@@ -1,10 +1,3 @@
-SET(CMAKE_C_COMPILER g++)
-
-#add_compile_options(-std=c++11)
-ADD_DEFINITIONS(-std=c++1y)
-ADD_DEFINITIONS(-fPIC)
-
-
 SET(BASE_SOURCES
   time/timestamp.cc
   time/time_utils.cc
@@ -22,6 +15,7 @@ SET(BASE_SOURCES
   message_loop/io_multiplexer_epoll.cc
   message_loop/timer_task_queue.cc
   message_loop/message_loop.cc
+  message_loop/timeout_event.cc
   #spin lock
   spin_lock.cc
   #memory
@@ -32,53 +26,39 @@ SET(BASE_SOURCES
   closure/location.cc
 )
 
-SET(LTBASE_DEPENDENCY
+SET(LTBASE_LINKLIBS
   3rd
-  coro
-)
-
-SET(LTBASEEXECUTE_LINKLIBS
-  ltbase
-  ${GLOG_LIBRARY}
-  ${ZLIB_LIBRARIES}
   coro
   gflags
   unwind
   pthread
+  timeout
+  ${GLOG_LIBRARY}
+  ${ZLIB_LIBRARIES}
 )
 
 ADD_LIBRARY(ltbase STATIC
   ${BASE_SOURCES}
 )
-add_dependencies(ltbase
-  ${LTBASE_DEPENDENCY}
+TARGET_LINK_LIBRARIES(ltbase
+  ${LTBASE_LINKLIBS}
 )
 
 ADD_EXECUTABLE(eventloop_test
   message_loop/test/run_loop_test.cc
 )
 TARGET_LINK_LIBRARIES(eventloop_test
-  ${LTBASEEXECUTE_LINKLIBS}
+  ltbase
+  ${LTBASE_LINKLIBS}
 )
 
 ADD_EXECUTABLE(eventloop_benchmark
   message_loop/test/benchmark.cc
 )
 TARGET_LINK_LIBRARIES(eventloop_benchmark
-  ${LTBASEEXECUTE_LINKLIBS}
+  ltbase
+  ${LTBASE_LINKLIBS}
 )
 
-ADD_EXECUTABLE(coro_unittest
-  coroutine/coro_unittest.cc
-)
-TARGET_LINK_LIBRARIES(coro_unittest
-  ${LTBASEEXECUTE_LINKLIBS}
-)
-
-ADD_EXECUTABLE(utils_unittest
-  utils/unittest_main.cc
-  utils/utils_unittest.cc
-)
-TARGET_LINK_LIBRARIES(utils_unittest
-  ${LTBASEEXECUTE_LINKLIBS}
-)
+# build base unittest
+ADD_SUBDIRECTORY(unittest)

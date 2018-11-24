@@ -1,16 +1,15 @@
 #include <unistd.h>
-#include "coroutine.h"
-#include "glog/logging.h"
-#include "coroutine_runner.h"
-#include <time/time_utils.h>
-#include <message_loop/message_loop.h>
-
 #include <iostream>
 #include <unistd.h>
 #include <stdlib.h>
 #include <atomic>
 
-#define CATCH_CONFIG_MAIN //only once
+#include "glog/logging.h"
+#include <time/time_utils.h>
+#include <coroutine/coroutine.h>
+#include <message_loop/message_loop.h>
+#include <coroutine/coroutine_runner.h>
+
 #include <catch/catch.hpp>
 
 void coro_c_function() {

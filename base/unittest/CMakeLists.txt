@@ -1,0 +1,10 @@
+ADD_EXECUTABLE(base_unittest
+  catch_main.cc
+  coro_unittest.cc
+  utils_unittest.cc
+  messageloop_unittest.cc
+)
+TARGET_LINK_LIBRARIES(base_unittest
+  ltbase
+  ${LTBASE_LINKLIBS}
+)

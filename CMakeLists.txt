@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 2.8)
 
+ADD_DEFINITIONS(-std=c++1z)
+ADD_DEFINITIONS(-fPIC)
+
 project(LightingIO)
 
 # for generate ycm complete database

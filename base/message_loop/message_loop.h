@@ -86,7 +86,7 @@ class MessageLoop : public PumpDelegate {
     std::string LoopName() {return loop_name_;}
 
     void QuitLoop();
-    EventPump* Pump() { return event_pump_.get(); }
+    EventPump* Pump() {return event_pump_.get();}
 
     void BeforePumpRun() override;
     void AfterPumpRun() override;

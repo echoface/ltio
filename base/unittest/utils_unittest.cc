@@ -1,7 +1,7 @@
-#include <catch/catch.hpp>
 #include <vector>
-#include "string/str_utils.hpp"
+#include <utils/string/str_utils.hpp>
 
+#include <catch/catch.hpp>
 
 TEST_CASE("string_utils", "[]") {
 
@@ -19,5 +19,4 @@ TEST_CASE("string_utils", "[]") {
   std::string none_true_str = "abc";
   ok_bool = base::StrUtils::Parse<bool>(none_true_str);
   CHECK(!ok_bool);
-
 }

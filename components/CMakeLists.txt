@@ -1,9 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
 
-SET(CMAKE_C_COMPILER g++)
-
-ADD_DEFINITIONS(-std=c++1z)
-ADD_DEFINITIONS(-fPIC)
 
 SET(LTCOMPONENT_DEPENDENCY
   3rd
@@ -36,12 +32,11 @@ SET(COMPONENT_LINKLIBS
 	ltbase
 	${GLOG_LIBRARY})
 
-link_libraries(
-	${COMPONENT_LINKLIBS}
-)
-
 ADD_LIBRARY(ltcomponent STATIC
 	${COMPONENT_SOURCES}
+)
+TARGET_LINK_LIBRARIES(ltcomponent
+	${COMPONENT_LINKLIBS}
 )
 
 SET(COMPONENT_EXECUTE_LINKLIBS
@@ -50,13 +45,12 @@ SET(COMPONENT_EXECUTE_LINKLIBS
 	ltcomponent
 	${GLOG_LIBRARY})
 
-link_libraries(
+LINK_LIBRARIES(
 	${COMPONENT_EXECUTE_LINKLIBS}
 )
 
 # all follow target or library will dependency the ltcomponent
-add_dependencies(
-  ltcomponent
+add_dependencies(ltcomponent
   ${LTCOMPONENT_DEPENDENCY}
 )
 

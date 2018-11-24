@@ -37,6 +37,12 @@ SET(MurMurHash3_SOURCES
   ./murmurhash/MurmurHash3.cpp
 )
 
+SET(TIMEOUT_SOURCES
+  ./timeout/timeout.c
+  ./timeout/timeout-bitops.c
+)
+
+#SET(CMAKE_C_COMPILER g++)
 ADD_LIBRARY(3rd STATIC
   ${CRC_SOURCES}
   ${MD5_SOURCES}
@@ -44,4 +50,8 @@ ADD_LIBRARY(3rd STATIC
   ${HTTPPARSER_SOURCES}
   ${URLSAFE64_SOURCES}
   ${MurMurHash3_SOURCES}
+)
+
+ADD_LIBRARY(timeout STATIC
+  ${TIMEOUT_SOURCES}
 )
