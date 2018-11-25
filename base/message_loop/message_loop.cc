@@ -23,6 +23,7 @@
 #include <iostream>
 #include "file_util_linux.h"
 #include "base/time/time_utils.h"
+#include "timeout_event.h"
 
 namespace base {
 
@@ -43,66 +44,62 @@ void IgnoreSigPipeSignalOnCurrentThread2() {
   pthread_sigmask(SIG_BLOCK, &sigpipe_mask, nullptr);
 }
 
-/* a helper class for re-schedule timer task */
-class MessageLoop::SetTimerTask : public TaskBase {
- public:
-  SetTimerTask(std::unique_ptr<TaskBase> task, uint32_t ms)
-    : task_(std::move(task)),
-      milliseconds_(ms),
-      posted_(time_ms()) {
-  }
- private:
+class TimeoutTaskHelper : public TaskBase {
+public:
+  TimeoutTaskHelper(ClosurePtr task, EventPump* pump, uint64_t ms) 
+    : TaskBase(task->TaskLocation()),
+      timeout_fn_(std::move(task)),
+      event_pump_(pump),
+      delay_ms_(ms),
+      schedule_time_(time_ms()) {}
+
   void Run() override {
-    uint32_t post_time = time_ms() - posted_;
-    uint32_t new_time = post_time > milliseconds_ ? 0 : milliseconds_ - post_time;
-    CHECK(MessageLoop::Current() != NULL);
-    if (new_time == 0) {
-      VLOG(GLOG_VINFO) <<  "Time was expired, run this timer task directly";
-      task_->Run();
-    } else {
-      VLOG(GLOG_VINFO) <<  "Re-Schedule timer in loop, will run task after " << new_time << " ms";
-      MessageLoop::Current()->PostDelayTask(std::move(task_), new_time);
+
+    uint64_t has_passed_time = time_ms() - schedule_time_;
+    int64_t new_delay_ms = delay_ms_ - has_passed_time;
+    if (new_delay_ms <= 0) {
+      return timeout_fn_->Run();
     }
+
+    VLOG(GLOG_VINFO) <<  "Re-Schedule timer " << new_delay_ms << " ms";
+
+    TimeoutEvent* timeout_ev = 
+      TimeoutEvent::CreateSelfDeleteTimeoutEvent(new_delay_ms);
+
+    timeout_ev->InstallTimerHandler(std::move(timeout_fn_));
+    event_pump_->AddTimeoutEvent(timeout_ev);
   }
-  std::unique_ptr<TaskBase> task_;
-  const uint32_t milliseconds_;
-  const uint32_t posted_;
+private:
+  ClosurePtr timeout_fn_;
+  EventPump* event_pump_;
+  const uint64_t delay_ms_;
+  const uint64_t schedule_time_;
 };
 
-class MessageLoop::BindReplyTask : public TaskBase {
+class MessageLoop::RepyTaskHelper : public TaskBase {
 public:
-  static std::unique_ptr<TaskBase> Create(std::unique_ptr<TaskBase>& task,
-                                            std::unique_ptr<TaskBase>& reply,
-                                            MessageLoop* reply_loop,
-                                            int notify_fd) {
-    return std::unique_ptr<TaskBase>(new BindReplyTask(task, reply, reply_loop, notify_fd));
+  RepyTaskHelper(ClosurePtr& task, ClosurePtr& reply, MessageLoop* loop, int notify_fd)
+    : notify_fd_(notify_fd),
+      task_(std::move(task)) {
+      //reply_(std::move(reply)) {
+    CHECK(loop);
+    holder_ = ReplyHolder::Create(reply);
+    loop->ScheduleFutureReply(holder_);
   }
   void Run() override {
     static uint64_t msg = 1;
-
     if (task_) {
       task_->Run();
     }
-
     holder_->CommitReply();
     int ret = ::write(notify_fd_, &msg, sizeof(msg));
-    CHECK(ret == sizeof(msg));
   }
 private:
-  BindReplyTask(std::unique_ptr<TaskBase>& task,
-                std::unique_ptr<TaskBase>& reply,
-                MessageLoop* reply_loop,
-                int notify_fd) :
-    notify_fd_(notify_fd),
-    task_(std::move(task)) {
-
-    CHECK(reply_loop);
-    holder_ = ReplyHolder::Create(std::move(reply));
-    reply_loop->ScheduleFutureReply(holder_);
-  }
 
   int notify_fd_;
-  std::unique_ptr<TaskBase> task_;
+  ClosurePtr task_;
+  //ClosurePtr reply_;
+  //MessageLoop* reply_loop_;
   std::shared_ptr<ReplyHolder> holder_;
 };
 
@@ -229,47 +226,41 @@ void MessageLoop::ThreadMain() {
 }
 
 void MessageLoop::PostDelayTask(std::unique_ptr<TaskBase> task, uint32_t ms) {
-  if (status_ != ST_STARTED) {
-    LOG(ERROR) << "MessageLoop: " << loop_name_ << " Not Started";
+  CHECK(status_ == ST_STARTED);
+
+  if (!IsInLoopThread()) {
+    PostTask(ClosurePtr(new TimeoutTaskHelper(std::move(task), event_pump_.get(), ms)));
     return;
   }
 
-  if (IsInLoopThread()) {
-    RefTimerEvent timer = TimerEvent::CreateOneShotTimer(ms, std::move(task));
-    event_pump_->ScheduleTimer(timer);
-  } else {
-    PostTask(std::unique_ptr<TaskBase>(new SetTimerTask(std::move(task), ms)));
-  }
+  TimeoutEvent* timeout_ev = TimeoutEvent::CreateSelfDeleteTimeoutEvent(ms);
+  timeout_ev->InstallTimerHandler(std::move(task));
+  event_pump_->AddTimeoutEvent(timeout_ev);
 }
 
 bool MessageLoop::PostTask(std::unique_ptr<TaskBase> task) {
   const static uint64_t count = 1;
 
-  if (status_ != ST_STARTED) {
-    LOG(ERROR) << "MessageLoop: " << loop_name_ << " Not Started";
-    return false;
-  }
+  CHECK(status_ == ST_STARTED);
 
   //nested task handle; alway true for this case; why?
   //bz waitIO timeout can also will triggle this
   if (IsInLoopThread()) {
     inloop_scheduled_task_.push_back(std::move(task));
-    if (write(task_event_fd_, &count, sizeof(count)) < 0) {
-      LOG(ERROR) << "write to eventfd failed, errno:" << errno;
-    }
+    LOG_IF(ERROR, Notify(task_event_fd_, &count, sizeof(count)) < 0) << "Notify failed, errno:" << errno; 
     return true;
   }
 
   TaskBase* task_id = task.get();  // Only used for comparison.
   CHECK(task_id);
 
+  const Location& loc = task->TaskLocation();
   {
     base::SpinLockGuard guard(task_lock_);
     scheduled_task_.push_back(std::move(task));
   }
-
-  if (write(task_event_fd_, &count, sizeof(count)) < 0) {
-    LOG(ERROR) << "write to eventfd failed, errno:" << errno;
+  if (Notify(task_event_fd_, &count, sizeof(count)) < 0) {
+    LOG(ERROR) << "Notify failed, errno:" << errno << " task:" << loc.ToString();
     {
       base::SpinLockGuard guard(task_lock_);
       scheduled_task_.remove_if([task_id](std::unique_ptr<TaskBase>& t) {
@@ -350,8 +341,7 @@ void MessageLoop::PostTaskAndReply(std::unique_ptr<TaskBase> task,
                                    std::unique_ptr<TaskBase> reply,
                                    MessageLoop* reply_loop) {
   CHECK(reply_loop);
-  auto wraper = BindReplyTask::Create(task, reply, reply_loop, reply_loop->reply_event_fd_);
-  PostTask(std::move(wraper));
+  PostTask(ClosurePtr(new RepyTaskHelper(task, reply, reply_loop, reply_loop->reply_event_fd_)));
 }
 
 bool MessageLoop::PostTaskAndReply(std::unique_ptr<TaskBase> task,

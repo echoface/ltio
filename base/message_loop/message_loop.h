@@ -26,9 +26,10 @@ enum LoopState {
 
 class ReplyHolder {
 public:
-  static std::shared_ptr<ReplyHolder> Create(std::unique_ptr<TaskBase> task) {
+  static std::shared_ptr<ReplyHolder> Create(ClosurePtr& task) {
     return std::make_shared<ReplyHolder>(std::move(task));
   }
+  ReplyHolder(ClosurePtr task) : commited_(false), reply_(std::move(task)) {}
   bool InvokeReply() {
     if (!reply_ || !commited_) {
       return false;
@@ -38,13 +39,9 @@ public:
   }
   inline void CommitReply() {commited_ = true;}
   inline bool IsCommited() {return commited_;};
-  ReplyHolder(std::unique_ptr<TaskBase> task) :
-    commited_(false),
-    reply_(std::move(task)) {
-  }
 private:
   bool commited_;
-  std::unique_ptr<TaskBase> reply_;
+  ClosurePtr reply_;
 };
 
 class MessageLoop : public PumpDelegate {
@@ -91,10 +88,8 @@ class MessageLoop : public PumpDelegate {
     void BeforePumpRun() override;
     void AfterPumpRun() override;
   private:
-    class SetTimerTask;
-    class BindReplyTask;
-
     void ThreadMain();
+    class RepyTaskHelper;
 
     void OnHandleCommand();  // NOLINT
     void RunScheduledTask(ScheduledTaskType t);

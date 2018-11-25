@@ -19,15 +19,16 @@ public:
 
   void InvokeTimerHanlder();
   void UpdateInterval(int64_t ms);
-  void InstallTimerHandler(StlClosure&& h);
+  void InstallTimerHandler(ClosurePtr&& h);
   bool IsRepeated() const {return repeat_;}
   bool SelfDelete() const {return self_delete_;}
   uint64_t Interval() const {return interval_;}
+  bool IsAtatched() const {return this->pending != NULL;}
 private:
   bool repeat_ = false;
   uint64_t interval_ = 0;
   bool self_delete_ = false;
-  StlClosure timer_handler_;
+  ClosurePtr timer_handler_;
 };
 
 }

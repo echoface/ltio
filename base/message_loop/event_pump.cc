@@ -11,12 +11,6 @@ EventPump::EventPump()
     running_(false) {
   // fd iomux
   multiplexer_.reset(new base::IoMultiplexerEpoll());
-
-  // timer
-  int err = 0;
-  timeout_wheel_ = ::timeouts_open(TIMEOUT_mHZ, &err); 
-  ::timeouts_update(timeout_wheel_, time_ms()); 
-
 }
 
 EventPump::EventPump(PumpDelegate* d)
@@ -27,6 +21,9 @@ EventPump::EventPump(PumpDelegate* d)
 
 EventPump::~EventPump() {
   multiplexer_.reset();
+  if (timeout_wheel_) {
+    FinalizeTimeWheel();
+  }
 }
 
 void EventPump::Run() {
@@ -36,20 +33,22 @@ void EventPump::Run() {
   if (delegate_) {
     delegate_->BeforePumpRun();
   }
+
   running_ = true;
+  InitializeTimeWheel();
+
+  std::vector<FdEvent*> active_events;
+
   while (running_) {
+    active_events.clear();
+  
+    uint64_t perfect_timeout = NextTimerTimeoutms(2000);
 
-    uint64_t perfect_timeout = timer_queue_.HandleExpiredTimer();
-
-    active_events_.clear();
-
-    perfect_timeout = std::min(perfect_timeout, NextTimerTimeoutms(perfect_timeout));
-
-    multiplexer_->WaitingIO(active_events_, perfect_timeout);
+    multiplexer_->WaitingIO(active_events, perfect_timeout);
 
     ProcessTimerEvent();
 
-    for (auto& fd_event : active_events_) {
+    for (auto& fd_event : active_events) {
       fd_event->HandleEvent();
     }
 
@@ -57,8 +56,8 @@ void EventPump::Run() {
       delegate_->RunNestedTask();
     }
   }
-
   running_ = false;
+  FinalizeTimeWheel();
 
   if (delegate_) {
     delegate_->AfterPumpRun();
@@ -107,15 +106,6 @@ void EventPump::OnEventChanged(FdEvent* fd_event) {
   multiplexer_->UpdateFdEvent(fd_event);
 }
 
-int32_t EventPump::ScheduleTimer(RefTimerEvent& timerevent) {
-  return timer_queue_.AddTimerEvent(timerevent);
-}
-
-bool EventPump::CancelTimer(uint32_t timer_id) {
-  CHECK(IsInLoopThread());
-  return timer_queue_.CancelTimerEvent(timer_id);
-}
-
 void EventPump::AddTimeoutEvent(TimeoutEvent* timeout_ev) {
   CHECK(IsInLoopThread());
   add_timer_internal(timeout_ev);
@@ -136,6 +126,7 @@ void EventPump::ProcessTimerEvent() {
 
 	Timeout* expired = NULL;
   while (NULL != (expired = timeouts_get(timeout_wheel_))) {
+
     TimeoutEvent* timeout_ev = static_cast<TimeoutEvent*>(expired);
     timeout_ev->InvokeTimerHanlder();
     if (timeout_ev->IsRepeated()) { // readd to timeout wheel
@@ -143,9 +134,10 @@ void EventPump::ProcessTimerEvent() {
     } else {
       ::timeouts_del(timeout_wheel_, expired);
       if (timeout_ev->SelfDelete()) {
-        delete timeout_ev;   
+        delete timeout_ev;
       }
     }
+
   }
 }
 
@@ -162,5 +154,33 @@ timeout_t EventPump::NextTimerTimeoutms(timeout_t default_timeout) {
   return default_timeout;
 }
 
+void EventPump::InitializeTimeWheel() {
+  int err = 0;
+  timeout_wheel_ = ::timeouts_open(TIMEOUT_mHZ, &err); 
+  ::timeouts_update(timeout_wheel_, time_ms()); 
+}
+
+void EventPump::FinalizeTimeWheel() {
+
+  std::vector<TimeoutEvent*> to_be_delete;
+
+  Timeout* to = NULL;
+  TIMEOUTS_FOREACH(to, timeout_wheel_, TIMEOUTS_ALL) {
+    TimeoutEvent* toe = static_cast<TimeoutEvent*>(to);
+
+    ::timeouts_del(timeout_wheel_, to);
+    if (toe->SelfDelete()) {
+      to_be_delete.push_back(toe);
+    }
+  }
+  
+  for (TimeoutEvent* toe : to_be_delete) {
+    delete toe;
+  }
+  to_be_delete.clear();
+
+  ::timeouts_close(timeout_wheel_);
+  timeout_wheel_ = NULL;
+}
 
 }//end base

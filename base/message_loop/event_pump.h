@@ -43,9 +43,6 @@ public:
   // override from FdEventWatcher
   void OnEventChanged(FdEvent* fd_event) override;
 
-  bool CancelTimer(uint32_t timer_id);
-  int32_t ScheduleTimer(RefTimerEvent& timerevent);
-
   void AddTimeoutEvent(TimeoutEvent* timeout_ev);
   void RemoveTimeoutEvent(TimeoutEvent* timeout_ev);
 
@@ -54,10 +51,8 @@ public:
 
   bool Running() { return running_; }
   void SetLoopThreadId(std::thread::id id) {tid_ = id;}
-  uint64_t NonePreciseMillsecond() {return timer_queue_.InexacTimeMillsecond();}
 protected:
   inline FdEvent::FdEventWatcher* AsFdWatcher() {return this;}
-
   /* update the time wheel mononic time and get all expired
    * timeoutevent will be invoke and re shedule if was repeated*/
   void ProcessTimerEvent();
@@ -67,18 +62,24 @@ protected:
    * return default_timeout when no timer*/
   timeout_t NextTimerTimeoutms(timeout_t default_timeout);
 
+  /* finalize TimeoutWheel and delete Life-Ownered timeoutEvent*/
+  void InitializeTimeWheel();
+  void FinalizeTimeWheel();
+
   /*calculate abs timeout time and add to timeout wheel*/
   void add_timer_internal(TimeoutEvent* event);
 private:
   PumpDelegate* delegate_;
   bool running_;
 
-  std::vector<FdEvent*> active_events_;
   std::unique_ptr<IoMultiplexer> multiplexer_;
-
+  
+#if 0
+  // replace by new timeout_wheel for more effective perfomance
+  //TimerTaskQueue timer_queue_;
+#endif
   TimeoutWheel* timeout_wheel_ = NULL;
 
-  TimerTaskQueue timer_queue_;
   std::thread::id tid_;
 };
 

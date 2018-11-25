@@ -16,6 +16,8 @@ TimeoutEvent::TimeoutEvent(uint64_t ms, bool repeat) :
 }
 
 TimeoutEvent::~TimeoutEvent() {
+  CHECK(!IsAtatched());
+  ::timeout_del((Timeout*)this);
 }
 
 void TimeoutEvent::UpdateInterval(int64_t ms) {
@@ -24,12 +26,12 @@ void TimeoutEvent::UpdateInterval(int64_t ms) {
 
 void TimeoutEvent::InvokeTimerHanlder() {
   if (timer_handler_) {
-    timer_handler_();
+    timer_handler_->Run();
   }
 }
 
-void TimeoutEvent::InstallTimerHandler(StlClosure&& h) {
-  timer_handler_ = h;
+void TimeoutEvent::InstallTimerHandler(ClosurePtr&& h) {
+  timer_handler_ = std::move(h);
 }
 
 }

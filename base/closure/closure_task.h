@@ -25,10 +25,8 @@ public:
   explicit TaskBase(const Location& location) : location_(location) {}
   virtual ~TaskBase() {}
   virtual void Run() = 0;
-protected:
-  std::string ClosureInfo() const {
-    return location_.ToString();
-  };
+  const Location& TaskLocation() const {return location_;}
+  std::string ClosureInfo() const {return location_.ToString();}
 private:
   Location location_;
 };
