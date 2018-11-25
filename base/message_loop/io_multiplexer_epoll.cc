@@ -1,7 +1,8 @@
 #include "io_multiplexer_epoll.h"
 
-#include "glog/logging.h"
 #include <assert.h>
+#include "glog/logging.h"
+#include <base/utils/sys_error.h>
 
 namespace base {
 
@@ -26,7 +27,7 @@ int IoMultiplexerEpoll::WaitingIO(FdEventList& active_list, int32_t timeout_ms) 
 
   if (turn_active_count < 0) {//error
     int32_t err = errno;
-    LOG(ERROR) << "epoll_wait ERROR" << strerror(err);
+    LOG(ERROR) << "epoll fd:" << epoll_fd_ << " epoll_wait failed with error:" << StrError(err);
     return 0;
   }
 
@@ -78,8 +79,7 @@ int IoMultiplexerEpoll::EpollCtl(FdEvent* fdev, int opt) {
   int ret = ::epoll_ctl(epoll_fd_, opt, fd, &ev);
 
   LOG_IF(ERROR, ret != 0) << "apply epoll_ctl opt " << EpollOptToString(opt)
-    << " on fd " << fd
-    << " failed, errno:" << errno
+    << " on fd " << fd << " failed, errno:" << StrError(errno)
     << " events:" << fdev->MonitorEventAsString();
 
   return ret;

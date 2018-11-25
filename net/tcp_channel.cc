@@ -6,6 +6,7 @@
 #include "glog/logging.h"
 #include "base/closure/closure_task.h"
 #include "protocol/proto_service.h"
+#include <base/utils/sys_error.h>
 
 namespace net {
 
@@ -198,17 +199,13 @@ bool TcpChannel::SendProtoMessage(RefProtocolMessage message) {
 void TcpChannel::HandleError() {
   int socket_fd = fd_event_->fd();
   int err = socketutils::GetSocketError(socket_fd);
-  thread_local static char t_err_buff[128];
-  LOG(ERROR) << " Socket Error, fd:[" << socket_fd << "], error info: [" << strerror_r(err, t_err_buff, sizeof t_err_buff) << "]";
+  LOG(ERROR) << "socket error, fd:[" << socket_fd << "], error: [" << base::StrError(err) << "]";
 }
 
 void TcpChannel::HandleClose() {
   CHECK(work_loop_->IsInLoopThread());
 
   RefTcpChannel guard(shared_from_this());
-  //if (channel_status_ == DISCONNECTED) {
-    //return;
-  //}
 
   fd_event_->DisableAll();
   fd_event_->ResetCallback();
@@ -285,11 +282,11 @@ int32_t TcpChannel::Send(const uint8_t* data, const int32_t len) {
 
       }
     } else { //n_write < 0
+
       n_write = 0;
       int32_t err = errno;
-
       if (EAGAIN != err) {
-        LOG(ERROR) << "Send Data Fail, fd:[" << fd_event_->fd() << "] errno: [" << err << "]";
+        LOG(ERROR) << "channel write data failed, fd:[" << fd_event_->fd() << "] errno: [" << base::StrError(err) << "]";
       }
     }
   }

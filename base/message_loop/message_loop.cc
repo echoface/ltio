@@ -22,8 +22,9 @@
 
 #include <iostream>
 #include "file_util_linux.h"
-#include "base/time/time_utils.h"
 #include "timeout_event.h"
+#include <base/time/time_utils.h>
+#include <base/utils/sys_error.h>
 
 namespace base {
 
@@ -142,8 +143,9 @@ MessageLoop::~MessageLoop() {
   CHECK(!IsInLoopThread());
 
   LOG(INFO) << " MessageLoop " << LoopName() << " Gone...";
-  while (write(wakeup_pipe_in_, &kQuit, sizeof(kQuit)) != sizeof(kQuit)) {
-    LOG_IF(ERROR, EAGAIN == errno) << "Write to pipe Failed:" << errno;
+
+  while (Notify(wakeup_pipe_in_, &kQuit, sizeof(kQuit)) != sizeof(kQuit)) {
+    LOG_IF(ERROR, EAGAIN == errno) << "Write to pipe Failed:" << StrError();
     std::this_thread::sleep_for(std::chrono::microseconds(1));
   }
 
@@ -247,7 +249,7 @@ bool MessageLoop::PostTask(std::unique_ptr<TaskBase> task) {
   //bz waitIO timeout can also will triggle this
   if (IsInLoopThread()) {
     inloop_scheduled_task_.push_back(std::move(task));
-    LOG_IF(ERROR, Notify(task_event_fd_, &count, sizeof(count)) < 0) << "Notify failed, errno:" << errno; 
+    LOG_IF(ERROR, Notify(task_event_fd_, &count, sizeof(count)) < 0) << "notify failed:" << StrError(); 
     return true;
   }
 
@@ -260,7 +262,7 @@ bool MessageLoop::PostTask(std::unique_ptr<TaskBase> task) {
     scheduled_task_.push_back(std::move(task));
   }
   if (Notify(task_event_fd_, &count, sizeof(count)) < 0) {
-    LOG(ERROR) << "Notify failed, errno:" << errno << " task:" << loc.ToString();
+    LOG(ERROR) << "task schedule failed:" << StrError() << " task:" << loc.ToString();
     {
       base::SpinLockGuard guard(task_lock_);
       scheduled_task_.remove_if([task_id](std::unique_ptr<TaskBase>& t) {
@@ -288,7 +290,7 @@ void MessageLoop::RunScheduledTask(ScheduledTaskType type) {
       uint64_t count = 0;
       int ret = read(task_event_fd_, &count, sizeof(count));
       if (ret < 0) {
-        LOG(INFO) << " read return:" << ret << " errno:" << errno;
+        LOG(INFO) << "run scheduled task failed:" << StrError();
         return;
       }
 
@@ -331,9 +333,9 @@ void MessageLoop::OnHandleCommand() {
     case kQuit: {
       QuitLoop();
     } break;
-    default:
+    default: {
       LOG(ERROR) << "Shout Not Reached HERE!";
-      break;
+    } break;
   }
 }
 

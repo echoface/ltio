@@ -18,7 +18,6 @@ public:
   ~IOBuffer();
 
   int32_t ReadFromSocketFd(int scoket, int *error);
-  //IOBuffer Clone();
 
   bool EnsureWritableSize(int32_t len);
   bool HasALine();

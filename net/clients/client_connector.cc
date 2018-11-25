@@ -1,5 +1,6 @@
 
 #include "client_connector.h"
+#include <base/utils/sys_error.h>
 
 namespace net {
 
@@ -37,7 +38,7 @@ bool Connector::LaunchAConnection(net::InetAddress& address) {
 
     } break;
     default:
-      LOG(FATAL) << " FATAL ERROR";
+      LOG(FATAL) << " set client connect failed:" << base::StrError((state);
       net::socketutils::CloseSocket(sockfd);
       return false;
     break;

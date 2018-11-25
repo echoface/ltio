@@ -9,7 +9,7 @@
  
 namespace base {
  
-std::string StrErrno() {
+std::string StrError() {
   return StrError(errno);
 }
 
