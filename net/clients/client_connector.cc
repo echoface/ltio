@@ -38,7 +38,7 @@ bool Connector::LaunchAConnection(net::InetAddress& address) {
 
     } break;
     default:
-      LOG(FATAL) << " set client connect failed:" << base::StrError((state);
+      LOG(FATAL) << " set client connect failed:" << base::StrError(state);
       net::socketutils::CloseSocket(sockfd);
       return false;
     break;

@@ -59,7 +59,7 @@ TEST_CASE("event_pump.timer", "[test event pump timer]") {
   pump.Run();
 
   delete repeated_toe;
-  delete oneshot_toe; 
+  delete oneshot_toe;
   delete zerooneshot_toe;
 }
 
@@ -67,7 +67,7 @@ TEST_CASE("messageloop.delaytask", "[run delay task]") {
   base::MessageLoop loop;
   loop.SetLoopName("DelayTaskTestLoop");
   loop.Start();
-  
+
   uint64_t start = base::time_ms();
   loop.PostDelayTask(NewClosure([&]() {
     uint64_t end = base::time_ms();

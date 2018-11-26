@@ -38,13 +38,14 @@ void EventPump::Run() {
   InitializeTimeWheel();
 
   std::vector<FdEvent*> active_events;
+  static uint64_t default_epoll_timeout_us = 2000000;
 
   while (running_) {
     active_events.clear();
   
-    uint64_t perfect_timeout = NextTimerTimeoutms(2000);
+    uint64_t perfect_timeout_us = NextTimerTimeout(default_epoll_timeout_us);
 
-    multiplexer_->WaitingIO(active_events, perfect_timeout);
+    multiplexer_->WaitingIO(active_events, perfect_timeout_us/1000.0);
 
     ProcessTimerEvent();
 
@@ -108,7 +109,7 @@ void EventPump::OnEventChanged(FdEvent* fd_event) {
 
 void EventPump::AddTimeoutEvent(TimeoutEvent* timeout_ev) {
   CHECK(IsInLoopThread());
-  add_timer_internal(timeout_ev);
+  add_timer_internal(time_us(), timeout_ev);
 }
 
 void EventPump::RemoveTimeoutEvent(TimeoutEvent* timeout_ev) {
@@ -116,12 +117,12 @@ void EventPump::RemoveTimeoutEvent(TimeoutEvent* timeout_ev) {
   ::timeouts_del(timeout_wheel_, timeout_ev); 
 }
 
-void EventPump::add_timer_internal(TimeoutEvent* event) {
-  ::timeouts_add(timeout_wheel_, event, time_ms() + event->Interval());
+void EventPump::add_timer_internal(uint64_t now_us, TimeoutEvent* event) {
+  ::timeouts_add(timeout_wheel_, event, now_us + event->IntervalMicroSecond());
 }
 
 void EventPump::ProcessTimerEvent() {
-  uint64_t now = time_ms();
+  uint64_t now = time_us();
   ::timeouts_update(timeout_wheel_, now);
 
 	Timeout* expired = NULL;
@@ -129,21 +130,25 @@ void EventPump::ProcessTimerEvent() {
 
     TimeoutEvent* timeout_ev = static_cast<TimeoutEvent*>(expired);
     timeout_ev->InvokeTimerHanlder();
+
     if (timeout_ev->IsRepeated()) { // readd to timeout wheel
-      add_timer_internal(timeout_ev);
+
+      add_timer_internal(now, timeout_ev);
+
     } else {
+
       ::timeouts_del(timeout_wheel_, expired);
       if (timeout_ev->SelfDelete()) {
         delete timeout_ev;
       }
     }
 
-  }
+  } // end while
 }
 
-timeout_t EventPump::NextTimerTimeoutms(timeout_t default_timeout) {
+timeout_t EventPump::NextTimerTimeout(timeout_t default_timeout) {
 
-  ::timeouts_update(timeout_wheel_, time_ms());
+  ::timeouts_update(timeout_wheel_, time_us());
 
   if (::timeouts_expired(timeout_wheel_)) {
     return 0;
@@ -156,8 +161,8 @@ timeout_t EventPump::NextTimerTimeoutms(timeout_t default_timeout) {
 
 void EventPump::InitializeTimeWheel() {
   int err = 0;
-  timeout_wheel_ = ::timeouts_open(TIMEOUT_mHZ, &err); 
-  ::timeouts_update(timeout_wheel_, time_ms()); 
+  timeout_wheel_ = ::timeouts_open(TIMEOUT_uHZ, &err); 
+  ::timeouts_update(timeout_wheel_, time_us()); 
 }
 
 void EventPump::FinalizeTimeWheel() {

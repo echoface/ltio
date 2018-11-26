@@ -8,7 +8,6 @@ SET(BASE_SOURCES
   coroutine/coroutine_runner.cc
   #new eventloop
   message_loop/fd_event.cc
-  message_loop/timer_event.cc
   message_loop/event_pump.cc
   message_loop/linux_signal.cpp
   message_loop/file_util_linux.cc
@@ -17,6 +16,7 @@ SET(BASE_SOURCES
   message_loop/timer_task_queue.cc
   message_loop/message_loop.cc
   message_loop/timeout_event.cc
+  message_loop/repeating_timer.cc
   #spin lock
   spin_lock.cc
   #memory

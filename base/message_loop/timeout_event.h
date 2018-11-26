@@ -23,6 +23,7 @@ public:
   bool IsRepeated() const {return repeat_;}
   bool SelfDelete() const {return self_delete_;}
   uint64_t Interval() const {return interval_;}
+  uint64_t IntervalMicroSecond() const {return interval_ * 1000;}
   bool IsAtatched() const {return this->pending != NULL;}
 private:
   bool repeat_ = false;

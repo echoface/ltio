@@ -60,14 +60,14 @@ protected:
   /* return the possible minimal wait-time for next timer
    * return 0 when has event expired,
    * return default_timeout when no timer*/
-  timeout_t NextTimerTimeoutms(timeout_t default_timeout);
+  timeout_t NextTimerTimeout(timeout_t default_timeout);
 
   /* finalize TimeoutWheel and delete Life-Ownered timeoutEvent*/
   void InitializeTimeWheel();
   void FinalizeTimeWheel();
 
   /*calculate abs timeout time and add to timeout wheel*/
-  void add_timer_internal(TimeoutEvent* event);
+  void add_timer_internal(uint64_t now_us, TimeoutEvent* event);
 private:
   PumpDelegate* delegate_;
   bool running_;

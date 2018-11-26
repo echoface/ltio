@@ -3,6 +3,7 @@ ADD_EXECUTABLE(base_unittest
   coro_unittest.cc
   utils_unittest.cc
   messageloop_unittest.cc
+  repeat_timer_unittest.cc
 )
 TARGET_LINK_LIBRARIES(base_unittest
   ltbase
