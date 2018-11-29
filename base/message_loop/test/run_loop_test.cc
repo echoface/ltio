@@ -17,8 +17,10 @@ bool LocationTaskTest() {
   base::MessageLoop loop;
 
   loop.Start();
+
   loop.PostTask(NewClosure([](){
     printf("FailureDump throw failed exception");
+    throw -1;
   }));
 
   loop.PostDelayTask(NewClosure([&]() {

@@ -6,7 +6,8 @@ namespace base {
 
 // new a timer with spcial runner loop
 RepeatingTimer::RepeatingTimer(MessageLoop* loop)
-  : runner_loop_(loop) {
+  : running_(false),
+    runner_loop_(loop) {
   CHECK(runner_loop_);
 }
 
@@ -18,9 +19,8 @@ bool RepeatingTimer::Running() const {
 }
 
 void RepeatingTimer::Start(uint64_t ms, StlClosure user_task) {
-  user_task_ = std::move(user_task);
 
-  if (timeout_event_) {
+  if (running_) {
     Stop();
   }
 
@@ -29,6 +29,7 @@ void RepeatingTimer::Start(uint64_t ms, StlClosure user_task) {
   timeout_event_.reset(new TimeoutEvent(ms, true));
   timeout_event_->InstallTimerHandler(
     NewClosure(std::bind(&RepeatingTimer::OnTimeout, this)));
+  user_task_ = std::move(user_task);
 
   ScopedGuard runing([this]() {
     this->running_ = true;
@@ -60,6 +61,7 @@ void RepeatingTimer::Stop() {
     pump->RemoveTimeoutEvent(timeout_event_.get());
     timeout_event_.reset();
     removed = true;
+    cv.notify_all();
   }, runner_loop_->Pump(), timeout_event_.get());
 
   runner_loop_->PostTask(NewClosure(remover_fn));

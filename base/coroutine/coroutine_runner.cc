@@ -74,6 +74,12 @@ void CoroRunner::YieldCurrent(int32_t wc) {
   tls_runner->TransferTo(tls_runner->main_coro_);
 }
 
+void CoroRunner::SleepMillsecond(uint64_t ms) {
+  bind_loop_->PostDelayTask(NewClosure(co_resumer), ms);
+  YieldCurrent();
+}
+
+
 /* 如果本身是在一个子coro里面, 需要在重新将resumecoroutine调度到主coroutine内
  * 不支持嵌套的coroutinetransfer........
  * 如果本身是主coro， 则直接tranfer去执行.

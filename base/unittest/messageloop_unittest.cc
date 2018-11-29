@@ -4,11 +4,15 @@
 #include "message_loop/event_pump.h"
 #include "message_loop/message_loop.h"
 
+void FailureDump(const char* s, int sz) {
+  std::string failure_info(s, sz);
+  LOG(INFO) << " ERROR: " << failure_info;
+}
+
 TEST_CASE("event_pump.timer", "[test event pump timer]") {
 
   base::EventPump pump;
   pump.SetLoopThreadId(std::this_thread::get_id());
-
 
   uint64_t repeated_timer_checker = 0;
   base::TimeoutEvent* repeated_toe = new base::TimeoutEvent(5000, true);
@@ -81,4 +85,55 @@ TEST_CASE("messageloop.delaytask", "[run delay task]") {
   loop.WaitLoopEnd();
 }
 
+TEST_CASE("messageloop.replytask", "[task with reply function]") {
 
+  base::MessageLoop loop;
+  loop.Start();
+
+  base::MessageLoop replyloop;
+  replyloop.Start();
+
+  bool inloop_reply_run = false;
+  bool outloop_reply_run = false;
+
+  loop.PostTaskAndReply(NewClosure([&]() {
+    LOG(INFO) << " task bind reply in loop run";
+  }), NewClosure([&]() {
+    inloop_reply_run = true;
+    REQUIRE(base::MessageLoop::Current() == &loop);
+  }));
+
+  loop.PostTaskAndReply(NewClosure([&]() {
+    LOG(INFO) << " task bind reply use another loop run";
+  }), NewClosure([&]() {
+    outloop_reply_run = true;
+    REQUIRE(base::MessageLoop::Current() == &replyloop);
+  }), &replyloop);
+
+
+  loop.PostDelayTask(NewClosure([&](){
+    loop.QuitLoop();
+  }), 2000);
+  loop.WaitLoopEnd();
+  REQUIRE(inloop_reply_run);
+  REQUIRE(outloop_reply_run);
+}
+
+
+TEST_CASE("messageloop.tasklocation", "[new task tracking location ]") {
+  google::InstallFailureSignalHandler();
+  google::InstallFailureWriter(FailureDump);
+
+  base::MessageLoop loop;
+  loop.Start();
+
+  loop.PostTask(NewClosure([&]() {
+    LOG(INFO) << " task_location exception by throw";
+    throw "task throw";
+  }));
+
+  loop.PostDelayTask(NewClosure([&](){
+    loop.QuitLoop();
+  }), 2000);
+  loop.WaitLoopEnd();
+}

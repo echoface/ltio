@@ -54,6 +54,8 @@ public:
   /* give up cpu; main coro will automatic resume; other coro should resume by manager*/
   static void YieldCurrent(int32_t wc = 1);
   static StlClosure CurrentCoroResumeCtx();
+
+  void SleepMillsecond(uint64_t ms);
 protected:
   CoroRunner();
   ~CoroRunner();
@@ -94,7 +96,10 @@ private:
   DISALLOW_COPY_AND_ASSIGN(CoroRunner);
 };
 
-#define go base::CoroRunner::__go(__FUNCTION__, __FILE__, __LINE__)-
+#define co_go        base::CoroRunner::__go(__FUNCTION__, __FILE__, __LINE__)-
+#define co_yield     base::CoroRunner::YieldCurrent()
+#define co_resumer   base::CoroRunner::CurrentCoroResumeCtx()
+#define co_sleep(ms) base::CoroRunner::Runner().SleepMillsecond(ms)
 
 }// end base
 #endif

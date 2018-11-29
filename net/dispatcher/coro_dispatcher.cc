@@ -22,14 +22,14 @@ CoroWlDispatcher::~CoroWlDispatcher() {
 void CoroWlDispatcher::TransferAndYield(base::MessageLoop* ioloop, base::StlClosure clourse) {
   CHECK(ioloop);
   ioloop->PostTask(NewClosure(std::move(clourse)));
-  base::CoroRunner::YieldCurrent();
+  co_yield;
 }
 
 bool CoroWlDispatcher::ResumeWorkContext(WorkContext& ctx) {
-	if (ctx.resume_ctx) {
-	  ctx.resume_ctx();
+	if (!ctx.resume_ctx) {
+	  return false;
 	}
-	return true;
+	ctx.resume_ctx();
 }
 
 bool CoroWlDispatcher::SetWorkContext(WorkContext& ctx) {
@@ -37,7 +37,7 @@ bool CoroWlDispatcher::SetWorkContext(WorkContext& ctx) {
       base::CoroRunner::CanYield()) {
 
     ctx.loop = base::MessageLoop::Current();
-    ctx.resume_ctx = base::CoroRunner::CurrentCoroResumeCtx();
+    ctx.resume_ctx = co_resumer; //base::CoroRunner::CurrentCoroResumeCtx();
     return true;
   }
   return false;
@@ -52,11 +52,9 @@ bool CoroWlDispatcher::TransmitToWorker(base::StlClosure& closure) {
   }
 
   if (loop->IsInLoopThread()) {
-    go closure;
+    co_go closure;
   } else {
-    loop->PostTask(NewClosure([=]() {
-      go closure;
-    }));
+    co_go loop << closure;
   }
   return true;
 }

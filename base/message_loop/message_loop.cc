@@ -139,10 +139,7 @@ MessageLoop::MessageLoop()
 }
 
 MessageLoop::~MessageLoop() {
-
-  CHECK(!IsInLoopThread());
-
-  LOG(INFO) << " MessageLoop " << LoopName() << " Gone...";
+  LOG(INFO) << "MessageLoop [" << LoopName() << "] Gone...";
 
   while (Notify(wakeup_pipe_in_, &kQuit, sizeof(kQuit)) != sizeof(kQuit)) {
     LOG_IF(ERROR, EAGAIN == errno) << "Write to pipe Failed:" << StrError();
@@ -176,25 +173,29 @@ bool MessageLoop::IsInLoopThread() const {
 
 void MessageLoop::Start() {
   bool run = running_.test_and_set(std::memory_order_acquire);
-  LOG_IF(INFO, run) << "Messageloop " << LoopName() << " aready runing...";
+  LOG_IF(INFO, run) << "Messageloop [" << LoopName() << "] aready runing...";
   if (run) {return;}
 
   thread_ptr_.reset(new std::thread(std::bind(&MessageLoop::ThreadMain, this)));
 
-  do {
-    std::this_thread::sleep_for(std::chrono::microseconds(1));
-  } while(status_ != ST_STARTED);
+  {
+    std::unique_lock<std::mutex> lk(start_stop_lock_);
+    cv_.wait(lk, [&]{return status_ == ST_STARTED;});
+  }
 }
 
 void MessageLoop::WaitLoopEnd(int32_t ms) {
+  CHECK(!IsInLoopThread());
+
+  {
+    std::unique_lock<std::mutex> lk(start_stop_lock_);
+    cv_.wait(lk, [&]{return status_ == ST_STOPED;});
+  }
+
   int32_t has_join = has_join_.exchange(1);
   if (has_join == 0 && thread_ptr_ && thread_ptr_->joinable()) {
     thread_ptr_->join();
   }
-
-  do {
-    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
-  } while(status_ == ST_STARTED);
 }
 
 void MessageLoop::BeforePumpRun() {
@@ -207,13 +208,17 @@ void MessageLoop::ThreadMain() {
   threadlocal_current_ = this;
   event_pump_->SetLoopThreadId(std::this_thread::get_id());
 
-  status_.store(ST_STARTED);
   event_pump_->InstallFdEvent(wakeup_event_.get());
   event_pump_->InstallFdEvent(task_event_.get());
   event_pump_->InstallFdEvent(reply_event_.get());
 
   //delegate_->BeforeLoopRun();
-  LOG(INFO) << "MessageLoop: " << loop_name_ << " Start Runing";
+  LOG(INFO) << "MessageLoop: [" << loop_name_ << "] Start Runing";
+
+  {
+    status_.store(ST_STARTED);
+    cv_.notify_all();
+  }
 
   event_pump_->Run();
 
@@ -222,9 +227,13 @@ void MessageLoop::ThreadMain() {
   event_pump_->RemoveFdEvent(reply_event_.get());
   event_pump_->RemoveFdEvent(wakeup_event_.get());
 
-  LOG(INFO) << "MessageLoop: " << loop_name_ << " Stop Runing";
-  status_.store(ST_STOPED);
   threadlocal_current_ = NULL;
+  LOG(INFO) << "MessageLoop: [" << loop_name_ << "] Stop Runing";
+
+  {
+    status_.store(ST_STOPED);
+    cv_.notify_all();
+  }
 }
 
 void MessageLoop::PostDelayTask(std::unique_ptr<TaskBase> task, uint32_t ms) {
@@ -242,7 +251,6 @@ void MessageLoop::PostDelayTask(std::unique_ptr<TaskBase> task, uint32_t ms) {
 
 bool MessageLoop::PostTask(std::unique_ptr<TaskBase> task) {
   const static uint64_t count = 1;
-
   CHECK(status_ == ST_STARTED);
 
   //nested task handle; alway true for this case; why?

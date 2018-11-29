@@ -22,24 +22,24 @@ void coro_fun(std::string tag) {
   LOG(INFO) << tag << " coro_fun leave";
 }
 
-TEST_CASE("go_coro", "[go flag call coroutine]") {
+TEST_CASE("coro.co_go", "[go flag call coroutine]") {
   base::MessageLoop loop;
   loop.Start();
 
   loop.PostTask(NewClosure([&]() {
     LOG(INFO) << " start test go flag enter";
 
-    go coro_c_function;
+    co_go coro_c_function;
 
-    go std::bind(&coro_fun, "tag_from_go_synatax");
+    co_go std::bind(&coro_fun, "tag_from_go_synatax");
 
-    go []() {
+    co_go []() {
       LOG(INFO) << " run lambda in coroutine" ;
     };
     LOG(INFO) << " start test go flag leave";
   }));
 
-  go &loop << []() {
+  co_go &loop << []() {
     LOG(INFO) << "go coroutine in loop ok!!!";
   };
 
@@ -49,25 +49,58 @@ TEST_CASE("go_coro", "[go flag call coroutine]") {
   loop.WaitLoopEnd();
 }
 
-void FailureDump(const char* s, int sz) {
-  std::string failure_info(s, sz);
-  LOG(INFO) << " ERROR: " << failure_info;
-}
-
-TEST_CASE("task_location", "[new task tracking location ]") {
-  google::InstallFailureSignalHandler();
-  google::InstallFailureWriter(FailureDump);
+TEST_CASE("coro.co_resumer", "[coroutine resumer with loop reply task]") {
 
   base::MessageLoop loop;
   loop.Start();
 
-  loop.PostTask(NewClosure([&]() {
-    LOG(INFO) << " task_location exception by throw";
-    throw "task throw";
-  }));
+  base::StlClosure stack_sensitive_fn = []() {
+    sleep(1);
+  };
 
-  loop.PostDelayTask(NewClosure([&](){
+  bool stack_sensitive_fn_resumed = false;
+
+  // big stack function;
+  co_go &loop << [&]() {
+    LOG(INFO) << " coroutine enter ..";
+    loop.PostTaskAndReply(NewClosure(stack_sensitive_fn), NewClosure(co_resumer));
+    LOG(INFO) << " coroutine pasued..";
+    co_yield;
+    LOG(INFO) << " coroutine resumed..";
+    stack_sensitive_fn_resumed = true;
+  };
+
+  loop.PostDelayTask(NewClosure([&]() {
     loop.QuitLoop();
-  }), 2000);
+  }), 5000); // exit ater 5s
+
   loop.WaitLoopEnd();
+
+  REQUIRE(stack_sensitive_fn_resumed);
 }
+
+TEST_CASE("coro.co_sleep", "[coroutine sleep]") {
+
+  base::MessageLoop loop;
+  loop.Start();
+
+  bool co_sleep_resumed = false;
+
+  // big stack function;
+  co_go &loop << [&]() {
+    LOG(INFO) << " coroutine enter ..";
+    LOG(INFO) << " coroutine pasued..";
+    co_sleep(50);
+    LOG(INFO) << " coroutine resumed..";
+    co_sleep_resumed = true;
+  };
+
+  loop.PostDelayTask(NewClosure([&]() {
+    loop.QuitLoop();
+  }), 1000); // exit ater 5s
+
+  loop.WaitLoopEnd();
+
+  REQUIRE(co_sleep_resumed);
+}
+

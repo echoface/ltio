@@ -6,6 +6,7 @@
 #include <base/base_micro.h>
 #include <base/closure/closure_task.h>
 #include <base/message_loop/message_loop.h>
+#include <atomic>
 
 #include <mutex>
 #include <condition_variable>
@@ -31,6 +32,7 @@ namespace base {
 //
 class MessageLoop;
 
+/*start and stop are not thread safe*/
 class RepeatingTimer {
 public:
   // new a timer with spcial runner loop
@@ -45,9 +47,10 @@ public:
 private:
   void OnTimeout();
 
-  bool running_ = false;
+  bool running_;
   StlClosure user_task_;
   MessageLoop* runner_loop_ = NULL;
+
   std::unique_ptr<TimeoutEvent> timeout_event_;
 
   std::mutex m;

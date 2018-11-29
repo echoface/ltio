@@ -43,7 +43,8 @@ public:
     try {
       closure_task();
     } catch (...) {
-      LOG(WARNING) << "Task Closure Exception, Task From:" << ClosureInfo();
+      LOG(WARNING) << "Task Error Exception, From:" << ClosureInfo();
+      abort();
     }
   }
 private:

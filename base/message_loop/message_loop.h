@@ -16,6 +16,8 @@
 #include "memory/scoped_ref_ptr.h"
 #include "memory/refcountedobject.h"
 
+#include <condition_variable>
+
 namespace base {
 
 enum LoopState {
@@ -105,7 +107,8 @@ class MessageLoop : public PumpDelegate {
     std::atomic_int has_join_;
     std::atomic_flag running_;
 
-    std::mutex pending_lock_;
+    std::mutex start_stop_lock_;
+    std::condition_variable cv_;
 
     std::string loop_name_;
     std::unique_ptr<std::thread> thread_ptr_;

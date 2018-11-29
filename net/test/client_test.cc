@@ -81,7 +81,7 @@ int main(int argc, char* argv[]) {
 
   loop.PostTask(NewClosure([]() {
     for (int i = 0; i < 10; i++) {
-      go std::bind(SendRequest, i);
+      co_go std::bind(SendRequest, i);
     }
   }));
 
