@@ -11,17 +11,15 @@ namespace net {
 //static
 RefHttpResponse HttpResponse::CreatWithCode(uint16_t code) {
   auto r = std::make_shared<HttpResponse>();
-  r->SetMessageType(MessageType::kResponse);
   r->SetResponseCode(code);
   return std::move(r);
 }
 
 HttpResponse::HttpResponse()
-  : ProtocolMessage("http"),
-  keepalive_(false),
-  http_major_(1),
-  http_minor_(1) {
-  SetMessageType(MessageType::kResponse);
+  : ProtocolMessage("http", MessageType::kResponse),
+    keepalive_(false),
+    http_major_(1),
+    http_minor_(1) {
 }
 
 HttpResponse::~HttpResponse() {

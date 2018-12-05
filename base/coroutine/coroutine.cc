@@ -66,12 +66,12 @@ Coroutine::Coroutine(CoroDelegate* d, bool main) :
     coro_create(this, coro_main, this, stack_.sptr, stack_.ssze);
   }
   coroutine_counter.fetch_add(1);
-  LOG(INFO) << "Coroutine +1 now has" << coroutine_counter.load() << " live coroutine";
+  LOG(INFO) << "Coroutine born, now has [" << coroutine_counter.load() << "] live coroutine";
 }
 
 Coroutine::~Coroutine() {
   coroutine_counter.fetch_sub(1);
-  LOG(INFO) << "Coroutine -1 now has " << coroutine_counter.load() << " live coroutine";
+  LOG(INFO) << "Coroutine gone, now has [" << coroutine_counter.load() << "] live coroutine";
 
   CHECK(state_ == CoroState::kDone);
   VLOG(GLOG_VTRACE) << "coroutine gone! count:" << coroutine_counter.load() << "st:" << StateToString();

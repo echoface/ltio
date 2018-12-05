@@ -7,7 +7,7 @@
 namespace net {
 
 LineProtoService::LineProtoService()
-  : ProtoService("line") {
+  : ProtoService() {
 }
 
 LineProtoService::~LineProtoService() {
@@ -27,9 +27,7 @@ void LineProtoService::OnDataRecieved(const RefTcpChannel& channel, IOBuffer* bu
   }
 
   {
-    std::shared_ptr<LineMessage> msg = std::make_shared<LineMessage>();
-    msg->SetMessageType(InMessageType());
-    //IOCtx
+    std::shared_ptr<LineMessage> msg(new LineMessage(InComingMessageType()));
     msg->SetIOContextWeakChannel(channel);
 
     const uint8_t* start = buf->GetRead();
@@ -45,25 +43,6 @@ void LineProtoService::OnDataRecieved(const RefTcpChannel& channel, IOBuffer* bu
     }
   }
 }
-/*
-bool LineProtoService::DecodeToMessage(IOBuffer* buf, ProtocolMessage* out_msg) {
-
-  LineMessage* line_msg = static_cast<LineMessage*>(out_msg);
-
-  const uint8_t* line_crlf =  buf->FindCRLF();
-  if (!line_crlf) {
-    return false;
-  }
-  const uint8_t* start = buf->GetRead();
-  int32_t len = line_crlf - start;
-
-  std::string& body = line_msg->MutableBody();
-  body.assign((const char*)start, len);
-
-  buf->Consume(len + 2);
-  return true;
-}
-*/
 
 bool LineProtoService::EncodeToBuffer(const ProtocolMessage* msg, IOBuffer* out_buffer) {
   if (msg->Protocol() != "line") {
@@ -74,6 +53,17 @@ bool LineProtoService::EncodeToBuffer(const ProtocolMessage* msg, IOBuffer* out_
   out_buffer->WriteString(line_msg->Body());
   out_buffer->WriteRawData("\r\n", 2);
   return true;
+}
+
+bool LineProtoService::SendProtocolMessage(RefProtocolMessage& message) {
+  static const std::string kCRCN("\r\n");
+  const LineMessage* line_msg = static_cast<const LineMessage*>(message.get());
+  int ret = writer_->Send((const uint8_t*)line_msg->Body().data(), line_msg->Body().size());
+  if (ret < 0) {
+    return false;
+  }
+  ret = writer_->Send((const uint8_t*)kCRCN.data(), 2);
+  return ret >= 0;
 }
 
 bool LineProtoService::CloseAfterMessage(ProtocolMessage* request, ProtocolMessage* response) {

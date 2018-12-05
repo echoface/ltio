@@ -182,8 +182,8 @@ bool ColumnParser::Initialize(const Json& config) {
     LOG(INFO) << "column parser header field not correct:" << header;
     return false;
   }
-
-  if (const auto it = config.find("ignore_header_line"); it == config.end()) {
+  auto it = config.find("ignore_header_line");
+  if (it == config.end()) {
     ignore_header_line_ = false;
   } else {
     ignore_header_line_ = (*it);

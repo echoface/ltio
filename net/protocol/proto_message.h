@@ -8,16 +8,16 @@
 
 namespace net {
 
-typedef enum {
-  kNone      = 0x0,
-  kRequest   = 0x1,
-  kResponse  = 0x2,
-} MessageType;
+enum class MessageType {
+  kRequest,
+  kResponse,
+};
 
 typedef enum {
   kNothing = 0,
   kTimeOut = 1,
-  kChannelBroken = 2
+  kChannelBroken = 2,
+  kBadMessage = 3,
 } FailInfo;
 
 typedef struct {
@@ -40,13 +40,11 @@ typedef std::function<void(const RefProtocolMessage&/*request*/)> ProtoMessageHa
 
 class ProtocolMessage {
 public:
-  ProtocolMessage(const std::string);
+  ProtocolMessage(const std::string, MessageType t);
   virtual ~ProtocolMessage();
 
   const std::string& Protocol() const;
-
-  void SetMessageType(MessageType t) {type_ = t;};
-  const MessageType ProtocolMessageType() const {return type_;};
+  const MessageType& GetMessageType() const {return type_;};
 
   IOContext& GetIOCtx() {return io_context_;}
   WorkContext& GetWorkCtx() {return work_context_;}
@@ -71,10 +69,11 @@ protected:
   WorkContext work_context_;
 private:
   // Work Context
+  MessageType type_;
+  std::string proto_;
+
   FailInfo fail_info_;
   std::string fail_;
-  std::string proto_;
-  MessageType type_;
   bool responsed_;
   RefProtocolMessage response_;
 };

@@ -56,7 +56,7 @@ private:
   friend class ReqParseContext;
 
   bool keepalive_;
-
+  int array_[10];
   std::string method_;
   std::string url_;
   std::string body_;

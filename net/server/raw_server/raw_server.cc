@@ -111,7 +111,7 @@ void RawServer::HandleRawRequest(const RefProtocolMessage request) {
     return;
   }
 
-  RefProtocolMessage response = channel->GetProtoService()->DefaultResponse(request);
+  RefProtocolMessage response = channel->GetProtoService()->NewResponseFromRequest(request);
   do {
     if (dispatcher_ && !dispatcher_->SetWorkContext(request->GetWorkCtx())) {
       LOG(ERROR) << "Set WorkerContext failed";
@@ -120,7 +120,7 @@ void RawServer::HandleRawRequest(const RefProtocolMessage request) {
     message_handler_((RawMessage*)request.get(), (RawMessage*)response.get());
   } while(0);
 
-  channel->GetProtoService()->BeforeReplyMessage(request.get(), response.get());
+	channel->GetProtoService()->BeforeSendResponse(request.get(), response.get());
   bool close = channel->GetProtoService()->CloseAfterMessage(request.get(), response.get());
 
   if (channel->InIOLoop()) { //send reply directly

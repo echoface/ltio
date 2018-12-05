@@ -94,6 +94,7 @@ public:
     }
     holder_->CommitReply();
     int ret = ::write(notify_fd_, &msg, sizeof(msg));
+    LOG_IF(ERROR, ret != sizeof(msg)) << "run reply failed for task:" << ClosureInfo();
   }
 private:
 

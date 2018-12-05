@@ -30,8 +30,7 @@ void AsyncChannel::StartClient() {
 void AsyncChannel::SendRequest(RefProtocolMessage request)  {
   CHECK(channel_->InIOLoop());
 
-  bool success = channel_->GetProtoService()->EnsureProtocol(request.get());
-
+  bool success = channel_->GetProtoService()->BeforeSendRequest(request.get());
   if (success) {
     success = channel_->SendProtoMessage(request);
   }
@@ -78,10 +77,7 @@ void AsyncChannel::OnResponseMessage(const RefProtocolMessage& res) {
   if (iter == in_progress_.end()) {
     return;
   }
-  //for (auto kv : in_progress_) {
-    //LOG(INFO) << " key identify:" << kv.first << " message identify:" << kv.second->MessageIdentify();
-  //}
-  //LOG(INFO) << __FUNCTION__ <<  " " << iter->second->MessageIdentify() << " response identify:" << identify;
+
   CHECK(iter->second->MessageIdentify() == identify);
 
   delegate_->OnRequestGetResponse(iter->second, res);

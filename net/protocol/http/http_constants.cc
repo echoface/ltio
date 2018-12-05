@@ -15,7 +15,7 @@ const std::string HttpConstant::kAcceptEncoding = "Accept-Encoding";
 //all default full header and response
 const std::string HttpConstant::kBadRequest = "HTTP/1.1 400 Bad Request\r\n\r\n";
 
-const std::string HttpConstant::kHeaderKeepAlive = "Connection: Keep-Alive\r\n";
+const std::string HttpConstant::kHeaderKeepAlive = "Connection: keep-alive\r\n";
 const std::string HttpConstant::kHeaderNotKeepAlive = "Connection: Close\r\n";
 const std::string HttpConstant::kHeaderGzipEncoding = "Content-Encoding: gzip\r\n";
 const std::string HttpConstant::kHeaderDefaultContentType = "Content-Type: text/plain\r\n";

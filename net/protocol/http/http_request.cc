@@ -9,14 +9,13 @@
 namespace net {
 
 HttpRequest::HttpRequest()
-  : ProtocolMessage("http"),
-  keepalive_(false),
-  method_("GET"),
-  url_("/"),
-  http_major_(1),
-  http_minor_(1),
-  url_param_parsed_(false) {
-  SetMessageType(kRequest);
+  : ProtocolMessage("http", MessageType::kRequest),
+    keepalive_(false),
+    method_("GET"),
+    url_("/"),
+    http_major_(1),
+    http_minor_(1),
+    url_param_parsed_(false) {
 }
 
 HttpRequest::~HttpRequest() {

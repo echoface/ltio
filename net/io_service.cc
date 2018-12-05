@@ -19,7 +19,6 @@ IOService::IOService(const InetAddress addr,
   : protocol_(protocol),
     acceptor_loop_(workloop),
     delegate_(delegate),
-    dispatcher_(NULL),
     is_stopping_(false) {
 
   CHECK(delegate_);
@@ -84,8 +83,8 @@ void IOService::OnNewConnection(int local_socket, const InetAddress& peer_addr) 
   }
 
 
-  base::MessageLoop* io_work_loop = delegate_->GetNextIOWorkLoop();
-  if (!io_work_loop) {
+  base::MessageLoop* io_loop = delegate_->GetNextIOWorkLoop();
+  if (!io_loop) {
     socketutils::CloseSocket(local_socket);
     return;
   }
@@ -101,10 +100,7 @@ void IOService::OnNewConnection(int local_socket, const InetAddress& peer_addr) 
 
   net::InetAddress local_addr(socketutils::GetLocalAddrIn(local_socket));
 
-  auto new_channel = TcpChannel::CreateServerChannel(local_socket,
-                                                     local_addr,
-                                                     peer_addr,
-                                                     io_work_loop);
+  auto new_channel = TcpChannel::Create(local_socket, local_addr, peer_addr, io_loop);
 
   //TODO: Is peer_addr.IpPortAsString Is unique?
   const std::string channel_name = peer_addr.IpPortAsString();
@@ -155,10 +151,6 @@ void IOService::RemoveConncetion(const RefTcpChannel connection) {
 
 void IOService::SetProtoMessageHandler(ProtoMessageHandler handler) {
   message_handler_ = handler;
-}
-
-void IOService::SetWorkLoadDispatcher(WorkLoadDispatcher* d) {
-  dispatcher_ = d;
 }
 
 }// endnamespace net

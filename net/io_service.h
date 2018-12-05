@@ -74,7 +74,6 @@ private:
   IOServiceDelegate* delegate_;
   //RefProtoService proto_service_;
 
-  WorkLoadDispatcher* dispatcher_;
   // install this callback to protoservice
   ProtoMessageHandler message_handler_;
 

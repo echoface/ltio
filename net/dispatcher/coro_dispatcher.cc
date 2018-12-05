@@ -30,6 +30,7 @@ bool CoroWlDispatcher::ResumeWorkContext(WorkContext& ctx) {
 	  return false;
 	}
 	ctx.resume_ctx();
+	return true;
 }
 
 bool CoroWlDispatcher::SetWorkContext(WorkContext& ctx) {

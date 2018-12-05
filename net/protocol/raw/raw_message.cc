@@ -6,18 +6,16 @@ namespace net {
 const uint32_t RawMessage::kRawHeaderSize = sizeof(RawHeader);
 
 RefRawMessage RawMessage::CreateRequest() {
-  auto m = std::make_shared<RawMessage>();
-  m->SetMessageType(MessageType::kRequest);
+  auto m = std::make_shared<RawMessage>(MessageType::kRequest);
   return std::move(m);
 }
 RefRawMessage RawMessage::CreateResponse() {
-  auto m = std::make_shared<RawMessage>();
-  m->SetMessageType(MessageType::kResponse);
+  auto m = std::make_shared<RawMessage>(MessageType::kResponse);
   return std::move(m);
 }
 
-RawMessage::RawMessage()
-  : ProtocolMessage("raw") {
+RawMessage::RawMessage(MessageType t)
+  : ProtocolMessage("raw", t) {
 }
 RawMessage::~RawMessage() {
 }

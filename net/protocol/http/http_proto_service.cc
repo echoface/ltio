@@ -10,8 +10,9 @@
 
 namespace net {
 
-static const int32_t kMeanHeaderSize = 24;
+static const int32_t kMeanHeaderSize = 32;
 static const int32_t kHttpMsgReserveSize = 64;
+static const int32_t kCompressionThreshold = 4096;
 
 //static
 http_parser_settings HttpProtoService::req_parser_settings_ = {
@@ -41,7 +42,7 @@ http_parser_settings HttpProtoService::res_parser_settings_ = {
 };
 
 HttpProtoService::HttpProtoService()
-  : ProtoService("http"),
+  : ProtoService(),
     request_context_(NULL),
     response_context_(NULL) {
 
@@ -62,7 +63,7 @@ void HttpProtoService::OnDataFinishSend(const RefTcpChannel& channel) {
 
 void HttpProtoService::OnDataRecieved(const RefTcpChannel& channel, IOBuffer* buf) {;
   bool success = false;
-  if (channel->IsServerChannel()) {// parse Request
+  if (IsServerSideservice()) {// parse Request
     success = ParseHttpRequest(channel, buf);
   } else {
     success = ParseHttpResponse(channel, buf);
@@ -80,7 +81,7 @@ bool HttpProtoService::DecodeToMessage(IOBuffer* buffer, ProtocolMessage* out_ms
 bool HttpProtoService::EncodeToBuffer(const ProtocolMessage* msg, IOBuffer* out_buffer) {
   CHECK(msg && out_buffer);
 
-  switch (msg->ProtocolMessageType()) {
+  switch (msg->GetMessageType()) {
     case MessageType::kRequest: {
       const HttpRequest* request = static_cast<const HttpRequest*>(msg);
       return RequestToBuffer(request, out_buffer);
@@ -131,7 +132,7 @@ bool HttpProtoService::ParseHttpRequest(const RefTcpChannel& channel, IOBuffer* 
     request_context_->messages_.pop_front();
 
     message->SetIOContextWeakChannel(channel);
-    CHECK(message->ProtocolMessageType() == MessageType::kRequest);
+    CHECK(message->GetMessageType() == MessageType::kRequest);
 
     if (message_handler_) {
       message_handler_(std::static_pointer_cast<ProtocolMessage>(message));
@@ -169,7 +170,7 @@ bool HttpProtoService::ParseHttpResponse(const RefTcpChannel& channel, IOBuffer*
     response_context_->messages_.pop_front();
 
     message->SetIOContextWeakChannel(channel);
-    CHECK(message->ProtocolMessageType() == MessageType::kResponse);
+    CHECK(message->GetMessageType() == MessageType::kResponse);
 
     if (message_handler_) {
       message_handler_(std::static_pointer_cast<ProtocolMessage>(message));
@@ -228,6 +229,16 @@ bool HttpProtoService::RequestToBuffer(const HttpRequest* request, IOBuffer* buf
   return true;
 }
 
+bool HttpProtoService::SendProtocolMessage(RefProtocolMessage& message) {
+  BeforeWriteMessage(message.get());
+
+  IOBuffer buffer;
+  if (!EncodeToBuffer(message.get(), &buffer)) {
+    return false;
+  }
+  return writer_->Send(buffer.GetRead(), buffer.CanReadSize()) >= 0;
+}
+
 //static
 bool HttpProtoService::ResponseToBuffer(const HttpResponse* response, IOBuffer* buffer) {
   CHECK(response && buffer);
@@ -235,14 +246,11 @@ bool HttpProtoService::ResponseToBuffer(const HttpResponse* response, IOBuffer* 
   int32_t guess_size = kHttpMsgReserveSize + response->Headers().size() * kMeanHeaderSize + response->Body().size();
   buffer->EnsureWritableSize(guess_size);
 
-  //char v[14]; //"HTTP/1.1 xxx "
-  //snprintf(v, 13, "HTTP/%d.%d %d ", (int)response->VersionMajor(), (int)response->VersionMinor(), response->ResponseCode());
-  std::string headline("HTTP/1.1 ");
-  headline.append(std::to_string(response->ResponseCode()));
-  headline.append(" ");
-  headline.append(HttpConstant::StatusCodeCStr(response->ResponseCode()));
-  headline.append(HttpConstant::kCRCN);
-  buffer->WriteString(headline);
+  std::ostringstream oss;
+  int32_t code = response->ResponseCode();
+  oss << "HTTP/1." << response->VersionMinor() << " " << code << " "
+      << HttpConstant::StatusCodeCStr(code) << HttpConstant::kCRCN;
+  buffer->WriteString(oss.str());
 
   for (const auto& header : response->Headers()) {
     buffer->WriteString(header.first);
@@ -274,43 +282,54 @@ bool HttpProtoService::ResponseToBuffer(const HttpResponse* response, IOBuffer* 
   return true;
 }
 
-const RefProtocolMessage HttpProtoService::DefaultResponse(const RefProtocolMessage& request)  {
-  CHECK(request);
-  HttpRequest* http_request = static_cast<HttpRequest*>(request.get());
+const RefProtocolMessage HttpProtoService::NewResponseFromRequest(const RefProtocolMessage& request)  {
+  CHECK(request && request->GetMessageType() == MessageType::kRequest);
 
-  const RefHttpResponse http_res = HttpResponse::CreatWithCode(500);
+  const HttpRequest* http_request = static_cast<HttpRequest*>(request.get());
+
+  RefHttpResponse http_res = HttpResponse::CreatWithCode(500);
+
   http_res->SetKeepAlive(http_request->IsKeepAlive());
+  http_res->InsertHeader("Content-Type", "text/plain");
 
   return std::move(http_res);
 }
 
 bool HttpProtoService::CloseAfterMessage(ProtocolMessage* request, ProtocolMessage* response) {
-  if (!request) {
-    return true;
-  }
-  HttpRequest* http_request = static_cast<HttpRequest*>(request);
-  //HttpResponse* http_response = static_cast<HttpResponse*>(response);
-  if (http_request->IsKeepAlive()) {
-    return false;
-  }
-  return true;
+  if (!request) {return true;}
+
+  return !static_cast<HttpRequest*>(request)->IsKeepAlive();
 }
 
-void HttpProtoService::BeforeSendMessage(ProtocolMessage* out_message) {
+void HttpProtoService::BeforeWriteRequestToBuffer(ProtocolMessage* out_message) {
   HttpRequest* request = static_cast<HttpRequest*>(out_message);
-  if (request->Body().size() < 4096 ||
-      request->HasHeaderField(HttpConstant::kContentEncoding)) {
-    return;
-  }
-  //compress the body default
-  std::string compressed_body;
-  if (0 == base::Gzip::compress_gzip(request->Body(), compressed_body)) { //success
-    request->body_ = std::move(compressed_body);
-    request->InsertHeader("Content-Encoding", "gzip");
+  if (request->Body().size() > kCompressionThreshold &&
+      !request->HasHeaderField(HttpConstant::kContentEncoding)) {
+
+    std::string compressed_body;
+    if (0 == base::Gzip::compress_gzip(request->Body(), compressed_body)) { //success
+      request->InsertHeader(HttpConstant::kContentEncoding, "gzip");
+      request->InsertHeader(HttpConstant::kContentLength, std::to_string(compressed_body.size()));
+      request->body_ = std::move(compressed_body);
+    }
   }
 }
 
-void HttpProtoService::BeforeReplyMessage(ProtocolMessage* in, ProtocolMessage* out) {
+void HttpProtoService::BeforeWriteResponseToBuffer(ProtocolMessage* out_message) {
+  HttpResponse* response = static_cast<HttpResponse*>(out_message);
+  if (response->Body().size() > kCompressionThreshold &&
+      !response->HasHeaderField(HttpConstant::kContentEncoding)) {
+
+    std::string compressed_body;
+    if (0 == base::Gzip::compress_gzip(response->Body(), compressed_body)) { //success
+      response->InsertHeader(HttpConstant::kContentEncoding, "gzip");
+      response->InsertHeader(HttpConstant::kContentLength, std::to_string(compressed_body.size()));
+      response->body_ = std::move(compressed_body);
+    }
+  }
+}
+
+void HttpProtoService::BeforeSendResponse(ProtocolMessage *in, ProtocolMessage *out) {
   HttpRequest* request = static_cast<HttpRequest*>(in);
   HttpResponse* response = static_cast<HttpResponse*>(out);
 
@@ -332,7 +351,6 @@ void HttpProtoService::BeforeReplyMessage(ProtocolMessage* in, ProtocolMessage* 
       }
     }
   }
-
 }
 
 }//end namespace

@@ -42,7 +42,5 @@ protected:
   uint32_t request_timeout_ = 1000; //1s
 };
 
-
-
 }//end namespace
 #endif

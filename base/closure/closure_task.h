@@ -35,7 +35,7 @@ private:
 template <typename Functor>
 class ClosureTask : public TaskBase {
 public:
-  explicit ClosureTask(const Location& location, const Functor& closure)
+  explicit ClosureTask(const Location& location, const Functor closure)
    : TaskBase(location),
      closure_task(closure) {
   }
@@ -59,11 +59,12 @@ public:
         cleanup_task(cleanup) {
   }
   ~ClosureTaskWithCleanup() {
-    //try {
+    try {
       cleanup_task();
-    //} catch (...) {
+    } catch (...) {
       LOG(WARNING) << "Cleanup Closure Exception, Task From:" << TaskBase::ClosureInfo();
-    //}
+      abort();
+    }
   }
 private:
   Cleanup cleanup_task;

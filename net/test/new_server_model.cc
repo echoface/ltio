@@ -37,10 +37,12 @@ void HandleHttp(const HttpRequest* req, HttpResponse* res) {
 }
 
 void HandleRaw(const RawMessage* req, RawMessage* res) {
-  LOG(INFO) << "Got A Raw Message";
   res->SetCode(0);
   res->SetMethod(2);
   res->SetContent("Raw Message");
+
+  LOG(INFO) << "Got A Raw Message:" << req->MessageDebug()
+  << "response:" << res->MessageDebug();
 }
 
 net::ClientRouter*  raw_router; //(base::MessageLoop*, const InetAddress&);
@@ -66,7 +68,7 @@ void StartRawClient() {
     raw_router = new net::ClientRouter(&main_loop, server_address);
     net::RouterConf router_config;
     router_config.protocol = "raw";
-    router_config.connections = 10;
+    router_config.connections = 1;
     router_config.recon_interal = 5000;
     router_config.message_timeout = 1000;
     raw_router->SetupRouter(router_config);
@@ -105,13 +107,13 @@ void SendHttpRequest() {
 }
 
 void SendRawRequest() {
-  auto raw_request = std::make_shared<RawMessage>();
+  auto raw_request = std::make_shared<RawMessage>(MessageType::kRequest);
   raw_request->SetMethod(1);
   raw_request->SetContent("ABC");
 
   RawMessage* raw_response = raw_router->SendRecieve(raw_request);
   if (raw_response) {
-    LOG(INFO) << "raw client got response:" << raw_response->Content();
+    LOG(INFO) << "raw client got response:" << raw_response->Content() << " method:" << (int)raw_response->Method();
   } else {
     LOG(ERROR) << "raw client request failed:" << raw_request->FailMessage();
   }
@@ -218,6 +220,7 @@ int main(int argc, char* argv[]) {
 
   net::HttpServer http_server;
   http_server.SetIoLoops(loops);
+  //http_server.SetDispatcher(dispatcher_);
   http_server.SetDispatcher(dispatcher_);
   http_server.ServeAddressSync("http://0.0.0.0:5006", std::bind(HandleHttp, std::placeholders::_1, std::placeholders::_2));
 

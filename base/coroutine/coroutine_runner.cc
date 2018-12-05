@@ -70,8 +70,13 @@ void CoroRunner::YieldCurrent(int32_t wc) {
     LOG(INFO) << " You try to going pause a coroutine which can't be yield";
     return;
   }
+  LOG(INFO) << "coroutine id:" << tls_runner->current_ << " resume id:" << tls_runner->current_->identify_ << " will paused";
   tls_runner->current_->wc_ = wc;
   tls_runner->TransferTo(tls_runner->main_coro_);
+}
+
+intptr_t CoroRunner::CurrentCoroutineId() const {
+  return (intptr_t)current_;
 }
 
 void CoroRunner::SleepMillsecond(uint64_t ms) {
@@ -113,6 +118,7 @@ void CoroRunner::ResumeCoroutine(std::weak_ptr<Coroutine> weak, uint64_t id) {
     return;
   }
 
+  LOG(INFO) << "coroutine id:" << coroutine << " resume id:" << coroutine->identify_;
   coroutine->wc_ = 0;
   coroutine->identify_++;
   TransferTo(coroutine);

@@ -36,13 +36,15 @@ public:
     }
     template <typename Functor>
     inline void operator<<(Functor closure_fn) {
-      target_loop_->PostTask(NewClosure([&]() {
+
+    	base::StlClosure func = [this, closure_fn]() {
         CoroRunner& runner = Runner();
         runner.coro_tasks_.push_back(std::move(CreateClosure(location_, closure_fn)));
         if (!runner.invoke_coro_shceduled_ && target_loop_) {
           target_loop_->PostTask(NewClosure(std::bind(&CoroRunner::InvokeCoroutineTasks, &runner)));
         }
-      }));
+    	};
+      target_loop_->PostTask(NewClosure(func));
     }
     Location location_;
     base::MessageLoop* target_loop_ = MessageLoop::Current();
@@ -56,6 +58,7 @@ public:
   static StlClosure CurrentCoroResumeCtx();
 
   void SleepMillsecond(uint64_t ms);
+  intptr_t CurrentCoroutineId() const;
 protected:
   CoroRunner();
   ~CoroRunner();

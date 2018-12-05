@@ -39,6 +39,17 @@ void QueuedChannel::StartClient() {
 
 void QueuedChannel::SendRequest(RefProtocolMessage request)  {
   CHECK(channel_->InIOLoop());
+ 
+  ProtoService* service = channel_->GetProtoService();
+  bool success = service->BeforeSendRequest(request.get());
+
+  if (!success) {
+    request->SetFailInfo(FailInfo::kBadMessage);
+    VLOG(GLOG_VTRACE) << __FUNCTION__ << " bad request detected";
+    delegate_->OnRequestGetResponse(request, kNullResponse);
+    return;
+  }
+
 
   waiting_list_.push_back(std::move(request));
 
@@ -82,7 +93,7 @@ void QueuedChannel::OnRequestTimeout(WeakProtocolMessage weak) {
   if (request.get() != in_progress_request_.get()) {
     return;
   }
-  LOG(INFO) << __FUNCTION__ << " call OnrequestGetResponse";
+  LOG(INFO) << __FUNCTION__ << " call OnRequestGetResponse for timeout";
   request->SetFailInfo(FailInfo::kTimeOut);
   delegate_->OnRequestGetResponse(request, kNullResponse);
   in_progress_request_.reset();
@@ -128,6 +139,7 @@ void QueuedChannel::OnChannelClosed(const RefTcpChannel& channel) {
   }
 
   auto guard = shared_from_this();
+  LOG(INFO) << __FUNCTION__ << " , Channel:" << channel_->ChannelName() << " closed";
   delegate_->OnClientChannelClosed(guard);
 }
 

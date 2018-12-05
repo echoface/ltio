@@ -3,9 +3,7 @@
 namespace net {
 
 RedisResponse::RedisResponse() :
-  ProtocolMessage("redis") {
-
-  ProtocolMessage::SetMessageType(kResponse);
+  ProtocolMessage("redis", MessageType::kResponse) {
 }
 
 RedisResponse::~RedisResponse() {

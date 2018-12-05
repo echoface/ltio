@@ -11,7 +11,7 @@ namespace net {
 class TcpProtoService : public ProtoService {
 public:
   TcpProtoService() :
-    ProtoService("tcp") {
+    ProtoService() {
   }
   ~TcpProtoService() {
   }
@@ -19,6 +19,10 @@ public:
   virtual void SetMessageHandler(ProtoMessageHandler) {
     ;
   }
+
+  bool SendProtocolMessage(RefProtocolMessage& message) {
+    return true;
+  };
 
   void OnStatusChanged(const RefTcpChannel& channel) override {
     LOG(INFO) << "RefTcpChannel status changed:" << channel->StatusAsString();

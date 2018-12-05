@@ -3,10 +3,10 @@
 
 namespace net {
 
-ProtocolMessage::ProtocolMessage(const std::string protocol)
-  : fail_info_(kNothing),
+ProtocolMessage::ProtocolMessage(const std::string protocol, MessageType type)
+  : type_(type),
     proto_(protocol),
-    type_(kNone),
+    fail_info_(kNothing),
     responsed_(false) {
   work_context_.loop = NULL;
 }
@@ -57,10 +57,8 @@ const char* ProtocolMessage::MessageTypeStr() const {
       return "Request Message";
     case MessageType::kResponse:
       return "Response Message";
-    case MessageType::kNone:
-      return "MessageNone";
     default:
-      return "MessageNone";
+      break;
   }
   return "MessageNone";
 }

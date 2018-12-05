@@ -26,14 +26,17 @@ public:
   bool DecodeToMessage(IOBuffer* buffer, ProtocolMessage* out_msg);
   bool EncodeToBuffer(const ProtocolMessage* msg, IOBuffer* out_buffer);
 
-  const RefProtocolMessage DefaultResponse(const RefProtocolMessage&) override;
+  bool SendProtocolMessage(RefProtocolMessage& message) override;
+  const RefProtocolMessage NewResponseFromRequest(const RefProtocolMessage &) override;
   bool CloseAfterMessage(ProtocolMessage* request, ProtocolMessage* response) override;
 
   static bool RequestToBuffer(const HttpRequest*, IOBuffer*);
   static bool ResponseToBuffer(const HttpResponse*, IOBuffer*);
 
-  void BeforeSendMessage(ProtocolMessage* out_message) override;
-  void BeforeReplyMessage(ProtocolMessage* in, ProtocolMessage* out) override;
+  void BeforeWriteRequestToBuffer(ProtocolMessage* out_message);
+  void BeforeWriteResponseToBuffer(ProtocolMessage* out_message);
+
+  void BeforeSendResponse(ProtocolMessage *in, ProtocolMessage *out) override;
 private:
   bool ParseHttpRequest(const RefTcpChannel&, IOBuffer*);
   bool ParseHttpResponse(const RefTcpChannel&, IOBuffer*);

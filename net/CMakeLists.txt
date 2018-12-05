@@ -1,6 +1,5 @@
-SET(CMAKE_C_COMPILER g++)
 ADD_DEFINITIONS(-std=c++11)
-ADD_DEFINITIONS(-fPIC)
+SET(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set(LTNET_SOURCE
   #server.cc
@@ -57,18 +56,14 @@ SET(LTNETEXECUTE_LINKLIBS
   pthread
 )
 
-SET(LTNET_DEPENDENCY
-  ltbase
-)
+SET(LTNET_DEPENDENCY ltbase)
 
-ADD_LIBRARY(ltnet STATIC
-  ${LTNET_SOURCE}
-)
+ADD_LIBRARY(ltnet STATIC ${LTNET_SOURCE})
+ADD_LIBRARY(ltnet_shared SHARED ${LTNET_SOURCE})
 
-# 指定静态库的输出名称#set_target_properties(ltnet_static PROPERTIES OUTPUT_NAME "ltnet")
-# 使动态库和静态库同时存在
-#set_target_properties(ltnet PROPERTIES CLEAN_DIRECT_OUTPUT 1)
-#set_target_properties(ltnet_static PROPERTIES CLEAN_DIRECT_OUTPUT 1)
+set_target_properties(ltnet_shared PROPERTIES OUTPUT_NAME "ltnet")
+set_target_properties(ltnet PROPERTIES CLEAN_DIRECT_OUTPUT 1)
+set_target_properties(ltnet_shared PROPERTIES CLEAN_DIRECT_OUTPUT 1)
 
 add_dependencies(ltnet
   ${LTNET_DEPENDENCY}

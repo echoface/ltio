@@ -189,15 +189,11 @@ int ResParseContext::OnHttpResponseBegin(http_parser* parser) {
   return 0;
 }
 int ResParseContext::OnUrlParsed(http_parser* parser, const char *url_start, size_t url_len) {
-  //LOG(INFO) << __FUNCTION__ << " Parse Request Should Not Reached";
   return 0;
 }
 int ResParseContext::OnStatusCodeParsed(http_parser* parser, const char *start, size_t len) {
   ResParseContext* context = (ResParseContext*)parser->data;
   CHECK(context);
-
-  //LOG(INFO) << __FUNCTION__ << " status code:" << std::string(start, len);
-  //context->current_->status_code_ =
   return 0;
 }
 
@@ -256,12 +252,7 @@ int ResParseContext::OnHttpResponseEnd(http_parser* parser) {
   ResParseContext* context = (ResParseContext*)parser->data;
   CHECK(context);
 
-  int type = parser->type;
-  if (type == HTTP_RESPONSE) {
-    LOG(ERROR) << __FUNCTION__ << " A HTTP_RESPONSE";
-  }
-
-  //context->current_->SetMessageType(MessagetType::kResponse);
+  CHECK(parser->type == HTTP_RESPONSE);
   context->current_->keepalive_ = http_should_keep_alive(parser);
   context->current_->http_major_ = parser->http_major;
   context->current_->http_minor_ = parser->http_minor;
@@ -287,17 +278,13 @@ int ResParseContext::OnHttpResponseEnd(http_parser* parser) {
 
   context->messages_.push_back(std::move(context->current_));
   context->current_.reset();
-
-  LOG(INFO) << __FUNCTION__ << " Get A Full HTTP_RESPONSE Message";
   return 0;
 }
 
 int ResParseContext::OnChunkHeader(http_parser* parser) {
-  LOG(INFO) << __FUNCTION__ ;
   return 0;
 }
 int ResParseContext::OnChunkFinished(http_parser* parser) {
-  LOG(INFO) << __FUNCTION__ ;
   return 0;
 }
 

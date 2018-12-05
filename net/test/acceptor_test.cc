@@ -18,11 +18,7 @@ int main(int argc, char** argv) {
     LOG(INFO) << " New Connection from:" << peer.IpPortAsString();
 
     net::InetAddress local(net::socketutils::GetLocalAddrIn(fd));
-    auto f = net::TcpChannel::Create(fd,
-                                     local,
-                                     peer,
-                                     &loop,
-                                     net::ChannelServeType::kServerType);
+    auto f = net::TcpChannel::Create(fd, local, peer, &loop);
     f->Start();
     connections.push_back(f);
 

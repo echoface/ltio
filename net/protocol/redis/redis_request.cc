@@ -3,8 +3,7 @@
 namespace net {
 
 RedisRequest::RedisRequest() :
-  ProtocolMessage("redis") {
-  ProtocolMessage::SetMessageType(kRequest);
+  ProtocolMessage("redis", MessageType::kRequest) {
 }
 
 RedisRequest::~RedisRequest() {

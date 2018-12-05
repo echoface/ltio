@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 
+ADD_DEFINITIONS(-std=c++11)
+SET(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 SET(LTCOMPONENT_DEPENDENCY
   3rd
@@ -32,9 +34,14 @@ SET(COMPONENT_LINKLIBS
 	ltbase
 	${GLOG_LIBRARY})
 
-ADD_LIBRARY(ltcomponent STATIC
-	${COMPONENT_SOURCES}
-)
+ADD_LIBRARY(ltcomponent STATIC ${COMPONENT_SOURCES})
+ADD_LIBRARY(ltcomponent_shared SHARED ${COMPONENT_SOURCES})
+
+set_target_properties(ltcomponent_shared PROPERTIES OUTPUT_NAME "ltcomponent")
+
+set_target_properties(ltcomponent PROPERTIES CLEAN_DIRECT_OUTPUT 1)
+set_target_properties(ltcomponent_shared PROPERTIES CLEAN_DIRECT_OUTPUT 1)
+
 TARGET_LINK_LIBRARIES(ltcomponent
 	${COMPONENT_LINKLIBS}
 )

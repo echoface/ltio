@@ -20,6 +20,9 @@ ClientRouter::ClientRouter(base::MessageLoop* loop, const InetAddress& server)
   router_counter_ = 0;
   CHECK(work_loop_);
   connector_ = std::make_shared<Connector>(work_loop_, this);
+
+  std::shared_ptr<ClientChannelList> list(new ClientChannelList(channels_));
+  std::atomic_store(&roundrobin_channes_, list);
 }
 
 ClientRouter::~ClientRouter() {
@@ -68,7 +71,7 @@ void ClientRouter::OnClientConnectFailed() {
   if (is_stopping_ || channel_count_ <= channels_.size()) {
     return;
   }
-  LOG(INFO) << server_addr_.IpPortAsString() << " connect failed try after " << reconnect_interval_ << " ms";
+  LOG(INFO) << server_addr_.IpPortAsString() << " connect failed, try after " << reconnect_interval_ << " ms";
   auto functor = std::bind(&Connector::LaunchAConnection, connector_, server_addr_);
   work_loop_->PostDelayTask(NewClosure(functor), reconnect_interval_);
 }
@@ -86,10 +89,8 @@ void ClientRouter::OnNewClientConnected(int socket_fd, InetAddress& local, InetA
 
   base::MessageLoop* io_loop = GetLoopForClient();
 
-  auto new_channel = TcpChannel::CreateClientChannel(socket_fd,
-                                                     local,
-                                                     remote,
-                                                     io_loop);
+  auto new_channel = TcpChannel::Create(socket_fd, local, remote, io_loop);
+
   new_channel->SetOwnerLoop(work_loop_);
   new_channel->SetChannelName(remote.IpPortAsString());
 
@@ -106,8 +107,10 @@ void ClientRouter::OnNewClientConnected(int socket_fd, InetAddress& local, InetA
   std::shared_ptr<ClientChannelList> list(new ClientChannelList(channels_));
   std::atomic_store(&roundrobin_channes_, list);
   VLOG(GLOG_VINFO) << server_addr_.IpPortAsString() << " Has " << channels_.size() << " Channel";
+  LOG(ERROR) << __FUNCTION__ << server_addr_.IpPortAsString() << " now has " << channels_.size() << " channel";
 }
 
+/*on the loop of client IO, need managed by connector loop*/
 void ClientRouter::OnClientChannelClosed(const RefClientChannel& channel) {
   if (!work_loop_->IsInLoopThread()) {
     auto functor = std::bind(&ClientRouter::OnClientChannelClosed, this, channel);
@@ -127,10 +130,12 @@ void ClientRouter::OnClientChannelClosed(const RefClientChannel& channel) {
     cv_.notify_all();
   }
 
-  VLOG(GLOG_VINFO) << server_addr_.IpPortAsString() << " Has " << channels_.size() << " Channel";
+//  VLOG(GLOG_VINFO) << server_addr_.IpPortAsString() << " Has " << channels_.size() << " Channel";
+  LOG(ERROR) << __FUNCTION__ << server_addr_.IpPortAsString() << " now has " << channels_.size() << " channel";
 
   if (!is_stopping_ && channels_.size() < channel_count_) {
     VLOG(GLOG_VTRACE) << "Broken, ReConnect After:" << reconnect_interval_ << " ms";
+    LOG(ERROR) << __FUNCTION__ << server_addr_.IpPortAsString() << " reconnect after " << reconnect_interval_ << " ms";
     auto functor = std::bind(&Connector::LaunchAConnection, connector_, server_addr_);
     work_loop_->PostDelayTask(NewClosure(functor), reconnect_interval_);
   }

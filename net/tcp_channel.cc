@@ -15,39 +15,20 @@ namespace net {
 RefTcpChannel TcpChannel::Create(int socket_fd,
                                  const InetAddress& local,
                                  const InetAddress& peer,
-                                 base::MessageLoop* loop,
-                                 ChannelServeType type) {
+                                 base::MessageLoop* loop) {
 
-  return std::make_shared<TcpChannel>(socket_fd, local, peer, loop, type);
-}
-
-RefTcpChannel TcpChannel::CreateServerChannel(int socket_fd,
-                                              const InetAddress& local,
-                                              const InetAddress& peer,
-                                              base::MessageLoop* loop) {
-
-  return std::make_shared<TcpChannel>(socket_fd, local, peer, loop, kServerType);
-}
-
-RefTcpChannel TcpChannel::CreateClientChannel(int socket_fd,
-                                              const InetAddress& local,
-                                              const InetAddress& remote,
-                                              base::MessageLoop* loop) {
-
-  return std::make_shared<TcpChannel>(socket_fd, local, remote, loop, kClientType);
+  return std::make_shared<TcpChannel>(socket_fd, local, peer, loop);
 }
 
 TcpChannel::TcpChannel(int socket_fd,
                        const InetAddress& loc,
                        const InetAddress& peer,
-                       base::MessageLoop* loop,
-                       ChannelServeType type)
+                       base::MessageLoop* loop)
   : work_loop_(loop),
     owner_loop_(NULL),
     channel_status_(CONNECTING),
     local_addr_(loc),
-    peer_addr_(peer),
-    serve_type_(type) {
+    peer_addr_(peer) {
 
   CHECK(work_loop_);
 
@@ -109,11 +90,10 @@ void TcpChannel::HandleRead() {
     }
 
   } else if (0 == bytes_read) { //read eof, remote close
-
+    VLOG(GLOG_VTRACE) << "peer closed:" << peer_addr_.IpPortAsString() << " local" << local_addr_.IpPortAsString() << " peer:" ;
     HandleClose();
-
   } else {
-
+    LOG(ERROR) << "socket:" << fd_event_->fd() << " error:" << base::StrError(error);
     errno = error;
     HandleError();
 
@@ -171,8 +151,7 @@ bool TcpChannel::SendProtoMessage(RefProtocolMessage message) {
     VLOG(GLOG_VERROR) << "Channel Is Broken, ChannelInfo:" << ChannelName() << " Status:" << StatusAsString();
     return false;
   }
-
-  proto_service_->BeforeSendMessage(message.get());
+  proto_service_->BeforeWriteMessage(message.get());
 
   bool success = false;
   if (out_buffer_.CanReadSize()) {
@@ -183,11 +162,11 @@ bool TcpChannel::SendProtoMessage(RefProtocolMessage message) {
     if (!fd_event_->IsWriteEnable()) {
       fd_event_->EnableWriting();
     }
-
   } else { //out_buffer_ empty, try write directly
 
     IOBuffer buffer;
     success = proto_service_->EncodeToBuffer(message.get(), &buffer);
+    LOG(INFO) << "buffer:" << buffer.AsString();
     LOG_IF(ERROR, !success) << "Send Failed For Message Encode Failed";
     if (success && buffer.CanReadSize()) {
       Send(buffer.GetRead(), buffer.CanReadSize());
@@ -214,6 +193,7 @@ void TcpChannel::HandleClose() {
   VLOG(GLOG_VTRACE) << "HandleClose, Channel:" << ChannelName() << " Status: DISCONNECTED";
 
   SetChannelStatus(DISCONNECTED);
+  LOG(INFO) << "HandleClose, Channel:" << ChannelName() << " Status: DISCONNECTED";
 
   if (closed_callback_) {
     closed_callback_(guard);
@@ -285,9 +265,7 @@ int32_t TcpChannel::Send(const uint8_t* data, const int32_t len) {
 
       n_write = 0;
       int32_t err = errno;
-      if (EAGAIN != err) {
-        LOG(ERROR) << "channel write data failed, fd:[" << fd_event_->fd() << "] errno: [" << base::StrError(err) << "]";
-      }
+      LOG_IF(ERROR, EAGAIN != err) << "channel write data failed, fd:[" << fd_event_->fd() << "]" << "errno: [" << base::StrError(err) << "]";
     }
   }
 
@@ -327,6 +305,7 @@ ProtoService* TcpChannel::GetProtoService() const {
 
 void TcpChannel::SetProtoService(ProtoServicePtr&& proto_service) {
   proto_service_ = std::move(proto_service);
+  proto_service_->SetChannelWriter(this);
 }
 
 const std::string TcpChannel::StatusAsString() {
@@ -340,7 +319,7 @@ const std::string TcpChannel::StatusAsString() {
     case DISCONNECTED:
       return "DISCONNECTED";
     default:
-      return "UNKNOWN";
+    	break;
   }
   return "UNKNOWN";
 }
@@ -350,14 +329,6 @@ base::MessageLoop* TcpChannel::IOLoop() const {
 }
 bool TcpChannel::InIOLoop() const {
   return work_loop_->IsInLoopThread();
-}
-
-bool TcpChannel::IsClientChannel() const {
-  return serve_type_ == ChannelServeType::kClientType;
-}
-
-bool TcpChannel::IsServerChannel() const {
-  return serve_type_ == ChannelServeType::kServerType;
 }
 
 bool TcpChannel::IsConnected() const {

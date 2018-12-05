@@ -1,3 +1,6 @@
+ADD_DEFINITIONS(-std=c++11)
+SET(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 SET(BASE_SOURCES
   time/timestamp.cc
   time/time_utils.cc
@@ -38,12 +41,17 @@ SET(LTBASE_LINKLIBS
   ${ZLIB_LIBRARIES}
 )
 
-ADD_LIBRARY(ltbase STATIC
-  ${BASE_SOURCES}
-)
+ADD_LIBRARY(ltbase STATIC ${BASE_SOURCES})
+ADD_LIBRARY(ltbase_shared SHARED ${BASE_SOURCES})
+
 TARGET_LINK_LIBRARIES(ltbase
   ${LTBASE_LINKLIBS}
 )
+set_target_properties(ltbase_shared PROPERTIES OUTPUT_NAME "ltbase")
+# make shared library and static lib exist same time
+set_target_properties(ltbase PROPERTIES CLEAN_DIRECT_OUTPUT 1)
+set_target_properties(ltbase_shared PROPERTIES CLEAN_DIRECT_OUTPUT 1)
+
 
 ADD_EXECUTABLE(eventloop_test
   message_loop/test/run_loop_test.cc

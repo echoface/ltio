@@ -12,17 +12,18 @@
 #include "base/message_loop/message_loop.h"
 /* *
  *
- * all of this thing should happend in own loop, include callbacks
+ * all of this thing happend in io-loop its attached, include callbacks
  *
  * */
 namespace net {
 
-typedef enum {
-  kClientType = 0,
-  kServerType = 1
-} ChannelServeType;
+class ChannelWriter {
+public:
+  virtual int32_t Send(const uint8_t* data, const int32_t len) = 0;
+};
 
-class TcpChannel : public std::enable_shared_from_this<TcpChannel> {
+class TcpChannel : public ChannelWriter,
+                   public std::enable_shared_from_this<TcpChannel> {
 public:
   typedef enum {
     CONNECTING = 0,
@@ -34,23 +35,13 @@ public:
   static RefTcpChannel Create(int socket_fd,
                               const InetAddress& local,
                               const InetAddress& peer,
-                              base::MessageLoop* loop,
-                              ChannelServeType type);
-
-  static RefTcpChannel CreateClientChannel(int socket_fd,
-                                           const InetAddress& local,
-                                           const InetAddress& remote,
-                                           base::MessageLoop* loop);
-  static RefTcpChannel CreateServerChannel(int socket_fd,
-                                           const InetAddress& local,
-                                           const InetAddress& peer,
-                                           base::MessageLoop* loop);
+                              base::MessageLoop* loop);
 
   TcpChannel(int socket_fd,
              const InetAddress& loc,
              const InetAddress& peer,
-             base::MessageLoop* loop,
-             ChannelServeType type);
+             base::MessageLoop* loop);
+
   ~TcpChannel();
 
   void Start();
@@ -67,7 +58,7 @@ public:
   /* send a protocol message*/
   bool SendProtoMessage(RefProtocolMessage message);
   /* return -1 in error, return 0 when success*/
-  int32_t Send(const uint8_t* data, const int32_t len);
+  int32_t Send(const uint8_t* data, const int32_t len) override;
 
   void ForceShutdown();
   void ShutdownChannel();
@@ -75,8 +66,6 @@ public:
   bool InIOLoop() const;
   bool IsConnected() const;
   base::MessageLoop* IOLoop() const;
-  bool IsServerChannel() const;
-  bool IsClientChannel() const;
   ProtoService* GetProtoService() const;
 protected:
   void HandleRead();
@@ -101,8 +90,6 @@ private:
 
   InetAddress local_addr_;
   InetAddress peer_addr_;
-
-  const ChannelServeType serve_type_;
 
   std::string channal_name_;
 

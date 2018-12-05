@@ -35,10 +35,11 @@ public:
   static RefRawMessage CreateRequest();
   static RefRawMessage CreateResponse();
 
-  RawMessage();
+  RawMessage(MessageType t);
   ~RawMessage();
 
   void SetCode(uint8_t code);
+  uint8_t Method() const {return header_.method;}
   void SetMethod(uint8_t method);
   const std::string& Content() const;
   void SetContent(const char* content);

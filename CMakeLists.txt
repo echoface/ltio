@@ -1,8 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
 
-ADD_DEFINITIONS(-std=c++1z)
-ADD_DEFINITIONS(-fPIC)
-
 project(LightingIO)
 
 # for generate ycm complete database
@@ -24,12 +21,12 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 # add a default linked path to build/lib
 LINK_DIRECTORIES(${CMAKE_BINARY_DIR}/lib)
 
-ADD_SUBDIRECTORY(thirdparty)
 ADD_SUBDIRECTORY(base)
 ADD_SUBDIRECTORY(net)
 #ADD_SUBDIRECTORY(app)
 ADD_SUBDIRECTORY(example)
 ADD_SUBDIRECTORY(components)
+ADD_SUBDIRECTORY(thirdparty)
 
 
 MESSAGE(STATUS "This is BINARY dir " ${LightingIO_BINARY_DIR})

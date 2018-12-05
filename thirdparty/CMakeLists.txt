@@ -42,7 +42,6 @@ SET(TIMEOUT_SOURCES
   ./timeout/timeout-bitops.c
 )
 
-#SET(CMAKE_C_COMPILER g++)
 ADD_LIBRARY(3rd STATIC
   ${CRC_SOURCES}
   ${MD5_SOURCES}

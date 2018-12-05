@@ -20,12 +20,18 @@ public:
   //bool DecodeToMessage(IOBuffer* buffer, ProtocolMessage* out_msg) override;
   bool EncodeToBuffer(const ProtocolMessage* msg, IOBuffer* out_buffer) override;
   bool CloseAfterMessage(ProtocolMessage* request, ProtocolMessage* response) override;
-  const RefProtocolMessage DefaultResponse(const RefProtocolMessage& req) override;
+  const RefProtocolMessage NewResponseFromRequest(const RefProtocolMessage &req) override;
 
   bool KeepSequence() override {return false;};
-  bool EnsureProtocol(ProtocolMessage* message) override;
-  void BeforeSendMessage(ProtocolMessage* out_message) override;
-  void BeforeReplyMessage(ProtocolMessage* in, ProtocolMessage* out) override;
+
+  bool SendProtocolMessage(RefProtocolMessage& message) override;
+  /* protocol level */
+  bool BeforeSendRequest(ProtocolMessage *message) override;
+  void BeforeSendResponse(ProtocolMessage *in, ProtocolMessage *out) override;
+
+  /* io level */
+  //void BeforeWriteRequestToBuffer(ProtocolMessage* request) override;
+  //void BeforeWriteResponseToBuffer(ProtocolMessage* response) override;
 private:
   RefRawMessage current_;
   uint64_t sequence_id_ = 1;
