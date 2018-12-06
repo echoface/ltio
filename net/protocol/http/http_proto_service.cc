@@ -236,7 +236,7 @@ bool HttpProtoService::SendProtocolMessage(RefProtocolMessage& message) {
   if (!EncodeToBuffer(message.get(), &buffer)) {
     return false;
   }
-  return writer_->Send(buffer.GetRead(), buffer.CanReadSize()) >= 0;
+  return channel_->Send(buffer.GetRead(), buffer.CanReadSize()) >= 0;
 }
 
 //static

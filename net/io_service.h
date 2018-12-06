@@ -7,6 +7,7 @@
 #include "net_callback.h"
 #include "service_acceptor.h"
 #include "protocol/proto_message.h"
+#include "protocol/proto_service.h"
 #include "dispatcher/workload_dispatcher.h"
 #include "base/message_loop/message_loop.h"
 
@@ -32,11 +33,14 @@ public:
   virtual void IOServiceStoped(const IOService* ioservice) {};
 };
 
-class IOService {
+class IOService : public ProtoServiceDelegate {
 public:
   /* Must Construct in ownerloop, why? bz we want all io level is clear and tiny
    * it only handle io relative things, it's easy! just post a task IOMain at everything
-   * begin */
+   * begin,
+   *
+   * A IOService Accept listen a local address and accept incoming connection; every connections
+   * will bind to protocol service*/
   IOService(const InetAddress local,
             const std::string protocol,
             base::MessageLoop* workloop,
@@ -51,18 +55,17 @@ public:
   const std::string& IOServiceName() const {return service_name_;}
   bool IsRunning() {return acceptor_ && acceptor_->IsListenning();}
 
-  void SetWorkLoadDispatcher(WorkLoadDispatcher* d);
   void SetProtoMessageHandler(ProtoMessageHandler handler);
 private:
   //void HandleProtoMessage(RefProtocolMessage message);
   /* create a new connection channel */
   void OnNewConnection(int, const InetAddress&);
 
-  void OnChannelClosed(const RefTcpChannel&);
+  // override from ProtoServiceDelegate to manager[remove] from managed list
+  void OnProtocolServiceGone(const RefProtoService& service) override;
 
-  /* store[remove] connection to[from] maps, only run on work_loop */
-  void StoreConnection(const RefTcpChannel connetion);
-  void RemoveConncetion(const RefTcpChannel connection);
+  void StoreProtocolService(const RefProtoService);
+  void RemoveProtocolService(const RefProtoService);
 
   //bool as_dispatcher_;
   std::string protocol_;
@@ -73,15 +76,14 @@ private:
   /* interface to owner and handler */
   IOServiceDelegate* delegate_;
   //RefProtoService proto_service_;
+  bool is_stopping_ = false;
 
   // install this callback to protoservice
   ProtoMessageHandler message_handler_;
 
   std::atomic<int64_t> channel_count_;
   std::string service_name_;
-  bool is_stopping_;
-  std::unordered_set<RefTcpChannel> connections_;
-  //std::unordered_map<std::string, RefTcpChannel> connections_;
+  std::unordered_set<RefProtoService> protocol_services;
 };
 
 }

@@ -67,7 +67,7 @@ public:
   void OnRequestGetResponse(const RefProtocolMessage&, const RefProtocolMessage&) override;
 
 private:
-  //Get a io work loop for channel, if no loop provide, use default work_loop_;
+  //Get a io work loop for channel, if no loop provide, use default io_loop_;
   base::MessageLoop* GetLoopForClient();
 
   std::string protocol_;

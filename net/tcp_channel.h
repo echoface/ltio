@@ -10,6 +10,7 @@
 #include "base/base_micro.h"
 #include "protocol/proto_message.h"
 #include "base/message_loop/message_loop.h"
+#include "channel.h"
 /* *
  *
  * all of this thing happend in io-loop its attached, include callbacks
@@ -17,13 +18,7 @@
  * */
 namespace net {
 
-class ChannelWriter {
-public:
-  virtual int32_t Send(const uint8_t* data, const int32_t len) = 0;
-};
-
-class TcpChannel : public ChannelWriter,
-                   public std::enable_shared_from_this<TcpChannel> {
+class TcpChannel : public std::enable_shared_from_this<TcpChannel> {
 public:
   typedef enum {
     CONNECTING = 0,
@@ -46,45 +41,37 @@ public:
 
   void Start();
 
-  const std::string& ChannelName() {return channal_name_;}
   void SetChannelName(const std::string name);
-  void SetOwnerLoop(base::MessageLoop* owner);
-  void SetDataHandleCallback(const RcvDataCallback& callback);
-  void SetFinishSendCallback(const FinishSendCallback& callback);
-  void SetCloseCallback(const ChannelClosedCallback& callback);
-  void SetStatusChangedCallback(const ChannelStatusCallback& callback);
-  void SetProtoService(ProtoServicePtr&& proto_service);
+  const std::string& ChannelName() const {return channal_name_;}
 
-  /* send a protocol message*/
-  bool SendProtoMessage(RefProtocolMessage message);
+  void SetChannelConsumer(ChannelConsumer* consumer);
+  void SetCloseCallback(const ChannelClosedCallback& callback);
+
   /* return -1 in error, return 0 when success*/
-  int32_t Send(const uint8_t* data, const int32_t len) override;
+  int32_t Send(const uint8_t* data, const int32_t len);
 
   void ForceShutdown();
   void ShutdownChannel();
-  const std::string StatusAsString();
-  bool InIOLoop() const;
   bool IsConnected() const;
+
+  bool InIOLoop() const;
   base::MessageLoop* IOLoop() const;
-  ProtoService* GetProtoService() const;
+  const std::string StatusAsString() const;
 protected:
   void HandleRead();
   void HandleWrite();
   void HandleError();
   void HandleClose();
 
-  void SetChannelStatus(ChannelStatus st);
 private:
   void OnConnectionReady();
-private:
-  /* all the io thing happend in work loop,
-   * and the life cycle managered by ownerloop
-   * */
-  base::MessageLoop* work_loop_;
-  base::MessageLoop* owner_loop_;
+  void SetChannelStatus(ChannelStatus st);
+
+  /* channel relative things should happened on io_loop*/
+  base::MessageLoop* io_loop_;
 
   bool schedule_shutdown_;
-  ChannelStatus channel_status_;
+  ChannelStatus channel_status_ = CONNECTING;
 
   base::RefFdEvent fd_event_;
 
@@ -96,12 +83,9 @@ private:
   IOBuffer in_buffer_;
   IOBuffer out_buffer_;
 
-  ProtoServicePtr proto_service_;
+  ChannelConsumer* channel_consumer_ = NULL;
 
-  RcvDataCallback recv_data_callback_;
   ChannelClosedCallback closed_callback_;
-  FinishSendCallback finish_write_callback_;
-  ChannelStatusCallback status_change_callback_;
   DISALLOW_COPY_AND_ASSIGN(TcpChannel);
 };
 

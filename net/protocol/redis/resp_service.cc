@@ -65,10 +65,9 @@ bool RespService::SendProtocolMessage(RefProtocolMessage& message) {
     LOG(ERROR) << " only redis client side protocol supported";
     return false;
   }
-  CHECK(writer_);
   BeforeWriteMessage(message.get());
   RedisRequest* request = (RedisRequest*)message.get();
-  return writer_->Send((uint8_t*)request->body_.data(), request->body_.size()) >= 0;
+  return channel_->Send((uint8_t*)request->body_.data(), request->body_.size()) >= 0;
 }
 
 void RespService::BeforeWriteRequestToBuffer(ProtocolMessage* out_message) {

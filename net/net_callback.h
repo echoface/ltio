@@ -23,7 +23,7 @@ typedef std::weak_ptr<TcpChannel> WeakPtrTcpChannel;
 typedef std::function<void(const RefTcpChannel&)> FinishSendCallback;
 typedef std::function<void(const RefTcpChannel&)> ChannelClosedCallback;
 typedef std::function<void(const RefTcpChannel&)> ChannelStatusCallback;
-typedef std::function<void(const RefTcpChannel&, IOBuffer*)> RcvDataCallback;
+typedef std::function<void(RefTcpChannel&, IOBuffer*)> RcvDataCallback;
 
 
 /* ============= Service Acceptor relative ===========*/
@@ -32,6 +32,8 @@ typedef std::function<void(int/*socket_fd*/, const InetAddress&)> NewConnectionC
 
 /* protoservice handle tcpmessage to different type protocol request and message */
 typedef std::unique_ptr<ProtoService> ProtoServicePtr;
+typedef std::shared_ptr<ProtoService> RefProtoService;
+typedef std::weak_ptr<ProtoService> WeakProtoService;
 
 /* ============== io service ====== */
 typedef std::shared_ptr<IOService> RefIOService;

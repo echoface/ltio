@@ -22,6 +22,7 @@ typedef enum {
 
 typedef struct {
   WeakPtrTcpChannel channel;
+  WeakProtoService protocol_service;
 } IOContext;
 
 typedef enum {

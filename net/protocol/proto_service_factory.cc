@@ -20,15 +20,15 @@ ProtoServiceFactory::ProtoServiceFactory() {
 }
 
 //Static
-ProtoServicePtr ProtoServiceFactory::Create(const std::string& proto) {
-  static ProtoServicePtr _null;
+RefProtoService ProtoServiceFactory::Create(const std::string& proto) {
+  static RefProtoService _null;
 
   auto& builder = Instance().creators_[proto];
   if (builder) {
     return builder();
   }
   LOG(ERROR) << __FUNCTION__ << " Protocol:" << proto << " Not Supported";
-  return NULL;
+  return _null;
 }
 
 // not thread safe,
@@ -42,17 +42,21 @@ bool ProtoServiceFactory::HasProtoServiceCreator(const std::string& proto) {
 }
 
 void ProtoServiceFactory::InitInnerDefault() {
-  creators_.insert(std::make_pair("line", []()->ProtoServicePtr {
-    return ProtoServicePtr(new LineProtoService);
+  creators_.insert(std::make_pair("line", []()->RefProtoService{
+    std::shared_ptr<LineProtoService> service(new LineProtoService);
+    return std::static_pointer_cast<ProtoService>(service);
   }));
-  creators_.insert(std::make_pair("http", []()->ProtoServicePtr {
-    return ProtoServicePtr(new HttpProtoService);
+  creators_.insert(std::make_pair("http", []()->RefProtoService{
+    std::shared_ptr<HttpProtoService> service(new HttpProtoService);
+    return std::static_pointer_cast<ProtoService>(service);
   }));
-  creators_.insert(std::make_pair("raw", []()->ProtoServicePtr {
-    return ProtoServicePtr(new RawProtoService);
+  creators_.insert(std::make_pair("raw", []()->RefProtoService{
+    std::shared_ptr<RawProtoService> service(new RawProtoService);
+    return std::static_pointer_cast<ProtoService>(service);
   }));
-  creators_.insert(std::make_pair("redis", []()->ProtoServicePtr {
-    return ProtoServicePtr(new RespService);
+  creators_.insert(std::make_pair("redis", []()->RefProtoService{
+    std::shared_ptr<RespService> service(new RespService);
+    return std::static_pointer_cast<ProtoService>(service);
   }));
 }
 

@@ -58,11 +58,11 @@ bool LineProtoService::EncodeToBuffer(const ProtocolMessage* msg, IOBuffer* out_
 bool LineProtoService::SendProtocolMessage(RefProtocolMessage& message) {
   static const std::string kCRCN("\r\n");
   const LineMessage* line_msg = static_cast<const LineMessage*>(message.get());
-  int ret = writer_->Send((const uint8_t*)line_msg->Body().data(), line_msg->Body().size());
+  int ret = channel_->Send((const uint8_t*)line_msg->Body().data(), line_msg->Body().size());
   if (ret < 0) {
     return false;
   }
-  ret = writer_->Send((const uint8_t*)kCRCN.data(), 2);
+  ret = channel_->Send((const uint8_t*)kCRCN.data(), 2);
   return ret >= 0;
 }
 

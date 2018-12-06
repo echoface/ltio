@@ -55,19 +55,19 @@ void IOService::StopIOService() {
     return;
   }
 
+  CHECK(acceptor_loop_->IsInLoopThread());
+
   //sync
   acceptor_->StopListen();
-
   is_stopping_ = true;
 
   //async
-  for (auto& channel : connections_) {
-    base::MessageLoop* loop = channel->IOLoop();
-    //loop->PostTask(NewClosure(std::bind(&TcpChannel::ShutdownChannel, channel)));
-    loop->PostTask(NewClosure(std::bind(&TcpChannel::ForceShutdown, channel)));
+  for (auto& proto_service : protocol_services) {
+      base::MessageLoop* loop = proto_service->IOLoop();
+      loop->PostTask(NewClosure(std::bind(&ProtoService::CloseService, proto_service)));
   }
 
-  if (connections_.size() == 0) {
+  if (protocol_services.size() == 0) {
     delegate_->IOServiceStoped(this);
   }
 }
@@ -82,19 +82,19 @@ void IOService::OnNewConnection(int local_socket, const InetAddress& peer_addr) 
     return;
   }
 
-
   base::MessageLoop* io_loop = delegate_->GetNextIOWorkLoop();
   if (!io_loop) {
     socketutils::CloseSocket(local_socket);
     return;
   }
 
-  ProtoServicePtr proto_service = ProtoServiceFactory::Create(protocol_);
+  RefProtoService proto_service = ProtoServiceFactory::Create(protocol_);
   if (!proto_service || !message_handler_) {
     LOG(ERROR) << "no proto parser or no message handler, close this connection.";
     socketutils::CloseSocket(local_socket);
     return;
   }
+  proto_service->SetDelegate(this);
   proto_service->SetMessageHandler(message_handler_);
   proto_service->SetServiceType(ProtocolServiceType::kServer);
 
@@ -102,49 +102,42 @@ void IOService::OnNewConnection(int local_socket, const InetAddress& peer_addr) 
 
   auto new_channel = TcpChannel::Create(local_socket, local_addr, peer_addr, io_loop);
 
-  //TODO: Is peer_addr.IpPortAsString Is unique?
   const std::string channel_name = peer_addr.IpPortAsString();
   new_channel->SetChannelName(channel_name);
-  new_channel->SetOwnerLoop(acceptor_loop_);
-  new_channel->SetProtoService(std::move(proto_service));
-  new_channel->SetCloseCallback(std::bind(&IOService::OnChannelClosed, this, std::placeholders::_1));
+
+  proto_service->BindChannel(new_channel);
 
   new_channel->Start();
 
   VLOG(GLOG_VTRACE) << " New Connection from:" << channel_name;
-
-  StoreConnection(new_channel);
+  StoreProtocolService(proto_service);
 }
 
-void IOService::OnChannelClosed(const RefTcpChannel& connection) {
+void IOService::OnProtocolServiceGone(const net::RefProtoService &service) {
   if (!acceptor_loop_->IsInLoopThread()) {
-    auto functor = std::bind(&IOService::RemoveConncetion, this, connection);
+    auto functor = std::bind(&IOService::OnProtocolServiceGone, this, service);
     acceptor_loop_->PostTask(NewClosure(std::move(functor)));
     return;
   }
-  RemoveConncetion(connection);
+  RemoveProtocolService(service);
 }
 
-void IOService::StoreConnection(const RefTcpChannel connection) {
+void IOService::StoreProtocolService(const RefProtoService service) {
   CHECK(acceptor_loop_->IsInLoopThread());
+  protocol_services.insert(service);
 
-  connections_.insert(connection);
-
-  channel_count_.store(connections_.size());
-
+  channel_count_.store(protocol_services.size());
   delegate_->IncreaseChannelCount();
 }
 
-void IOService::RemoveConncetion(const RefTcpChannel connection) {
+void IOService::RemoveProtocolService(const RefProtoService service) {
   CHECK(acceptor_loop_->IsInLoopThread());
+  protocol_services.erase(service);
 
-  connections_.erase(connection);
-
-  channel_count_.store(connections_.size());
+  channel_count_.store(protocol_services.size());
 
   delegate_->DecreaseChannelCount();
-
-  if (is_stopping_ && connections_.size() == 0) {
+  if (is_stopping_ && protocol_services.size() == 0) {
     delegate_->IOServiceStoped(this);
   }
 }

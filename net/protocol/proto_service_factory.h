@@ -9,18 +9,18 @@
 
 namespace net {
 
-typedef std::function<ProtoServicePtr()> ProtoserviceCreator;
+typedef std::function<RefProtoService()> ProtoserviceCreator;
 
 class ProtoServiceFactory {
 public:
   static ProtoServiceFactory& Instance();
-  static ProtoServicePtr Create(const std::string& proto);
+  static RefProtoService Create(const std::string& proto);
 
   ProtoServiceFactory();
   // not thread safe,
   // this can cover the default protoservice or add new protocol support
-  void RegisterCreator(const std::string, ProtoserviceCreator);
   bool HasProtoServiceCreator(const std::string&);
+  void RegisterCreator(const std::string, ProtoserviceCreator);
 private:
   void InitInnerDefault();
   std::map<std::string, ProtoserviceCreator> creators_;

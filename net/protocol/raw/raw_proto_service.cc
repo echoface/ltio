@@ -82,11 +82,11 @@ bool RawProtoService::SendProtocolMessage(RefProtocolMessage& message) {
   const RawMessage* raw_message = static_cast<const RawMessage*>(message.get());
   CHECK(raw_message->header_.frame_size == kRawHeaderSize + raw_message->content_.size());
 
-  if (writer_->Send((const uint8_t*)&raw_message->header_, kRawHeaderSize) < 0) {;
+  if (channel_->Send((const uint8_t*)&raw_message->header_, kRawHeaderSize) < 0) {;
     return false;
   }
 
-  return writer_->Send((const uint8_t*)raw_message->content_.data(), raw_message->content_.size()) >= 0;
+  return channel_->Send((const uint8_t*)raw_message->content_.data(), raw_message->content_.size()) >= 0;
 };
 
 
