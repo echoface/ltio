@@ -13,7 +13,6 @@ namespace net {
 
 class ServiceAcceptor {
 public:
-  //TODO: consider using eventpump replace loop
   ServiceAcceptor(base::EventPump*, const InetAddress&);
   ~ServiceAcceptor();
 
@@ -22,22 +21,18 @@ public:
   bool IsListenning() { return listenning_; }
 
   void SetNewConnectionCallback(const NewConnectionCallback& cb);
-  const InetAddress& ListenLocal() const { return address_; };
+  const InetAddress& ListenningAddress() const { return address_; };
 private:
-  void InitListener();
-  void OnAccepterError();
+  bool InitListener();
+  void OnAcceptorError();
   void HandleCommingConnection();
 
   bool listenning_;
-  base::EventPump* event_pump_;
-
-  int socket_fd_;
-  base::FdEvent::RefFdEvent socket_event_;
-
   InetAddress address_;
-  NewConnectionCallback new_conn_callback_;
 
-private:
+  base::EventPump* event_pump_;
+  base::FdEvent::RefFdEvent socket_event_;
+  NewConnectionCallback new_conn_callback_;
   DISALLOW_COPY_AND_ASSIGN(ServiceAcceptor);
 };
 

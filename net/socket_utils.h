@@ -19,13 +19,13 @@ const struct sockaddr_in6* sockaddr_in6_cast(const struct sockaddr* addr);
 
 SocketFd CreateNonBlockingSocket(sa_family_t family);
 
-void ListenSocket(SocketFd fd);
+int ListenSocket(SocketFd fd);
 
-void BindSocketFd(SocketFd fd, const struct sockaddr* addr);
+int BindSocketFd(SocketFd fd, const struct sockaddr* addr);
 
-SocketFd SocketConnect(SocketFd fd, const struct sockaddr* addr);
+int SocketConnect(SocketFd fd, const struct sockaddr* addr);
 
-SocketFd AcceptSocket(SocketFd fd, struct sockaddr_in* addr);
+SocketFd AcceptSocket(SocketFd fd, struct sockaddr_in* addr, int* err);
 
 ssize_t Read(SocketFd fd, void* buf, size_t count);
 

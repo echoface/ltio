@@ -33,7 +33,7 @@ int main(int argc, char** argv) {
     acceptor = new net::ServiceAcceptor(loop.Pump(), addr);
 
     acceptor->SetNewConnectionCallback(std::bind(new_connection, std::placeholders::_1, std::placeholders::_2));
-    acceptor->StartListen();
+    CHECK(acceptor->StartListen());
   }));
 
 

@@ -21,7 +21,6 @@ typedef enum {
 } FailInfo;
 
 typedef struct {
-  WeakPtrTcpChannel channel;
   WeakProtoService protocol_service;
 } IOContext;
 
@@ -49,7 +48,7 @@ public:
 
   IOContext& GetIOCtx() {return io_context_;}
   WorkContext& GetWorkCtx() {return work_context_;}
-  void SetIOContextWeakChannel(const RefTcpChannel& channel);
+  void SetIOContext(const RefProtoService& service);
 
   void SetFailInfo(FailInfo reason);
   FailInfo MessageFailInfo() const;

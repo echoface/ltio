@@ -14,9 +14,15 @@ bool Connector::LaunchAConnection(net::InetAddress& address) {
   CHECK(loop_->IsInLoopThread());
 
   int sockfd = net::socketutils::CreateNonBlockingSocket(address.SocketFamily());
+  if (sockfd == -1) {
+    return false;
+  }
+
   const struct sockaddr* sock_addr = net::socketutils::sockaddr_cast(address.SockAddrIn());
   int ret = net::socketutils::SocketConnect(sockfd, sock_addr);
+
   int state = ret == 0 ? 0 : errno;
+
   switch(state)  {
     case 0:
     case EINTR:
@@ -35,13 +41,12 @@ bool Connector::LaunchAConnection(net::InetAddress& address) {
       connecting_sockets_.insert(fdevent);
 
       return true;
-
     } break;
-    default:
+    default: {
       LOG(FATAL) << " set client connect failed:" << base::StrError(state);
       net::socketutils::CloseSocket(sockfd);
       return false;
-    break;
+    } break;
   }
   return true;
 }

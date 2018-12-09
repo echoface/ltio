@@ -79,12 +79,12 @@ QuitClourse EventPump::Quit_Clourse() {
 
 bool EventPump::InstallFdEvent(FdEvent *fd_event) {
   CHECK(IsInLoopThread());
-  if (fd_event->EventDelegate()) {
+  if (fd_event->EventWatcher()) {
     LOG(ERROR) << "can't install event to eventPump twice or install event to two different eventPump";
     return false;
   }
 
-  fd_event->SetDelegate(AsFdWatcher());
+  fd_event->SetFdWatcher(AsFdWatcher());
 
   multiplexer_->AddFdEvent(fd_event);
   return true;
@@ -92,18 +92,18 @@ bool EventPump::InstallFdEvent(FdEvent *fd_event) {
 
 bool EventPump::RemoveFdEvent(FdEvent* fd_event) {
   CHECK(IsInLoopThread());
-  if (!fd_event->EventDelegate()) {
+  if (!fd_event->EventWatcher()) {
     LOG(ERROR) << "event don't attach to any Pump";
     return false;
   }
-  fd_event->SetDelegate(nullptr);
+  fd_event->SetFdWatcher(nullptr);
 
   multiplexer_->DelFdEvent(fd_event);
   return true;
 }
 
 void EventPump::OnEventChanged(FdEvent* fd_event) {
-  CHECK(IsInLoopThread() && fd_event->EventDelegate());
+  CHECK(IsInLoopThread() && fd_event->EventWatcher());
   multiplexer_->UpdateFdEvent(fd_event);
 }
 

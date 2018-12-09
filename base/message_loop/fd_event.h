@@ -16,9 +16,16 @@ class FdEvent : public EnableDoubleLinked<FdEvent> {
 public:
   /* interface notify poller update polling events*/
   class FdEventWatcher {
-    public:
-      virtual ~FdEventWatcher() {}
-      virtual void OnEventChanged(FdEvent* fd_event) = 0;
+  public:
+    virtual ~FdEventWatcher() {}
+    virtual void OnEventChanged(FdEvent* fd_event) = 0;
+  };
+  class EventHandler { //fd owner should implement those
+  public:
+    virtual void HandleRead(FdEvent* fd_event) = 0;
+    virtual void HandleWrite(FdEvent* fd_event) = 0;
+    virtual void HandleError(FdEvent* fd_event) = 0;
+    virtual void HandleClose(FdEvent* fd_event) = 0;
   };
 
   typedef std::function<void()> EventCallback;
@@ -31,8 +38,8 @@ public:
   FdEvent(int fd, uint32_t events);
   ~FdEvent();
   
-  void SetDelegate(FdEventWatcher* d);
-  FdEventWatcher* EventDelegate() {return watcher_;}
+  void SetFdWatcher(FdEventWatcher *d);
+  FdEventWatcher* EventWatcher() {return watcher_;}
 
   void HandleEvent();
   void ResetCallback();
@@ -77,12 +84,14 @@ private:
   }
   std::string events2string(uint32_t event);
 
-  FdEventWatcher* watcher_;
 
   int fd_;
   uint32_t events_;
   uint32_t revents_;
   bool owner_fd_life_;
+
+  EventHandler* handler_ = NULL;
+  FdEventWatcher* watcher_ = NULL;
 
   EventCallback read_callback_;
   EventCallback write_callback_;
@@ -90,6 +99,7 @@ private:
   EventCallback close_callback_;
   DISALLOW_COPY_AND_ASSIGN(FdEvent);
 };
+
 typedef std::shared_ptr<FdEvent> RefFdEvent;
 
 } // namespace

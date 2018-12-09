@@ -91,17 +91,19 @@ void ClientRouter::OnNewClientConnected(int socket_fd, InetAddress& local, InetA
 
   auto new_channel = TcpChannel::Create(socket_fd, local, remote, io_loop);
 
-  new_channel->SetOwnerLoop(work_loop_);
   new_channel->SetChannelName(remote.IpPortAsString());
 
-  ProtoServicePtr proto_service = ProtoServiceFactory::Create(protocol_);
+  RefProtoService proto_service = ProtoServiceFactory::Create(protocol_);
   proto_service->SetServiceType(ProtocolServiceType::kClient);
-  new_channel->SetProtoService(std::move(proto_service));
+  proto_service->BindChannel(new_channel);
 
-  RefClientChannel client_channel = CreateClientChannel(this, new_channel);
-
+  RefClientChannel client_channel = CreateClientChannel(this, proto_service);
   client_channel->SetRequestTimeout(message_timeout_);
+
+  proto_service->SetDelegate(client_channel.get());
+
   client_channel->StartClient();
+
   channels_.push_back(client_channel);
 
   std::shared_ptr<ClientChannelList> list(new ClientChannelList(channels_));
@@ -130,7 +132,6 @@ void ClientRouter::OnClientChannelClosed(const RefClientChannel& channel) {
     cv_.notify_all();
   }
 
-//  VLOG(GLOG_VINFO) << server_addr_.IpPortAsString() << " Has " << channels_.size() << " Channel";
   LOG(ERROR) << __FUNCTION__ << server_addr_.IpPortAsString() << " now has " << channels_.size() << " channel";
 
   if (!is_stopping_ && channels_.size() < channel_count_) {
@@ -180,4 +181,3 @@ void ClientRouter::SetWorkLoadTransfer(CoroWlDispatcher* dispatcher) {
 }
 
 }//end namespace net
-

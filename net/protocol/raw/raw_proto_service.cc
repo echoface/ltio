@@ -29,7 +29,7 @@ void RawProtoService::OnDataRecieved(const RefTcpChannel& channel, IOBuffer* buf
       return;
     }
     const RawHeader* header = (const RawHeader*)buffer->GetRead();
-    int32_t frame_size = header->frame_size;
+    uint32_t frame_size = header->frame_size;
     int32_t body_size = frame_size - kRawHeaderSize;
 
     if (buffer->CanReadSize() < frame_size) {
@@ -38,7 +38,7 @@ void RawProtoService::OnDataRecieved(const RefTcpChannel& channel, IOBuffer* buf
 
     auto raw_message = std::make_shared<RawMessage>(InComingMessageType());
 
-    raw_message->SetIOContextWeakChannel(channel);
+    raw_message->SetIOContext(shared_from_this());
 
     memcpy(&(raw_message->header_), buffer->GetRead(), kRawHeaderSize);
     buffer->Consume(kRawHeaderSize);
@@ -81,6 +81,7 @@ bool RawProtoService::SendProtocolMessage(RefProtocolMessage& message) {
 
   const RawMessage* raw_message = static_cast<const RawMessage*>(message.get());
   CHECK(raw_message->header_.frame_size == kRawHeaderSize + raw_message->content_.size());
+  BeforeWriteMessage(message.get());
 
   if (channel_->Send((const uint8_t*)&raw_message->header_, kRawHeaderSize) < 0) {;
     return false;
@@ -88,7 +89,6 @@ bool RawProtoService::SendProtocolMessage(RefProtocolMessage& message) {
 
   return channel_->Send((const uint8_t*)raw_message->content_.data(), raw_message->content_.size()) >= 0;
 };
-
 
 void RawProtoService::BeforeSendResponse(ProtocolMessage *in, ProtocolMessage *out) {
   CHECK(IsServerSideservice());

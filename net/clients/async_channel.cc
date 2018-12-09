@@ -6,33 +6,28 @@ namespace net {
 
 const static RefProtocolMessage kNullResponse;
 
-AsyncChannel::AsyncChannel(Delegate* d, RefTcpChannel& ch)
-  : ClientChannel(d, ch) {
+AsyncChannel::AsyncChannel(Delegate* d, RefProtoService& s)
+  : ClientChannel(d, s) {
 }
 
 AsyncChannel::~AsyncChannel() {
 }
 
 void AsyncChannel::StartClient() {
-  ProtoService* service = channel_->GetProtoService();
 
-  ProtoMessageHandler res_handler = std::bind(&AsyncChannel::OnResponseMessage,
-                                             this, std::placeholders::_1);
-  service->SetMessageHandler(std::move(res_handler));
-
-  ChannelClosedCallback close_callback = std::bind(&AsyncChannel::OnChannelClosed,
-                                                   this, std::placeholders::_1);
-  channel_->SetCloseCallback(close_callback);
-
-  channel_->Start();
+  ProtoMessageHandler res_handler =
+      std::bind(&AsyncChannel::OnResponseMessage,this, std::placeholders::_1);
+  protocol_service_->SetMessageHandler(std::move(res_handler));
+  protocol_service_->Channel()->Start();
 }
 
 void AsyncChannel::SendRequest(RefProtocolMessage request)  {
-  CHECK(channel_->InIOLoop());
+  CHECK(IOLoop()->IsInLoopThread());
 
-  bool success = channel_->GetProtoService()->BeforeSendRequest(request.get());
+  bool success = protocol_service_->BeforeSendRequest(request.get());
+  request->SetIOContext(protocol_service_);
   if (success) {
-    success = channel_->SendProtoMessage(request);
+    success = protocol_service_->SendProtocolMessage(request);
   }
 
   if (!success) {
@@ -46,7 +41,7 @@ void AsyncChannel::SendRequest(RefProtocolMessage request)  {
   IOLoop()->PostDelayTask(NewClosure(functor), request_timeout_);
 
   uint64_t message_identify = request->MessageIdentify();
-  CHECK(message_identify !=MessageIdentifyType::KInvalidIdentify);
+  CHECK(message_identify != MessageIdentifyType::KInvalidIdentify);
   in_progress_.insert(std::make_pair(message_identify, std::move(request)));
 }
 
@@ -62,13 +57,13 @@ void AsyncChannel::OnRequestTimeout(WeakProtocolMessage weak) {
 
   size_t numbers = in_progress_.erase(identify);
   CHECK(numbers == 1);
-  //LOG(INFO) << "raw request timeout";
+
   request->SetFailInfo(FailInfo::kTimeOut);
   delegate_->OnRequestGetResponse(request, kNullResponse);
 }
 
 void AsyncChannel::OnResponseMessage(const RefProtocolMessage& res) {
-  CHECK(channel_->InIOLoop());
+  //CHECK(IOLoop()->IsInLoopThread());
 
   uint64_t identify = res->MessageIdentify();
   CHECK(identify != MessageIdentifyType::KInvalidIdentify);
@@ -84,9 +79,8 @@ void AsyncChannel::OnResponseMessage(const RefProtocolMessage& res) {
   in_progress_.erase(iter);
 }
 
-void AsyncChannel::OnChannelClosed(const RefTcpChannel& channel) {
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << " , Channel:" << channel_->ChannelName();
-
+void AsyncChannel::OnProtocolServiceGone(const RefProtoService& service) {
+  //CHECK(IOLoop()->IsInLoopThread());
   for (auto kv : in_progress_) {
     kv.second->SetFailInfo(FailInfo::kChannelBroken);
     delegate_->OnRequestGetResponse(kv.second, kNullResponse);

@@ -40,10 +40,9 @@ TcpChannel::TcpChannel(int socket_fd,
 void TcpChannel::Start() {
   CHECK(fd_event_);
   if (io_loop_->IsInLoopThread()) {
-    return OnConnectionReady();
+    return OnChannelReady();
   }
-
-  auto task = std::bind(&TcpChannel::OnConnectionReady, shared_from_this());
+  auto task = std::bind(&TcpChannel::OnChannelReady, shared_from_this());
   io_loop_->PostTask(NewClosure(std::move(task)));
 }
 
@@ -53,15 +52,14 @@ TcpChannel::~TcpChannel() {
   CHECK(channel_status_ == DISCONNECTED);
 }
 
-void TcpChannel::OnConnectionReady() {
+void TcpChannel::OnChannelReady() {
   CHECK(InIOLoop());
+  CHECK(channel_consumer_);
 
   if (channel_status_ != CONNECTING) {
     LOG(ERROR) << " Channel Status Changed After Enable this Channel";
-    if (closed_callback_) {
-      RefTcpChannel guard(shared_from_this());
-      closed_callback_(guard);
-    }
+    RefTcpChannel guard(shared_from_this());
+    channel_consumer_->OnChannelClosed(guard);
     fd_event_->ResetCallback();
     return;
   }
@@ -79,18 +77,22 @@ void TcpChannel::SetChannelConsumer(ChannelConsumer *consumer) {
 void TcpChannel::HandleRead() {
   int error = 0;
 
-  int32_t bytes_read = in_buffer_.ReadFromSocketFd(fd_event_->fd(), &error);
-  VLOG(GLOG_VTRACE) << " Read " << bytes_read << " bytes from:" << channal_name_;
-
+  int64_t bytes_read = in_buffer_.ReadFromSocketFd(fd_event_->fd(), &error);
   if (bytes_read > 0) {
+    VLOG(GLOG_VTRACE) << __FUNCTION__ << " [" << ChannelName() << "] read ["
+                      << fd_event_->fd() << "] got [" << bytes_read << "] bytes";
 
     channel_consumer_->OnDataRecieved(shared_from_this(), &in_buffer_);
 
   } else if (0 == bytes_read) { //read eof, remote close
-    VLOG(GLOG_VTRACE) << "peer closed:" << peer_addr_.IpPortAsString() << " local" << local_addr_.IpPortAsString() << " peer:" ;
+    VLOG(GLOG_VTRACE) << __FUNCTION__ << " peer [" << ChannelName() << "] closed, fd ["
+                      << fd_event_->fd() << "]";
     HandleClose();
+
   } else {
-    LOG(ERROR) << "socket:" << fd_event_->fd() << " error:" << base::StrError(error);
+
+    LOG(ERROR) << __FUNCTION__ << " [" << ChannelName() << "] socket ["
+                      << fd_event_->fd() << "] error [" << base::StrError(error) << "]";
     errno = error;
     HandleError();
 
@@ -100,36 +102,44 @@ void TcpChannel::HandleRead() {
 
 void TcpChannel::HandleWrite() {
 
+  int fatal_err = 0;
   int socket_fd = fd_event_->fd();
 
-  int32_t data_size = out_buffer_.CanReadSize();
-  if (0 == data_size) {
-    fd_event_->DisableWriting();
+  while(out_buffer_.CanReadSize()) {
+
+    ssize_t writen_bytes = socketutils::Write(socket_fd, out_buffer_.GetRead(), out_buffer_.CanReadSize());
+    if (writen_bytes < 0) {
+      int err = errno;
+      if (err != EAGAIN && err != EWOULDBLOCK) {
+        LOG(ERROR) << "channel [" << ChannelName() << "] handle write err:" << base::StrError(err);
+        ForceShutdown();
+        fatal_err = err;
+      }
+      break;
+    }
+    out_buffer_.Consume(writen_bytes);
+  };
+
+  if (fatal_err != 0) {
+    return;
+  }
+
+  if (out_buffer_.CanReadSize()) {
+
+  	if (!fd_event_->IsWriteEnable()) {
+  	  fd_event_->EnableWriting();
+  	}
+
+  } else { //all data writen done
+
+    channel_consumer_->OnDataFinishSend(shared_from_this());
 
     if (schedule_shutdown_) {
       socketutils::ShutdownWrite(socket_fd);
-    }
-    return;
-  }
-  int writen_bytes = socketutils::Write(socket_fd, out_buffer_.GetRead(), data_size);
-
-  if (writen_bytes > 0) {
-    out_buffer_.Consume(writen_bytes);
-
-    if (out_buffer_.CanReadSize() == 0) { //all data writen
-      channel_consumer_->OnDataFinishSend(shared_from_this());
+    } else {
+      fd_event_->DisableWriting();
     }
 
-  } else {
-    LOG(ERROR) << "Call Socket Write Error";
-  }
-
-  if (out_buffer_.CanReadSize() == 0) { //all data writen
-    fd_event_->DisableWriting();
-
-    if (schedule_shutdown_) {
-      socketutils::ShutdownWrite(fd_event_->fd());
-    }
   }
 }
 
@@ -148,14 +158,12 @@ void TcpChannel::HandleClose() {
   fd_event_->ResetCallback();
   io_loop_->Pump()->RemoveFdEvent(fd_event_.get());
 
-  VLOG(GLOG_VTRACE) << "HandleClose, Channel:" << ChannelName() << " Status: DISCONNECTED";
 
   SetChannelStatus(DISCONNECTED);
-  LOG(INFO) << "HandleClose, Channel:" << ChannelName() << " Status: DISCONNECTED";
 
-  if (closed_callback_) {
-    closed_callback_(guard);
-  }
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << " channel [" << ChannelName() << "] close";
+
+  channel_consumer_->OnChannelClosed(guard);
 }
 
 void TcpChannel::SetChannelStatus(ChannelStatus st) {
@@ -182,59 +190,54 @@ void TcpChannel::ShutdownChannel() {
 
 void TcpChannel::ForceShutdown() {
   CHECK(InIOLoop());
-
   HandleClose();
 }
 
 int32_t TcpChannel::Send(const uint8_t* data, const int32_t len) {
   CHECK(io_loop_->IsInLoopThread());
-
   if (channel_status_ != CONNECTED) {
     VLOG(GLOG_VERROR) << "Can't Write Data To a Closed[ing] socket; Channal:" << ChannelName();
     return -1;
   }
 
-  int32_t n_write = 0;
-  int32_t n_remain = len;
+  if (out_buffer_.CanReadSize() > 0) {
+    out_buffer_.WriteRawData(data, len);
 
-  //nothing write in out buffer
-  if (0 == out_buffer_.CanReadSize()) {
-
-    n_write = socketutils::Write(fd_event_->fd(), data, len);
-
-    if (n_write >= 0) {
-
-      n_remain = len - n_write;
-
-      if (n_remain == 0) { //finish all
-
-        RefTcpChannel guard(shared_from_this());
-        channel_consumer_->OnDataFinishSend(guard);
-
-      }
-    } else { //n_write < 0
-
-      n_write = 0;
-      int32_t err = errno;
-      LOG_IF(ERROR, EAGAIN != err) << "channel write data failed, fd:[" << fd_event_->fd() << "]" << "errno: [" << base::StrError(err) << "]";
-    }
-  }
-
-  if (n_remain > 0) {
     if (!fd_event_->IsWriteEnable()) {
       fd_event_->EnableWriting();
     }
-    out_buffer_.WriteRawData(data + n_write, n_remain);
+    return 0; //all write to buffer, zero write to fd
   }
-  return n_write;
+
+  int32_t fatal_err = 0;
+  size_t n_write = 0;
+  size_t n_remain = len;
+
+  do {
+    ssize_t part_write = socketutils::Write(fd_event_->fd(), data + n_write, n_remain);
+    if (part_write < 0) {
+      if (errno == EAGAIN || errno == EWOULDBLOCK) {
+        out_buffer_.WriteRawData(data + n_write, n_remain);
+      } else {
+      	fatal_err = errno;
+        LOG(ERROR) << "channel [" << ChannelName() << "] write err:" << base::StrError(fatal_err);
+        ForceShutdown();
+      }
+      break;
+    }
+    n_write += part_write;
+    n_remain = n_remain - part_write;
+    DCHECK((n_write + n_remain) == size_t(len));
+  } while(n_remain != 0);
+
+  if (out_buffer_.CanReadSize() > 0 && !fd_event_->IsWriteEnable()) {
+    fd_event_->EnableWriting();
+  }
+  return fatal_err != 0 ? -1 : n_write;
 }
 
 void TcpChannel::SetChannelName(const std::string name) {
   channal_name_ = name;
-}
-
-void TcpChannel::SetCloseCallback(const ChannelClosedCallback& callback) {
-  closed_callback_ = callback;
 }
 
 const std::string TcpChannel::StatusAsString() const {

@@ -62,15 +62,9 @@ void HttpProtoService::OnDataFinishSend(const RefTcpChannel& channel) {
 }
 
 void HttpProtoService::OnDataRecieved(const RefTcpChannel& channel, IOBuffer* buf) {;
-  bool success = false;
-  if (IsServerSideservice()) {// parse Request
-    success = ParseHttpRequest(channel, buf);
-  } else {
-    success = ParseHttpResponse(channel, buf);
-  }
-
+  bool success = IsServerSideservice() ? ParseHttpRequest(channel, buf) : ParseHttpResponse(channel, buf);
   if (!success) {
-    channel->ShutdownChannel();
+  	CloseService();
   }
 }
 
@@ -127,19 +121,18 @@ bool HttpProtoService::ParseHttpRequest(const RefTcpChannel& channel, IOBuffer* 
     return false;
   }
 
+  if (!message_handler_) {
+    LOG(ERROR) << "No message handler for this http protocol service message, shutdown this channel";
+    return false;
+  }
+
   while (request_context_->messages_.size()) {
     RefHttpRequest message = request_context_->messages_.front();
     request_context_->messages_.pop_front();
 
-    message->SetIOContextWeakChannel(channel);
+    message->SetIOContext(shared_from_this());
     CHECK(message->GetMessageType() == MessageType::kRequest);
-
-    if (message_handler_) {
-      message_handler_(std::static_pointer_cast<ProtocolMessage>(message));
-    } else {
-      LOG(ERROR) << "No message handler for this channel, shutdown this channel";
-      channel->ShutdownChannel();
-    }
+    message_handler_(std::static_pointer_cast<ProtocolMessage>(message));
   }
   return true;
 }
@@ -154,6 +147,7 @@ bool HttpProtoService::ParseHttpResponse(const RefTcpChannel& channel, IOBuffer*
                                        buffer_start,
                                        buffer_size);
 
+  buf->Consume(nparsed);
   if (parser->upgrade) { //websockt
     LOG(ERROR) << " Not Supported Now";
     response_context_->current_.reset();
@@ -163,13 +157,16 @@ bool HttpProtoService::ParseHttpResponse(const RefTcpChannel& channel, IOBuffer*
     response_context_->current_.reset();
     return false;
   }
-  buf->Consume(nparsed);
+  if (!message_handler_) {
+    LOG(ERROR) << __FUNCTION__ << " no message handler message, ";
+    return false;
+  }
 
   while (response_context_->messages_.size()) {
     RefHttpResponse message = response_context_->messages_.front();
     response_context_->messages_.pop_front();
 
-    message->SetIOContextWeakChannel(channel);
+    message->SetIOContext(shared_from_this());
     CHECK(message->GetMessageType() == MessageType::kResponse);
 
     if (message_handler_) {

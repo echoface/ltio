@@ -13,22 +13,22 @@ namespace net {
 
 class IOBuffer {
 public:
-  IOBuffer(int32_t size = kDefaultInitialSize);
+  IOBuffer(uint64_t size = kDefaultInitialSize);
   IOBuffer(const IOBuffer&& r);
   ~IOBuffer();
 
-  int32_t ReadFromSocketFd(int scoket, int *error);
+  ssize_t ReadFromSocketFd(int socket, int *error);
 
-  bool EnsureWritableSize(int32_t len);
+  bool EnsureWritableSize(int64_t len);
   bool HasALine();
 
-  const uint8_t* GetRead();
   uint8_t* GetWrite();
+  const uint8_t* GetRead();
 
-  inline int32_t CanReadSize() {
+  inline uint64_t CanReadSize() {
     return write_index_ - read_index_;
   }
-  inline int32_t CanWriteSize() {
+  inline uint64_t CanWriteSize() {
     return data_.size() - write_index_;
   }
 
@@ -50,17 +50,17 @@ public:
 
   std::string AsString();
 
-  void Consume(int32_t len);
+  void Consume(uint64_t len);
 
-  inline void Produce(int32_t len) {
+  inline void Produce(uint64_t len) {
     write_index_ += len;
   }
 private:
   uint8_t* MutableRead();
   uint8_t* MutableWrite();
 
-  int32_t read_index_;
-  int32_t write_index_;
+  uint64_t read_index_;
+  uint64_t write_index_;
   std::vector<uint8_t> data_;
 };
 

@@ -47,7 +47,9 @@ public:
   void SetChannelConsumer(ChannelConsumer* consumer);
   void SetCloseCallback(const ChannelClosedCallback& callback);
 
-  /* return -1 in error, return 0 when success*/
+  /* return -1 in error,
+   * return 0 when all data pending to buffer,
+   * other case return the byte writen to socket fd successfully */
   int32_t Send(const uint8_t* data, const int32_t len);
 
   void ForceShutdown();
@@ -64,7 +66,7 @@ protected:
   void HandleClose();
 
 private:
-  void OnConnectionReady();
+  void OnChannelReady();
   void SetChannelStatus(ChannelStatus st);
 
   /* channel relative things should happened on io_loop*/
@@ -84,8 +86,6 @@ private:
   IOBuffer out_buffer_;
 
   ChannelConsumer* channel_consumer_ = NULL;
-
-  ChannelClosedCallback closed_callback_;
   DISALLOW_COPY_AND_ASSIGN(TcpChannel);
 };
 

@@ -7,42 +7,37 @@ namespace net {
 
 const static RefProtocolMessage kNullResponse;
 
-RefClientChannel CreateClientChannel(ClientChannel::Delegate* delegate, RefTcpChannel& channel) {
-  if (channel->GetProtoService()->KeepSequence()) {
-    auto client_channel = std::make_shared<QueuedChannel>(delegate, channel);
+RefClientChannel CreateClientChannel(ClientChannel::Delegate* delegate, RefProtoService& service) {
+  if (service->KeepSequence()) {
+    auto client_channel = std::make_shared<QueuedChannel>(delegate, service);
     return std::static_pointer_cast<ClientChannel>(client_channel);
   }
-  auto client_channel = std::make_shared<AsyncChannel>(delegate, channel);
+  auto client_channel = std::make_shared<AsyncChannel>(delegate, service);
   return std::static_pointer_cast<ClientChannel>(client_channel);
 }
 
-QueuedChannel::QueuedChannel(Delegate* d, RefTcpChannel& ch)
-  : ClientChannel(d, ch) {
+QueuedChannel::QueuedChannel(Delegate* d, RefProtoService& service)
+  : ClientChannel(d, service) {
 }
 
 QueuedChannel::~QueuedChannel() {
 }
 
 void QueuedChannel::StartClient() {
-  ProtoService* service = channel_->GetProtoService();
 
-  ProtoMessageHandler res_handler = std::bind(&QueuedChannel::OnResponseMessage,
-                                             this, std::placeholders::_1);
-  service->SetMessageHandler(std::move(res_handler));
+  ProtoMessageHandler res_handler =
+      std::bind(&QueuedChannel::OnResponseMessage,this, std::placeholders::_1);
 
-  ChannelClosedCallback close_callback = std::bind(&QueuedChannel::OnChannelClosed,
-                                                   this, std::placeholders::_1);
-  channel_->SetCloseCallback(close_callback);
+  protocol_service_->SetMessageHandler(std::move(res_handler));
 
-  channel_->Start();
+  protocol_service_->Channel()->Start();
 }
 
 void QueuedChannel::SendRequest(RefProtocolMessage request)  {
-  CHECK(channel_->InIOLoop());
- 
-  ProtoService* service = channel_->GetProtoService();
-  bool success = service->BeforeSendRequest(request.get());
+  CHECK(IOLoop()->IsInLoopThread());
 
+  bool success = protocol_service_->BeforeSendRequest(request.get());
+  request->SetIOContext(protocol_service_);
   if (!success) {
     request->SetFailInfo(FailInfo::kBadMessage);
     VLOG(GLOG_VTRACE) << __FUNCTION__ << " bad request detected";
@@ -50,13 +45,12 @@ void QueuedChannel::SendRequest(RefProtocolMessage request)  {
     return;
   }
 
-
   waiting_list_.push_back(std::move(request));
 
-  TrySendRequestInternal();
+  TrySendNext();
 }
 
-bool QueuedChannel::TrySendRequestInternal() {
+bool QueuedChannel::TrySendNext() {
   if (in_progress_request_) {
     return false;
   }
@@ -65,7 +59,7 @@ bool QueuedChannel::TrySendRequestInternal() {
   while(!success && waiting_list_.size()) {
 
     RefProtocolMessage& next = waiting_list_.front();
-    success = channel_->SendProtoMessage(next);
+    success = protocol_service_->SendProtocolMessage(next);
     waiting_list_.pop_front();
     if (success) {
       in_progress_request_ = next;
@@ -98,15 +92,15 @@ void QueuedChannel::OnRequestTimeout(WeakProtocolMessage weak) {
   delegate_->OnRequestGetResponse(request, kNullResponse);
   in_progress_request_.reset();
 
-  if (channel_->IsConnected()) {
-    channel_->ShutdownChannel();
+  if (protocol_service_->IsConnected()) {
+  	protocol_service_->CloseService();
   } else {
-    OnChannelClosed(channel_);
+  	OnProtocolServiceGone(protocol_service_);
   }
 }
 
 void QueuedChannel::OnResponseMessage(const RefProtocolMessage& res) {
-  CHECK(channel_->InIOLoop());
+  //CHECK(IOLoop()->IsInLoopThread());
 
   if (!in_progress_request_) {
     LOG(ERROR) << "Got Response Without Request or Request Has Canceled";
@@ -117,11 +111,10 @@ void QueuedChannel::OnResponseMessage(const RefProtocolMessage& res) {
   delegate_->OnRequestGetResponse(in_progress_request_, res);
   in_progress_request_.reset();
 
-  TrySendRequestInternal();
+  TrySendNext();
 }
 
-void QueuedChannel::OnChannelClosed(const RefTcpChannel& channel) {
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << " , Channel:" << channel_->ChannelName();
+void QueuedChannel::OnProtocolServiceGone(const RefProtoService& service) {
 
   if (in_progress_request_) {
     in_progress_request_->SetFailInfo(FailInfo::kChannelBroken);
@@ -139,8 +132,7 @@ void QueuedChannel::OnChannelClosed(const RefTcpChannel& channel) {
   }
 
   auto guard = shared_from_this();
-  LOG(INFO) << __FUNCTION__ << " , Channel:" << channel_->ChannelName() << " closed";
   delegate_->OnClientChannelClosed(guard);
-}
+};
 
 }//net

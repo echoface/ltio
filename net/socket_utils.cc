@@ -14,6 +14,7 @@
 #include <sys/types.h>
 #include <arpa/inet.h>
 #include <base/base_constants.h>
+#include "base/utils/sys_error.h"
 
 #include "net_endian.h"
 
@@ -52,40 +53,36 @@ const struct sockaddr_in6* sockaddr_in6_cast(const struct sockaddr* addr)  {
 }
 
 SocketFd CreateNonBlockingSocket(sa_family_t family) {
-  int sockfd = ::socket(family,
-                        SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC,
-                        IPPROTO_TCP);
-  if (sockfd < 0) {
-    LOG(ERROR) << " CreateNonBlockingFd call ::socket Failed" << family;
-    CHECK(false);
-  }
+  int sockfd = ::socket(family, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_TCP);
+  LOG_IF(ERROR, sockfd == -1) << __FUNCTION__ << " open socket err:[" << base::StrError() << "]";
   return sockfd;
 }
 
-void BindSocketFd(SocketFd sockfd, const struct sockaddr* addr) {
-  int ret = ::bind(sockfd,
-                   addr,
-                   static_cast<socklen_t>(sizeof(struct sockaddr_in6)));
-  LOG_IF(ERROR, ret < 0) << " BindSocketFd call ::bind Failed";
-  CHECK(ret == 0);
+int BindSocketFd(SocketFd sockfd, const struct sockaddr* addr) {
+  int ret = ::bind(sockfd, addr, static_cast<socklen_t>(sizeof(struct sockaddr_in6)));
+  LOG_IF(ERROR, ret < 0) << __FUNCTION__ << " socket bind failed, err:[" << base::StrError() << "]";
+  return ret;
 }
 
-SocketFd SocketConnect(SocketFd fd, const struct sockaddr* addr) {
-  return ::connect(fd, addr, static_cast<socklen_t>(sizeof(struct sockaddr_in6)));
+int SocketConnect(SocketFd fd, const struct sockaddr* addr) {
+  int ret = ::connect(fd, addr, static_cast<socklen_t>(sizeof(struct sockaddr_in6)));
+  LOG_IF(ERROR, ret != 0) << __FUNCTION__ << " connect failed, err:[" << base::StrError() << "]";
+  return ret;
 }
 
-void ListenSocket(SocketFd sockfd) {
-  int ret = ::listen(sockfd, SOMAXCONN);
-  LOG_IF(ERROR, ret < 0) << "socketutils::ListenSocket Error, fd:" << sockfd;
-  CHECK(ret == 0);
+int ListenSocket(SocketFd socket_fd) {
+  int ret = ::listen(socket_fd, SOMAXCONN);
+  LOG_IF(ERROR, ret < 0) << __FUNCTION__ << " listen fd:[" << socket_fd << "] err:[" << base::StrError() << "]";
+  return ret;
 }
 
-SocketFd AcceptSocket(SocketFd sockfd, struct sockaddr_in* addr) {
+SocketFd AcceptSocket(SocketFd sockfd, struct sockaddr_in* addr, int* err) {
   socklen_t addrlen = static_cast<socklen_t>(sizeof *addr);
   int connfd = ::accept4(sockfd, sockaddr_cast(addr),
                          &addrlen, SOCK_NONBLOCK | SOCK_CLOEXEC);
+  int savedErrno = 0;
   if (connfd < 0) {
-    int savedErrno = errno;
+    savedErrno = errno;
     VLOG(GLOG_VERROR) << "SocketUtils::AcceptSocket Error: fd:" << sockfd;
     switch (savedErrno) {
       case EAGAIN:
@@ -113,6 +110,7 @@ SocketFd AcceptSocket(SocketFd sockfd, struct sockaddr_in* addr) {
         break;
     }
   }
+  if (err) {*err = savedErrno;}
   return connfd;
 }
 

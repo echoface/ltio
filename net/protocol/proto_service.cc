@@ -30,14 +30,18 @@ void ProtoService::SetDelegate(ProtoServiceDelegate* d) {
 void ProtoService::BindChannel(RefTcpChannel& channel) {
 	channel_ = channel;
 	channel_->SetChannelConsumer(this);
-	channel_->SetCloseCallback(std::bind(&ProtoService::OnChannelClosed, this, std::placeholders::_1));
+}
+
+bool ProtoService::IsConnected() const {
+	return channel_ ?	channel_->IsConnected() : false;
 }
 
 void ProtoService::CloseService() {
 	BeforeCloseService();
-
 	CHECK(channel_->InIOLoop());
-	channel_->ForceShutdown();
+	if (IsConnected()) {
+		channel_->ShutdownChannel();
+	}
 }
 
 void ProtoService::OnChannelClosed(const RefTcpChannel& channel) {

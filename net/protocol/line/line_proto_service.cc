@@ -28,7 +28,7 @@ void LineProtoService::OnDataRecieved(const RefTcpChannel& channel, IOBuffer* bu
 
   {
     std::shared_ptr<LineMessage> msg(new LineMessage(InComingMessageType()));
-    msg->SetIOContextWeakChannel(channel);
+    msg->SetIOContext(shared_from_this());
 
     const uint8_t* start = buf->GetRead();
     int32_t len = line_crlf - start;
@@ -57,7 +57,9 @@ bool LineProtoService::EncodeToBuffer(const ProtocolMessage* msg, IOBuffer* out_
 
 bool LineProtoService::SendProtocolMessage(RefProtocolMessage& message) {
   static const std::string kCRCN("\r\n");
+  BeforeWriteMessage(message.get());
   const LineMessage* line_msg = static_cast<const LineMessage*>(message.get());
+
   int ret = channel_->Send((const uint8_t*)line_msg->Body().data(), line_msg->Body().size());
   if (ret < 0) {
     return false;

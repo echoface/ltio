@@ -19,16 +19,15 @@ typedef std::shared_ptr<AsyncChannel> RefAsyncChannel;
 class AsyncChannel : public ClientChannel,
                      public std::enable_shared_from_this<AsyncChannel> {
 public:
-  AsyncChannel(Delegate*, RefTcpChannel&);
+  AsyncChannel(Delegate*, RefProtoService&);
   ~AsyncChannel();
 
   void StartClient() override;
   void SendRequest(RefProtocolMessage request) override;
 private:
-  bool TrySendRequestInternal();
   void OnRequestTimeout(WeakProtocolMessage request);
-  void OnChannelClosed(const RefTcpChannel& channel);
   void OnResponseMessage(const RefProtocolMessage& res);
+	void OnProtocolServiceGone(const RefProtoService& service) override;
 private:
   std::unordered_map<uint64_t, RefProtocolMessage> in_progress_;
 };

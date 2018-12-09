@@ -96,22 +96,22 @@ void HttpServer::OnHttpRequest(const RefProtocolMessage& request) {
   base::StlClosure functor = std::bind(&HttpServer::HandleHttpRequest, this, request);
   if (false == dispatcher_->TransmitToWorker(functor)) {
     LOG(ERROR) << __FUNCTION__ << " dispatcher_->TransmitToWorker failed";
-    RefTcpChannel channel = request->GetIOCtx().channel.lock();
-    if (channel) {
-      channel->ShutdownChannel();
+    RefProtoService service = request->GetIOCtx().protocol_service.lock();
+    if (service) {
+      service->CloseService();
     }
   }
 }
 
 void HttpServer::HandleHttpRequest(const RefProtocolMessage request) {
 
-  RefTcpChannel channel = request->GetIOCtx().channel.lock();
-  if (!channel || !channel->IsConnected()) {
+  RefProtoService service = request->GetIOCtx().protocol_service.lock();
+  if (!service) {
     VLOG(GLOG_VERROR) << __FUNCTION__ << " Channel Has Broken After Handle Request Message";
     return;
   }
 
-  RefProtocolMessage response = channel->GetProtoService()->NewResponseFromRequest(request);
+  RefProtocolMessage response = service->NewResponseFromRequest(request);
   do {
     if (dispatcher_) {
       if (!dispatcher_->SetWorkContext(request->GetWorkCtx())) {
@@ -122,25 +122,26 @@ void HttpServer::HandleHttpRequest(const RefProtocolMessage request) {
     message_handler_((HttpRequest*)request.get(), (HttpResponse*)response.get());
   } while(0);
 
-	channel->GetProtoService()->BeforeSendResponse(request.get(), response.get());
-  bool close = channel->GetProtoService()->CloseAfterMessage(request.get(), response.get());
+	service->BeforeSendResponse(request.get(), response.get());
+  bool close = service->CloseAfterMessage(request.get(), response.get());
 
-  if (channel->InIOLoop()) { //send reply directly
+  if (service->IOLoop()->IsInLoopThread()) { //send reply directly
 
-    bool send_success = channel->SendProtoMessage(response);
+    bool send_success = service->SendProtocolMessage(response);
     if (close || !send_success) { //failed
-      channel->ShutdownChannel();
+      service->CloseService();
     }
 
   } else  { //Send Response to Channel's IO Loop
 
     auto functor = [=]() {
-      bool send_success = channel->SendProtoMessage(response);
+      RefProtocolMessage message = response;
+      bool send_success = service->SendProtocolMessage(message);
       if (close || !send_success) { //failed
-        channel->ShutdownChannel();
+        service->CloseService();
       }
     };
-    channel->IOLoop()->PostTask(NewClosure(std::move(functor)));
+    service->IOLoop()->PostTask(NewClosure(std::move(functor)));
   }
 }
 

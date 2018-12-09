@@ -81,7 +81,7 @@ private:
   // install this callback to protoservice
   ProtoMessageHandler message_handler_;
 
-  std::atomic<int64_t> channel_count_;
+  uint64_t channel_count_;
   std::string service_name_;
   std::unordered_set<RefProtoService> protocol_services;
 };

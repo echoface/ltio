@@ -5,9 +5,9 @@
 namespace base {
 
 FdEvent::FdEvent(int fd, uint32_t event):
-  watcher_(NULL),
   fd_(fd),
   events_(event),
+  revents_(0),
   owner_fd_life_(true) {
 }
 
@@ -17,7 +17,7 @@ FdEvent::~FdEvent() {
   }
 }
 
-void FdEvent::SetDelegate(FdEventWatcher* d) {
+void FdEvent::SetFdWatcher(FdEventWatcher *d) {
   watcher_ = d;
 }
 
@@ -51,10 +51,10 @@ void FdEvent::ResetCallback() {
 
 void FdEvent::Update() {
   if (watcher_) {
-    VLOG(GLOG_VTRACE) << "update fdevent to poll, events:" << events_;
+    VLOG(GLOG_VTRACE) << "update fd event to poll, events:" << events_;
     watcher_->OnEventChanged(this);
   } else {
-    LOG(INFO) << "This fdevent not attach to any event dump yet, fd:" << fd();
+    LOG(ERROR) << "This fd event not attach to any event dump yet, fd:" << fd();
   }
 }
 
@@ -63,7 +63,7 @@ void FdEvent::SetCloseCallback(const EventCallback &cb) {
 }
 
 void FdEvent::HandleEvent() {
-  VLOG(GLOG_VTRACE) << "FdEvent::handle_event: " << RcvEventAsString();
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << " got event notification:" << RcvEventAsString();
   do {
     if ((revents_ & EPOLLHUP) && !(revents_ & EPOLLIN)) {
       if (close_callback_) {

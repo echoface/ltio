@@ -23,7 +23,8 @@
 
 base::MessageLoop loop;
 base::MessageLoop wloop;
-net::InetAddress server_address("127.0.0.1", 80);
+net::InetAddress server_address("127.0.0.1", 5006);
+//net::InetAddress server_address("127.0.0.1", 80);
 //net::InetAddress server_address("123.59.153.185", 80);
 net::InetAddress raw_server_address("0.0.0.0", 5002);
 
@@ -98,7 +99,7 @@ int main(int argc, char* argv[]) {
   router = new net::ClientRouter(&loop, server_address);
   net::RouterConf router_config;
   router_config.protocol = "http";
-  router_config.connections = 1;
+  router_config.connections = 10000;
   router_config.recon_interal = 1000;
   router_config.message_timeout = 5000;
   router->SetupRouter(router_config);

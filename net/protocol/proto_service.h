@@ -29,9 +29,11 @@ public:
   void SetDelegate(ProtoServiceDelegate* d);
   void BindChannel(RefTcpChannel& channel);
   void SetMessageHandler(ProtoMessageHandler);
+  TcpChannel* Channel() {return channel_.get();};
   base::MessageLoop* IOLoop() {return channel_ ? channel_->IOLoop() : NULL;}
 
   void CloseService();
+  bool IsConnected() const;
   virtual void BeforeCloseService() {};
 
   virtual bool EncodeToBuffer(const ProtocolMessage* msg, IOBuffer* out_buffer) = 0;
@@ -58,7 +60,7 @@ public:
 
   virtual void AfterChannelClosed() {};
 protected:
-  void OnChannelClosed(const RefTcpChannel&);
+  void OnChannelClosed(const RefTcpChannel&) override;
 protected:
   ProtocolServiceType type_;
   RefTcpChannel channel_;

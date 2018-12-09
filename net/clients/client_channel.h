@@ -11,34 +11,35 @@ namespace net {
 class ClientChannel;
 
 typedef std::shared_ptr<ClientChannel> RefClientChannel;
-class ClientChannel {
+class ClientChannel : public ProtoServiceDelegate {
 public:
   class Delegate {
   public:
     virtual void OnClientChannelClosed(const RefClientChannel& channel) = 0;
     virtual void OnRequestGetResponse(const RefProtocolMessage&, const RefProtocolMessage&) = 0;
   };
-  ClientChannel(Delegate* d, RefTcpChannel& ch)
+  ClientChannel(Delegate* d, RefProtoService& service)
     : delegate_(d),
-      channel_(ch) {
+      protocol_service_(service) {
   }
   virtual ~ClientChannel() {}
   virtual void StartClient() = 0;
+
   void CloseClientChannel() {
-    if (channel_->InIOLoop()) {
-      channel_->ShutdownChannel();
+    if (IOLoop()->IsInLoopThread()) {
+      protocol_service_->CloseService();
       return;
     }
-    auto functor = std::bind(&TcpChannel::ShutdownChannel, channel_);
+    auto functor = std::bind(&ProtoService::CloseService, protocol_service_);
     IOLoop()->PostTask(NewClosure(functor));
   }
   virtual void SendRequest(RefProtocolMessage request) = 0;
 
-  base::MessageLoop* IOLoop() {return channel_->IOLoop();};
+  base::MessageLoop* IOLoop() {return protocol_service_->IOLoop();};
   void SetRequestTimeout(uint32_t ms) {request_timeout_ = ms;};
 protected:
   Delegate* delegate_;
-  RefTcpChannel channel_;
+  RefProtoService protocol_service_;
   uint32_t request_timeout_ = 1000; //1s
 };
 

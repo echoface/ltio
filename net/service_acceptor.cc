@@ -1,40 +1,45 @@
 
 
+#include "glog/logging.h"
 #include "service_acceptor.h"
 #include "base/base_constants.h"
-
-#include "glog/logging.h"
+#include "base/utils/sys_error.h"
 
 namespace net {
 
 ServiceAcceptor::ServiceAcceptor(base::EventPump* pump, const InetAddress& address)
   : listenning_(false),
-    event_pump_(pump),
-    address_(address) {
+    address_(address),
+    event_pump_(pump) {
   CHECK(event_pump_);
-
-  InitListener();
+  CHECK(InitListener());
 }
 
 ServiceAcceptor::~ServiceAcceptor() {
   CHECK(listenning_ == false);
-
   socket_event_.reset();
 }
 
-void ServiceAcceptor::InitListener() {
+bool ServiceAcceptor::InitListener() {
   int socket_fd = socketutils::CreateNonBlockingSocket(address_.SocketFamily());
+  if (socket_fd < 0) {
+    return false;
+  }
   //reuse socket addr and port if possible
-  socketutils::ReUseSocketAddress(socket_fd, true);
   socketutils::ReUseSocketPort(socket_fd, true);
-  socketutils::BindSocketFd(socket_fd, address_.AsSocketAddr());
-
+  socketutils::ReUseSocketAddress(socket_fd, true);
+  int ret = socketutils::BindSocketFd(socket_fd, address_.AsSocketAddr());
+  if (ret < 0) {
+    socketutils::CloseSocket(socket_fd);
+    return false;
+  }
   socket_event_ = base::FdEvent::Create(socket_fd, 0);
-  socket_event_->SetCloseCallback(std::bind(&ServiceAcceptor::OnAccepterError, this));
-  socket_event_->SetErrorCallback(std::bind(&ServiceAcceptor::OnAccepterError, this));
+  socket_event_->SetCloseCallback(std::bind(&ServiceAcceptor::OnAcceptorError, this));
+  socket_event_->SetErrorCallback(std::bind(&ServiceAcceptor::OnAcceptorError, this));
   socket_event_->SetReadCallback(std::bind(&ServiceAcceptor::HandleCommingConnection, this));
 
-  VLOG(GLOG_VTRACE) << " Server Accept Socket Fd:" << socket_fd;
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << " init acceptor fd event success, fd:[" << socket_fd
+                    << "] bind to local:[" << address_.IpPortAsString() << "]";
 }
 
 bool ServiceAcceptor::StartListen() {
@@ -48,10 +53,9 @@ bool ServiceAcceptor::StartListen() {
   event_pump_->InstallFdEvent(socket_event_.get());
   socket_event_->EnableReading();
 
-  listenning_ = true;
-  socketutils::ListenSocket(socket_event_->fd());
-  LOG(INFO) << " Start Listen on:" << address_.IpPortAsString();
-  return true;
+  listenning_ = socketutils::ListenSocket(socket_event_->fd()) == 0;
+  LOG_IF(INFO, listenning_) << __FUNCTION__ << " satrt listen on:" << address_.IpPortAsString();
+  return listenning_;
 }
 
 void ServiceAcceptor::StopListen() {
@@ -74,31 +78,34 @@ void ServiceAcceptor::SetNewConnectionCallback(const NewConnectionCallback& cb) 
 void ServiceAcceptor::HandleCommingConnection() {
 
   struct sockaddr_in client_socket_in;
-  int peer_fd = socketutils::AcceptSocket(socket_event_->fd(), &client_socket_in);
 
-  if (peer_fd <= 0) {
-    LOG(ERROR) << "AcceptSocket Failed";
+  int err = 0;
+  int peer_fd = socketutils::AcceptSocket(socket_event_->fd(), &client_socket_in, &err);
+  if (peer_fd < 0) {
+    LOG(ERROR) << __FUNCTION__ << " accept new connection failed, err:" << base::StrError(err);
     return ;
   }
 
-  InetAddress clientaddr(client_socket_in);
+  InetAddress client_addr(client_socket_in);
 
-  VLOG(GLOG_VTRACE) << "Accept a New Connection:" << clientaddr.IpPortAsString();
-
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << " accept a connection:" << client_addr.IpPortAsString();
   if (new_conn_callback_) {
-    new_conn_callback_(peer_fd, clientaddr);
+    new_conn_callback_(peer_fd, client_addr);
   } else {
     socketutils::CloseSocket(peer_fd);
   }
 }
 
-void ServiceAcceptor::OnAccepterError() {
-  CHECK(event_pump_->IsInLoopThread());
+void ServiceAcceptor::OnAcceptorError() {
+  LOG(ERROR) << __FUNCTION__ << " accept fd [" << socket_event_->fd() << "] error:[" << base::StrError() << "]";
 
-  LOG(ERROR) << "Acceptor" << socket_event_->fd() << " Occur Error, Relaunch It";
+  listenning_ = false;
+
   // Relaunch This server 
-  InitListener();
-  StartListen();
+  if (InitListener()) {
+    bool re_listen_ok = StartListen();
+    LOG_IF(ERROR, !re_listen_ok) << __FUNCTION__ << " acceptor:[" << address_.IpPortAsString() << "] re-listen failed";
+  }
 }
 
 }//end namespace net

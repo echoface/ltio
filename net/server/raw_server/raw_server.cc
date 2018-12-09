@@ -95,9 +95,9 @@ void RawServer::OnRawRequest(const RefProtocolMessage& request) {
 
   base::StlClosure functor = std::bind(&RawServer::HandleRawRequest, this, request);
   if (false == dispatcher_->TransmitToWorker(functor)) {
-    RefTcpChannel channel = request->GetIOCtx().channel.lock();
-    if (channel) {
-      channel->ShutdownChannel();
+    RefProtoService service = request->GetIOCtx().protocol_service.lock();
+    if (service) {
+      service->CloseService();
     }
     LOG(ERROR) << __FUNCTION__ << " dispatcher_->TransmitToWorker failed";
   }
@@ -105,13 +105,14 @@ void RawServer::OnRawRequest(const RefProtocolMessage& request) {
 
 void RawServer::HandleRawRequest(const RefProtocolMessage request) {
 
-  RefTcpChannel channel = request->GetIOCtx().channel.lock();
-  if (!channel || !channel->IsConnected()) {
+  //RefTcpChannel channel = request->GetIOCtx().channel.lock();
+  RefProtoService raw_service = request->GetIOCtx().protocol_service.lock();
+  if (!raw_service) {
     VLOG(GLOG_VERROR) << __FUNCTION__ << " Channel Has Broken After Handle Request Message";
     return;
   }
 
-  RefProtocolMessage response = channel->GetProtoService()->NewResponseFromRequest(request);
+  RefProtocolMessage response = raw_service->NewResponseFromRequest(request);
   do {
     if (dispatcher_ && !dispatcher_->SetWorkContext(request->GetWorkCtx())) {
       LOG(ERROR) << "Set WorkerContext failed";
@@ -120,25 +121,26 @@ void RawServer::HandleRawRequest(const RefProtocolMessage request) {
     message_handler_((RawMessage*)request.get(), (RawMessage*)response.get());
   } while(0);
 
-	channel->GetProtoService()->BeforeSendResponse(request.get(), response.get());
-  bool close = channel->GetProtoService()->CloseAfterMessage(request.get(), response.get());
+	raw_service->BeforeSendResponse(request.get(), response.get());
+  bool close = raw_service->CloseAfterMessage(request.get(), response.get());
 
-  if (channel->InIOLoop()) { //send reply directly
+  if (raw_service->IOLoop()->IsInLoopThread()) { //send reply directly
 
-    bool send_success = channel->SendProtoMessage(response);
+    bool send_success = raw_service->SendProtocolMessage(response);
     if (close || !send_success) { //failed
-      channel->ShutdownChannel();
+      raw_service->CloseService();
     }
 
   } else  { //Send Response to Channel's IO Loop
 
     auto functor = [=]() {
-      bool send_success = channel->SendProtoMessage(response);
+    	RefProtocolMessage msg = response;
+      bool send_success = raw_service->SendProtocolMessage(msg);
       if (close || !send_success) { //failed
-        channel->ShutdownChannel();
+        raw_service->CloseService();
       }
     };
-    channel->IOLoop()->PostTask(NewClosure(std::move(functor)));
+    raw_service->IOLoop()->PostTask(NewClosure(std::move(functor)));
   }
 }
 
