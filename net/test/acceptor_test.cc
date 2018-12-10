@@ -1,29 +1,40 @@
-#include "../service_acceptor.h"
+#include <set>
+#include <functional>
+#include <glog/logging.h>
 
 #include "../tcp_channel.h"
-#include <glog/logging.h>
 #include "../socket_utils.h"
-#include <functional>
+#include "../service_acceptor.h"
+
+base::MessageLoop loop;
+std::set<net::RefTcpChannel> connections;
+
+class EchoConsumer : public net::ChannelConsumer {
+public:
+  void OnChannelClosed(const net::RefTcpChannel& ch) override {
+    connections.erase(ch);
+    LOG(INFO) << "channel:[" << ch->ChannelName() << "] closed, connections count:" << connections.size();
+  };
+  void OnDataReceived(const net::RefTcpChannel &ch, net::IOBuffer *buf) override {
+    ch->Send(buf->GetRead(), buf->CanReadSize());
+    buf->Consume(buf->CanReadSize());
+  };
+};
+
+EchoConsumer global_consumer;
 
 int main(int argc, char** argv) {
 
-  base::MessageLoop loop;
-  LOG(INFO) << "Call Start";
   loop.Start();
-  LOG(INFO) << "Started";
-
-  std::vector<net::RefTcpChannel> connections;
 
   auto new_connection = [&](int fd, const net::InetAddress& peer) {
-    LOG(INFO) << " New Connection from:" << peer.IpPortAsString();
-
     net::InetAddress local(net::socketutils::GetLocalAddrIn(fd));
-    auto f = net::TcpChannel::Create(fd, local, peer, &loop);
-    f->Start();
-    connections.push_back(f);
+    auto ch = net::TcpChannel::Create(fd, local, peer, &loop);
+    ch->SetChannelConsumer(&global_consumer);
+    ch->Start();
 
-    int32_t size = f->Send((const uint8_t*)"const", sizeof "const");
-    LOG(INFO) << "N ByteWrite:" << size;
+    connections.insert(ch);
+    LOG(INFO) << "channel:[" << ch->ChannelName() << "] connected, connections count:" << connections.size();
   };
 
   net::ServiceAcceptor* acceptor;

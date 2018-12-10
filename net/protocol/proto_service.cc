@@ -19,10 +19,6 @@ void ProtoService::SetMessageHandler(ProtoMessageHandler handler) {
   message_handler_ = handler;
 }
 
-void ProtoService::BeforeWriteMessage(ProtocolMessage* message) {
-	return IsServerSideservice() ? BeforeWriteResponseToBuffer(message) : BeforeWriteRequestToBuffer(message);
-}
-
 void ProtoService::SetDelegate(ProtoServiceDelegate* d) {
 	delegate_ = d;
 }
@@ -49,7 +45,7 @@ void ProtoService::OnChannelClosed(const RefTcpChannel& channel) {
 	RefProtoService guard = shared_from_this();
 
 	AfterChannelClosed();
-
+	VLOG(GLOG_VTRACE) << __FUNCTION__ << " " << channel_->ChannelName() << " closed";
 	if (delegate_) {
 		delegate_->OnProtocolServiceGone(guard);
 	}

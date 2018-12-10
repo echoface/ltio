@@ -61,34 +61,11 @@ void HttpProtoService::OnStatusChanged(const RefTcpChannel& channel) {
 void HttpProtoService::OnDataFinishSend(const RefTcpChannel& channel) {
 }
 
-void HttpProtoService::OnDataRecieved(const RefTcpChannel& channel, IOBuffer* buf) {;
-  bool success = IsServerSideservice() ? ParseHttpRequest(channel, buf) : ParseHttpResponse(channel, buf);
+void HttpProtoService::OnDataReceived(const RefTcpChannel &channel, IOBuffer *buf) {;
+  bool success = IsServerService() ? ParseHttpRequest(channel, buf) : ParseHttpResponse(channel, buf);
   if (!success) {
   	CloseService();
   }
-}
-
-bool HttpProtoService::DecodeToMessage(IOBuffer* buffer, ProtocolMessage* out_msg) {
-  return false;
-}
-
-bool HttpProtoService::EncodeToBuffer(const ProtocolMessage* msg, IOBuffer* out_buffer) {
-  CHECK(msg && out_buffer);
-
-  switch (msg->GetMessageType()) {
-    case MessageType::kRequest: {
-      const HttpRequest* request = static_cast<const HttpRequest*>(msg);
-      return RequestToBuffer(request, out_buffer);
-    } break;
-    case MessageType::kResponse: {
-      const HttpResponse* response = static_cast<const HttpResponse*>(msg);
-      return ResponseToBuffer(response, out_buffer);
-    } break;
-    default:
-      LOG(ERROR) << __FUNCTION__ << " Should Not Readched";
-    break;
-  }
-  return false;
 }
 
 bool HttpProtoService::ParseHttpRequest(const RefTcpChannel& channel, IOBuffer* buf) {
@@ -112,8 +89,7 @@ bool HttpProtoService::ParseHttpRequest(const RefTcpChannel& channel, IOBuffer* 
 
     return false;
   } else if (nparsed != buffer_size) {
-    LOG(ERROR) << " Parse Occur ERROR, nparsed" << nparsed
-               << " buffer_size:" << buffer_size;
+    LOG(ERROR) << " Parse Occur ERROR, nparsed" << nparsed << " buffer_size:" << buffer_size;
 
     request_context_->current_.reset();
     channel->Send((const uint8_t*)HttpConstant::kBadRequest.data(), HttpConstant::kBadRequest.size());
@@ -162,7 +138,7 @@ bool HttpProtoService::ParseHttpResponse(const RefTcpChannel& channel, IOBuffer*
     return false;
   }
 
-  while (response_context_->messages_.size()) {
+  while (!response_context_->messages_.empty()) {
     RefHttpResponse message = response_context_->messages_.front();
     response_context_->messages_.pop_front();
 
@@ -226,15 +202,31 @@ bool HttpProtoService::RequestToBuffer(const HttpRequest* request, IOBuffer* buf
   return true;
 }
 
-bool HttpProtoService::SendProtocolMessage(RefProtocolMessage& message) {
-  BeforeWriteMessage(message.get());
+bool HttpProtoService::SendRequestMessage(const RefProtocolMessage &message) {
+	CHECK(message->GetMessageType() == MessageType::kRequest);
+
+  auto request = static_cast<HttpRequest*>(message.get());
+  BeforeSendRequest(request);
 
   IOBuffer buffer;
-  if (!EncodeToBuffer(message.get(), &buffer)) {
+  if (!RequestToBuffer(request, &buffer)) {
     return false;
   }
   return channel_->Send(buffer.GetRead(), buffer.CanReadSize()) >= 0;
 }
+
+bool HttpProtoService::ReplyRequest(const RefProtocolMessage& req, const RefProtocolMessage& res) {
+  HttpRequest* request = static_cast<HttpRequest*>(req.get());
+  HttpResponse* response = static_cast<HttpResponse*>(res.get());
+
+  BeforeSendResponse(request, response);
+
+  IOBuffer buffer;
+  if (!ResponseToBuffer(response, &buffer)) {
+    return false;
+  }
+  return channel_->Send(buffer.GetRead(), buffer.CanReadSize()) >= 0;
+};
 
 //static
 bool HttpProtoService::ResponseToBuffer(const HttpResponse* response, IOBuffer* buffer) {
@@ -298,7 +290,8 @@ bool HttpProtoService::CloseAfterMessage(ProtocolMessage* request, ProtocolMessa
   return !static_cast<HttpRequest*>(request)->IsKeepAlive();
 }
 
-void HttpProtoService::BeforeWriteRequestToBuffer(ProtocolMessage* out_message) {
+void HttpProtoService::BeforeSendRequest(HttpRequest* out_message) {
+
   HttpRequest* request = static_cast<HttpRequest*>(out_message);
   if (request->Body().size() > kCompressionThreshold &&
       !request->HasHeaderField(HttpConstant::kContentEncoding)) {
@@ -312,26 +305,9 @@ void HttpProtoService::BeforeWriteRequestToBuffer(ProtocolMessage* out_message) 
   }
 }
 
-void HttpProtoService::BeforeWriteResponseToBuffer(ProtocolMessage* out_message) {
-  HttpResponse* response = static_cast<HttpResponse*>(out_message);
-  if (response->Body().size() > kCompressionThreshold &&
-      !response->HasHeaderField(HttpConstant::kContentEncoding)) {
-
-    std::string compressed_body;
-    if (0 == base::Gzip::compress_gzip(response->Body(), compressed_body)) { //success
-      response->InsertHeader(HttpConstant::kContentEncoding, "gzip");
-      response->InsertHeader(HttpConstant::kContentLength, std::to_string(compressed_body.size()));
-      response->body_ = std::move(compressed_body);
-    }
-  }
-}
-
-void HttpProtoService::BeforeSendResponse(ProtocolMessage *in, ProtocolMessage *out) {
-  HttpRequest* request = static_cast<HttpRequest*>(in);
-  HttpResponse* response = static_cast<HttpResponse*>(out);
-
+bool HttpProtoService::BeforeSendResponse(HttpRequest* request, HttpResponse* response) {
   //response compression if needed
-  if (response->Body().size() > 4096 &&
+  if (response->Body().size() > kCompressionThreshold &&
       !response->HasHeaderField(HttpConstant::kContentEncoding)) {
 
     const std::string& accept = request->GetHeader(HttpConstant::kAcceptEncoding);
@@ -348,6 +324,7 @@ void HttpProtoService::BeforeSendResponse(ProtocolMessage *in, ProtocolMessage *
       }
     }
   }
+  return true;
 }
 
 }//end namespace

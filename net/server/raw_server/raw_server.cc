@@ -121,12 +121,11 @@ void RawServer::HandleRawRequest(const RefProtocolMessage request) {
     message_handler_((RawMessage*)request.get(), (RawMessage*)response.get());
   } while(0);
 
-	raw_service->BeforeSendResponse(request.get(), response.get());
   bool close = raw_service->CloseAfterMessage(request.get(), response.get());
 
   if (raw_service->IOLoop()->IsInLoopThread()) { //send reply directly
 
-    bool send_success = raw_service->SendProtocolMessage(response);
+    bool send_success = raw_service->ReplyRequest(request, response);
     if (close || !send_success) { //failed
       raw_service->CloseService();
     }
@@ -134,8 +133,7 @@ void RawServer::HandleRawRequest(const RefProtocolMessage request) {
   } else  { //Send Response to Channel's IO Loop
 
     auto functor = [=]() {
-    	RefProtocolMessage msg = response;
-      bool send_success = raw_service->SendProtocolMessage(msg);
+      bool send_success = raw_service->ReplyRequest(request, response);
       if (close || !send_success) { //failed
         raw_service->CloseService();
       }

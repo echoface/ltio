@@ -23,10 +23,6 @@
 
 base::MessageLoop loop;
 base::MessageLoop wloop;
-net::InetAddress server_address("127.0.0.1", 5006);
-//net::InetAddress server_address("127.0.0.1", 80);
-//net::InetAddress server_address("123.59.153.185", 80);
-net::InetAddress raw_server_address("0.0.0.0", 5002);
 
 net::ClientRouter*  router; //(base::MessageLoop*, const InetAddress&);
 net::ClientRouter* raw_router;
@@ -36,13 +32,14 @@ net::RefTcpChannel g_channel;
 bool SendRequest(int sequence_id) {
   net::RefHttpRequest request = std::make_shared<net::HttpRequest>();
   request->SetKeepAlive(true);
-  //request->SetRequestURL("/rtb?v=118");
   request->SetRequestURL("/");
   request->InsertHeader("Accept", "*/*");
-  //request->InsertHeader("Host", "127.0.0.1");
-  request->InsertHeader("Host", "g.test.amnetapi.com");
+  request->InsertHeader("Host", "127.0.0.1");
+  request->InsertHeader("T", std::to_string(sequence_id));
+  //request->InsertHeader("Host", "g.test.amnetapi.com");
   request->InsertHeader("User-Agent", "curl/7.58.0");
 
+  LOG(INFO) << "call send [" << sequence_id << "]st request";
   net::HttpResponse* response = router->SendRecieve(request);
   if (response && !response->IsKeepAlive()) {
     LOG(ERROR) << "recieve a closed response from server" << response->MessageDebug();
@@ -62,36 +59,43 @@ void SendRawRequest(int sequence_id) {
     LOG(ERROR) << "Get RawResponse:\n" << response->MessageDebug();
   }
 }
+int g_count = 0;
 
 void HttpClientBenchMark(int grp, int count) {
   LOG(ERROR) << "@"<< base::CoroRunner::Runner().CurrentCoroutineId()
              << " group:" << grp << " start, count:" << count;
+
   int success_count = 0;
   for (int i=0; i < count; i++) {
-    if (SendRequest(i)) {success_count++;}
+    if (SendRequest(g_count++)) {success_count++;}
   }
+
   LOG(ERROR) << "@"<< base::CoroRunner::Runner().CurrentCoroutineId()
              << " group:" << grp << " end, count/success:" << count << "/" << success_count;
 }
 
+// usage
 int main(int argc, char* argv[]) {
 
   google::ParseCommandLineFlags(&argc, &argv, true);  // 初始化 gflags
   google::SetStderrLogging(google::GLOG_ERROR);
 
-  net::CoroWlDispatcher* dispatcher_ = new net::CoroWlDispatcher(true);
+
+  if (argc != 5) {
+    LOG(INFO) << "usage: cmd ip port concurrency send_count";
+    LOG(INFO) << "eg: ./client_test 127.0.0.1 80 4 100";
+    return 0;
+  }
 
   loop.SetLoopName("clientloop");
   wloop.SetLoopName("workloop");
+  net::CoroWlDispatcher* dispatcher_ = new net::CoroWlDispatcher(true);
 
-  int groups = 2;
-  int send_count_per_grp = 100;
-  if (argc > 1) {
-    groups = std::atoi(argv[1]);
-  }
-  if (argc > 2) {
-    send_count_per_grp = std::atoi(argv[2]);
-  }
+
+  net::InetAddress server_address(std::string(argv[1]), std::atoi(argv[2]));
+
+  uint32_t concurrency = uint32_t(std::atoi(argv[3]));
+  int send_count_per_grp = std::atoi(argv[4]);
 
   loop.Start();
   wloop.Start();
@@ -99,7 +103,7 @@ int main(int argc, char* argv[]) {
   router = new net::ClientRouter(&loop, server_address);
   net::RouterConf router_config;
   router_config.protocol = "http";
-  router_config.connections = 10000;
+  router_config.connections = concurrency;
   router_config.recon_interal = 1000;
   router_config.message_timeout = 5000;
   router->SetupRouter(router_config);
@@ -108,11 +112,12 @@ int main(int argc, char* argv[]) {
 
   sleep(2);
 
-  for (int i = 0; i < groups; i++) {
-    co_go &loop << std::bind(HttpClientBenchMark, i, send_count_per_grp);
+  for (size_t i = 0; i < std::thread::hardware_concurrency(); i++) {
+    co_go &loop << std::bind(HttpClientBenchMark, 0, send_count_per_grp);
   }
 
   loop.WaitLoopEnd();
+
   delete router;
   delete raw_router;
   return 0;

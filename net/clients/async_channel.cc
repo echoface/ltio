@@ -24,12 +24,8 @@ void AsyncChannel::StartClient() {
 void AsyncChannel::SendRequest(RefProtocolMessage request)  {
   CHECK(IOLoop()->IsInLoopThread());
 
-  bool success = protocol_service_->BeforeSendRequest(request.get());
   request->SetIOContext(protocol_service_);
-  if (success) {
-    success = protocol_service_->SendProtocolMessage(request);
-  }
-
+  bool success = protocol_service_->SendRequestMessage(request);
   if (!success) {
     request->SetFailInfo(FailInfo::kChannelBroken);
     delegate_->OnRequestGetResponse(request, kNullResponse);

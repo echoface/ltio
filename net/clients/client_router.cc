@@ -91,8 +91,6 @@ void ClientRouter::OnNewClientConnected(int socket_fd, InetAddress& local, InetA
 
   auto new_channel = TcpChannel::Create(socket_fd, local, remote, io_loop);
 
-  new_channel->SetChannelName(remote.IpPortAsString());
-
   RefProtoService proto_service = ProtoServiceFactory::Create(protocol_);
   proto_service->SetServiceType(ProtocolServiceType::kClient);
   proto_service->BindChannel(new_channel);

@@ -49,11 +49,10 @@ public:
   const uint64_t MessageIdentify() const {return header_.sequence_id;}
 private:
   friend class RawProtoService;
+  void CalculateFrameSize();
   std::string& MutableContent() {return content_;}
-  void SetSequenceId(uint64_t id) {
-    CHECK(header_.sequence_id == 0);
-    header_.sequence_id = id;
-  }
+  uint64_t SequenceId() const {return header_.sequence_id;}
+  void SetSequenceId(uint64_t id) {header_.sequence_id = id;}
 
   RawHeader header_;
   std::string content_;

@@ -68,7 +68,7 @@ void IOService::StopIOService() {
       loop->PostTask(NewClosure(std::bind(&ProtoService::CloseService, proto_service)));
   }
 
-  if (protocol_services.size() == 0) {
+  if (protocol_services.empty()) {
     delegate_->IOServiceStoped(this);
   }
 }
@@ -103,14 +103,11 @@ void IOService::OnNewConnection(int local_socket, const InetAddress& peer_addr) 
 
   auto new_channel = TcpChannel::Create(local_socket, local_addr, peer_addr, io_loop);
 
-  const std::string channel_name = peer_addr.IpPortAsString();
-  new_channel->SetChannelName(channel_name);
-
   proto_service->BindChannel(new_channel);
 
   new_channel->Start();
 
-  VLOG(GLOG_VTRACE) << " New Connection from:" << channel_name;
+  VLOG(GLOG_VTRACE) << " New Connection from:" << new_channel->ChannelName();
   StoreProtocolService(proto_service);
 }
 

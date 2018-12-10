@@ -19,9 +19,12 @@ bool Connector::LaunchAConnection(net::InetAddress& address) {
   }
 
   const struct sockaddr* sock_addr = net::socketutils::sockaddr_cast(address.SockAddrIn());
-  int ret = net::socketutils::SocketConnect(sockfd, sock_addr);
 
-  int state = ret == 0 ? 0 : errno;
+  bool success = false;
+
+
+  int state = 0;
+  net::socketutils::SocketConnect(sockfd, sock_addr, &state);
 
   switch(state)  {
     case 0:
@@ -29,26 +32,24 @@ bool Connector::LaunchAConnection(net::InetAddress& address) {
     case EISCONN:
     case EINPROGRESS: {
 
+      success = true;
       base::RefFdEvent fdevent = base::FdEvent::Create(sockfd, 0);
 
-      //Important, must weak ptr
       WeakPtrFdEvent weak_fdevent(fdevent);
       fdevent->SetWriteCallback(std::bind(&Connector::OnWrite, this, weak_fdevent));
       fdevent->SetErrorCallback(std::bind(&Connector::OnError, this, weak_fdevent));
       fdevent->SetCloseCallback(std::bind(&Connector::OnError, this, weak_fdevent));
-
       InitEvent(fdevent);
-      connecting_sockets_.insert(fdevent);
 
-      return true;
+      connecting_sockets_.insert(fdevent);
     } break;
     default: {
-      LOG(FATAL) << " set client connect failed:" << base::StrError(state);
+      success = false;
+      LOG(ERROR) << " setup client connect failed:" << base::StrError(state);
       net::socketutils::CloseSocket(sockfd);
-      return false;
     } break;
   }
-  return true;
+  return success;
 }
 
 void Connector::OnWrite(WeakPtrFdEvent weak_fdevent) {

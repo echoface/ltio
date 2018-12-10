@@ -15,12 +15,10 @@ public:
   }
   ~TcpProtoService() {
   }
-
-  virtual void SetMessageHandler(ProtoMessageHandler) {
-    ;
-  }
-
-  bool SendProtocolMessage(RefProtocolMessage& message) {
+  bool SendRequestMessage(const RefProtocolMessage &message) override {
+    return true;
+  };
+  bool ReplyRequest(const RefProtocolMessage& req, const RefProtocolMessage& res) override {
     return true;
   };
 
@@ -31,18 +29,14 @@ public:
     LOG(INFO) << " RefTcpChannel  data write finished";
   }
 
-  void OnDataRecieved(const RefTcpChannel& channel, IOBuffer* buffer) override {
+  void OnDataReceived(const RefTcpChannel &channel, IOBuffer *buffer) override {
     LOG(INFO) << " RefTcpChannel  recieve data";
 
-    int32_t size = channel->Send(buffer->GetRead(),
-                                 buffer->CanReadSize());
+    int32_t size = channel->Send(buffer->GetRead(), buffer->CanReadSize());
     if (size > 0) {
       buffer->Consume(size);
     }
     //channel->ShutdownChannel();
-  }
-  bool EncodeToBuffer(const ProtocolMessage* msg, IOBuffer* out_buffer) {
-    return false;
   }
 };
 

@@ -13,7 +13,7 @@ public:
 	virtual void OnStatusChanged(const RefTcpChannel&) {};
 	virtual void OnDataFinishSend(const RefTcpChannel&) {};
 	virtual void OnChannelClosed(const RefTcpChannel&) = 0;
-	virtual void OnDataRecieved(const RefTcpChannel&, IOBuffer*) = 0;
+	virtual void OnDataReceived(const RefTcpChannel &, IOBuffer *) = 0;
 };
 
 }

@@ -142,12 +142,15 @@ MessageLoop::MessageLoop()
 MessageLoop::~MessageLoop() {
   LOG(INFO) << "MessageLoop [" << LoopName() << "] Gone...";
 
-  while (Notify(wakeup_pipe_in_, &kQuit, sizeof(kQuit)) != sizeof(kQuit)) {
-    LOG_IF(ERROR, EAGAIN == errno) << "Write to pipe Failed:" << StrError();
-    std::this_thread::sleep_for(std::chrono::microseconds(1));
-  }
+  if (status_ == ST_STARTED) {
 
-  WaitLoopEnd();
+    while (Notify(wakeup_pipe_in_, &kQuit, sizeof(kQuit)) != sizeof(kQuit)) {
+      LOG_IF(ERROR, EAGAIN == errno) << "Write to pipe Failed:" << StrError();
+      std::this_thread::sleep_for(std::chrono::microseconds(1));
+    }
+
+    WaitLoopEnd();
+  }
 
   wakeup_event_.reset();
   IgnoreSigPipeSignalOnCurrentThread2();
@@ -187,6 +190,10 @@ void MessageLoop::Start() {
 
 void MessageLoop::WaitLoopEnd(int32_t ms) {
   CHECK(!IsInLoopThread());
+
+  if (status_ == ST_STOPED) {
+    return;
+  }
 
   {
     std::unique_lock<std::mutex> lk(start_stop_lock_);

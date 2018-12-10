@@ -23,7 +23,7 @@ int ListenSocket(SocketFd fd);
 
 int BindSocketFd(SocketFd fd, const struct sockaddr* addr);
 
-int SocketConnect(SocketFd fd, const struct sockaddr* addr);
+int SocketConnect(SocketFd fd, const struct sockaddr* addr, int* err);
 
 SocketFd AcceptSocket(SocketFd fd, struct sockaddr_in* addr, int* err);
 

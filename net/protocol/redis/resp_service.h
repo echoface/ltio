@@ -14,15 +14,10 @@ public:
   void OnStatusChanged(const RefTcpChannel&) override;
   void OnDataFinishSend(const RefTcpChannel&) override;
 
-  void OnDataRecieved(const RefTcpChannel&, IOBuffer*) override;
-  bool EncodeToBuffer(const ProtocolMessage* msg, IOBuffer* out_buffer) override;
+  void OnDataReceived(const RefTcpChannel &, IOBuffer *) override;
 
-	bool SendProtocolMessage(RefProtocolMessage& message) override;
-
-  void BeforeWriteRequestToBuffer(ProtocolMessage* out_message) override;
-  void BeforeWriteResponseToBuffer(ProtocolMessage* out_message) override;
-
-  void BeforeSendResponse(ProtocolMessage *in, ProtocolMessage *out) override;
+	bool SendRequestMessage(const RefProtocolMessage &message) override;
+	bool ReplyRequest(const RefProtocolMessage& req, const RefProtocolMessage& res) override;
 private:
   uint32_t next_incoming_count_ = 0;
   RefRedisResponse current_response;// = std::make_shared<RedisResponse>();

@@ -23,7 +23,7 @@ void RawProtoService::OnStatusChanged(const RefTcpChannel&) {
 void RawProtoService::OnDataFinishSend(const RefTcpChannel&) {
 }
 
-void RawProtoService::OnDataRecieved(const RefTcpChannel& channel, IOBuffer* buffer) {
+void RawProtoService::OnDataReceived(const RefTcpChannel &channel, IOBuffer *buffer) {
   do {
     if (buffer->CanReadSize() <= (int)kRawHeaderSize) {
       return;
@@ -36,7 +36,7 @@ void RawProtoService::OnDataRecieved(const RefTcpChannel& channel, IOBuffer* buf
       return;
     }
 
-    auto raw_message = std::make_shared<RawMessage>(InComingMessageType());
+    auto raw_message = std::make_shared<RawMessage>(InComingType());
 
     raw_message->SetIOContext(shared_from_this());
 
@@ -53,35 +53,34 @@ void RawProtoService::OnDataRecieved(const RefTcpChannel& channel, IOBuffer* buf
   } while(1);
 }
 
-bool RawProtoService::BeforeSendRequest(ProtocolMessage *message)  {
-  CHECK(ServiceType() == ProtocolServiceType::kClient);
-  RawMessage* request = static_cast<RawMessage*>(message);
-  request->SetSequenceId(sequence_id_);
-  sequence_id_++;
+bool RawProtoService::CloseAfterMessage(ProtocolMessage*, ProtocolMessage*) {
+  return false;
+}
+
+const RefProtocolMessage RawProtoService::NewResponseFromRequest(const RefProtocolMessage &req) {
+  CHECK(req->GetMessageType() == MessageType::kRequest);
+  return std::make_shared<RawMessage>(MessageType::kResponse);
+}
+
+
+bool RawProtoService::BeforeSendRequest(RawMessage* request)  {
+	CHECK(request->GetMessageType() == MessageType::kRequest);
+
+  request->CalculateFrameSize();
+  request->SetSequenceId(sequence_id_++);
+
   if (sequence_id_ == 0) {
     sequence_id_++;
   }
   return true;
 }
 
-bool RawProtoService::EncodeToBuffer(const ProtocolMessage* msg, IOBuffer* out_buffer) {
-  CHECK(msg && out_buffer);
+bool RawProtoService::SendRequestMessage(const RefProtocolMessage &message) {
+  auto raw_message = static_cast<RawMessage*>(message.get());
 
-  const RawMessage* raw_message = static_cast<const RawMessage*>(msg);
+  BeforeSendRequest(raw_message);
+
   CHECK(raw_message->header_.frame_size == kRawHeaderSize + raw_message->content_.size());
-
-  out_buffer->EnsureWritableSize(raw_message->header_.frame_size);
-
-  out_buffer->WriteRawData(&raw_message->header_, kRawHeaderSize);
-  out_buffer->WriteString(raw_message->content_);
-  return true;
-}
-
-bool RawProtoService::SendProtocolMessage(RefProtocolMessage& message) {
-
-  const RawMessage* raw_message = static_cast<const RawMessage*>(message.get());
-  CHECK(raw_message->header_.frame_size == kRawHeaderSize + raw_message->content_.size());
-  BeforeWriteMessage(message.get());
 
   if (channel_->Send((const uint8_t*)&raw_message->header_, kRawHeaderSize) < 0) {;
     return false;
@@ -90,21 +89,19 @@ bool RawProtoService::SendProtocolMessage(RefProtocolMessage& message) {
   return channel_->Send((const uint8_t*)raw_message->content_.data(), raw_message->content_.size()) >= 0;
 };
 
-void RawProtoService::BeforeSendResponse(ProtocolMessage *in, ProtocolMessage *out) {
-  CHECK(IsServerSideservice());
-  RawMessage* raw_request = (RawMessage*)in;
-  RawMessage* raw_response = (RawMessage*)out;
-  raw_response->SetSequenceId(raw_request->Header().sequence_id);
-  LOG(ERROR) << "request:" << raw_request->MessageDebug() << " response:" << raw_response->MessageDebug();
-}
+bool RawProtoService::ReplyRequest(const RefProtocolMessage& req, const RefProtocolMessage& res) {
+  RawMessage* raw_request = static_cast<RawMessage*>(req.get());
+  RawMessage* raw_response = static_cast<RawMessage*>(res.get());
 
-bool RawProtoService::CloseAfterMessage(ProtocolMessage* request, ProtocolMessage* response) {
-  return false;
-}
+  raw_response->CalculateFrameSize();
+  raw_response->SetMethod(raw_request->Method());
+  raw_response->SetSequenceId(raw_request->SequenceId());
 
-const RefProtocolMessage RawProtoService::NewResponseFromRequest(const RefProtocolMessage &req) {
-  CHECK(req->GetMessageType() == MessageType::kRequest);
-  return std::make_shared<RawMessage>(MessageType::kResponse);
+  VLOG(GLOG_VTRACE) << __FUNCTION__
+                    << " request:" << raw_request->MessageDebug()
+                    << " response:" << raw_response->MessageDebug();
+
+  return channel_->Send((const uint8_t*)raw_response->content_.data(), raw_response->content_.size()) >= 0;
 }
 
 };

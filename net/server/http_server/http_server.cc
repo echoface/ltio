@@ -94,7 +94,7 @@ void HttpServer::OnHttpRequest(const RefProtocolMessage& request) {
   }
 
   base::StlClosure functor = std::bind(&HttpServer::HandleHttpRequest, this, request);
-  if (false == dispatcher_->TransmitToWorker(functor)) {
+  if (!dispatcher_->TransmitToWorker(functor)) {
     LOG(ERROR) << __FUNCTION__ << " dispatcher_->TransmitToWorker failed";
     RefProtoService service = request->GetIOCtx().protocol_service.lock();
     if (service) {
@@ -122,12 +122,10 @@ void HttpServer::HandleHttpRequest(const RefProtocolMessage request) {
     message_handler_((HttpRequest*)request.get(), (HttpResponse*)response.get());
   } while(0);
 
-	service->BeforeSendResponse(request.get(), response.get());
   bool close = service->CloseAfterMessage(request.get(), response.get());
-
   if (service->IOLoop()->IsInLoopThread()) { //send reply directly
 
-    bool send_success = service->SendProtocolMessage(response);
+    bool send_success = service->ReplyRequest(request, response);
     if (close || !send_success) { //failed
       service->CloseService();
     }
@@ -135,8 +133,8 @@ void HttpServer::HandleHttpRequest(const RefProtocolMessage request) {
   } else  { //Send Response to Channel's IO Loop
 
     auto functor = [=]() {
-      RefProtocolMessage message = response;
-      bool send_success = service->SendProtocolMessage(message);
+      bool send_success = service->ReplyRequest(request, response);
+
       if (close || !send_success) { //failed
         service->CloseService();
       }

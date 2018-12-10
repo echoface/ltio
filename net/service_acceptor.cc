@@ -23,6 +23,7 @@ ServiceAcceptor::~ServiceAcceptor() {
 bool ServiceAcceptor::InitListener() {
   int socket_fd = socketutils::CreateNonBlockingSocket(address_.SocketFamily());
   if (socket_fd < 0) {
+  	LOG(ERROR) << " failed create none blocking socket fd";
     return false;
   }
   //reuse socket addr and port if possible
@@ -30,6 +31,7 @@ bool ServiceAcceptor::InitListener() {
   socketutils::ReUseSocketAddress(socket_fd, true);
   int ret = socketutils::BindSocketFd(socket_fd, address_.AsSocketAddr());
   if (ret < 0) {
+    LOG(ERROR) << " failed bind address for blocking socket fd";
     socketutils::CloseSocket(socket_fd);
     return false;
   }
@@ -40,6 +42,7 @@ bool ServiceAcceptor::InitListener() {
 
   VLOG(GLOG_VTRACE) << __FUNCTION__ << " init acceptor fd event success, fd:[" << socket_fd
                     << "] bind to local:[" << address_.IpPortAsString() << "]";
+  return true;
 }
 
 bool ServiceAcceptor::StartListen() {
@@ -53,9 +56,16 @@ bool ServiceAcceptor::StartListen() {
   event_pump_->InstallFdEvent(socket_event_.get());
   socket_event_->EnableReading();
 
-  listenning_ = socketutils::ListenSocket(socket_event_->fd()) == 0;
-  LOG_IF(INFO, listenning_) << __FUNCTION__ << " satrt listen on:" << address_.IpPortAsString();
-  return listenning_;
+  bool success = socketutils::ListenSocket(socket_event_->fd()) == 0;
+  if (!success) {
+    socket_event_->DisableAll();
+    event_pump_->RemoveFdEvent(socket_event_.get());
+    LOG(INFO) << __FUNCTION__ << " failed listen on" << address_.IpPortAsString();
+    return false;
+  }
+  LOG(INFO) << __FUNCTION__ << " start listen on:" << address_.IpPortAsString();
+  listenning_ = true;
+  return true;
 }
 
 void ServiceAcceptor::StopListen() {

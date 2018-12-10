@@ -110,7 +110,7 @@ void IOBuffer::WriteString(const std::string& str) {
   Produce(str.size());
 }
 
-void IOBuffer::WriteRawData(const void* data, int32_t len) {
+void IOBuffer::WriteRawData(const void* data, size_t len) {
   EnsureWritableSize(len);
   memcpy(&data_[write_index_], data, len);
   Produce(len);

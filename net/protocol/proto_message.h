@@ -45,6 +45,7 @@ public:
 
   const std::string& Protocol() const;
   const MessageType& GetMessageType() const {return type_;};
+  bool IsRequestMessage() const {return type_ == MessageType::kRequest;};
 
   IOContext& GetIOCtx() {return io_context_;}
   WorkContext& GetWorkCtx() {return work_context_;}

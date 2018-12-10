@@ -12,9 +12,7 @@
 #include "base/message_loop/message_loop.h"
 #include "channel.h"
 /* *
- *
  * all of this thing happend in io-loop its attached, include callbacks
- *
  * */
 namespace net {
 
@@ -41,13 +39,10 @@ public:
 
   void Start();
 
-  void SetChannelName(const std::string name);
-  const std::string& ChannelName() const {return channal_name_;}
+  const std::string& ChannelName() const {return name_;}
 
   void SetChannelConsumer(ChannelConsumer* consumer);
-  void SetCloseCallback(const ChannelClosedCallback& callback);
-
-  /* return -1 in error,
+  /* return -1 when error,
    * return 0 when all data pending to buffer,
    * other case return the byte writen to socket fd successfully */
   int32_t Send(const uint8_t* data, const int32_t len);
@@ -80,7 +75,7 @@ private:
   InetAddress local_addr_;
   InetAddress peer_addr_;
 
-  std::string channal_name_;
+  std::string name_;
 
   IOBuffer in_buffer_;
   IOBuffer out_buffer_;

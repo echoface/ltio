@@ -36,15 +36,7 @@ void QueuedChannel::StartClient() {
 void QueuedChannel::SendRequest(RefProtocolMessage request)  {
   CHECK(IOLoop()->IsInLoopThread());
 
-  bool success = protocol_service_->BeforeSendRequest(request.get());
   request->SetIOContext(protocol_service_);
-  if (!success) {
-    request->SetFailInfo(FailInfo::kBadMessage);
-    VLOG(GLOG_VTRACE) << __FUNCTION__ << " bad request detected";
-    delegate_->OnRequestGetResponse(request, kNullResponse);
-    return;
-  }
-
   waiting_list_.push_back(std::move(request));
 
   TrySendNext();
@@ -52,14 +44,14 @@ void QueuedChannel::SendRequest(RefProtocolMessage request)  {
 
 bool QueuedChannel::TrySendNext() {
   if (in_progress_request_) {
-    return false;
+    return true;
   }
 
   bool success = false;
   while(!success && waiting_list_.size()) {
 
     RefProtocolMessage& next = waiting_list_.front();
-    success = protocol_service_->SendProtocolMessage(next);
+    success = protocol_service_->SendRequestMessage(next);
     waiting_list_.pop_front();
     if (success) {
       in_progress_request_ = next;

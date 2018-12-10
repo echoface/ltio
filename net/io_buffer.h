@@ -35,7 +35,7 @@ public:
   const uint8_t* FindCRLF();
 
   void WriteString(const std::string& str);
-  void WriteRawData(const void* data, int32_t len);
+  void WriteRawData(const void* data, size_t len);
 
   template <typename T> void Append(T data) {
     union _X {

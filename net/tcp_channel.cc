@@ -29,6 +29,7 @@ TcpChannel::TcpChannel(int socket_fd,
 
   CHECK(io_loop_);
 
+  name_ = peer.IpPortAsString();
   fd_event_ = base::FdEvent::Create(socket_fd, 0);
   fd_event_->SetReadCallback(std::bind(&TcpChannel::HandleRead, this));
   fd_event_->SetWriteCallback(std::bind(&TcpChannel::HandleWrite, this));
@@ -47,7 +48,7 @@ void TcpChannel::Start() {
 }
 
 TcpChannel::~TcpChannel() {
-  VLOG(GLOG_VTRACE) << channal_name_ << " Gone, Fd:" << fd_event_->fd();
+  VLOG(GLOG_VTRACE) << name_ << " Gone, Fd:" << fd_event_->fd();
   fd_event_.reset();
   CHECK(channel_status_ == DISCONNECTED);
 }
@@ -82,7 +83,7 @@ void TcpChannel::HandleRead() {
     VLOG(GLOG_VTRACE) << __FUNCTION__ << " [" << ChannelName() << "] read ["
                       << fd_event_->fd() << "] got [" << bytes_read << "] bytes";
 
-    channel_consumer_->OnDataRecieved(shared_from_this(), &in_buffer_);
+	  channel_consumer_->OnDataReceived(shared_from_this(), &in_buffer_);
 
   } else if (0 == bytes_read) { //read eof, remote close
     VLOG(GLOG_VTRACE) << __FUNCTION__ << " peer [" << ChannelName() << "] closed, fd ["
@@ -175,7 +176,7 @@ void TcpChannel::SetChannelStatus(ChannelStatus st) {
 void TcpChannel::ShutdownChannel() {
   CHECK(InIOLoop());
 
-  VLOG(GLOG_VTRACE) << "TcpChannel::ShutdownChannel " << channal_name_;
+  VLOG(GLOG_VTRACE) << "TcpChannel::ShutdownChannel " << name_;
   if (channel_status_ == DISCONNECTED) {
     return;
   }
@@ -234,10 +235,6 @@ int32_t TcpChannel::Send(const uint8_t* data, const int32_t len) {
     fd_event_->EnableWriting();
   }
   return fatal_err != 0 ? -1 : n_write;
-}
-
-void TcpChannel::SetChannelName(const std::string name) {
-  channal_name_ = name;
 }
 
 const std::string TcpChannel::StatusAsString() const {

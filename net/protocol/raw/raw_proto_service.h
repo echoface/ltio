@@ -14,24 +14,18 @@ public:
   // override from ProtoService
   void OnStatusChanged(const RefTcpChannel&) override;
   void OnDataFinishSend(const RefTcpChannel&) override;
-  void OnDataRecieved(const RefTcpChannel&, IOBuffer*) override;
+  void OnDataReceived(const RefTcpChannel &, IOBuffer *) override;
 
-  //no SharedPtr here, bz of type_cast and don't need guarantee
-  //bool DecodeToMessage(IOBuffer* buffer, ProtocolMessage* out_msg) override;
-  bool EncodeToBuffer(const ProtocolMessage* msg, IOBuffer* out_buffer) override;
   bool CloseAfterMessage(ProtocolMessage* request, ProtocolMessage* response) override;
   const RefProtocolMessage NewResponseFromRequest(const RefProtocolMessage &req) override;
 
   bool KeepSequence() override {return false;};
 
-  bool SendProtocolMessage(RefProtocolMessage& message) override;
   /* protocol level */
-  bool BeforeSendRequest(ProtocolMessage *message) override;
-  void BeforeSendResponse(ProtocolMessage *in, ProtocolMessage *out) override;
+  bool BeforeSendRequest(RawMessage* message);
+  bool SendRequestMessage(const RefProtocolMessage &message) override;
 
-  /* io level */
-  //void BeforeWriteRequestToBuffer(ProtocolMessage* request) override;
-  //void BeforeWriteResponseToBuffer(ProtocolMessage* response) override;
+  bool ReplyRequest(const RefProtocolMessage& req, const RefProtocolMessage& res) override;
 private:
   RefRawMessage current_;
   uint64_t sequence_id_ = 1;

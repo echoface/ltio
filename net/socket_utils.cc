@@ -64,9 +64,12 @@ int BindSocketFd(SocketFd sockfd, const struct sockaddr* addr) {
   return ret;
 }
 
-int SocketConnect(SocketFd fd, const struct sockaddr* addr) {
+int SocketConnect(SocketFd fd, const struct sockaddr* addr, int* err) {
   int ret = ::connect(fd, addr, static_cast<socklen_t>(sizeof(struct sockaddr_in6)));
-  LOG_IF(ERROR, ret != 0) << __FUNCTION__ << " connect failed, err:[" << base::StrError() << "]";
+  LOG_IF(ERROR, ret < 0 && errno != EINPROGRESS) << __FUNCTION__ << " connect failed, err:[" << base::StrError() << "]";
+  if (ret < 0 && err != nullptr) {
+    *err = errno;
+  }
   return ret;
 }
 

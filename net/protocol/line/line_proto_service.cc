@@ -20,18 +20,18 @@ void LineProtoService::OnDataFinishSend(const RefTcpChannel& channel) {
   ;
 }
 
-void LineProtoService::OnDataRecieved(const RefTcpChannel& channel, IOBuffer* buf) {
+void LineProtoService::OnDataReceived(const RefTcpChannel&, IOBuffer *buf) {
   const uint8_t* line_crlf =  buf->FindCRLF();
   if (!line_crlf) {
     return;
   }
 
   {
-    std::shared_ptr<LineMessage> msg(new LineMessage(InComingMessageType()));
+    std::shared_ptr<LineMessage> msg(new LineMessage(InComingType()));
     msg->SetIOContext(shared_from_this());
 
     const uint8_t* start = buf->GetRead();
-    int32_t len = line_crlf - start;
+    uint64_t len = line_crlf - start;
 
     std::string& body = msg->MutableBody();
     body.assign((const char*)start, len);
@@ -44,22 +44,9 @@ void LineProtoService::OnDataRecieved(const RefTcpChannel& channel, IOBuffer* bu
   }
 }
 
-bool LineProtoService::EncodeToBuffer(const ProtocolMessage* msg, IOBuffer* out_buffer) {
-  if (msg->Protocol() != "line") {
-    return false;
-  }
-  const LineMessage* line_msg = static_cast<const LineMessage*>(msg);
-  out_buffer->EnsureWritableSize(line_msg->Body().size() + 2);
-  out_buffer->WriteString(line_msg->Body());
-  out_buffer->WriteRawData("\r\n", 2);
-  return true;
-}
-
-bool LineProtoService::SendProtocolMessage(RefProtocolMessage& message) {
+bool LineProtoService::SendRequestMessage(const RefProtocolMessage &message) {
   static const std::string kCRCN("\r\n");
-  BeforeWriteMessage(message.get());
   const LineMessage* line_msg = static_cast<const LineMessage*>(message.get());
-
   int ret = channel_->Send((const uint8_t*)line_msg->Body().data(), line_msg->Body().size());
   if (ret < 0) {
     return false;
@@ -68,7 +55,11 @@ bool LineProtoService::SendProtocolMessage(RefProtocolMessage& message) {
   return ret >= 0;
 }
 
-bool LineProtoService::CloseAfterMessage(ProtocolMessage* request, ProtocolMessage* response) {
+bool LineProtoService::ReplyRequest(const RefProtocolMessage& req, const RefProtocolMessage& res) {
+  return SendRequestMessage(res);
+};
+
+bool LineProtoService::CloseAfterMessage(ProtocolMessage*, ProtocolMessage*) {
   return false;
 }
 
