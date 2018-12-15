@@ -24,19 +24,11 @@ public:
   }
   virtual ~ClientChannel() {}
   virtual void StartClient() = 0;
-
-  void CloseClientChannel() {
-    if (IOLoop()->IsInLoopThread()) {
-      protocol_service_->CloseService();
-      return;
-    }
-    auto functor = std::bind(&ProtoService::CloseService, protocol_service_);
-    IOLoop()->PostTask(NewClosure(functor));
-  }
   virtual void SendRequest(RefProtocolMessage request) = 0;
 
-  base::MessageLoop* IOLoop() {return protocol_service_->IOLoop();};
+  void CloseClientChannel();
   void SetRequestTimeout(uint32_t ms) {request_timeout_ = ms;};
+  base::MessageLoop* IOLoop() {return protocol_service_->IOLoop();};
 protected:
   Delegate* delegate_;
   RefProtoService protocol_service_;

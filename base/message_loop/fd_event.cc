@@ -4,6 +4,10 @@
 
 namespace base {
 
+RefFdEvent FdEvent::Create(int fd, uint32_t events) {
+  return std::make_shared<FdEvent>(fd, events);
+}
+
 FdEvent::FdEvent(int fd, uint32_t event):
   fd_(fd),
   events_(event),
@@ -49,13 +53,27 @@ void FdEvent::ResetCallback() {
   close_callback_ = kNullCallback;
 }
 
+void FdEvent::EnableReading() {
+  if (IsReadEnable()) {
+    return;
+  }
+  events_ |= EPOLLIN;
+  Update();
+}
+
+void FdEvent::EnableWriting() {
+  if (IsWriteEnable()) {
+    return;
+  }
+  events_ |= EPOLLOUT;
+  Update();
+}
+
 void FdEvent::Update() {
   if (watcher_) {
-    VLOG(GLOG_VTRACE) << "update fd event to poll, events:" << events_;
     watcher_->OnEventChanged(this);
-  } else {
-    LOG(ERROR) << "This fd event not attach to any event dump yet, fd:" << fd();
   }
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << EventInfo() << " updated";
 }
 
 void FdEvent::SetCloseCallback(const EventCallback &cb) {
@@ -63,7 +81,7 @@ void FdEvent::SetCloseCallback(const EventCallback &cb) {
 }
 
 void FdEvent::HandleEvent() {
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << " got event notification:" << RcvEventAsString();
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << EventInfo() << " rcv event:" << RcvEventAsString();
   do {
     if ((revents_ & EPOLLHUP) && !(revents_ & EPOLLIN)) {
       if (close_callback_) {
@@ -91,14 +109,22 @@ void FdEvent::HandleEvent() {
   revents_ = 0;
 }
 
-std::string FdEvent::RcvEventAsString() {
+std::string FdEvent::EventInfo() const {
+  std::ostringstream oss;
+  oss << " [fd:" << fd()
+      << ", monitor:" << MonitorEventAsString() << "]";
+  return oss.str();
+}
+
+std::string FdEvent::RcvEventAsString() const {
   return events2string(revents_);
 }
 
-std::string FdEvent::MonitorEventAsString() {
+std::string FdEvent::MonitorEventAsString() const {
   return events2string(events_);
 }
-std::string FdEvent::events2string(uint32_t events) {
+
+std::string FdEvent::events2string(uint32_t events) const {
   std::ostringstream oss;
   oss << "fd: " << fd_ << ": [";
   if (events & EPOLLIN)

@@ -29,11 +29,7 @@ public:
   };
 
   typedef std::function<void()> EventCallback;
-  typedef std::shared_ptr<FdEvent> RefFdEvent;
-
-  static RefFdEvent Create(int fd, uint32_t events) {
-      return std::make_shared<FdEvent>(fd, events);
-  }
+  static std::shared_ptr<FdEvent> Create(int fd, uint32_t event);
 
   FdEvent(int fd, uint32_t events);
   ~FdEvent();
@@ -54,38 +50,26 @@ public:
 
   void Update();
 
-  void EnableReading() {
-    if (!IsReadEnable()) {
-      update_event(EPOLLIN | EPOLLPRI);
-    }
-  }
-  void EnableWriting() {
-    if (!IsWriteEnable()) {
-      update_event(EPOLLOUT);
-    }
-  }
+  void EnableReading();
+  inline bool IsReadEnable() {return events_ & EPOLLIN; }
+
+  void EnableWriting();
+  inline bool IsWriteEnable() {return events_ & EPOLLOUT; }
 
   void DisableAll() { events_ = 0; Update();}
-  void DisableReading() { events_ &=  ~(EPOLLIN | EPOLLPRI); Update();  }
-  void DisableWriting() { events_ &=   ~EPOLLOUT; Update(); }
+  void DisableReading() { events_ &= ~EPOLLIN; Update();}
+  void DisableWriting() { events_ &= ~EPOLLOUT; Update();}
 
   inline int fd() const {return fd_;};
-  inline bool IsReadEnable() {return events_ & EPOLLIN; }
-  inline bool IsWriteEnable() {return events_ & EPOLLOUT; }
   inline void GiveupOwnerFd() {owner_fd_life_ = false;}
 
-  // for debug
-  std::string RcvEventAsString();
-  std::string MonitorEventAsString();
+  std::string EventInfo() const;
+  std::string RcvEventAsString() const;
+  std::string MonitorEventAsString() const;
 private:
-  inline void update_event(int new_event) {
-    events_ |=  new_event;
-    Update();
-  }
-  std::string events2string(uint32_t event);
+  std::string events2string(uint32_t event) const;
 
-
-  int fd_;
+  const int fd_;
   uint32_t events_;
   uint32_t revents_;
   bool owner_fd_life_;

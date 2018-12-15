@@ -9,7 +9,6 @@ namespace base {
 EventPump::EventPump()
   : delegate_(NULL),
     running_(false) {
-  // fd iomux
   multiplexer_.reset(new base::IoMultiplexerEpoll());
 }
 
@@ -80,12 +79,11 @@ QuitClourse EventPump::Quit_Clourse() {
 bool EventPump::InstallFdEvent(FdEvent *fd_event) {
   CHECK(IsInLoopThread());
   if (fd_event->EventWatcher()) {
-    LOG(ERROR) << "can't install event to eventPump twice or install event to two different eventPump";
+    LOG(ERROR) << __FUNCTION__ << " event has has monitored";
     return false;
   }
 
   fd_event->SetFdWatcher(AsFdWatcher());
-
   multiplexer_->AddFdEvent(fd_event);
   return true;
 }
@@ -93,7 +91,7 @@ bool EventPump::InstallFdEvent(FdEvent *fd_event) {
 bool EventPump::RemoveFdEvent(FdEvent* fd_event) {
   CHECK(IsInLoopThread());
   if (!fd_event->EventWatcher()) {
-    LOG(ERROR) << "event don't attach to any Pump";
+    LOG(ERROR) << __FUNCTION__ << " event don't attach to any Pump";
     return false;
   }
   fd_event->SetFdWatcher(nullptr);
@@ -131,7 +129,7 @@ void EventPump::ProcessTimerEvent() {
     TimeoutEvent* timeout_ev = static_cast<TimeoutEvent*>(expired);
     timeout_ev->InvokeTimerHanlder();
 
-    if (timeout_ev->IsRepeated()) { // readd to timeout wheel
+    if (timeout_ev->IsRepeated()) { // re-add to timeout wheel
 
       add_timer_internal(now, timeout_ev);
 

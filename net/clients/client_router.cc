@@ -62,16 +62,17 @@ void ClientRouter::StopRouterSync() {
   StopRouter();
 
   std::unique_lock<std::mutex> lck(mtx_);
-  while (cv_.wait_for(lck, std::chrono::milliseconds(500)) == std::cv_status::timeout) {
-    LOG(INFO) << "stoping... ... ...";
-  }
+  cv_.wait(lck, [&]{
+    auto channels = std::atomic_load(&roundrobin_channes_);
+    return channels->empty();
+  });
 }
 
 void ClientRouter::OnClientConnectFailed() {
   if (is_stopping_ || channel_count_ <= channels_.size()) {
     return;
   }
-  LOG(INFO) << server_addr_.IpPortAsString() << " connect failed, try after " << reconnect_interval_ << " ms";
+  VLOG(GLOG_VERROR) << __FUNCTION__ << RouterInfo() << " try after " << reconnect_interval_ << " ms";
   auto functor = std::bind(&Connector::LaunchAConnection, connector_, server_addr_);
   work_loop_->PostDelayTask(NewClosure(functor), reconnect_interval_);
 }
@@ -106,12 +107,12 @@ void ClientRouter::OnNewClientConnected(int socket_fd, InetAddress& local, InetA
 
   std::shared_ptr<ClientChannelList> list(new ClientChannelList(channels_));
   std::atomic_store(&roundrobin_channes_, list);
-  VLOG(GLOG_VINFO) << server_addr_.IpPortAsString() << " Has " << channels_.size() << " Channel";
-  LOG(ERROR) << __FUNCTION__ << server_addr_.IpPortAsString() << " now has " << channels_.size() << " channel";
+  VLOG(GLOG_VINFO) << __FUNCTION__ << RouterInfo();
 }
 
 /*on the loop of client IO, need managed by connector loop*/
 void ClientRouter::OnClientChannelClosed(const RefClientChannel& channel) {
+
   if (!work_loop_->IsInLoopThread()) {
     auto functor = std::bind(&ClientRouter::OnClientChannelClosed, this, channel);
     work_loop_->PostTask(NewClosure(std::move(functor)));
@@ -126,17 +127,16 @@ void ClientRouter::OnClientChannelClosed(const RefClientChannel& channel) {
   std::shared_ptr<ClientChannelList> list(new ClientChannelList(channels_));
   std::atomic_store(&roundrobin_channes_, list);
 
-  if (is_stopping_ && channels_.empty()) {//for sync stoping
-    cv_.notify_all();
-  }
-
-  LOG(ERROR) << __FUNCTION__ << server_addr_.IpPortAsString() << " now has " << channels_.size() << " channel";
-
   if (!is_stopping_ && channels_.size() < channel_count_) {
-    VLOG(GLOG_VTRACE) << "Broken, ReConnect After:" << reconnect_interval_ << " ms";
-    LOG(ERROR) << __FUNCTION__ << server_addr_.IpPortAsString() << " reconnect after " << reconnect_interval_ << " ms";
+    VLOG(GLOG_VTRACE) << __FUNCTION__ << RouterInfo() << " reconnect after:" << reconnect_interval_;
     auto functor = std::bind(&Connector::LaunchAConnection, connector_, server_addr_);
     work_loop_->PostDelayTask(NewClosure(functor), reconnect_interval_);
+  }
+
+  VLOG(GLOG_VINFO) << __FUNCTION__ << RouterInfo();
+
+  if (is_stopping_ && channels_.empty()) {//for sync stoping
+    cv_.notify_all();
   }
 }
 
@@ -158,7 +158,7 @@ ProtocolMessage* ClientRouter::SendClientRequest(RefProtocolMessage& message) {
 
   auto channels = std::atomic_load(&roundrobin_channes_);
 
-  if ((*channels).empty()) { //avoid x/0 Error
+  if (channels->empty()) { //avoid x/0 Error
     LOG(ERROR) << " No Connection Established To Server:" << server_addr_.IpPortAsString();
     return NULL;
   }
@@ -176,6 +176,18 @@ ProtocolMessage* ClientRouter::SendClientRequest(RefProtocolMessage& message) {
 
 void ClientRouter::SetWorkLoadTransfer(CoroWlDispatcher* dispatcher) {
   dispatcher_ = dispatcher;
+}
+
+uint32_t ClientRouter::ClientCount() const {
+  auto channels = std::atomic_load(&roundrobin_channes_);
+  return channels->size();
+}
+
+std::string ClientRouter::RouterInfo() const {
+  std::ostringstream oss;
+  oss << " [remote:" << server_addr_.IpPortAsString()
+      << ", clients:" << ClientCount() << "]";
+  return oss.str();
 }
 
 }//end namespace net

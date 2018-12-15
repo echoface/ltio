@@ -79,7 +79,8 @@ void QueuedChannel::OnRequestTimeout(WeakProtocolMessage weak) {
   if (request.get() != in_progress_request_.get()) {
     return;
   }
-  LOG(INFO) << __FUNCTION__ << " call OnRequestGetResponse for timeout";
+
+  VLOG(GLOG_VINFO) << __FUNCTION__ << protocol_service_->Channel()->ChannelInfo() << " timeout reached";
   request->SetFailInfo(FailInfo::kTimeOut);
   delegate_->OnRequestGetResponse(request, kNullResponse);
   in_progress_request_.reset();
@@ -107,10 +108,10 @@ void QueuedChannel::OnResponseMessage(const RefProtocolMessage& res) {
 }
 
 void QueuedChannel::OnProtocolServiceGone(const RefProtoService& service) {
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << service->Channel()->ChannelInfo() << " protocol service closed";
 
   if (in_progress_request_) {
     in_progress_request_->SetFailInfo(FailInfo::kChannelBroken);
-    LOG(INFO) << __FUNCTION__ << " reset inprogress request call OnrequestGetResponse";
     delegate_->OnRequestGetResponse(in_progress_request_, kNullResponse);
     in_progress_request_.reset();
   }
@@ -118,13 +119,12 @@ void QueuedChannel::OnProtocolServiceGone(const RefProtoService& service) {
   while(waiting_list_.size()) {
     RefProtocolMessage& request = waiting_list_.front();
     request->SetFailInfo(FailInfo::kChannelBroken);
-    LOG(INFO) << __FUNCTION__ << " reset waitlist request call OnrequestGetResponse";
     delegate_->OnRequestGetResponse(request, kNullResponse);
     waiting_list_.pop_front();
   }
 
   auto guard = shared_from_this();
   delegate_->OnClientChannelClosed(guard);
-};
+}
 
 }//net

@@ -18,20 +18,20 @@ public:
 
   bool StartListen();
   void StopListen();
-  bool IsListenning() { return listenning_; }
+  bool IsListening() { return listening_; }
 
   void SetNewConnectionCallback(const NewConnectionCallback& cb);
-  const InetAddress& ListenningAddress() const { return address_; };
+  const InetAddress& ListeningAddress() const { return address_; };
 private:
   bool InitListener();
   void OnAcceptorError();
   void HandleCommingConnection();
 
-  bool listenning_;
+  bool listening_;
   InetAddress address_;
 
   base::EventPump* event_pump_;
-  base::FdEvent::RefFdEvent socket_event_;
+  base::RefFdEvent socket_event_;
   NewConnectionCallback new_conn_callback_;
   DISALLOW_COPY_AND_ASSIGN(ServiceAcceptor);
 };

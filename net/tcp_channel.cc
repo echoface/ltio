@@ -29,7 +29,7 @@ TcpChannel::TcpChannel(int socket_fd,
 
   CHECK(io_loop_);
 
-  name_ = peer.IpPortAsString();
+  name_ = local_addr_.IpPortAsString();
   fd_event_ = base::FdEvent::Create(socket_fd, 0);
   fd_event_->SetReadCallback(std::bind(&TcpChannel::HandleRead, this));
   fd_event_->SetWriteCallback(std::bind(&TcpChannel::HandleWrite, this));
@@ -40,35 +40,46 @@ TcpChannel::TcpChannel(int socket_fd,
 
 void TcpChannel::Start() {
   CHECK(fd_event_);
-  if (io_loop_->IsInLoopThread()) {
-    return OnChannelReady();
-  }
-  auto task = std::bind(&TcpChannel::OnChannelReady, shared_from_this());
-  io_loop_->PostTask(NewClosure(std::move(task)));
+  status_ = Status::CONNECTING;
+
+  auto t = std::bind(&TcpChannel::OnChannelReady, shared_from_this());
+
+  io_loop_->PostTask(NewClosure(std::move(t)));
 }
 
 TcpChannel::~TcpChannel() {
-  VLOG(GLOG_VTRACE) << name_ << " Gone, Fd:" << fd_event_->fd();
-  fd_event_.reset();
-  CHECK(channel_status_ == DISCONNECTED);
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
+  CHECK(status_ == Status::CLOSED);
+}
+
+std::string TcpChannel::ChannelInfo() const {
+  std::ostringstream oss;
+  oss << " [name:" << name_
+      << ", fd:" << fd_event_->fd()
+      << ", loc:" << local_addr_.IpPortAsString()
+      << ", peer:" << peer_addr_.IpPortAsString()
+      << ", status:" << StatusAsString() << "]";
+  return oss.str();
 }
 
 void TcpChannel::OnChannelReady() {
   CHECK(InIOLoop());
   CHECK(channel_consumer_);
 
-  if (channel_status_ != CONNECTING) {
-    LOG(ERROR) << " Channel Status Changed After Enable this Channel";
+  if (status_ != Status::CONNECTING) {
+    LOG(ERROR) << __FUNCTION__ << ChannelInfo();
     RefTcpChannel guard(shared_from_this());
-    channel_consumer_->OnChannelClosed(guard);
+
     fd_event_->ResetCallback();
+    SetChannelStatus(Status::CLOSED);
+    channel_consumer_->OnChannelClosed(guard);
     return;
   }
 
+  fd_event_->EnableReading();
   base::EventPump* event_pump = io_loop_->Pump();
   event_pump->InstallFdEvent(fd_event_.get());
-  fd_event_->EnableReading();
-  SetChannelStatus(CONNECTED);
+  SetChannelStatus(Status::CONNECTED);
 }
 
 void TcpChannel::SetChannelConsumer(ChannelConsumer *consumer) {
@@ -80,20 +91,21 @@ void TcpChannel::HandleRead() {
 
   int64_t bytes_read = in_buffer_.ReadFromSocketFd(fd_event_->fd(), &error);
   if (bytes_read > 0) {
-    VLOG(GLOG_VTRACE) << __FUNCTION__ << " [" << ChannelName() << "] read ["
-                      << fd_event_->fd() << "] got [" << bytes_read << "] bytes";
-
+    VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo() << " read [" << bytes_read << "] bytes";
 	  channel_consumer_->OnDataReceived(shared_from_this(), &in_buffer_);
 
   } else if (0 == bytes_read) { //read eof, remote close
-    VLOG(GLOG_VTRACE) << __FUNCTION__ << " peer [" << ChannelName() << "] closed, fd ["
-                      << fd_event_->fd() << "]";
+
+    VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo() << " peer close";
     HandleClose();
 
   } else {
 
-    LOG(ERROR) << __FUNCTION__ << " [" << ChannelName() << "] socket ["
-                      << fd_event_->fd() << "] error [" << base::StrError(error) << "]";
+    if (error == EAGAIN || error == EWOULDBLOCK) {
+      return;
+    }
+    LOG(ERROR) << __FUNCTION__ << ChannelInfo() << " read error";
+
     errno = error;
     HandleError();
 
@@ -109,11 +121,10 @@ void TcpChannel::HandleWrite() {
   while(out_buffer_.CanReadSize()) {
 
     ssize_t writen_bytes = socketutils::Write(socket_fd, out_buffer_.GetRead(), out_buffer_.CanReadSize());
+
     if (writen_bytes < 0) {
       int err = errno;
       if (err != EAGAIN && err != EWOULDBLOCK) {
-        LOG(ERROR) << "channel [" << ChannelName() << "] handle write err:" << base::StrError(err);
-        ForceShutdown();
         fatal_err = err;
       }
       break;
@@ -122,7 +133,9 @@ void TcpChannel::HandleWrite() {
   };
 
   if (fatal_err != 0) {
-    return;
+    HandleClose();
+    LOG(ERROR) << __FUNCTION__ << ChannelInfo() << " write err:" << base::StrError(fatal_err);
+	  return;
   }
 
   if (out_buffer_.CanReadSize()) {
@@ -133,21 +146,20 @@ void TcpChannel::HandleWrite() {
 
   } else { //all data writen done
 
+    fd_event_->DisableWriting();
     channel_consumer_->OnDataFinishSend(shared_from_this());
 
     if (schedule_shutdown_) {
-      socketutils::ShutdownWrite(socket_fd);
-    } else {
-      fd_event_->DisableWriting();
+      HandleClose();
+      //socketutils::ShutdownWrite(socket_fd);
     }
-
   }
 }
 
 void TcpChannel::HandleError() {
   int socket_fd = fd_event_->fd();
   int err = socketutils::GetSocketError(socket_fd);
-  LOG(ERROR) << "socket error, fd:[" << socket_fd << "], error: [" << base::StrError(err) << "]";
+  LOG(ERROR) << __FUNCTION__ << ChannelInfo() << " error: [" << base::StrError(err) << "]";
 }
 
 void TcpChannel::HandleClose() {
@@ -155,20 +167,17 @@ void TcpChannel::HandleClose() {
 
   RefTcpChannel guard(shared_from_this());
 
-  fd_event_->DisableAll();
-  fd_event_->ResetCallback();
-  io_loop_->Pump()->RemoveFdEvent(fd_event_.get());
+	io_loop_->Pump()->RemoveFdEvent(fd_event_.get());
+	fd_event_->ResetCallback();
 
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
 
-  SetChannelStatus(DISCONNECTED);
-
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << " channel [" << ChannelName() << "] close";
-
+  SetChannelStatus(Status::CLOSED);
   channel_consumer_->OnChannelClosed(guard);
 }
 
-void TcpChannel::SetChannelStatus(ChannelStatus st) {
-  channel_status_ = st;
+void TcpChannel::SetChannelStatus(Status st) {
+  status_ = st;
   RefTcpChannel guard(shared_from_this());
   channel_consumer_->OnStatusChanged(guard);
 }
@@ -176,28 +185,26 @@ void TcpChannel::SetChannelStatus(ChannelStatus st) {
 void TcpChannel::ShutdownChannel() {
   CHECK(InIOLoop());
 
-  VLOG(GLOG_VTRACE) << "TcpChannel::ShutdownChannel " << name_;
-  if (channel_status_ == DISCONNECTED) {
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
+  if (status_ == Status::CLOSED) {
     return;
   }
 
-  if (!fd_event_->IsWriteEnable()) {
-    SetChannelStatus(DISCONNECTING);
-    socketutils::ShutdownWrite(fd_event_->fd());
-  } else {
-    schedule_shutdown_ = true;
-  }
-}
+  schedule_shutdown_ = true;
+  SetChannelStatus(Status::CLOSING);
 
-void TcpChannel::ForceShutdown() {
-  CHECK(InIOLoop());
-  HandleClose();
+  if (!fd_event_->IsWriteEnable()) {
+
+    //socketutils::ShutdownWrite(fd_event_->fd());
+
+    HandleClose();
+    schedule_shutdown_ = false;
+  }
 }
 
 int32_t TcpChannel::Send(const uint8_t* data, const int32_t len) {
   CHECK(io_loop_->IsInLoopThread());
-  if (channel_status_ != CONNECTED) {
-    VLOG(GLOG_VERROR) << "Can't Write Data To a Closed[ing] socket; Channal:" << ChannelName();
+  if (!IsConnected()) {
     return -1;
   }
 
@@ -222,7 +229,7 @@ int32_t TcpChannel::Send(const uint8_t* data, const int32_t len) {
       } else {
       	fatal_err = errno;
         LOG(ERROR) << "channel [" << ChannelName() << "] write err:" << base::StrError(fatal_err);
-        ForceShutdown();
+        HandleClose();
       }
       break;
     }
@@ -231,22 +238,25 @@ int32_t TcpChannel::Send(const uint8_t* data, const int32_t len) {
     DCHECK((n_write + n_remain) == size_t(len));
   } while(n_remain != 0);
 
-  if (out_buffer_.CanReadSize() > 0 && !fd_event_->IsWriteEnable()) {
+  if (!fatal_err &&
+      !fd_event_->IsWriteEnable() &&
+      out_buffer_.CanReadSize() > 0) {
+
     fd_event_->EnableWriting();
   }
   return fatal_err != 0 ? -1 : n_write;
 }
 
 const std::string TcpChannel::StatusAsString() const {
-  switch(channel_status_) {
-    case CONNECTING:
+  switch(status_) {
+    case Status::CONNECTING:
       return "CONNECTING";
-    case CONNECTED:
+    case Status::CONNECTED:
       return "ESTABLISHED";
-    case DISCONNECTING:
-      return "DISCONNECTING";
-    case DISCONNECTED:
-      return "DISCONNECTED";
+    case Status::CLOSING:
+      return "CLOSING";
+    case Status::CLOSED:
+      return "CLOSED";
     default:
     	break;
   }
@@ -261,7 +271,7 @@ bool TcpChannel::InIOLoop() const {
 }
 
 bool TcpChannel::IsConnected() const {
-  return channel_status_ == CONNECTED;
+  return status_ == Status::CONNECTED;
 }
 
 }

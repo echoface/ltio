@@ -8,7 +8,7 @@
 namespace net {
 
 ServiceAcceptor::ServiceAcceptor(base::EventPump* pump, const InetAddress& address)
-  : listenning_(false),
+  : listening_(false),
     address_(address),
     event_pump_(pump) {
   CHECK(event_pump_);
@@ -16,7 +16,7 @@ ServiceAcceptor::ServiceAcceptor(base::EventPump* pump, const InetAddress& addre
 }
 
 ServiceAcceptor::~ServiceAcceptor() {
-  CHECK(listenning_ == false);
+  CHECK(listening_ == false);
   socket_event_.reset();
 }
 
@@ -48,7 +48,7 @@ bool ServiceAcceptor::InitListener() {
 bool ServiceAcceptor::StartListen() {
   CHECK(event_pump_->IsInLoopThread());
 
-  if (listenning_) {
+  if (listening_) {
     LOG(ERROR) << " Aready Listen on:" << address_.IpPortAsString();
     return true;
   }
@@ -64,20 +64,20 @@ bool ServiceAcceptor::StartListen() {
     return false;
   }
   LOG(INFO) << __FUNCTION__ << " start listen on:" << address_.IpPortAsString();
-  listenning_ = true;
+  listening_ = true;
   return true;
 }
 
 void ServiceAcceptor::StopListen() {
   CHECK(event_pump_->IsInLoopThread());
 
-  if (!listenning_) {
+  if (!listening_) {
     return;
   }
 
   socket_event_->DisableAll();
   event_pump_->RemoveFdEvent(socket_event_.get());
-  listenning_ = false;
+  listening_ = false;
   LOG(INFO) << " Stop Listen on:" << address_.IpPortAsString();
 }
 
@@ -109,7 +109,7 @@ void ServiceAcceptor::HandleCommingConnection() {
 void ServiceAcceptor::OnAcceptorError() {
   LOG(ERROR) << __FUNCTION__ << " accept fd [" << socket_event_->fd() << "] error:[" << base::StrError() << "]";
 
-  listenning_ = false;
+  listening_ = false;
 
   // Relaunch This server 
   if (InitListener()) {

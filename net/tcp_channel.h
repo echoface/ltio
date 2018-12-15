@@ -18,12 +18,12 @@ namespace net {
 
 class TcpChannel : public std::enable_shared_from_this<TcpChannel> {
 public:
-  typedef enum {
-    CONNECTING = 0,
-    CONNECTED = 1,
-    DISCONNECTED = 2,
-    DISCONNECTING = 3
-  } ChannelStatus;
+  enum class Status {
+    CONNECTING,
+    CONNECTED,
+	  CLOSING,
+    CLOSED
+  };
 
   static RefTcpChannel Create(int socket_fd,
                               const InetAddress& local,
@@ -47,9 +47,9 @@ public:
    * other case return the byte writen to socket fd successfully */
   int32_t Send(const uint8_t* data, const int32_t len);
 
-  void ForceShutdown();
   void ShutdownChannel();
   bool IsConnected() const;
+	std::string ChannelInfo() const;
 
   bool InIOLoop() const;
   base::MessageLoop* IOLoop() const;
@@ -62,13 +62,13 @@ protected:
 
 private:
   void OnChannelReady();
-  void SetChannelStatus(ChannelStatus st);
+  void SetChannelStatus(Status st);
 
   /* channel relative things should happened on io_loop*/
   base::MessageLoop* io_loop_;
 
   bool schedule_shutdown_;
-  ChannelStatus channel_status_ = CONNECTING;
+  Status status_ = Status::CLOSED;
 
   base::RefFdEvent fd_event_;
 

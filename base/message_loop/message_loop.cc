@@ -29,7 +29,6 @@
 namespace base {
 
 static const char kQuit = 1;
-static const char kRunReplyTask = 3;
 
 //static thread safe
 static thread_local MessageLoop* threadlocal_current_ = NULL;
@@ -77,12 +76,11 @@ private:
   const uint64_t schedule_time_;
 };
 
-class MessageLoop::RepyTaskHelper : public TaskBase {
+class MessageLoop::ReplyTaskHelper : public TaskBase {
 public:
-  RepyTaskHelper(ClosurePtr& task, ClosurePtr& reply, MessageLoop* loop, int notify_fd)
+  ReplyTaskHelper(ClosurePtr& task, ClosurePtr& reply, MessageLoop* loop, int notify_fd)
     : notify_fd_(notify_fd),
       task_(std::move(task)) {
-      //reply_(std::move(reply)) {
     CHECK(loop);
     holder_ = ReplyHolder::Create(reply);
     loop->ScheduleFutureReply(holder_);
@@ -97,11 +95,8 @@ public:
     LOG_IF(ERROR, ret != sizeof(msg)) << "run reply failed for task:" << ClosureInfo();
   }
 private:
-
   int notify_fd_;
   ClosurePtr task_;
-  //ClosurePtr reply_;
-  //MessageLoop* reply_loop_;
   std::shared_ptr<ReplyHolder> holder_;
 };
 
@@ -140,7 +135,7 @@ MessageLoop::MessageLoop()
 }
 
 MessageLoop::~MessageLoop() {
-  LOG(INFO) << "MessageLoop [" << LoopName() << "] Gone...";
+  LOG(INFO) << "MessageLoop: [" << LoopName() << "] Gone...";
 
   if (status_ == ST_STARTED) {
 
@@ -155,6 +150,7 @@ MessageLoop::~MessageLoop() {
   wakeup_event_.reset();
   IgnoreSigPipeSignalOnCurrentThread2();
   close(wakeup_pipe_in_);
+  //wakeup_pipe_out managed by fdevent
   //close(wakeup_pipe_out_);
 
   task_event_.reset();
@@ -221,7 +217,7 @@ void MessageLoop::ThreadMain() {
   event_pump_->InstallFdEvent(reply_event_.get());
 
   //delegate_->BeforeLoopRun();
-  LOG(INFO) << "MessageLoop: [" << loop_name_ << "] Start Runing";
+  LOG(INFO) << "MessageLoop: [" << loop_name_ << "] Start Running";
 
   {
     status_.store(ST_STARTED);
@@ -236,7 +232,7 @@ void MessageLoop::ThreadMain() {
   event_pump_->RemoveFdEvent(wakeup_event_.get());
 
   threadlocal_current_ = NULL;
-  LOG(INFO) << "MessageLoop: [" << loop_name_ << "] Stop Runing";
+  LOG(INFO) << "MessageLoop: [" << loop_name_ << "] Stop Running";
 
   {
     status_.store(ST_STOPED);
@@ -334,6 +330,7 @@ void MessageLoop::RunScheduledTask(ScheduledTaskType type) {
       }
     } break;
     default:
+      DCHECK(false);
       LOG(ERROR) << " Should Not Reached Here!!!";
     break;
   }
@@ -350,6 +347,7 @@ void MessageLoop::OnHandleCommand() {
       QuitLoop();
     } break;
     default: {
+      DCHECK(false);
       LOG(ERROR) << "Shout Not Reached HERE!";
     } break;
   }
@@ -359,7 +357,7 @@ void MessageLoop::PostTaskAndReply(std::unique_ptr<TaskBase> task,
                                    std::unique_ptr<TaskBase> reply,
                                    MessageLoop* reply_loop) {
   CHECK(reply_loop);
-  PostTask(ClosurePtr(new RepyTaskHelper(task, reply, reply_loop, reply_loop->reply_event_fd_)));
+  PostTask(ClosurePtr(new ReplyTaskHelper(task, reply, reply_loop, reply_loop->reply_event_fd_)));
 }
 
 bool MessageLoop::PostTaskAndReply(std::unique_ptr<TaskBase> task,

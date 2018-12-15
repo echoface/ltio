@@ -53,7 +53,7 @@ public:
 
   base::MessageLoop* AcceptorLoop() { return acceptor_loop_; }
   const std::string& IOServiceName() const {return service_name_;}
-  bool IsRunning() {return acceptor_ && acceptor_->IsListenning();}
+  bool IsRunning() {return acceptor_ && acceptor_->IsListening();}
 
   void SetProtoMessageHandler(ProtoMessageHandler handler);
 private:

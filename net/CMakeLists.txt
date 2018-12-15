@@ -35,7 +35,7 @@ set(LTNET_SOURCE
   server/http_server/http_server.cc
 
   #clients source
-  #clients/client_channel.cc
+  clients/client_channel.cc
   clients/client_connector.cc
   #clients/requests_keeper.cc
   clients/client_router.cc
@@ -72,6 +72,8 @@ add_dependencies(ltnet
 link_libraries(
   ${LTNETEXECUTE_LINKLIBS}
 )
+
+ADD_SUBDIRECTORY(unittests)
 
 ADD_EXECUTABLE(reuseport_test
   test/reuseport_test.cc

@@ -91,7 +91,7 @@ class MessageLoop : public PumpDelegate {
     void AfterPumpRun() override;
   private:
     void ThreadMain();
-    class RepyTaskHelper;
+    class ReplyTaskHelper;
 
     void OnHandleCommand();  // NOLINT
     void RunScheduledTask(ScheduledTaskType t);

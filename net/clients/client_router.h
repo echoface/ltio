@@ -66,6 +66,8 @@ public:
   void OnClientChannelClosed(const RefClientChannel& channel) override;
   void OnRequestGetResponse(const RefProtocolMessage&, const RefProtocolMessage&) override;
 
+  uint32_t ClientCount() const;
+  std::string RouterInfo() const;
 private:
   //Get a io work loop for channel, if no loop provide, use default io_loop_;
   base::MessageLoop* GetLoopForClient();

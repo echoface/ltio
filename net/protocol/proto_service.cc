@@ -33,19 +33,18 @@ bool ProtoService::IsConnected() const {
 }
 
 void ProtoService::CloseService() {
-	BeforeCloseService();
 	CHECK(channel_->InIOLoop());
-	if (IsConnected()) {
-		channel_->ShutdownChannel();
-	}
+	BeforeCloseService();
+	channel_->ShutdownChannel();
 }
 
 void ProtoService::OnChannelClosed(const RefTcpChannel& channel) {
 	CHECK(channel.get() == channel_.get());
 	RefProtoService guard = shared_from_this();
 
+	VLOG(GLOG_VTRACE) << __FUNCTION__ << channel_->ChannelInfo() << " closed";
+
 	AfterChannelClosed();
-	VLOG(GLOG_VTRACE) << __FUNCTION__ << " " << channel_->ChannelName() << " closed";
 	if (delegate_) {
 		delegate_->OnProtocolServiceGone(guard);
 	}
