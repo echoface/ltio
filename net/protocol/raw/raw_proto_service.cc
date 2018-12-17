@@ -18,6 +18,11 @@ RawProtoService::RawProtoService()
 }
 
 RawProtoService::~RawProtoService() {
+  {
+    CHECK(!timeout_ev_->IsAtatched());
+    delete timeout_ev_;
+    timeout_ev_ = nullptr;
+  }
 }
 
 // override from ProtoService
@@ -134,21 +139,21 @@ bool RawProtoService::ReplyRequest(const RefProtocolMessage& req, const RefProto
 void RawProtoService::AfterChannelClosed() {
   if (timeout_ev_) {
     IOLoop()->Pump()->RemoveTimeoutEvent(timeout_ev_);
-    delete timeout_ev_;
-    timeout_ev_ = nullptr;
   }
 }
 
 void RawProtoService::StartHeartBeat(int32_t ms) {
-	if (IsServerService()) {
-	  LOG(ERROR) << __FUNCTION__ << " should not keep heart beat on server side";
+	if (IsServerService() || ms < 5) {
+	  LOG_IF(ERROR, IsServerService()) << __FUNCTION__ << " should not keep heart beat on server side";
 	  return;
 	}
+
   timeout_ev_ = new base::TimeoutEvent(ms, true);
   timeout_ev_->InstallTimerHandler(NewClosure(std::bind(&RawProtoService::OnHeartBeat, this)));
 }
 
 void RawProtoService::OnHeartBeat() {
+
 	DCHECK(!IsServerService());
   static RawHeader hb;
   hb.sequence_id = kRawHeartBeatId;
@@ -157,9 +162,9 @@ void RawProtoService::OnHeartBeat() {
 	  CloseService();
     return;
   }
-
-	channel_->Send((const uint8_t*)&hb, sizeof(RawHeader));
-	heart_beat_alive_ = false;
+  LOG_EVERY_N(INFO, 1000) << __FUNCTION__ << " send heart beat";
+  channel_->Send((const uint8_t*)&hb, sizeof(RawHeader));
+  heart_beat_alive_ = false;
 }
 
 };

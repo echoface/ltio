@@ -76,6 +76,7 @@ private:
   //Get a io work loop for channel, if no loop provide, use default io_loop_;
   base::MessageLoop* GetLoopForClient();
 
+  RouterConf config_;
   std::string protocol_;
   uint32_t channel_count_;
   uint32_t reconnect_interval_; //ms

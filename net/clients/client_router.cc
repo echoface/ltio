@@ -33,6 +33,7 @@ void ClientRouter::SetDelegate(RouterDelegate* delegate) {
 }
 
 void ClientRouter::SetupRouter(const RouterConf& config) {
+  config_ = config;
   protocol_ = config.protocol;
   channel_count_ = config.connections;
   reconnect_interval_ = config.recon_interval;
@@ -100,7 +101,7 @@ void ClientRouter::OnNewClientConnected(int socket_fd, InetAddress& local, InetA
   client_channel->SetRequestTimeout(message_timeout_);
 
   proto_service->SetDelegate(client_channel.get());
-  proto_service->StartHeartBeat(5000);
+  proto_service->StartHeartBeat(config_.heart_beat_ms);
 
   client_channel->StartClient();
 
