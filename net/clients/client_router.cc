@@ -35,7 +35,7 @@ void ClientRouter::SetDelegate(RouterDelegate* delegate) {
 void ClientRouter::SetupRouter(const RouterConf& config) {
   protocol_ = config.protocol;
   channel_count_ = config.connections;
-  reconnect_interval_ = config.recon_interal;
+  reconnect_interval_ = config.recon_interval;
   message_timeout_ = config.message_timeout;
 }
 
@@ -100,6 +100,7 @@ void ClientRouter::OnNewClientConnected(int socket_fd, InetAddress& local, InetA
   client_channel->SetRequestTimeout(message_timeout_);
 
   proto_service->SetDelegate(client_channel.get());
+  proto_service->StartHeartBeat(5000);
 
   client_channel->StartClient();
 
@@ -107,7 +108,8 @@ void ClientRouter::OnNewClientConnected(int socket_fd, InetAddress& local, InetA
 
   std::shared_ptr<ClientChannelList> list(new ClientChannelList(channels_));
   std::atomic_store(&roundrobin_channes_, list);
-  VLOG(GLOG_VINFO) << __FUNCTION__ << RouterInfo();
+
+  VLOG(GLOG_VINFO) << __FUNCTION__ << RouterInfo() << " new protocol service started";
 }
 
 /*on the loop of client IO, need managed by connector loop*/
@@ -129,8 +131,11 @@ void ClientRouter::OnClientChannelClosed(const RefClientChannel& channel) {
 
   if (!is_stopping_ && channels_.size() < channel_count_) {
     VLOG(GLOG_VTRACE) << __FUNCTION__ << RouterInfo() << " reconnect after:" << reconnect_interval_;
-    auto functor = std::bind(&Connector::LaunchAConnection, connector_, server_addr_);
-    work_loop_->PostDelayTask(NewClosure(functor), reconnect_interval_);
+    //auto functor = std::bind(&Connector::LaunchAConnection, connector_, server_addr_);
+    //work_loop_->PostDelayTask(NewClosure(functor), reconnect_interval_);
+
+    auto functor2 = std::bind(&Connector::LaunchAConnection, connector_, server_addr_);
+    work_loop_->PostDelayTask(NewClosure(functor2), reconnect_interval_);
   }
 
   VLOG(GLOG_VINFO) << __FUNCTION__ << RouterInfo();
@@ -152,7 +157,7 @@ ProtocolMessage* ClientRouter::SendClientRequest(RefProtocolMessage& message) {
   CHECK(dispatcher_);
 
   if (!dispatcher_->SetWorkContext(message->GetWorkCtx())) {
-    LOG(FATAL) << "this task can't by yield, send failed";
+    LOG(FATAL) << __FUNCTION__ << " this task can't by yield, send failed";
     return NULL;
   }
 

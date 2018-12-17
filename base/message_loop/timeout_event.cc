@@ -17,14 +17,13 @@ TimeoutEvent::TimeoutEvent(uint64_t ms, bool repeat) :
 
 TimeoutEvent::~TimeoutEvent() {
   CHECK(!IsAtatched());
-  ::timeout_del((Timeout*)this);
 }
 
 void TimeoutEvent::UpdateInterval(int64_t ms) {
   interval_ = ms;
 }
 
-void TimeoutEvent::InvokeTimerHanlder() {
+void TimeoutEvent::Invoke() {
   if (timer_handler_) {
     timer_handler_->Run();
   }

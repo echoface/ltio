@@ -27,7 +27,6 @@ std::atomic_int64_t http_count;
 void HandleHttp(const HttpRequest* req, HttpResponse* res) {
   http_count++;
   LOG(INFO) << "http count:" << http_count << " enter";
-  //broadcast
   if (req->RequestUrl() == "/br") {
       SendRawRequest();
   }
@@ -41,8 +40,7 @@ void HandleRaw(const RawMessage* req, RawMessage* res) {
   res->SetMethod(2);
   res->SetContent("Raw Message");
 
-  LOG(INFO) << "Got A Raw Message:" << req->MessageDebug()
-  << "response:" << res->MessageDebug();
+  LOG(INFO) << "Got A Raw Message:" << req->Dump() << "response:" << res->Dump();
 }
 
 net::ClientRouter*  raw_router; //(base::MessageLoop*, const InetAddress&);
@@ -55,7 +53,7 @@ void StartRedisClient() {
     net::RouterConf router_config;
     router_config.protocol = "redis";
     router_config.connections = 2;
-    router_config.recon_interal = 5000;
+    router_config.recon_interval = 5000;
     router_config.message_timeout = 1000;
     redis_router->SetupRouter(router_config);
     redis_router->SetWorkLoadTransfer(dispatcher_);
@@ -69,7 +67,7 @@ void StartRawClient() {
     net::RouterConf router_config;
     router_config.protocol = "raw";
     router_config.connections = 1;
-    router_config.recon_interal = 5000;
+    router_config.recon_interval = 100;
     router_config.message_timeout = 1000;
     raw_router->SetupRouter(router_config);
     raw_router->SetWorkLoadTransfer(dispatcher_);
@@ -84,7 +82,7 @@ void StartHttpClients() {
     net::RouterConf router_config;
     router_config.protocol = "http";
     router_config.connections = 2;
-    router_config.recon_interal = 5000;
+    router_config.recon_interval = 100;
     router_config.message_timeout = 1000;
     http_router->SetupRouter(router_config);
     http_router->SetWorkLoadTransfer(dispatcher_);
@@ -112,9 +110,7 @@ void SendRawRequest() {
   raw_request->SetContent("ABC");
 
   RawMessage* raw_response = raw_router->SendRecieve(raw_request);
-  if (raw_response) {
-    LOG(INFO) << "raw client got response:" << raw_response->Content() << " method:" << (int)raw_response->Method();
-  } else {
+  if (!raw_response) {
     LOG(ERROR) << "raw client request failed:" << raw_request->FailMessage();
   }
 }
@@ -183,7 +179,6 @@ void SendRedisMessage() {
 
   auto redis_response  = redis_router->SendRecieve(redis_request);
   if (redis_response) {
-    //LOG(INFO) << "redis client got response:" << redis_response->Count();
     DumpRedisResponse(redis_response);
   } else {
     LOG(ERROR) << "redis client request failed:" << redis_request->FailMessage();

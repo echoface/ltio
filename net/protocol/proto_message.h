@@ -14,19 +14,19 @@ enum class MessageType {
 };
 
 typedef enum {
-  kNothing = 0,
+  kSuccess = 0,
   kTimeOut = 1,
-  kChannelBroken = 2,
+  kConnBroken = 2,
   kBadMessage = 3,
-} FailInfo;
+} MessageCode;
 
 typedef struct {
   WeakProtoService protocol_service;
 } IOContext;
 
 typedef enum {
-  KInvalidIdentify = 0,
-} MessageIdentifyType;
+  KNullId = 0,
+} SequenceIdentify;
 
 typedef struct {
   base::MessageLoop* loop;
@@ -40,31 +40,32 @@ typedef std::function<void(const RefProtocolMessage&/*request*/)> ProtoMessageHa
 
 class ProtocolMessage {
 public:
+  const static RefProtocolMessage kNullMessage;
   ProtocolMessage(const std::string, MessageType t);
   virtual ~ProtocolMessage();
 
   const std::string& Protocol() const;
   const MessageType& GetMessageType() const {return type_;};
-  bool IsRequestMessage() const {return type_ == MessageType::kRequest;};
+  bool IsRequest() const {return type_ == MessageType::kRequest;};
 
   IOContext& GetIOCtx() {return io_context_;}
   WorkContext& GetWorkCtx() {return work_context_;}
   void SetIOContext(const RefProtoService& service);
 
-  void SetFailInfo(FailInfo reason);
-  FailInfo MessageFailInfo() const;
-  const std::string& FailMessage() const;
+  MessageCode FailCode() const;
+  void SetFailCode(MessageCode reason);
   void AppendFailMessage(std::string m);
+  const std::string& FailMessage() const;
 
   void SetResponse(const RefProtocolMessage& response);
   void SetResponse(RefProtocolMessage&& response);
   ProtocolMessage* RawResponse() {return response_.get();}
   const RefProtocolMessage& Response() const {return response_;}
 
-  const char* MessageTypeStr() const;
-  bool IsResponsed() const {return responsed_;}
-  virtual const uint64_t MessageIdentify() const {return 0;};
-  virtual const std::string MessageDebug() const {return "";};
+  const char* TypeAsStr() const;
+  bool IsResponded() const {return responsed_;}
+  virtual const std::string Dump() const {return "";};
+  virtual const uint64_t Identify() const {return SequenceIdentify::KNullId;};
 protected:
   IOContext io_context_;
   WorkContext work_context_;
@@ -73,7 +74,7 @@ private:
   MessageType type_;
   std::string proto_;
 
-  FailInfo fail_info_;
+  MessageCode fail_code_;
   std::string fail_;
   bool responsed_;
   RefProtocolMessage response_;

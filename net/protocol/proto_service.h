@@ -34,7 +34,10 @@ public:
 
   void CloseService();
   bool IsConnected() const;
+
   virtual void BeforeCloseService() {};
+  virtual void AfterChannelClosed() {};
+  virtual void StartHeartBeat(int32_t ms) {};
 
   //async clients request
   virtual bool KeepSequence() {return true;};
@@ -49,8 +52,6 @@ public:
   inline ProtocolServiceType ServiceType() const {return type_;}
   inline bool IsServerService() const {return type_ == ProtocolServiceType::kServer;};
   inline MessageType InComingType() const {return IsServerService()? MessageType::kRequest : MessageType::kResponse;};
-
-  virtual void AfterChannelClosed() {};
 protected:
   void OnChannelClosed(const RefTcpChannel&) override;
 protected:

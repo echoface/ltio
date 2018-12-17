@@ -58,6 +58,7 @@ public:
     uint64_t has_passed_time = time_ms() - schedule_time_;
     int64_t new_delay_ms = delay_ms_ - has_passed_time;
     if (new_delay_ms <= 0) {
+      LOG(INFO) << __FUNCTION__ << " directly run task:" << timeout_fn_->ClosureInfo();
       return timeout_fn_->Run();
     }
 
@@ -247,7 +248,6 @@ void MessageLoop::PostDelayTask(std::unique_ptr<TaskBase> task, uint32_t ms) {
     PostTask(ClosurePtr(new TimeoutTaskHelper(std::move(task), event_pump_.get(), ms)));
     return;
   }
-
   TimeoutEvent* timeout_ev = TimeoutEvent::CreateSelfDeleteTimeoutEvent(ms);
   timeout_ev->InstallTimerHandler(std::move(task));
   event_pump_->AddTimeoutEvent(timeout_ev);
@@ -258,7 +258,7 @@ bool MessageLoop::PostTask(std::unique_ptr<TaskBase> task) {
   CHECK(status_ == ST_STARTED);
 
   //nested task handle; alway true for this case; why?
-  //bz waitIO timeout can also will triggle this
+  //bz waitIO timeout can also will trigger this
   if (IsInLoopThread()) {
     inloop_scheduled_task_.push_back(std::move(task));
     LOG_IF(ERROR, Notify(task_event_fd_, &count, sizeof(count)) < 0) << "notify failed:" << StrError(); 
@@ -274,7 +274,7 @@ bool MessageLoop::PostTask(std::unique_ptr<TaskBase> task) {
     scheduled_task_.push_back(std::move(task));
   }
   if (Notify(task_event_fd_, &count, sizeof(count)) < 0) {
-    LOG(ERROR) << "task schedule failed:" << StrError() << " task:" << loc.ToString();
+    LOG(ERROR) << __FUNCTION__ << " task schedule failed:" << StrError() << " task:" << loc.ToString();
     {
       base::SpinLockGuard guard(task_lock_);
       scheduled_task_.remove_if([task_id](std::unique_ptr<TaskBase>& t) {

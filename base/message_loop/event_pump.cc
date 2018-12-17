@@ -112,7 +112,7 @@ void EventPump::AddTimeoutEvent(TimeoutEvent* timeout_ev) {
 
 void EventPump::RemoveTimeoutEvent(TimeoutEvent* timeout_ev) {
   CHECK(IsInLoopThread());
-  ::timeouts_del(timeout_wheel_, timeout_ev); 
+  ::timeouts_del(timeout_wheel_, timeout_ev);
 }
 
 void EventPump::add_timer_internal(uint64_t now_us, TimeoutEvent* event) {
@@ -123,25 +123,32 @@ void EventPump::ProcessTimerEvent() {
   uint64_t now = time_us();
   ::timeouts_update(timeout_wheel_, now);
 
+  std::vector<TimeoutEvent*> to_be_deleted;
+
 	Timeout* expired = NULL;
   while (NULL != (expired = timeouts_get(timeout_wheel_))) {
+  	// remove first
+    ::timeouts_del(timeout_wheel_, expired);
 
     TimeoutEvent* timeout_ev = static_cast<TimeoutEvent*>(expired);
-    timeout_ev->InvokeTimerHanlder();
 
     if (timeout_ev->IsRepeated()) { // re-add to timeout wheel
-
       add_timer_internal(now, timeout_ev);
-
     } else {
-
-      ::timeouts_del(timeout_wheel_, expired);
       if (timeout_ev->SelfDelete()) {
-        delete timeout_ev;
+        to_be_deleted.push_back(timeout_ev);
       }
     }
+    // Must at end; avoid case: ABA
+    // timer A invoke ->
+    // {do something but remove this time event and create a new timer magic use the same memory} ->
+    // use A(but actually is B timer) again
+    timeout_ev->Invoke();
+  }// end while
 
-  } // end while
+  for (auto toe : to_be_deleted) {
+    delete toe;
+  }
 }
 
 timeout_t EventPump::NextTimerTimeout(timeout_t default_timeout) {

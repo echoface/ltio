@@ -39,21 +39,21 @@ public:
   ~RawMessage();
 
   void SetCode(uint8_t code);
-  uint8_t Method() const {return header_.method;}
   void SetMethod(uint8_t method);
   const std::string& Content() const;
   void SetContent(const char* content);
   void SetContent(const std::string& body);
+  const std::string Dump() const override;
+
+  uint8_t Method() const {return header_.method;}
   const RawHeader& Header() const {return header_;}
-  const std::string MessageDebug() const override;
-  const uint64_t MessageIdentify() const {return header_.sequence_id;}
+  const uint64_t Identify() const {return header_.sequence_id;}
 private:
   friend class RawProtoService;
   void CalculateFrameSize();
   std::string& MutableContent() {return content_;}
   uint64_t SequenceId() const {return header_.sequence_id;}
   void SetSequenceId(uint64_t id) {header_.sequence_id = id;}
-
   RawHeader header_;
   std::string content_;
 };

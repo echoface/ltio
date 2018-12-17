@@ -60,9 +60,9 @@ const std::string& HttpResponse::GetHeader(const std::string& field) const {
   return base::kNullString;
 }
 
-const std::string HttpResponse::MessageDebug() const {
+const std::string HttpResponse::Dump() const {
   std::ostringstream oss;
-  oss << "{\"type\": \"" << MessageTypeStr() << "\""
+  oss << "{\"type\": \"" << TypeAsStr() << "\""
       << ", \"http_major\": " << (int)http_major_
       << ", \"http_minor\": " << (int)http_minor_
       << ", \"status_code\": " << (int)status_code_;

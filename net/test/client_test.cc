@@ -30,17 +30,17 @@ bool SendRequest(int sequence_id) {
   request->SetKeepAlive(true);
   request->SetRequestURL("/");
   request->InsertHeader("Accept", "*/*");
-  request->InsertHeader("Host", "127.0.0.1");
-  request->InsertHeader("T", std::to_string(sequence_id));
-  //request->InsertHeader("Host", "g.test.amnetapi.com");
   request->InsertHeader("User-Agent", "curl/7.58.0");
+  request->InsertHeader("T", std::to_string(sequence_id));
 
-  LOG(INFO) << "call send [" << sequence_id << "]st request";
   net::HttpResponse* response = http_router->SendRecieve(request);
   if (response && !response->IsKeepAlive()) {
-    LOG(ERROR) << "recieve a closed response from server" << response->MessageDebug();
+    LOG(ERROR) << "recieve a closed response from server" << response->Dump();
   }
-  return response != NULL && request->MessageFailInfo() == net::FailInfo::kNothing;
+  if (request->FailCode() != net::MessageCode::kSuccess) {
+    LOG(ERROR) << "request failed reason:" << request->FailCode() << " message:" << request->FailMessage();
+  }
+  return response != NULL && request->FailCode() == net::MessageCode::kSuccess;
 }
 
 void SendRawRequest(int sequence_id) {
@@ -52,7 +52,7 @@ void SendRawRequest(int sequence_id) {
 
   auto response = raw_router->SendRecieve(raw_request);
   if (response) {
-    LOG(ERROR) << "Get RawResponse:\n" << response->MessageDebug();
+    LOG(ERROR) << "Get RawResponse:\n" << response->Dump();
   }
 }
 int g_count = 0;
@@ -63,6 +63,7 @@ void HttpClientBenchMark(int grp, int count) {
 
   int success_count = 0;
   for (int i=0; i < count; i++) {
+    co_sleep(100);
     if (SendRequest(g_count++)) {success_count++;}
   }
 
@@ -84,11 +85,13 @@ int main(int argc, char* argv[]) {
   wloop.Start();
   {
     net::InetAddress http_server_addr("127.0.0.1", 80);
+    //net::InetAddress http_server_addr("47.100.201.65", 80);
+    //net::InetAddress http_server_addr("123.59.153.186", 80);
     http_router = new net::ClientRouter(&loop, http_server_addr);
     net::RouterConf router_config;
     router_config.protocol = "http";
-    router_config.connections = 2;
-    router_config.recon_interal = 100;
+    router_config.connections = 1;
+    router_config.recon_interval = 100;
     router_config.message_timeout = 5000;
     http_router->SetupRouter(router_config);
     http_router->SetWorkLoadTransfer(dispatcher_);
@@ -99,7 +102,7 @@ int main(int argc, char* argv[]) {
   sleep(2);
 
   for (size_t i = 0; i < std::thread::hardware_concurrency(); i++) {
-    co_go &loop << std::bind(HttpClientBenchMark, 0, 1000);
+    co_go &loop << std::bind(HttpClientBenchMark, i, 100);
   }
 
   loop.WaitLoopEnd();

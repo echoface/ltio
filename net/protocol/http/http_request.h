@@ -48,7 +48,7 @@ public:
   int VersionMajor() const {return http_major_;}
   int VersionMinor() const {return http_minor_;}
 
-  const std::string MessageDebug() const override;
+  const std::string Dump() const override;
 private:
   void ParseUrlToParams();
 private:

@@ -19,6 +19,9 @@ public:
   bool CloseAfterMessage(ProtocolMessage* request, ProtocolMessage* response) override;
   const RefProtocolMessage NewResponseFromRequest(const RefProtocolMessage &req) override;
 
+	void AfterChannelClosed() override;
+	void StartHeartBeat(int32_t ms) override;
+
   bool KeepSequence() override {return false;};
 
   /* protocol level */
@@ -27,8 +30,11 @@ public:
 
   bool ReplyRequest(const RefProtocolMessage& req, const RefProtocolMessage& res) override;
 private:
-  RefRawMessage current_;
-  uint64_t sequence_id_ = 1;
+	void OnHeartBeat();
+  void HandleMessage(RefRawMessage& message);
+  bool heart_beat_alive_ = true;
+  base::TimeoutEvent* timeout_ev_ = nullptr;
+  static std::atomic<uint64_t> sequence_id_;
 };
 
 }

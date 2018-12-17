@@ -114,14 +114,12 @@ void TcpChannel::HandleRead() {
 }
 
 void TcpChannel::HandleWrite() {
-
   int fatal_err = 0;
   int socket_fd = fd_event_->fd();
 
   while(out_buffer_.CanReadSize()) {
 
     ssize_t writen_bytes = socketutils::Write(socket_fd, out_buffer_.GetRead(), out_buffer_.CanReadSize());
-
     if (writen_bytes < 0) {
       int err = errno;
       if (err != EAGAIN && err != EWOULDBLOCK) {
@@ -223,12 +221,12 @@ int32_t TcpChannel::Send(const uint8_t* data, const int32_t len) {
 
   do {
     ssize_t part_write = socketutils::Write(fd_event_->fd(), data + n_write, n_remain);
+
     if (part_write < 0) {
       if (errno == EAGAIN || errno == EWOULDBLOCK) {
         out_buffer_.WriteRawData(data + n_write, n_remain);
       } else {
       	fatal_err = errno;
-        LOG(ERROR) << "channel [" << ChannelName() << "] write err:" << base::StrError(fatal_err);
         HandleClose();
       }
       break;

@@ -46,10 +46,10 @@ void RawMessage::CalculateFrameSize() {
   header_.frame_size = kRawHeaderSize + content_.size();
 }
 
-const std::string RawMessage::MessageDebug() const {
+const std::string RawMessage::Dump() const {
   std::ostringstream oss;
 
-  oss << "{\"type\": \"" << MessageTypeStr() << "\","
+  oss << "{\"type\": \"" << TypeAsStr() << "\","
       << "\"code\": " << (int)header_.code << ","
       << "\"method\": " << (int)header_.method << ","
       << "\"frame_size\": " << (int)header_.frame_size << ","

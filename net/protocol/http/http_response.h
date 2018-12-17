@@ -36,7 +36,7 @@ public:
   bool IsKeepAlive() const;
   void SetKeepAlive(bool alive);
 
-  const std::string MessageDebug() const override;
+  const std::string Dump() const override;
 
   uint16_t ResponseCode() const;
   void SetResponseCode(uint16_t code);

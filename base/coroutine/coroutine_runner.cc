@@ -47,7 +47,7 @@ CoroRunner::CoroRunner()
   current_ = main_coro_ = coro_ptr.get();
 
   gc_task_ = std::bind(&CoroRunner::ReleaseExpiredCoroutine, this);
-  LOG_IF(ERROR, !bind_loop_) << "CoroRunner need constructor with initialized loop";
+  LOG_IF(ERROR, !bind_loop_) << __FUNCTION__ << " CoroRunner need constructor with initialized loop";
   CHECK(bind_loop_);
 }
 
@@ -67,11 +67,13 @@ void CoroRunner::YieldCurrent(int32_t wc) {
   CHECK(tls_runner->current_->wc_ == 0);
 
   if (tls_runner->InMainCoroutine()) {
-    LOG(INFO) << " You try to going pause a coroutine which can't be yield";
+    LOG(ERROR) << __FUNCTION__ << Runner().RunnerInfo() << " main coro can't paused";
     return;
   }
-  LOG(INFO) << "coroutine id:" << tls_runner->current_ << " resume id:" << tls_runner->current_->identify_ << " will paused";
+
   tls_runner->current_->wc_ = wc;
+
+  VLOG(GLOG_VINFO) << __FUNCTION__ << Runner().RunnerInfo() << " will paused";
   tls_runner->TransferTo(tls_runner->main_coro_);
 }
 
@@ -102,15 +104,14 @@ void CoroRunner::ResumeCoroutine(std::weak_ptr<Coroutine> weak, uint64_t id) {
   {
     RefCoroutine coro = weak.lock();
     if (!coro) {
-      LOG(ERROR) << " coroutine has gone";
+      LOG(ERROR) << __FUNCTION__ << " coroutine has gone";
       return;
     }
     coroutine = coro.get();
   }
 
   if (coroutine->Status() != CoroState::kPaused || coroutine->identify_ != id) {
-    LOG(ERROR) << " can't resume this coroutine, id:" << coroutine->identify_
-               << " wait counter:" << coroutine->wc_;
+    LOG(ERROR) << __FUNCTION__ << RunnerInfo() << " coro has resumed";
     return;
   }
 
@@ -118,7 +119,7 @@ void CoroRunner::ResumeCoroutine(std::weak_ptr<Coroutine> weak, uint64_t id) {
     return;
   }
 
-  LOG(INFO) << "coroutine id:" << coroutine << " resume id:" << coroutine->identify_;
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << RunnerInfo() << " resume coro:" << coroutine;
   coroutine->wc_ = 0;
   coroutine->identify_++;
   TransferTo(coroutine);
@@ -203,6 +204,16 @@ Coroutine* CoroRunner::RetrieveCoroutine() {
     coro = coro_ptr.get();
   }
   return coro;
+}
+
+std::string CoroRunner::RunnerInfo() const {
+  std::ostringstream oss;
+  oss << "[ current:" << current_
+      << ", wait_c:" << current_->wc_
+      << ", wait_id:" << current_->identify_
+      << ", status:" << current_->StateToString()
+      << ", is_main:" << (current_ == main_coro_ ? "true" : "false") << "] ";
+  return oss.str();
 }
 
 }// end base

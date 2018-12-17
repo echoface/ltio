@@ -3,10 +3,12 @@
 
 namespace net {
 
+const RefProtocolMessage ProtocolMessage::kNullMessage = RefProtocolMessage();
+
 ProtocolMessage::ProtocolMessage(const std::string protocol, MessageType type)
   : type_(type),
     proto_(protocol),
-    fail_info_(kNothing),
+    fail_code_(kSuccess),
     responsed_(false) {
   work_context_.loop = NULL;
 }
@@ -18,11 +20,11 @@ const std::string& ProtocolMessage::Protocol() const {
   return proto_;
 }
 
-void ProtocolMessage::SetFailInfo(FailInfo reason) {
-  fail_info_ = reason;
+void ProtocolMessage::SetFailCode(MessageCode reason) {
+  fail_code_ = reason;
 }
-FailInfo ProtocolMessage::MessageFailInfo() const {
-  return fail_info_;
+MessageCode ProtocolMessage::FailCode() const {
+  return fail_code_;
 }
 
 void ProtocolMessage::SetIOContext(const RefProtoService& service) {
@@ -51,12 +53,12 @@ void ProtocolMessage::AppendFailMessage(std::string m) {
   fail_ = m;
 }
 
-const char* ProtocolMessage::MessageTypeStr() const {
+const char* ProtocolMessage::TypeAsStr() const {
   switch(type_) {
     case MessageType::kRequest:
-      return "Request Message";
+      return "Request";
     case MessageType::kResponse:
-      return "Response Message";
+      return "Response";
     default:
       break;
   }

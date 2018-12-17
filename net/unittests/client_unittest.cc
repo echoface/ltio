@@ -32,7 +32,6 @@
 #include "net/protocol/raw/raw_proto_service.h"
 
 TEST_CASE("client.base", "[http client]") {
-  google::InitGoogleLogging()
   base::MessageLoop loop;
   loop.SetLoopName("client");
   loop.Start();
@@ -46,7 +45,7 @@ TEST_CASE("client.base", "[http client]") {
 
   net::RouterConf router_config;
   router_config.protocol = "http";
-  router_config.recon_interal = 100;
+  router_config.recon_interval = 100;
   router_config.message_timeout = 5000;
   router_config.connections = connections;
 
@@ -74,12 +73,11 @@ TEST_CASE("client.http.request", "[http client send request]") {
   net::ClientRouter http_router(&loop, http_server_addr);
   net::CoroWlDispatcher* dispatcher_ = new net::CoroWlDispatcher(true);
 
-
   static const int connections = 10;
 
   net::RouterConf router_config;
   router_config.protocol = "http";
-  router_config.recon_interal = 100;
+  router_config.recon_interval = 100;
   router_config.message_timeout = 5000;
   router_config.connections = connections;
 
@@ -101,7 +99,7 @@ TEST_CASE("client.http.request", "[http client send request]") {
     request->InsertHeader("User-Agent", "curl/7.58.0");
 
     net::HttpResponse* response = http_router.SendRecieve(request);
-    if (response && request->MessageFailInfo() == net::FailInfo::kNothing) {
+    if (response && request->FailCode() == net::MessageCode::kSuccess) {
     	success_request++;
     } else {
       failed_request++;
@@ -123,4 +121,62 @@ TEST_CASE("client.http.request", "[http client send request]") {
   }), 10000);
 
   loop.WaitLoopEnd();
+}
+
+TEST_CASE("client.raw.request", "[raw client send request]") {
+	base::MessageLoop loop;
+	loop.SetLoopName("client");
+	loop.Start();
+
+	net::InetAddress raw_server_addr("127.0.0.1", 5005);
+	net::ClientRouter raw_router(&loop, raw_server_addr);
+	net::CoroWlDispatcher* dispatcher_ = new net::CoroWlDispatcher(true);
+
+	static const int connections = 10;
+
+	net::RouterConf router_config;
+	router_config.protocol = "raw";
+	router_config.recon_interval = 100;
+	router_config.message_timeout = 5000;
+	router_config.connections = connections;
+
+	raw_router.SetupRouter(router_config);
+	raw_router.SetWorkLoadTransfer(dispatcher_);
+
+	raw_router.StartRouter();
+
+	int total_task = 10;
+	int failed_request = 0;
+	int success_request = 0;
+
+	auto raw_request_task = [&]() {
+		auto request = net::RawMessage::CreateRequest();
+		request->SetMethod(12);
+		request->SetContent("RawRequest");
+
+		net::RawMessage* response = raw_router.SendRecieve(request);
+
+		if (response && request->FailCode() == net::MessageCode::kSuccess) {
+			success_request++;
+		} else {
+			LOG(INFO) << " failed reason:" << request->FailCode();
+			failed_request++;
+		}
+	};
+
+	sleep(2);
+
+	for (int i = 0; i < total_task; i++) {
+		co_go &loop << raw_request_task;
+	}
+
+	loop.PostDelayTask(NewClosure([&](){
+		REQUIRE(raw_router.ClientCount() == connections);
+		REQUIRE((failed_request + success_request) == total_task);
+
+		raw_router.StopRouterSync();
+		loop.QuitLoop();
+	}), 10000);
+
+	loop.WaitLoopEnd();
 }

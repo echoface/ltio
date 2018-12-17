@@ -17,7 +17,7 @@ public:
   TimeoutEvent(uint64_t ms, bool repeat);
   ~TimeoutEvent();
 
-  void InvokeTimerHanlder();
+  void Invoke();
   void UpdateInterval(int64_t ms);
   void InstallTimerHandler(ClosurePtr&& h);
   bool IsRepeated() const {return repeat_;}

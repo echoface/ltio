@@ -5,15 +5,8 @@
 
 namespace net {
 
-const static RefProtocolMessage kNullResponse;
-
-RefClientChannel CreateClientChannel(ClientChannel::Delegate* delegate, RefProtoService& service) {
-  if (service->KeepSequence()) {
-    auto client_channel = std::make_shared<QueuedChannel>(delegate, service);
-    return std::static_pointer_cast<ClientChannel>(client_channel);
-  }
-  auto client_channel = std::make_shared<AsyncChannel>(delegate, service);
-  return std::static_pointer_cast<ClientChannel>(client_channel);
+RefQueuedChannel QueuedChannel::Create(Delegate* d, RefProtoService& s) {
+  return RefQueuedChannel(new QueuedChannel(d, s));
 }
 
 QueuedChannel::QueuedChannel(Delegate* d, RefProtoService& service)
@@ -43,7 +36,7 @@ void QueuedChannel::SendRequest(RefProtocolMessage request)  {
 }
 
 bool QueuedChannel::TrySendNext() {
-  if (in_progress_request_) {
+  if (ing_request_) {
     return true;
   }
 
@@ -54,17 +47,16 @@ bool QueuedChannel::TrySendNext() {
     success = protocol_service_->SendRequestMessage(next);
     waiting_list_.pop_front();
     if (success) {
-      in_progress_request_ = next;
+      ing_request_ = next;
     } else {
-      next->SetFailInfo(FailInfo::kChannelBroken);
-      LOG(INFO) << __FUNCTION__ << " send failed call OnrequestGetResponse";
-      delegate_->OnRequestGetResponse(next, kNullResponse);
+      next->SetFailCode(MessageCode::kConnBroken);
+      delegate_->OnRequestGetResponse(next, ProtocolMessage::kNullMessage);
     }
   }
 
   if (success) {
-    CHECK(in_progress_request_);
-    WeakProtocolMessage weak(in_progress_request_);   // weak ptr must init outside, Take Care of weakptr
+    DCHECK(ing_request_);
+    WeakProtocolMessage weak(ing_request_);   // weak ptr must init outside, Take Care of weakptr
     auto functor = std::bind(&QueuedChannel::OnRequestTimeout, shared_from_this(), weak);
     IOLoop()->PostDelayTask(NewClosure(functor), request_timeout_);
   }
@@ -76,14 +68,15 @@ void QueuedChannel::OnRequestTimeout(WeakProtocolMessage weak) {
   RefProtocolMessage request = weak.lock();
   if (!request) return;
 
-  if (request.get() != in_progress_request_.get()) {
+  if (request.get() != ing_request_.get()) {
     return;
   }
 
   VLOG(GLOG_VINFO) << __FUNCTION__ << protocol_service_->Channel()->ChannelInfo() << " timeout reached";
-  request->SetFailInfo(FailInfo::kTimeOut);
-  delegate_->OnRequestGetResponse(request, kNullResponse);
-  in_progress_request_.reset();
+
+  request->SetFailCode(MessageCode::kTimeOut);
+  delegate_->OnRequestGetResponse(request, ProtocolMessage::kNullMessage);
+  ing_request_.reset();
 
   if (protocol_service_->IsConnected()) {
   	protocol_service_->CloseService();
@@ -93,16 +86,15 @@ void QueuedChannel::OnRequestTimeout(WeakProtocolMessage weak) {
 }
 
 void QueuedChannel::OnResponseMessage(const RefProtocolMessage& res) {
-  //CHECK(IOLoop()->IsInLoopThread());
+  DCHECK(IOLoop()->IsInLoopThread());
 
-  if (!in_progress_request_) {
-    LOG(ERROR) << "Got Response Without Request or Request Has Canceled";
+  if (!ing_request_) {
+    LOG(ERROR) << __FUNCTION__ << " got response without request or request has canceled";
     return ;
   }
 
-  LOG(INFO) << __FUNCTION__ << " call OnrequestGetResponse";
-  delegate_->OnRequestGetResponse(in_progress_request_, res);
-  in_progress_request_.reset();
+  delegate_->OnRequestGetResponse(ing_request_, res);
+  ing_request_.reset();
 
   TrySendNext();
 }
@@ -110,16 +102,16 @@ void QueuedChannel::OnResponseMessage(const RefProtocolMessage& res) {
 void QueuedChannel::OnProtocolServiceGone(const RefProtoService& service) {
   VLOG(GLOG_VTRACE) << __FUNCTION__ << service->Channel()->ChannelInfo() << " protocol service closed";
 
-  if (in_progress_request_) {
-    in_progress_request_->SetFailInfo(FailInfo::kChannelBroken);
-    delegate_->OnRequestGetResponse(in_progress_request_, kNullResponse);
-    in_progress_request_.reset();
+  if (ing_request_) {
+    ing_request_->SetFailCode(MessageCode::kConnBroken);
+    delegate_->OnRequestGetResponse(ing_request_, ProtocolMessage::kNullMessage);
+    ing_request_.reset();
   }
 
   while(waiting_list_.size()) {
     RefProtocolMessage& request = waiting_list_.front();
-    request->SetFailInfo(FailInfo::kChannelBroken);
-    delegate_->OnRequestGetResponse(request, kNullResponse);
+    request->SetFailCode(MessageCode::kConnBroken);
+    delegate_->OnRequestGetResponse(request, ProtocolMessage::kNullMessage);
     waiting_list_.pop_front();
   }
 

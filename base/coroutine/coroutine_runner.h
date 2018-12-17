@@ -80,6 +80,8 @@ protected:
   void InvokeCoroutineTasks();
 
   Coroutine* RetrieveCoroutine();
+
+  std::string RunnerInfo() const;
 private:
   Coroutine* current_;
   Coroutine* main_coro_;

@@ -13,15 +13,17 @@ Connector::Connector(base::MessageLoop* loop, ConnectorDelegate* delegate)
 bool Connector::LaunchAConnection(net::InetAddress& address) {
   CHECK(loop_->IsInLoopThread());
 
+  LOG(INFO) << __FUNCTION__ << " enter";
+
   int sockfd = net::socketutils::CreateNonBlockingSocket(address.SocketFamily());
   if (sockfd == -1) {
+    LOG(INFO) << __FUNCTION__ << " create none block socket failed";
     return false;
   }
 
   const struct sockaddr* sock_addr = net::socketutils::sockaddr_cast(address.SockAddrIn());
 
   bool success = false;
-
 
   int state = 0;
   net::socketutils::SocketConnect(sockfd, sock_addr, &state);
@@ -49,6 +51,9 @@ bool Connector::LaunchAConnection(net::InetAddress& address) {
       net::socketutils::CloseSocket(sockfd);
     } break;
   }
+  if (!success) {
+    delegate_->OnClientConnectFailed();
+  }
   return success;
 }
 
@@ -57,8 +62,11 @@ void Connector::OnWrite(WeakPtrFdEvent weak_fdevent) {
 
   if (!fd_event) {
     LOG(ERROR) << __FUNCTION__ << " FdEvent Has Gone Before Connection Setup";
+    delegate_->OnClientConnectFailed();
     return ;
   }
+
+  LOG(ERROR) << __FUNCTION__ << " handle write for connect a new channel";
 
   int socket_fd = fd_event->fd();
 
@@ -82,8 +90,10 @@ void Connector::OnWrite(WeakPtrFdEvent weak_fdevent) {
 void Connector::OnError(WeakPtrFdEvent weak_fdevent) {
   base::RefFdEvent event = weak_fdevent.lock();
   if (!event) {
+    delegate_->OnClientConnectFailed();
     return;
   }
+
   CleanUpBadChannel(event);
   delegate_->OnClientConnectFailed();
 }

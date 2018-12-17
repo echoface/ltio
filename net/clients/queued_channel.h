@@ -16,23 +16,23 @@ typedef std::shared_ptr<QueuedChannel> RefQueuedChannel;
 class QueuedChannel : public ClientChannel,
                       public std::enable_shared_from_this<QueuedChannel> {
 public:
-  QueuedChannel(Delegate*, RefProtoService&);
+	static RefQueuedChannel Create(Delegate*, RefProtoService&);
   ~QueuedChannel();
 
   void StartClient() override;
   void SendRequest(RefProtocolMessage request) override;
 private:
+	QueuedChannel(Delegate*, RefProtoService&);
+
   bool TrySendNext();
   void OnRequestTimeout(WeakProtocolMessage request);
 
   void OnResponseMessage(const RefProtocolMessage& res);
 	void OnProtocolServiceGone(const RefProtoService& service) override;
 private:
-  RefProtocolMessage in_progress_request_;
+  RefProtocolMessage ing_request_;
   std::list<RefProtocolMessage> waiting_list_;
 };
-
-RefClientChannel CreateClientChannel(ClientChannel::Delegate* delegate, RefProtoService& service);
 
 }//end namespace
 #endif

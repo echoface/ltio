@@ -19,12 +19,13 @@ typedef std::shared_ptr<AsyncChannel> RefAsyncChannel;
 class AsyncChannel : public ClientChannel,
                      public std::enable_shared_from_this<AsyncChannel> {
 public:
-  AsyncChannel(Delegate*, RefProtoService&);
+	static RefAsyncChannel Create(Delegate*, RefProtoService&);
   ~AsyncChannel();
 
   void StartClient() override;
   void SendRequest(RefProtocolMessage request) override;
 private:
+	AsyncChannel(Delegate*, RefProtoService&);
   void OnRequestTimeout(WeakProtocolMessage request);
   void OnResponseMessage(const RefProtocolMessage& res);
 	void OnProtocolServiceGone(const RefProtoService& service) override;

@@ -93,9 +93,9 @@ const std::string& HttpRequest::Method() const {
   return method_;
 }
 
-const std::string HttpRequest::MessageDebug() const {
+const std::string HttpRequest::Dump() const {
   std::ostringstream oss;
-  oss << "{\"type\": \"" << MessageTypeStr() << "\""
+  oss << "{\"type\": \"" << TypeAsStr() << "\""
       << ", \"http_major\": " << (int)http_major_
       << ", \"http_minor\": " << (int)http_minor_
       << ", \"method\": \"" << Method() << "\""

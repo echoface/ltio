@@ -18,11 +18,11 @@ public:
     virtual void OnClientChannelClosed(const RefClientChannel& channel) = 0;
     virtual void OnRequestGetResponse(const RefProtocolMessage&, const RefProtocolMessage&) = 0;
   };
-  ClientChannel(Delegate* d, RefProtoService& service)
-    : delegate_(d),
-      protocol_service_(service) {
-  }
+
+  ClientChannel(Delegate* d, RefProtoService& service);
+
   virtual ~ClientChannel() {}
+
   virtual void StartClient() = 0;
   virtual void SendRequest(RefProtocolMessage request) = 0;
 
@@ -32,8 +32,11 @@ public:
 protected:
   Delegate* delegate_;
   RefProtoService protocol_service_;
-  uint32_t request_timeout_ = 1000; //1s
+  uint32_t request_timeout_ = 5000; //1s
 };
+
+RefClientChannel CreateClientChannel(ClientChannel::Delegate*, RefProtoService&);
+
 
 }//end namespace
 #endif

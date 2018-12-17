@@ -25,8 +25,12 @@ namespace net {
 typedef struct {
   std::string protocol;
   uint32_t connections;
-  uint32_t recon_interal;
+  uint32_t recon_interval;
   uint32_t message_timeout;
+  //heart beat_ms only work for protocol service supported
+  //  >0: mean keep heart beat every ms
+  //zero: mean never need heart beat keep
+  uint32_t heart_beat_ms;
 } RouterConf;
 
 class RouterDelegate {

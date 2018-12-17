@@ -31,7 +31,7 @@ void RepeatingTimer::Start(uint64_t ms, StlClosure user_task) {
     NewClosure(std::bind(&RepeatingTimer::OnTimeout, this)));
   user_task_ = std::move(user_task);
 
-  ScopedGuard runing([this]() {
+  ScopedGuard running([this]() {
     this->running_ = true;
   });
 
@@ -46,7 +46,7 @@ void RepeatingTimer::Start(uint64_t ms, StlClosure user_task) {
 // reset timeoutevent and reset it
 void RepeatingTimer::Stop() {
 
-  ScopedGuard runing([this]() {
+  ScopedGuard running([this]() {
     this->running_ = false;
   });
 
