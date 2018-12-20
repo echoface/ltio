@@ -10,7 +10,7 @@ Connector::Connector(base::MessageLoop* loop, ConnectorDelegate* delegate)
   CHECK(delegate_);
 }
 
-bool Connector::LaunchAConnection(net::InetAddress& address) {
+bool Connector::LaunchConnection(net::InetAddress &address) {
   CHECK(loop_->IsInLoopThread());
 
   LOG(INFO) << __FUNCTION__ << " enter";
@@ -119,7 +119,6 @@ void Connector::CleanUpBadChannel(base::RefFdEvent& event) {
   loop_->Pump()->RemoveFdEvent(event.get());
 
   connecting_sockets_.erase(event);
-
   LOG(INFO) << "Now Has " << connecting_sockets_.size() << " In Connecting Progress";
 }
 

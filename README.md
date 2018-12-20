@@ -63,10 +63,23 @@ void coro_fun(std::string tag);
 
     co_go [&]() {  // lambda support
         LOG(INFO) << " run lambda in coroutine" ;
-       };
+    };
 
     co_go &loop << []() { //run corotine with specify loop runing on
       LOG(INFO) << "go coroutine in loop ok!!!";
+    };
+
+    // 使用net.client定时去获取网络资源
+    bool stop = false;
+    co_go &loop << [&]() {
+       do {
+            // do http/redis/raw/line request async based on coroutine
+            // see net/client for detail
+
+            // do resource fetching
+
+            co_sleep(1000); // every 1s
+       } while(!stop);
     };
 }
 
@@ -79,21 +92,20 @@ void coro_fun(std::string tag);
     // do something here util has something need async done
     // 例如这件事情需要很大的栈空间来完成或者是需要异步完成，这里挂起当前coroutine，并在这里就指定好resume的逻辑
     loop.PostTaskWithReply(NewClosure([]() {
-      // some thing especial Havy
+      // some thing especial need big stack
     }),
     NewClosure(co_resumer));
 
     //or another function in coroutine with current corotine's resume_closure
     co_go std::bind(AnotherCoroutineWithResume, co_resumer);
 
-    co_yield; // paused here, util co_resumer resume this
+    co_yield; // paused here, util co_resumer be called in any where;
 
     //  do other things
   }
 
   //keep in loop run this code
   loop.PostTask(NewClosure([&]() {
-
     co_go will_yield_fn; //just schedule, not entry now
   });
   loop.WaitLoopEnd();

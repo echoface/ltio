@@ -19,7 +19,7 @@ RawProtoService::RawProtoService()
 
 RawProtoService::~RawProtoService() {
   if (timeout_ev_) {
-    CHECK(!timeout_ev_->IsAtatched());
+    CHECK(!timeout_ev_->IsAttached());
     delete timeout_ev_;
     timeout_ev_ = nullptr;
   }

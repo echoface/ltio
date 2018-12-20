@@ -20,13 +20,13 @@ void coro_main(void* arg) {
   CHECK(coroutine);
 
   do {
-    CHECK(coroutine->coro_task_ && CoroState::kRunning == coroutine->state_);
+    DCHECK(coroutine->coro_task_ && CoroState::kRunning == coroutine->state_);
 
     coroutine->coro_task_->Run();
     coroutine->coro_task_.reset();
 
     coroutine->delegate_->RecallCoroutineIfNeeded();
-  } while(true);
+  } while(coroutine);
 }
 
 //static

@@ -154,7 +154,7 @@ void CoroRunner::ReleaseExpiredCoroutine() {
 }
 
 void CoroRunner::RecallCoroutineIfNeeded() {
-  CHECK(current_ != main_coro_);
+  DCHECK(current_ != main_coro_);
 
   if (coro_tasks_.size() > 0) {
     current_->SetTask(std::move(coro_tasks_.front()));

@@ -260,7 +260,7 @@ bool MessageLoop::PostTask(std::unique_ptr<TaskBase> task) {
   //nested task handle; alway true for this case; why?
   //bz waitIO timeout can also will trigger this
   if (IsInLoopThread()) {
-    inloop_scheduled_task_.push_back(std::move(task));
+    in_loop_tasks_.push_back(std::move(task));
     LOG_IF(ERROR, Notify(task_event_fd_, &count, sizeof(count)) < 0) << "notify failed:" << StrError(); 
     return true;
   }
@@ -289,10 +289,16 @@ bool MessageLoop::PostTask(std::unique_ptr<TaskBase> task) {
 void MessageLoop::RunNestedTask() {
   CHECK(IsInLoopThread());
 
-  for (auto& task : inloop_scheduled_task_) {
+  for (auto& task : in_loop_tasks_) {
     task->Run();
   }
-  inloop_scheduled_task_.clear();
+  in_loop_tasks_.clear();
+}
+
+void MessageLoop::RunTimerClosure(const TimerEventList& timer_evs) {
+  for (auto& te : timer_evs) {
+    te->Invoke();
+  }
 }
 
 void MessageLoop::RunScheduledTask(ScheduledTaskType type) {

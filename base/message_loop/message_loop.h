@@ -96,9 +96,11 @@ class MessageLoop : public PumpDelegate {
     void OnHandleCommand();  // NOLINT
     void RunScheduledTask(ScheduledTaskType t);
 
-    // nested task: in a inloop task , post another task in current loop
+    // nested task: post another task in current loop
     // override from pump for nested task;
     void RunNestedTask() override;
+    void RunTimerClosure(const TimerEventList&) override;
+
     void ScheduleFutureReply(std::shared_ptr<ReplyHolder>& reply);
 
     int Notify(int fd, const void* data, size_t count);
@@ -117,17 +119,18 @@ class MessageLoop : public PumpDelegate {
     RefFdEvent task_event_;
     base::SpinLock task_lock_;
     std::list<std::unique_ptr<TaskBase>> scheduled_task_;
+    // those task was post in loop thread, no lock needed
+    std::list<std::unique_ptr<TaskBase>> in_loop_tasks_;
 
     int reply_event_fd_ = -1;
     RefFdEvent reply_event_;
     base::SpinLock future_reply_lock_;
     std::list<std::shared_ptr<ReplyHolder>> future_replys_;
 
-    // those task was post inloop thread, no lock needed
-    std::list<std::unique_ptr<TaskBase>> inloop_scheduled_task_;
 
     //new version <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
+    // pipe just use for loop control
     int wakeup_pipe_in_ = -1;
     int wakeup_pipe_out_ = -1;
     RefFdEvent wakeup_event_;

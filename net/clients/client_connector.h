@@ -32,7 +32,7 @@ public:
   Connector(base::MessageLoop* loop, ConnectorDelegate* delegate);
   ~Connector() {};
 
-  bool LaunchAConnection(net::InetAddress& address);
+  bool LaunchConnection(net::InetAddress &address);
 
   void OnWrite(WeakPtrFdEvent weak_fdevent);
   void OnError(WeakPtrFdEvent weak_fdevent);

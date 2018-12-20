@@ -21,12 +21,14 @@ public:
   void UpdateInterval(int64_t ms);
   void InstallTimerHandler(ClosurePtr&& h);
   bool IsRepeated() const {return repeat_;}
-  bool SelfDelete() const {return self_delete_;}
-  uint64_t Interval() const {return interval_;}
-  uint64_t IntervalMicroSecond() const {return interval_ * 1000;}
-  bool IsAtatched() const {return this->pending != NULL;}
+  inline bool SelfDelete() const {return self_delete_;}
+  inline bool UseCoroutine() const {return use_coro_;}
+  inline bool IsAttached() const {return pending != NULL;}
+  inline uint64_t Interval() const {return interval_;}
+  inline uint64_t IntervalMicroSecond() const {return interval_ * 1000;}
 private:
   bool repeat_ = false;
+  bool use_coro_ = false;
   uint64_t interval_ = 0;
   bool self_delete_ = false;
   ClosurePtr timer_handler_;

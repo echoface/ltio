@@ -16,7 +16,7 @@ TimeoutEvent::TimeoutEvent(uint64_t ms, bool repeat) :
 }
 
 TimeoutEvent::~TimeoutEvent() {
-  CHECK(!IsAtatched());
+  CHECK(!IsAttached());
 }
 
 void TimeoutEvent::UpdateInterval(int64_t ms) {

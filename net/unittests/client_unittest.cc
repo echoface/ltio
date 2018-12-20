@@ -180,3 +180,62 @@ TEST_CASE("client.raw.request", "[raw client send request]") {
 
 	loop.WaitLoopEnd();
 }
+
+TEST_CASE("client.timer.request", "[fetch resource every interval]") {
+
+  base::MessageLoop loop;
+  loop.SetLoopName("client");
+  loop.Start();
+
+  net::InetAddress raw_server_addr("127.0.0.1", 5005);
+  net::ClientRouter raw_router(&loop, raw_server_addr);
+  net::CoroWlDispatcher* dispatcher_ = new net::CoroWlDispatcher(true);
+
+  static const int connections = 10;
+
+  {
+    net::RouterConf router_config;
+    router_config.protocol = "raw";
+    router_config.recon_interval = 100;
+    router_config.message_timeout = 5000;
+    router_config.connections = connections;
+
+    raw_router.SetupRouter(router_config);
+    raw_router.SetWorkLoadTransfer(dispatcher_);
+
+    raw_router.StartRouter();
+  }
+
+  bool stop = false;
+
+  co_go &loop << [&]() {
+    do {
+      auto request = net::RawMessage::CreateRequest();
+      request->SetMethod(12);
+      request->SetContent("RawRequest");
+
+      net::RawMessage* response = raw_router.SendRecieve(request);
+
+      if (response && request->FailCode() == net::MessageCode::kSuccess) {
+        LOG(INFO) << " response:" << response->Content();
+      } else {
+        LOG(INFO) << " failed reason:" << request->FailCode();
+      }
+      co_sleep(1000);
+    } while(!stop);
+  };
+
+  loop.PostDelayTask(NewClosure([&](){
+    stop = true;
+
+    raw_router.StopRouterSync();
+
+    loop.PostDelayTask(NewClosure([&](){
+      loop.QuitLoop();
+    }), 1000);
+
+  }), 10000);
+
+  loop.WaitLoopEnd();
+  LOG(INFO) << "system co count:" << base::SystemCoroutineCount();
+}

@@ -17,14 +17,17 @@ namespace base {
 class IoMultiplexer;
 
 typedef struct timeouts TimeoutWheel;
-typedef std::function<void()> QuitClourse;
+typedef std::function<void()> QuitClosure;
 typedef std::shared_ptr<FdEvent> RefFdEvent;
+typedef std::vector<TimeoutEvent*> TimerEventList;
 
 class PumpDelegate {
 public:
-  virtual void RunNestedTask() {};
   virtual void BeforePumpRun() {};
   virtual void AfterPumpRun() {};
+
+  virtual void RunNestedTask() {};
+  virtual void RunTimerClosure(const TimerEventList&) {};
 };
 
 /* pump fd event and timeout event*/
@@ -46,7 +49,7 @@ public:
   void AddTimeoutEvent(TimeoutEvent* timeout_ev);
   void RemoveTimeoutEvent(TimeoutEvent* timeout_ev);
 
-  QuitClourse Quit_Clourse();
+  QuitClosure Quit_Clourse();
   bool IsInLoopThread() const;
 
   bool Running() { return running_; }

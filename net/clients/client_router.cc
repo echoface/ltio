@@ -42,7 +42,7 @@ void ClientRouter::SetupRouter(const RouterConf& config) {
 
 void ClientRouter::StartRouter() {
   for (uint32_t i = 0; i < channel_count_; i++) {
-    auto functor = std::bind(&Connector::LaunchAConnection, connector_, server_addr_);
+    auto functor = std::bind(&Connector::LaunchConnection, connector_, server_addr_);
     work_loop_->PostTask(NewClosure(functor));
   }
 }
@@ -74,7 +74,7 @@ void ClientRouter::OnClientConnectFailed() {
     return;
   }
   VLOG(GLOG_VERROR) << __FUNCTION__ << RouterInfo() << " try after " << reconnect_interval_ << " ms";
-  auto functor = std::bind(&Connector::LaunchAConnection, connector_, server_addr_);
+  auto functor = std::bind(&Connector::LaunchConnection, connector_, server_addr_);
   work_loop_->PostDelayTask(NewClosure(functor), reconnect_interval_);
 }
 
@@ -132,10 +132,10 @@ void ClientRouter::OnClientChannelClosed(const RefClientChannel& channel) {
 
   if (!is_stopping_ && channels_.size() < channel_count_) {
     VLOG(GLOG_VTRACE) << __FUNCTION__ << RouterInfo() << " reconnect after:" << reconnect_interval_;
-    //auto functor = std::bind(&Connector::LaunchAConnection, connector_, server_addr_);
+    //auto functor = std::bind(&Connector::LaunchConnection, connector_, server_addr_);
     //work_loop_->PostDelayTask(NewClosure(functor), reconnect_interval_);
 
-    auto functor2 = std::bind(&Connector::LaunchAConnection, connector_, server_addr_);
+    auto functor2 = std::bind(&Connector::LaunchConnection, connector_, server_addr_);
     work_loop_->PostDelayTask(NewClosure(functor2), reconnect_interval_);
   }
 
