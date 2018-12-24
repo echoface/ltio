@@ -49,7 +49,7 @@ void RawServer::ServeAddress(const std::string address, RawMessageHandler handle
   CHECK(io_loops_.size() > 0);
 
   url::SchemeIpPort sch_ip_port;
-  if (!url::ParseSchemeIpPortString(address, sch_ip_port)) {
+  if (!url::ParseURI(address, sch_ip_port)) {
     LOG(ERROR) << "address format error,eg [raw://xx.xx.xx.xx:port]";
     CHECK(false);
   }
@@ -118,7 +118,7 @@ void RawServer::HandleRawRequest(const RefProtocolMessage request) {
       LOG(ERROR) << "Set WorkerContext failed";
       break;
     }
-    message_handler_((RawMessage*)request.get(), (RawMessage*)response.get());
+    message_handler_((LtRawMessage*)request.get(), (LtRawMessage*)response.get());
   } while(0);
 
   bool close = raw_service->CloseAfterMessage(request.get(), response.get());

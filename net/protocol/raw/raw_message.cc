@@ -1,62 +1,29 @@
-
 #include "raw_message.h"
+#include "net/net_endian.h"
 
 namespace net {
-//static
-const uint32_t RawMessage::kRawHeaderSize = sizeof(RawHeader);
 
-RefRawMessage RawMessage::CreateRequest() {
-  auto m = std::make_shared<RawMessage>(MessageType::kRequest);
-  return std::move(m);
-}
-RefRawMessage RawMessage::CreateResponse() {
-  auto m = std::make_shared<RawMessage>(MessageType::kResponse);
-  return std::move(m);
-}
+const uint64_t LtRawHeader::kHeartBeatId = 0;
+const uint64_t LtRawHeader::kHeaderSize = sizeof(LtRawHeader);
 
-RawMessage::RawMessage(MessageType t)
-  : ProtocolMessage("raw", t) {
+LtRawHeader* LtRawHeader::ToNetOrder() {
+  sequence_id_ = endian::HostToNetwork64(sequence_id_);
+  content_size_ = endian::HostToNetwork64(content_size_);
+  return this;
 }
-RawMessage::~RawMessage() {
+LtRawHeader* LtRawHeader::FromNetOrder() {
+  sequence_id_ = endian::NetworkToHost64(sequence_id_);
+  content_size_ = endian::NetworkToHost64(content_size_);
+  return this;
 }
 
-const std::string& RawMessage::Content() const {
-  return content_;
-}
-
-void RawMessage::SetCode(uint8_t code) {
-  header_.code = code;
-}
-
-void RawMessage::SetMethod(uint8_t method) {
-  header_.method = method;
-}
-
-void RawMessage::SetContent(const std::string& body) {
-  content_ = body;
-  header_.frame_size = kRawHeaderSize + content_.size();
-}
-
-void RawMessage::SetContent(const char* content) {
-  content_ = content;
-  header_.frame_size = kRawHeaderSize + content_.size();
-}
-
-void RawMessage::CalculateFrameSize() {
-  header_.frame_size = kRawHeaderSize + content_.size();
-}
-
-const std::string RawMessage::Dump() const {
+const std::string LtRawHeader::Dump() const {
   std::ostringstream oss;
-
-  oss << "{\"type\": \"" << TypeAsStr() << "\","
-      << "\"code\": " << (int)header_.code << ","
-      << "\"method\": " << (int)header_.method << ","
-      << "\"frame_size\": " << (int)header_.frame_size << ","
-      << "\"sequence_id\": " << (int)header_.sequence_id << ","
-      << "\"content\": \"" << content_ << "\""
+  oss << "{\"code\": \"" << int(code) << "\","
+      << "\"method\": " << int(method) << ","
+      << "\"content_sz\": " << content_size_ << ","
+      << "\"sequence_id\": \"" << sequence_id_ << "\""
       << "}";
-
   return std::move(oss.str());
 }
 

@@ -1,4 +1,3 @@
-
 #include "inet_address.h"
 #include "net_endian.h"
 #include <strings.h>

@@ -58,14 +58,17 @@ public:
   const std::string& FailMessage() const;
 
   void SetResponse(const RefProtocolMessage& response);
-  void SetResponse(RefProtocolMessage&& response);
   ProtocolMessage* RawResponse() {return response_.get();}
   const RefProtocolMessage& Response() const {return response_;}
 
   const char* TypeAsStr() const;
-  bool IsResponded() const {return responsed_;}
+  bool IsResponded() const {return responded_;}
+
+  /* use for those async-able protocol message, use for matching request and response*/
+  void SetAsyncIdentify(uint64_t id) {async_id_ = id;}
+  const uint64_t AsyncIdentify() const {return async_id_;};
+
   virtual const std::string Dump() const {return "";};
-  virtual const uint64_t Identify() const {return SequenceIdentify::KNullId;};
 protected:
   IOContext io_context_;
   WorkContext work_context_;
@@ -76,8 +79,9 @@ private:
 
   MessageCode fail_code_;
   std::string fail_;
-  bool responsed_;
+  bool responded_;
   RefProtocolMessage response_;
+  uint64_t async_id_ = SequenceIdentify::KNullId;
 };
 
 }

@@ -47,7 +47,7 @@ void HttpServer::ServeAddress(const std::string address, HttpMessageHandler hand
   CHECK(!served);
 
   url::SchemeIpPort sch_ip_port;
-  if (!url::ParseSchemeIpPortString(address, sch_ip_port)) {
+  if (!url::ParseURI(address, sch_ip_port)) {
     LOG(ERROR) << "address format error,eg [http://xx.xx.xx.xx:port]";
     CHECK(false);
   }
@@ -55,11 +55,11 @@ void HttpServer::ServeAddress(const std::string address, HttpMessageHandler hand
     LOG(ERROR) << "No ProtoServiceCreator Find for protocol scheme:" << sch_ip_port.protocol;
     CHECK(false);
   }
-  LOG_IF(ERROR, io_loops_.size() == 0) << "No loop handle socket io";
+  LOG_IF(ERROR, io_loops_.empty()) << __FUNCTION__ << " No loop handle socket io";
 
   CHECK(handler);
   message_handler_ = handler;
-  CHECK(io_loops_.size() > 0);
+  CHECK(!io_loops_.empty());
 
   ProtoMessageHandler func = std::bind(&HttpServer::OnHttpRequest, this, std::placeholders::_1);
 

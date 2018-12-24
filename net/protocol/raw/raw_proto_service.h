@@ -6,6 +6,7 @@
 
 namespace net {
 
+// just work on same endian machine; if not, consider add net-endian convert code
 class RawProtoService : public ProtoService {
 public:
   RawProtoService();
@@ -19,19 +20,20 @@ public:
   bool CloseAfterMessage(ProtocolMessage* request, ProtocolMessage* response) override;
   const RefProtocolMessage NewResponseFromRequest(const RefProtocolMessage &req) override;
 
-	void AfterChannelClosed() override;
-	void StartHeartBeat(int32_t ms) override;
+  void AfterChannelClosed() override;
+  void StartHeartBeat(int32_t ms) override;
 
   bool KeepSequence() override {return false;};
 
   /* protocol level */
-  bool BeforeSendRequest(RawMessage* message);
+  bool BeforeSendRequest(RawMessage<LtRawHeader>* message);
   bool SendRequestMessage(const RefProtocolMessage &message) override;
 
   bool ReplyRequest(const RefProtocolMessage& req, const RefProtocolMessage& res) override;
 private:
-	void OnHeartBeat();
-  void HandleMessage(RefRawMessage& message);
+  void OnHeartBeat();
+  bool SendHeartBeat();
+
   bool heart_beat_alive_ = true;
   base::TimeoutEvent* timeout_ev_ = nullptr;
   static std::atomic<uint64_t> sequence_id_;

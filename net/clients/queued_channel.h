@@ -28,7 +28,7 @@ private:
   void OnRequestTimeout(WeakProtocolMessage request);
 
   void OnResponseMessage(const RefProtocolMessage& res);
-	void OnProtocolServiceGone(const RefProtoService& service) override;
+  void OnProtocolServiceGone(const RefProtoService& service) override;
 private:
   RefProtocolMessage ing_request_;
   std::list<RefProtocolMessage> waiting_list_;

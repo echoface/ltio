@@ -35,7 +35,7 @@ bool SendRequest(int sequence_id) {
 
   net::HttpResponse* response = http_router->SendRecieve(request);
   if (response && !response->IsKeepAlive()) {
-    LOG(ERROR) << "recieve a closed response from server" << response->Dump();
+    LOG(ERROR) << "receive a closed response from server" << response->Dump();
   }
   if (request->FailCode() != net::MessageCode::kSuccess) {
     LOG(ERROR) << "request failed reason:" << request->FailCode() << " message:" << request->FailMessage();
@@ -44,11 +44,11 @@ bool SendRequest(int sequence_id) {
 }
 
 void SendRawRequest(int sequence_id) {
-  net::RefRawMessage raw_request = net::RawMessage::CreateRequest();
+  auto raw_request = net::LtRawMessage::Create(true);
   std::string content("this is a raw request");
   raw_request->SetContent(content);
-  raw_request->SetCode(12);
-  raw_request->SetMethod(12);
+  auto header = raw_request->MutableHeader();
+  header->method = 12;
 
   auto response = raw_router->SendRecieve(raw_request);
   if (response) {

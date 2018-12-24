@@ -1,16 +1,13 @@
-
 #include <memory>
 #include "io_buffer.h"
 #include "tcp_channel.h"
 #include "glog/logging.h"
 #include "raw_message.h"
+#include "net/net_endian.h"
 #include "raw_proto_service.h"
 
 namespace net {
 
-#define kRawHeartBeatId 0
-
-static const uint32_t kRawHeaderSize = sizeof(RawHeader);
 std::atomic<uint64_t> RawProtoService::sequence_id_ = ATOMIC_VAR_INIT(1);
 
 RawProtoService::RawProtoService()
@@ -37,49 +34,48 @@ void RawProtoService::OnDataFinishSend(const RefTcpChannel&) {
 
 void RawProtoService::OnDataReceived(const RefTcpChannel &channel, IOBuffer *buffer) {
   do {
-    if (buffer->CanReadSize() < (uint64_t)kRawHeaderSize) {
-      return;
-    }
+    // pre calculate frame size
+    {
+      if (buffer->CanReadSize() < LtRawHeader::kHeaderSize) {
+        return;
+      }
 
-    const RawHeader* header = (const RawHeader*)buffer->GetRead();
-    uint32_t frame_size = header->frame_size;
-    int32_t body_size = frame_size - kRawHeaderSize;
+      const LtRawHeader* predict_header = (const LtRawHeader*)buffer->GetRead();
 
-    if (buffer->CanReadSize() < frame_size) {
-      return;
-    }
-
-    auto raw_message = std::make_shared<RawMessage>(InComingType());
-    raw_message->SetIOContext(shared_from_this());
-
-    memcpy(&(raw_message->header_), buffer->GetRead(), kRawHeaderSize);
-    buffer->Consume(kRawHeaderSize);
-
-    if (body_size > 0) {
-      std::string& content = raw_message->MutableContent();
-      content.append((const char*)buffer->GetRead(), body_size);
-      buffer->Consume(body_size);
-    }
-
-    HandleMessage(raw_message);
-  } while(1);
-}
-
-void RawProtoService::HandleMessage(RefRawMessage& message) {
-
-  if (message->SequenceId() == kRawHeartBeatId) {
-    heart_beat_alive_ = true;
-    if (IsServerService()) {
-      if (channel_->Send((const uint8_t*)&message->header_, kRawHeaderSize) < 0) {
-        LOG(ERROR) << __FUNCTION__ << channel_->ChannelInfo() << " heart beat broken";
+      uint64_t body_size = predict_header->content_size_;
+      if (buffer->CanReadSize() < LtRawHeader::kHeaderSize + body_size) {
+        return;
       }
     }
-    return;
-  }
 
-  if (message_handler_) {
-    message_handler_(std::static_pointer_cast<ProtocolMessage>(message));
-  }
+    auto raw_message = LtRawMessage::Create(IsServerService());
+    raw_message->SetIOContext(shared_from_this());
+
+    LtRawHeader* header = raw_message->MutableHeader();
+
+    ::memcpy(header, buffer->GetRead(), LtRawHeader::kHeaderSize);
+    buffer->Consume(LtRawHeader::kHeaderSize);
+
+    raw_message->SetAsyncIdentify(header->identify_id());
+
+    // header heart beat
+    if (header->sequence_id_ == LtRawHeader::kHeartBeatId) {
+      heart_beat_alive_ = true;  // reset heart beat flag
+      if (IsServerService()) {
+        LOG_IF(ERROR, !SendHeartBeat()) << __FUNCTION__ << channel_->ChannelInfo() << " heart beat broken";
+      }
+      continue;
+    }
+
+    if (header->content_size_ > 0) {
+      raw_message->AppendContent((char*)buffer->GetRead(), header->content_size_);
+      buffer->Consume(header->content_size_);
+    }
+
+    if (message_handler_) {
+      message_handler_(std::static_pointer_cast<ProtocolMessage>(raw_message));
+    }
+  } while(1);
 }
 
 bool RawProtoService::CloseAfterMessage(ProtocolMessage*, ProtocolMessage*) {
@@ -88,52 +84,52 @@ bool RawProtoService::CloseAfterMessage(ProtocolMessage*, ProtocolMessage*) {
 
 const RefProtocolMessage RawProtoService::NewResponseFromRequest(const RefProtocolMessage &req) {
   CHECK(req->GetMessageType() == MessageType::kRequest);
-  return std::make_shared<RawMessage>(MessageType::kResponse);
+  return LtRawMessage::Create(false);
 }
 
+bool RawProtoService::BeforeSendRequest(LtRawMessage* request)  {
+  CHECK(request->GetMessageType() == MessageType::kRequest);
+  auto header = request->MutableHeader();
+  header->content_size_ = request->ContentLength();
+  header->sequence_id_ = sequence_id_++;
 
-bool RawProtoService::BeforeSendRequest(RawMessage* request)  {
-	CHECK(request->GetMessageType() == MessageType::kRequest);
+  request->SetAsyncIdentify(header->sequence_id_);
 
-  request->CalculateFrameSize();
-  request->SetSequenceId(sequence_id_++);
-  if (sequence_id_ == kRawHeartBeatId) {
+  if (LtRawHeader::kHeartBeatId == sequence_id_) {
     sequence_id_++;
   }
   return true;
 }
 
 bool RawProtoService::SendRequestMessage(const RefProtocolMessage &message) {
-  auto raw_message = static_cast<RawMessage*>(message.get());
+  auto raw_message = static_cast<LtRawMessage*>(message.get());
 
   BeforeSendRequest(raw_message);
-
-  CHECK(raw_message->header_.frame_size == kRawHeaderSize + raw_message->content_.size());
-
-  if (channel_->Send((const uint8_t*)&raw_message->header_, kRawHeaderSize) < 0) {
+  auto header =  raw_message->MutableHeader();
+  if (channel_->Send((const uint8_t*)header, LtRawHeader::kHeaderSize) < 0) {
     return false;
   }
 
-  return channel_->Send((const uint8_t*)raw_message->content_.data(), raw_message->content_.size()) >= 0;
+  return channel_->Send((const uint8_t*)raw_message->Content().data(), raw_message->ContentLength()) >= 0;
 };
 
 bool RawProtoService::ReplyRequest(const RefProtocolMessage& req, const RefProtocolMessage& res) {
-  RawMessage* raw_request = static_cast<RawMessage*>(req.get());
-  RawMessage* raw_response = static_cast<RawMessage*>(res.get());
+  auto raw_request = static_cast<LtRawMessage*>(req.get());
+  auto raw_response = static_cast<LtRawMessage*>(res.get());
 
-  raw_response->CalculateFrameSize();
-  raw_response->SetMethod(raw_request->Method());
-  raw_response->SetSequenceId(raw_request->SequenceId());
+  LtRawHeader* header = raw_response->MutableHeader();
+  header->content_size_ = raw_response->ContentLength();
+  header->sequence_id_ = raw_request->Header().sequence_id_;
 
   VLOG(GLOG_VTRACE) << __FUNCTION__
                     << " request:" << raw_request->Dump()
                     << " response:" << raw_response->Dump();
 
-  if (channel_->Send((const uint8_t*)&raw_response->header_, kRawHeaderSize) < 0) {;
+  if (channel_->Send((uint8_t*)header, LtRawHeader::kHeaderSize) < 0) {;
     return false;
   }
 
-  return channel_->Send((const uint8_t*)raw_response->content_.data(), raw_response->content_.size()) >= 0;
+  return channel_->Send((const uint8_t*)raw_response->Content().data(), raw_response->ContentLength()) >= 0;
 }
 
 void RawProtoService::AfterChannelClosed() {
@@ -143,27 +139,29 @@ void RawProtoService::AfterChannelClosed() {
 }
 
 void RawProtoService::StartHeartBeat(int32_t ms) {
-	if (IsServerService() || ms < 5) {
-	  LOG_IF(ERROR, IsServerService()) << __FUNCTION__ << " should not keep heart beat on server side";
-	  return;
-	}
-
+  if (IsServerService() || ms < 5) {
+    LOG_IF(ERROR, IsServerService()) << __FUNCTION__ << " should not keep heart beat on server side";
+    return;
+  }
   timeout_ev_ = new base::TimeoutEvent(ms, true);
   timeout_ev_->InstallTimerHandler(NewClosure(std::bind(&RawProtoService::OnHeartBeat, this)));
 }
 
-void RawProtoService::OnHeartBeat() {
+bool RawProtoService::SendHeartBeat() {
+  LtRawHeader hb;
+  hb.sequence_id_ = LtRawHeader::kHeartBeatId;
+  LOG_EVERY_N(INFO, 1000) << __FUNCTION__ << " send heart beat";
+  return channel_->Send((const uint8_t*)&hb, sizeof(LtRawHeader)) >= 0;
+}
 
-	DCHECK(!IsServerService());
-  static RawHeader hb;
-  hb.sequence_id = kRawHeartBeatId;
+void RawProtoService::OnHeartBeat() {
+  DCHECK(!IsServerService());
 
   if (!heart_beat_alive_) {
-	  CloseService();
+    CloseService();
     return;
   }
-  LOG_EVERY_N(INFO, 1000) << __FUNCTION__ << " send heart beat";
-  channel_->Send((const uint8_t*)&hb, sizeof(RawHeader));
+  SendHeartBeat();
   heart_beat_alive_ = false;
 }
 

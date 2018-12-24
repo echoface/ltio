@@ -6,12 +6,7 @@
 namespace net {
 
 ClientRouter::ClientRouter(base::MessageLoop* loop, const InetAddress& server)
-  : protocol_("http"),
-    channel_count_(1),
-    reconnect_interval_(5000),
-    connection_timeout_(10000),
-    message_timeout_(30000),
-    server_addr_(server),
+  : server_addr_(server),
     work_loop_(loop),
     is_stopping_(false),
     delegate_(NULL),
@@ -34,14 +29,10 @@ void ClientRouter::SetDelegate(RouterDelegate* delegate) {
 
 void ClientRouter::SetupRouter(const RouterConf& config) {
   config_ = config;
-  protocol_ = config.protocol;
-  channel_count_ = config.connections;
-  reconnect_interval_ = config.recon_interval;
-  message_timeout_ = config.message_timeout;
 }
 
 void ClientRouter::StartRouter() {
-  for (uint32_t i = 0; i < channel_count_; i++) {
+  for (uint32_t i = 0; i < config_.connections; i++) {
     auto functor = std::bind(&Connector::LaunchConnection, connector_, server_addr_);
     work_loop_->PostTask(NewClosure(functor));
   }
@@ -70,12 +61,12 @@ void ClientRouter::StopRouterSync() {
 }
 
 void ClientRouter::OnClientConnectFailed() {
-  if (is_stopping_ || channel_count_ <= channels_.size()) {
+  if (is_stopping_ || config_.connections <= channels_.size()) {
     return;
   }
-  VLOG(GLOG_VERROR) << __FUNCTION__ << RouterInfo() << " try after " << reconnect_interval_ << " ms";
   auto functor = std::bind(&Connector::LaunchConnection, connector_, server_addr_);
-  work_loop_->PostDelayTask(NewClosure(functor), reconnect_interval_);
+  work_loop_->PostDelayTask(NewClosure(functor), config_.recon_interval);
+  VLOG(GLOG_VERROR) << __FUNCTION__ << RouterInfo() << " try after " << config_.recon_interval << " ms";
 }
 
 base::MessageLoop* ClientRouter::GetLoopForClient() {
@@ -93,12 +84,12 @@ void ClientRouter::OnNewClientConnected(int socket_fd, InetAddress& local, InetA
 
   auto new_channel = TcpChannel::Create(socket_fd, local, remote, io_loop);
 
-  RefProtoService proto_service = ProtoServiceFactory::Create(protocol_);
+  RefProtoService proto_service = ProtoServiceFactory::Create(config_.protocol);
   proto_service->SetServiceType(ProtocolServiceType::kClient);
   proto_service->BindChannel(new_channel);
 
   RefClientChannel client_channel = CreateClientChannel(this, proto_service);
-  client_channel->SetRequestTimeout(message_timeout_);
+  client_channel->SetRequestTimeout(config_.message_timeout);
 
   proto_service->SetDelegate(client_channel.get());
   proto_service->StartHeartBeat(config_.heart_beat_ms);
@@ -130,18 +121,16 @@ void ClientRouter::OnClientChannelClosed(const RefClientChannel& channel) {
   std::shared_ptr<ClientChannelList> list(new ClientChannelList(channels_));
   std::atomic_store(&roundrobin_channes_, list);
 
-  if (!is_stopping_ && channels_.size() < channel_count_) {
-    VLOG(GLOG_VTRACE) << __FUNCTION__ << RouterInfo() << " reconnect after:" << reconnect_interval_;
-    //auto functor = std::bind(&Connector::LaunchConnection, connector_, server_addr_);
-    //work_loop_->PostDelayTask(NewClosure(functor), reconnect_interval_);
+  if (!is_stopping_ && channels_.size() < config_.connections) {
+    auto f = std::bind(&Connector::LaunchConnection, connector_, server_addr_);
+    work_loop_->PostDelayTask(NewClosure(f), config_.recon_interval);
 
-    auto functor2 = std::bind(&Connector::LaunchConnection, connector_, server_addr_);
-    work_loop_->PostDelayTask(NewClosure(functor2), reconnect_interval_);
+    VLOG(GLOG_VTRACE) << __FUNCTION__ << RouterInfo() << " reconnect after:" << config_.recon_interval;
   }
 
   VLOG(GLOG_VINFO) << __FUNCTION__ << RouterInfo();
 
-  if (is_stopping_ && channels_.empty()) {//for sync stoping
+  if (is_stopping_ && channels_.empty()) {//for sync stopping
     cv_.notify_all();
   }
 }
@@ -168,9 +157,9 @@ ProtocolMessage* ClientRouter::SendClientRequest(RefProtocolMessage& message) {
     LOG(ERROR) << " No Connection Established To Server:" << server_addr_.IpPortAsString();
     return NULL;
   }
+  uint32_t client_index = router_counter_.fetch_add(1) % channels->size();
 
-  uint32_t count = router_counter_.fetch_add(1);
-  RefClientChannel& client = (*channels)[count % (*channels).size()];
+  RefClientChannel& client = channels->at(client_index);
   base::MessageLoop* io_loop = client->IOLoop();
   CHECK(io_loop);
 
@@ -184,7 +173,7 @@ void ClientRouter::SetWorkLoadTransfer(CoroWlDispatcher* dispatcher) {
   dispatcher_ = dispatcher;
 }
 
-uint32_t ClientRouter::ClientCount() const {
+uint64_t ClientRouter::ClientCount() const {
   auto channels = std::atomic_load(&roundrobin_channes_);
   return channels->size();
 }

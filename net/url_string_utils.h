@@ -15,12 +15,9 @@ typedef struct {
 } SchemeIpPort;
 
 /* only for scheme://xx.xx.xx.xx:port format */
-uint16_t GetPort(const std::string uri);
-std::string GetIP(const std::string uri);
-std::string GetScheme(const std::string uri);
-bool HostResolve(const std::string host, std::string& host_ip);
-bool ParseSchemeIpPortString(const std::string, SchemeIpPort& out);
-
+bool ParseURI(const std::string, SchemeIpPort& out);
+/* host resolve */
+bool HostResolve(const std::string& host, std::string& host_ip);
 
 
 }}

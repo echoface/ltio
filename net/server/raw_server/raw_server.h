@@ -15,7 +15,7 @@
 
 namespace net {
 
-typedef std::function<void(const RawMessage*, RawMessage*)> RawMessageHandler;
+typedef std::function<void(const LtRawMessage*, LtRawMessage*)> RawMessageHandler;
 
 class RawServer : public IOServiceDelegate {
 public:

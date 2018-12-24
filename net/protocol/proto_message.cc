@@ -9,7 +9,7 @@ ProtocolMessage::ProtocolMessage(const std::string protocol, MessageType type)
   : type_(type),
     proto_(protocol),
     fail_code_(kSuccess),
-    responsed_(false) {
+    responded_(false) {
   work_context_.loop = NULL;
 }
 
@@ -31,14 +31,9 @@ void ProtocolMessage::SetIOContext(const RefProtoService& service) {
   io_context_.protocol_service = service;
 }
 
-void ProtocolMessage::SetResponse(RefProtocolMessage&& response) {
-  response_ = response;
-  responsed_ = true;
-}
-
 void ProtocolMessage::SetResponse(const RefProtocolMessage& response) {
   response_ = response;
-  responsed_ = true;
+  responded_ = true;
 }
 
 const std::string& ProtocolMessage::FailMessage() const {

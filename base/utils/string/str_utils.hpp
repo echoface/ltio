@@ -11,6 +11,8 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <istream>
+#include <iterator>
 
 namespace base {
 
@@ -135,21 +137,17 @@ public:
 
   static std::vector<std::string> Split(const std::string &text,
                                         const std::string &delims,
-                                        bool ignore_empty_result = false) {
-    std::vector<std::string> tokens;
-    std::size_t start = text.find_first_not_of(delims), end = 0;
+                                        bool ignore_empty = true) {
 
-    while ((end = text.find_first_of(delims, start)) != std::string::npos) {
-      if (start != end) {
-        tokens.push_back(text.substr(start, end - start));
-      } else if (!ignore_empty_result) {
-        tokens.push_back("");
-      }
-      start = text.find_first_not_of(delims, end);
-    }
-    if (start != std::string::npos) {
-      tokens.push_back(text.substr(start));
-    }
+    std::vector<std::string> tokens;
+    size_t prev = 0, pos = 0;
+    do {
+      pos = text.find(delims, prev);
+      if (pos == std::string::npos) pos = text.length();
+      std::string token = text.substr(prev, pos-prev);
+      if (!token.empty() || !ignore_empty) tokens.push_back(token);
+      prev = pos + delims.length();
+    } while (pos < text.length() && prev < text.length());
     return std::move(tokens);
   }
 };

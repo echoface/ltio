@@ -29,7 +29,7 @@ void ProtoService::BindChannel(RefTcpChannel& channel) {
 }
 
 bool ProtoService::IsConnected() const {
-	return channel_ ?	channel_->IsConnected() : false;
+	return channel_ ? channel_->IsConnected() : false;
 }
 
 void ProtoService::CloseService() {
@@ -40,6 +40,7 @@ void ProtoService::CloseService() {
 
 void ProtoService::OnChannelClosed(const RefTcpChannel& channel) {
 	CHECK(channel.get() == channel_.get());
+
 	RefProtoService guard = shared_from_this();
 
 	VLOG(GLOG_VTRACE) << __FUNCTION__ << channel_->ChannelInfo() << " closed";

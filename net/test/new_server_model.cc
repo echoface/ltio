@@ -35,9 +35,9 @@ void HandleHttp(const HttpRequest* req, HttpResponse* res) {
   LOG(INFO) << "http count: " << http_count << " leave";
 }
 
-void HandleRaw(const RawMessage* req, RawMessage* res) {
-  res->SetCode(0);
-  res->SetMethod(2);
+void HandleRaw(const LtRawMessage* req, LtRawMessage* res) {
+  res->MutableHeader()->code = 0;
+  res->MutableHeader()->method = 2;
   res->SetContent("Raw Message");
 
   LOG(INFO) << "Got A Raw Message:" << req->Dump() << "response:" << res->Dump();
@@ -105,11 +105,11 @@ void SendHttpRequest() {
 }
 
 void SendRawRequest() {
-  auto raw_request = std::make_shared<RawMessage>(MessageType::kRequest);
-  raw_request->SetMethod(1);
+  auto raw_request = LtRawMessage::Create(true);
+  raw_request->MutableHeader()->method = 12;
   raw_request->SetContent("ABC");
 
-  RawMessage* raw_response = raw_router->SendRecieve(raw_request);
+  LtRawMessage* raw_response = raw_router->SendRecieve(raw_request);
   if (!raw_response) {
     LOG(ERROR) << "raw client request failed:" << raw_request->FailMessage();
   }

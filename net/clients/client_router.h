@@ -24,6 +24,8 @@ namespace net {
 
 typedef struct {
   std::string protocol;
+  std::string host;
+  uint16_t  port;
   uint32_t connections;
   uint32_t recon_interval;
   uint32_t message_timeout;
@@ -70,19 +72,13 @@ public:
   void OnClientChannelClosed(const RefClientChannel& channel) override;
   void OnRequestGetResponse(const RefProtocolMessage&, const RefProtocolMessage&) override;
 
-  uint32_t ClientCount() const;
+  uint64_t ClientCount() const;
   std::string RouterInfo() const;
 private:
   //Get a io work loop for channel, if no loop provide, use default io_loop_;
   base::MessageLoop* GetLoopForClient();
 
   RouterConf config_;
-  std::string protocol_;
-  uint32_t channel_count_;
-  uint32_t reconnect_interval_; //ms
-  uint32_t connection_timeout_; //ms
-
-  uint32_t message_timeout_; //ms
 
   const InetAddress server_addr_;
   base::MessageLoop* work_loop_;

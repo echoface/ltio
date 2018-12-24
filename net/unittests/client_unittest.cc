@@ -25,7 +25,6 @@
 #include "clients/client_connector.h"
 #include "clients/client_router.h"
 #include "dispatcher/coro_dispatcher.h"
-#include "base/coroutine/coroutine_runner.h"
 #include "base/closure/closure_task.h"
 #include "net/dispatcher/coro_dispatcher.h"
 #include "net/protocol/raw/raw_message.h"
@@ -150,11 +149,13 @@ TEST_CASE("client.raw.request", "[raw client send request]") {
 	int success_request = 0;
 
 	auto raw_request_task = [&]() {
-		auto request = net::RawMessage::CreateRequest();
-		request->SetMethod(12);
+		auto request = net::LtRawMessage::Create(true);
+		auto lt_header = request->MutableHeader();
+		lt_header->code = 0;
+		lt_header->method = 12;
 		request->SetContent("RawRequest");
 
-		net::RawMessage* response = raw_router.SendRecieve(request);
+		net::LtRawMessage* response = raw_router.SendRecieve(request);
 
 		if (response && request->FailCode() == net::MessageCode::kSuccess) {
 			success_request++;
@@ -210,11 +211,13 @@ TEST_CASE("client.timer.request", "[fetch resource every interval]") {
 
   co_go &loop << [&]() {
     do {
-      auto request = net::RawMessage::CreateRequest();
-      request->SetMethod(12);
+      auto request = net::LtRawMessage::Create(true);
+      auto lt_header = request->MutableHeader();
+      lt_header->code = 0;
+      lt_header->method = 12;
       request->SetContent("RawRequest");
 
-      net::RawMessage* response = raw_router.SendRecieve(request);
+      net::LtRawMessage* response = raw_router.SendRecieve(request);
 
       if (response && request->FailCode() == net::MessageCode::kSuccess) {
         LOG(INFO) << " response:" << response->Content();

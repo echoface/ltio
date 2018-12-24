@@ -192,10 +192,8 @@ void TcpChannel::ShutdownChannel() {
   SetChannelStatus(Status::CLOSING);
 
   if (!fd_event_->IsWriteEnable()) {
-
-    //socketutils::ShutdownWrite(fd_event_->fd());
-
     HandleClose();
+
     schedule_shutdown_ = false;
   }
 }
