@@ -10,7 +10,9 @@ static const int kMaxReuseCoroutineNumbersPerThread = 500;
 namespace __detail {
   struct _T : public CoroRunner {};
 }
-static thread_local base::LazyInstance<__detail::_T> tls_runner = LAZY_INSTANCE_INIT;
+//static thread_local base::LazyInstance<__detail::_T> tls_runner = LAZY_INSTANCE_INIT;
+static thread_local __detail::_T tls_runner_impl;
+static thread_local CoroRunner* tls_runner = NULL;
 
 bool CoroRunner::CanYield() {
   return !tls_runner->InMainCoroutine();
@@ -41,6 +43,8 @@ CoroRunner::CoroRunner()
   : gc_task_scheduled_(false),
     bind_loop_(MessageLoop::Current()),
     max_reuse_coroutines_(kMaxReuseCoroutineNumbersPerThread) {
+  tls_runner = &tls_runner_impl;
+  LOG(INFO) << __FUNCTION__ << " coroutine runner born";
 
   RefCoroutine coro_ptr = Coroutine::Create(this, true);
   coro_ptr->SelfHolder(coro_ptr);
@@ -52,7 +56,13 @@ CoroRunner::CoroRunner()
 }
 
 CoroRunner::~CoroRunner() {
+  LOG(INFO) << __FUNCTION__ << " coroutine runner gone";
   ReleaseExpiredCoroutine();
+  for (auto coro : free_list_) {
+    coro->ReleaseSelfHolder();
+  }
+  free_list_.clear();
+
   current_->ReleaseSelfHolder();
   main_coro_->ReleaseSelfHolder();
   current_ = nullptr;
@@ -60,7 +70,8 @@ CoroRunner::~CoroRunner() {
 }
 
 CoroRunner& CoroRunner::Runner() {
-  return tls_runner.get();
+  return tls_runner_impl;
+  //return tls_runner.get();
 }
 
 void CoroRunner::YieldCurrent(int32_t wc) {
@@ -92,7 +103,6 @@ void CoroRunner::SleepMillsecond(uint64_t ms) {
  * 如果本身是主coro， 则直接tranfer去执行.
  * 如果不是在调度的线程里， 则posttask去Resume*/
 void CoroRunner::ResumeCoroutine(std::weak_ptr<Coroutine> weak, uint64_t id) {
-
   if (!bind_loop_->IsInLoopThread() || CanYield()) {
     auto f = std::bind(&CoroRunner::ResumeCoroutine, this, weak, id);
     bind_loop_->PostTask(NewClosure(f));
@@ -102,16 +112,13 @@ void CoroRunner::ResumeCoroutine(std::weak_ptr<Coroutine> weak, uint64_t id) {
   CHECK(InMainCoroutine());
   Coroutine* coroutine = nullptr;
   {
-    RefCoroutine coro = weak.lock();
-    if (!coro) {
-      LOG(ERROR) << __FUNCTION__ << " coroutine has gone";
-      return;
-    }
+    auto coro = weak.lock();
+    if (!coro) {return;}
+
     coroutine = coro.get();
   }
 
-  if (coroutine->Status() != CoroState::kPaused || coroutine->identify_ != id) {
-    LOG(ERROR) << __FUNCTION__ << RunnerInfo() << " coro has resumed";
+  if (coroutine->state_ != CoroState::kPaused || coroutine->identify_ != id) {
     return;
   }
 
@@ -127,7 +134,7 @@ void CoroRunner::ResumeCoroutine(std::weak_ptr<Coroutine> weak, uint64_t id) {
 
 StlClosure CoroRunner::CurrentCoroResumeCtx() {
   return std::bind(&CoroRunner::ResumeCoroutine,
-                   tls_runner.ptr(),
+                   tls_runner,
                    tls_runner->current_->AsWeakPtr(),
                    tls_runner->current_->identify_);
 }
@@ -137,7 +144,7 @@ void CoroRunner::TransferTo(Coroutine *next) {
 
   coro_context* to = next;
   coro_context* from = current_;
-  if (current_->state_ != CoroState::kDone) {
+  if (current_->state_ == CoroState::kRunning) {
     current_->SetCoroState(CoroState::kPaused);
   }
   current_ = next;

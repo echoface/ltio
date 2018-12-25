@@ -5,7 +5,7 @@
 
 namespace net {
 
-InetAddress::InetAddress(uint16_t port) {
+SocketAddress::SocketAddress(uint16_t port) {
   bzero(&addr_in_, sizeof addr_in_);
 
   addr_in_.sin_family = AF_INET;
@@ -14,51 +14,46 @@ InetAddress::InetAddress(uint16_t port) {
   addr_in_.sin_port = endian::HostToNetwork16(port);
 }
 
-// @c ip should be "1.2.3.4"
-InetAddress::InetAddress(std::string ip, uint16_t port) {
+SocketAddress::SocketAddress(const std::string ip, const uint16_t port) {
   bzero(&addr_in_, sizeof addr_in_);
   socketutils::FromIpPort(ip.c_str(), port, &addr_in_);
 }
 
-InetAddress::InetAddress(const struct sockaddr_in& addr)
+SocketAddress::SocketAddress(const struct sockaddr_in& addr)
   : addr_in_(addr) {
 }
 
 //static
-InetAddress InetAddress::FromSocketFd(int fd) {
+SocketAddress SocketAddress::FromSocketFd(int fd) {
   struct sockaddr_in addr = socketutils::GetLocalAddrIn(fd);
-  return InetAddress(addr);
+  return SocketAddress(addr);
 }
 
-struct sockaddr* InetAddress::AsSocketAddr() {
+const struct sockaddr* SocketAddress::AsSocketAddr() const {
   return socketutils::sockaddr_cast(&addr_in_);
 }
 
-inline uint16_t InetAddress::PortAsUInt() {
+inline uint16_t SocketAddress::Port() const {
   return endian::NetworkToHost16(addr_in_.sin_port);
 }
 
-sa_family_t InetAddress::SocketFamily() {
+sa_family_t SocketAddress::Family() const {
   return addr_in_.sin_family;
 }
 
-std::string InetAddress::IpAsString() {
+std::string SocketAddress::Ip() const {
   return socketutils::SocketAddr2Ip(socketutils::sockaddr_cast(&addr_in_));
 }
 
-std::string InetAddress::PortAsString() {
-  return std::to_string(PortAsUInt());
-}
-
-std::string InetAddress::IpPortAsString() const {
+std::string SocketAddress::IpPort() const {
   return socketutils::SocketAddr2IpPort(socketutils::sockaddr_cast(&addr_in_));
 }
 
-uint32_t InetAddress::NetworkEndianIp() {
+uint32_t SocketAddress::NetworkEndianIp() const {
   return addr_in_.sin_addr.s_addr;
 }
 
-uint16_t InetAddress::NetworkEndianPort() {
+uint16_t SocketAddress::NetworkEndianPort() const {
   return addr_in_.sin_port;
 }
 

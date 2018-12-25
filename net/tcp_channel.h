@@ -26,13 +26,13 @@ public:
   };
 
   static RefTcpChannel Create(int socket_fd,
-                              const InetAddress& local,
-                              const InetAddress& peer,
+                              const SocketAddress& local,
+                              const SocketAddress& peer,
                               base::MessageLoop* loop);
 
   TcpChannel(int socket_fd,
-             const InetAddress& loc,
-             const InetAddress& peer,
+             const SocketAddress& loc,
+             const SocketAddress& peer,
              base::MessageLoop* loop);
 
   ~TcpChannel();
@@ -72,8 +72,8 @@ private:
 
   base::RefFdEvent fd_event_;
 
-  InetAddress local_addr_;
-  InetAddress peer_addr_;
+  SocketAddress local_addr_;
+  SocketAddress peer_addr_;
 
   std::string name_;
 

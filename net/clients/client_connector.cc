@@ -10,13 +10,11 @@ Connector::Connector(base::MessageLoop* loop, ConnectorDelegate* delegate)
   CHECK(delegate_);
 }
 
-bool Connector::LaunchConnection(net::InetAddress &address) {
+bool Connector::Launch(const net::SocketAddress &address) {
   CHECK(loop_->IsInLoopThread());
 
-  LOG(INFO) << __FUNCTION__ << " enter";
-
-  int sockfd = net::socketutils::CreateNonBlockingSocket(address.SocketFamily());
-  if (sockfd == -1) {
+  int sock_fd = net::socketutils::CreateNonBlockingSocket(address.Family());
+  if (sock_fd == -1) {
     LOG(INFO) << __FUNCTION__ << " create none block socket failed";
     return false;
   }
@@ -26,7 +24,7 @@ bool Connector::LaunchConnection(net::InetAddress &address) {
   bool success = false;
 
   int state = 0;
-  net::socketutils::SocketConnect(sockfd, sock_addr, &state);
+  net::socketutils::SocketConnect(sock_fd, sock_addr, &state);
 
   switch(state)  {
     case 0:
@@ -35,20 +33,20 @@ bool Connector::LaunchConnection(net::InetAddress &address) {
     case EINPROGRESS: {
 
       success = true;
-      base::RefFdEvent fdevent = base::FdEvent::Create(sockfd, 0);
+      base::RefFdEvent fd_event = base::FdEvent::Create(sock_fd, 0);
 
-      WeakPtrFdEvent weak_fdevent(fdevent);
-      fdevent->SetWriteCallback(std::bind(&Connector::OnWrite, this, weak_fdevent));
-      fdevent->SetErrorCallback(std::bind(&Connector::OnError, this, weak_fdevent));
-      fdevent->SetCloseCallback(std::bind(&Connector::OnError, this, weak_fdevent));
-      InitEvent(fdevent);
+      WeakPtrFdEvent weak_fd_event(fd_event);
+      fd_event->SetWriteCallback(std::bind(&Connector::OnWrite, this, weak_fd_event));
+      fd_event->SetErrorCallback(std::bind(&Connector::OnError, this, weak_fd_event));
+      fd_event->SetCloseCallback(std::bind(&Connector::OnError, this, weak_fd_event));
+      InitEvent(fd_event);
 
-      connecting_sockets_.insert(fdevent);
+      connecting_sockets_.insert(fd_event);
     } break;
     default: {
       success = false;
       LOG(ERROR) << " setup client connect failed:" << base::StrError(state);
-      net::socketutils::CloseSocket(sockfd);
+      net::socketutils::CloseSocket(sock_fd);
     } break;
   }
   if (!success) {
@@ -66,8 +64,6 @@ void Connector::OnWrite(WeakPtrFdEvent weak_fdevent) {
     return ;
   }
 
-  LOG(ERROR) << __FUNCTION__ << " handle write for connect a new channel";
-
   int socket_fd = fd_event->fd();
 
   if (net::socketutils::IsSelfConnect(socket_fd)) {
@@ -81,8 +77,8 @@ void Connector::OnWrite(WeakPtrFdEvent weak_fdevent) {
   fd_event->GiveupOwnerFd();
   connecting_sockets_.erase(fd_event);
 
-  net::InetAddress remote_addr(net::socketutils::GetPeerAddrIn(socket_fd));
-  net::InetAddress local_addr(net::socketutils::GetLocalAddrIn(socket_fd));
+  net::SocketAddress remote_addr(net::socketutils::GetPeerAddrIn(socket_fd));
+  net::SocketAddress local_addr(net::socketutils::GetLocalAddrIn(socket_fd));
 
   delegate_->OnNewClientConnected(socket_fd, local_addr, remote_addr);
 }

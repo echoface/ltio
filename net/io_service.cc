@@ -12,7 +12,7 @@
 
 namespace net {
 
-IOService::IOService(const InetAddress addr,
+IOService::IOService(const SocketAddress addr,
                      const std::string protocol,
                      base::MessageLoop* workloop,
                      IOServiceDelegate* delegate)
@@ -23,7 +23,7 @@ IOService::IOService(const InetAddress addr,
 
   CHECK(delegate_);
 
-  service_name_ = addr.IpPortAsString();
+  service_name_ = addr.IpPort();
   acceptor_.reset(new ServiceAcceptor(acceptor_loop_->Pump(), addr));
   acceptor_->SetNewConnectionCallback(std::bind(&IOService::OnNewConnection,
                                                 this,
@@ -73,7 +73,7 @@ void IOService::StopIOService() {
   }
 }
 
-void IOService::OnNewConnection(int local_socket, const InetAddress& peer_addr) {
+void IOService::OnNewConnection(int local_socket, const SocketAddress& peer_addr) {
   CHECK(acceptor_loop_->IsInLoopThread());
 
   //max connction reached
@@ -99,7 +99,7 @@ void IOService::OnNewConnection(int local_socket, const InetAddress& peer_addr) 
   proto_service->SetMessageHandler(message_handler_);
   proto_service->SetServiceType(ProtocolServiceType::kServer);
 
-  net::InetAddress local_addr(socketutils::GetLocalAddrIn(local_socket));
+  net::SocketAddress local_addr(socketutils::GetLocalAddrIn(local_socket));
 
   auto new_channel = TcpChannel::Create(local_socket, local_addr, peer_addr, io_loop);
 

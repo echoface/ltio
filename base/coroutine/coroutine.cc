@@ -66,19 +66,17 @@ Coroutine::Coroutine(CoroDelegate* d, bool main) :
     coro_create(this, coro_main, this, stack_.sptr, stack_.ssze);
   }
   coroutine_counter.fetch_add(1);
-  LOG(INFO) << "Coroutine born, now has [" << coroutine_counter.load() << "] live coroutine";
+  VLOG(GLOG_VTRACE) << "coroutine born! count:" << coroutine_counter.load() << "st:" << StateToString();
 }
 
 Coroutine::~Coroutine() {
-  coroutine_counter.fetch_sub(1);
-  LOG(INFO) << "Coroutine gone, now has [" << coroutine_counter.load() << "] live coroutine";
-
-  CHECK(state_ == CoroState::kDone);
-  VLOG(GLOG_VTRACE) << "coroutine gone! count:" << coroutine_counter.load() << "st:" << StateToString();
-
-  if (stack_.ssze != 0) {
+  if (stack_.ssze != 0) { //none main coroutine
     coro_stack_free(&stack_);
+    coroutine_counter.fetch_sub(1);
+    CHECK(state_ != CoroState::kRunning);
   }
+
+  VLOG(GLOG_VTRACE) << "coroutine gone! count:" << coroutine_counter.load() << "st:" << StateToString();
 }
 
 void Coroutine::SetTask(ClosurePtr&& task) {
@@ -98,16 +96,16 @@ void Coroutine::Reset() {
 
 std::string Coroutine::StateToString() const {
   switch(state_) {
-    case CoroState::kInitialized:
-      return "Initialized";
-    case CoroState::kRunning:
-      return "Running";
-    case CoroState::kPaused:
-      return "Paused";
     case CoroState::kDone:
       return "Done";
+    case CoroState::kPaused:
+      return "Paused";
+    case CoroState::kRunning:
+      return "Running";
+    case CoroState::kInitialized:
+      return "Initialized";
     default:
-      return "Unknown";
+      break;
   }
   return "Unknown";
 }

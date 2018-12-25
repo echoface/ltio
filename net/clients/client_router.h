@@ -15,24 +15,24 @@
 #include <mutex>              // std::mutex, std::unique_lock
 #include <condition_variable> // std::condition_variable, std::cv_status
 #include <cinttypes>
+#include <net/url_string_utils.h>
 #include "clients/queued_channel.h"
 #include "clients/client_router.h"
 #include "clients/client_connector.h"
 #include "dispatcher/coro_dispatcher.h"
+#include "url_string_utils.h"
 
 namespace net {
 
 typedef struct {
-  std::string protocol;
-  std::string host;
-  uint16_t  port;
-  uint32_t connections;
-  uint32_t recon_interval;
-  uint32_t message_timeout;
-  //heart beat_ms only work for protocol service supported
-  //  >0: mean keep heart beat every ms
-  //zero: mean never need heart beat keep
-  uint32_t heart_beat_ms;
+  uint32_t connections = 1;
+  // heart beat_ms only work for protocol service supported
+  // 0 mean not need heart beat keep
+  uint32_t heart_beat_ms = 0;
+
+  uint32_t recon_interval = 5000;
+
+  uint32_t message_timeout = 5000;
 } RouterConf;
 
 class RouterDelegate {
@@ -46,9 +46,8 @@ typedef std::shared_ptr<ClientRouter> RefClientRouter;
 class ClientRouter : public ConnectorDelegate,
                      public ClientChannel::Delegate {
 public:
-  ClientRouter(base::MessageLoop*, const InetAddress&);
+  ClientRouter(base::MessageLoop*, const url::SchemeIpPort&);
   ~ClientRouter();
-
   void SetDelegate(RouterDelegate* delegate);
   void SetupRouter(const RouterConf& config);
   void SetWorkLoadTransfer(CoroWlDispatcher* dispatcher);
@@ -66,7 +65,7 @@ public:
 
   //override from ConnectorDelegate
   void OnClientConnectFailed() override;
-  void OnNewClientConnected(int fd, InetAddress& loc, InetAddress& remote) override;
+  void OnNewClientConnected(int fd, SocketAddress& loc, SocketAddress& remote) override;
 
   //override from ClientChannel::Delegate
   void OnClientChannelClosed(const RefClientChannel& channel) override;
@@ -78,15 +77,16 @@ private:
   //Get a io work loop for channel, if no loop provide, use default io_loop_;
   base::MessageLoop* GetLoopForClient();
 
-  RouterConf config_;
+  SocketAddress address_;
+  const url::SchemeIpPort server_info_;
 
-  const InetAddress server_addr_;
   base::MessageLoop* work_loop_;
 
   bool is_stopping_;
   std::mutex mtx_;
   std::condition_variable cv_;
 
+  RouterConf config_;
   RefConnector connector_;
   RouterDelegate* delegate_;
   CoroWlDispatcher* dispatcher_;

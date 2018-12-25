@@ -24,29 +24,30 @@ namespace url {
 static std::string ip_port(":");
 static std::string scheme_host("://");
 
-/* only for scheme://xx.xx.xx.xx:port format */
+/* full format [scheme://xx.xx.xx.xx:port] */
+
 /* case 1: http://127.0.0.1:80 */
 /* case 2: ://127.0.0.1:80 */
 /* case 3: ://127.0.0.1: */
-/* case 4: ://ui.jd.cn:*/
-/* case 5: ://ui.jd.cn*/
+/* case 4: ://ui.jd.cn: */
+/* case 5: ://ui.jd.cn */
 
+/* default protocol: http, default port: 80  */
 bool ParseURI(const std::string uri, SchemeIpPort& out) {
 
   out.port = 0;
 
   auto result = base::StrUtils::Split(uri, scheme_host, false);
-  std::cout << " result:" << base::StrUtils::Join(result, std::string("==")) << " size:" <<  result.size() << std::endl;
   if (result.size() != 2) {
     return false;
   }
-  out.protocol = result[0].empty() ?  "http" : result[0];
+  out.protocol = result[0].empty() ? "http" : result[0];
 
   auto host_port = base::StrUtils::Split(result[1], ip_port);
   switch (host_port.size()) {
     case 1:
       out.host = host_port[0];
-      out.port = 0;
+      out.port = 80;
       break;
     case 2:
       out.host = host_port[0];

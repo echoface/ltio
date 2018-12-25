@@ -43,51 +43,49 @@ void HandleRaw(const LtRawMessage* req, LtRawMessage* res) {
   LOG(INFO) << "Got A Raw Message:" << req->Dump() << "response:" << res->Dump();
 }
 
-net::ClientRouter*  raw_router; //(base::MessageLoop*, const InetAddress&);
-net::ClientRouter*  http_router; //(base::MessageLoop*, const InetAddress&);
+net::ClientRouter*  raw_router; //(base::MessageLoop*, const SocketAddress&);
+net::ClientRouter*  http_router; //(base::MessageLoop*, const SocketAddress&);
 net::ClientRouter*  redis_router;
+
 void StartRedisClient() {
-  {
-    net::InetAddress server_address("127.0.0.1", 6379);
-    redis_router = new net::ClientRouter(&main_loop, server_address);
-    net::RouterConf router_config;
-    router_config.protocol = "redis";
-    router_config.connections = 2;
-    router_config.recon_interval = 5000;
-    router_config.message_timeout = 1000;
-    redis_router->SetupRouter(router_config);
-    redis_router->SetWorkLoadTransfer(dispatcher_);
-    redis_router->StartRouter();
-  }
+  net::url::SchemeIpPort server_info;
+  LOG_IF(ERROR, !net::url::ParseURI("redis://127.0.0.1:6379", server_info)) << " server can't be resolve";
+
+  redis_router = new net::ClientRouter(&main_loop, server_info);
+  net::RouterConf router_config;
+  router_config.connections = 2;
+  router_config.recon_interval = 5000;
+  router_config.message_timeout = 1000;
+  redis_router->SetupRouter(router_config);
+  redis_router->SetWorkLoadTransfer(dispatcher_);
+  redis_router->StartRouter();
 }
+
 void StartRawClient() {
-  {
-    net::InetAddress server_address("0.0.0.0", 5005);
-    raw_router = new net::ClientRouter(&main_loop, server_address);
-    net::RouterConf router_config;
-    router_config.protocol = "raw";
-    router_config.connections = 1;
-    router_config.recon_interval = 100;
-    router_config.message_timeout = 1000;
-    raw_router->SetupRouter(router_config);
-    raw_router->SetWorkLoadTransfer(dispatcher_);
-    raw_router->StartRouter();
-  }
+  net::url::SchemeIpPort server_info;
+  LOG_IF(ERROR, !net::url::ParseURI("raw://127.0.0.1:5005", server_info)) << " server can't be resolve";
+
+  raw_router = new net::ClientRouter(&main_loop, server_info);
+  net::RouterConf router_config;
+  router_config.connections = 1;
+  router_config.recon_interval = 100;
+  router_config.message_timeout = 1000;
+  raw_router->SetupRouter(router_config);
+  raw_router->SetWorkLoadTransfer(dispatcher_);
+  raw_router->StartRouter();
 }
 
 void StartHttpClients() {
-  {
-    net::InetAddress server_address("0.0.0.0", 5006);
-    http_router = new net::ClientRouter(&main_loop, server_address);
-    net::RouterConf router_config;
-    router_config.protocol = "http";
-    router_config.connections = 2;
-    router_config.recon_interval = 100;
-    router_config.message_timeout = 1000;
-    http_router->SetupRouter(router_config);
-    http_router->SetWorkLoadTransfer(dispatcher_);
-    http_router->StartRouter();
-  }
+  net::url::SchemeIpPort server_info;
+  LOG_IF(ERROR, !net::url::ParseURI("http://127.0.0.1:5006", server_info)) << " server can't be resolve";
+  http_router = new net::ClientRouter(&main_loop, server_info);
+  net::RouterConf router_config;
+  router_config.connections = 2;
+  router_config.recon_interval = 100;
+  router_config.message_timeout = 1000;
+  http_router->SetupRouter(router_config);
+  http_router->SetWorkLoadTransfer(dispatcher_);
+  http_router->StartRouter();
 }
 
 void SendHttpRequest() {
@@ -117,6 +115,7 @@ void SendRawRequest() {
 
 void DumpRedisResponse(RedisResponse* redis_response) {
   for (size_t i = 0; i < redis_response->Count(); i++) {
+
     auto& value = redis_response->ResultAtIndex(i);
     switch(value.type()) {
       case resp::ty_string: {
@@ -128,7 +127,7 @@ void DumpRedisResponse(RedisResponse* redis_response) {
       }
       break;
       case resp::ty_integer: {
-        LOG(INFO) << "iterger:" << value.integer();
+        LOG(INFO) << "interger:" << value.integer();
       }
       break;
       case resp::ty_null: {

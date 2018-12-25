@@ -46,7 +46,7 @@ public:
     tcp_protoservice_.reset(new TcpProtoService);
     InitWorkLoop();
 
-    net::InetAddress addr(5005);
+    net::SocketAddress addr(5005);
     ioservice_.reset(new IOService(addr,
                                    "tcp",
                                    &acceptor_loop_,

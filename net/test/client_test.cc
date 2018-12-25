@@ -84,12 +84,11 @@ int main(int argc, char* argv[]) {
   loop.Start();
   wloop.Start();
   {
-    net::InetAddress http_server_addr("127.0.0.1", 80);
-    //net::InetAddress http_server_addr("47.100.201.65", 80);
-    //net::InetAddress http_server_addr("123.59.153.186", 80);
-    http_router = new net::ClientRouter(&loop, http_server_addr);
+    net::url::SchemeIpPort server_info;
+    LOG_IF(ERROR, !net::url::ParseURI("http://127.0.0.1:80", server_info)) << " server can't be resolve";
+    http_router = new net::ClientRouter(&loop, server_info);
+
     net::RouterConf router_config;
-    router_config.protocol = "http";
     router_config.connections = 1;
     router_config.recon_interval = 100;
     router_config.message_timeout = 5000;

@@ -63,7 +63,7 @@ void HttpServer::ServeAddress(const std::string address, HttpMessageHandler hand
 
   ProtoMessageHandler func = std::bind(&HttpServer::OnHttpRequest, this, std::placeholders::_1);
 
-  net::InetAddress addr(sch_ip_port.host_ip, sch_ip_port.port);
+  net::SocketAddress addr(sch_ip_port.host_ip, sch_ip_port.port);
 
   {
 #if defined SO_REUSEPORT && defined NET_ENABLE_REUSER_PORT

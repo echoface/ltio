@@ -47,9 +47,9 @@ TEST_CASE("uri.parse", "[http uri parse]") {
 
   {
     net::url::SchemeIpPort result;
-    REQUIRE(net::url::ParseURI("://www.baidu.com:", result));
+    REQUIRE(net::url::ParseURI("://127.0.0.1:", result));
     REQUIRE(result.protocol == "http");
-    REQUIRE(result.host == "www.baidu.com");
+    REQUIRE(result.host == "127.0.0.1");
   }
 
   {

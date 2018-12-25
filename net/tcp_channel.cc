@@ -12,16 +12,16 @@ namespace net {
 
 //static
 RefTcpChannel TcpChannel::Create(int socket_fd,
-                                 const InetAddress& local,
-                                 const InetAddress& peer,
+                                 const SocketAddress& local,
+                                 const SocketAddress& peer,
                                  base::MessageLoop* loop) {
 
   return std::make_shared<TcpChannel>(socket_fd, local, peer, loop);
 }
 
 TcpChannel::TcpChannel(int socket_fd,
-                       const InetAddress& loc,
-                       const InetAddress& peer,
+                       const SocketAddress& loc,
+                       const SocketAddress& peer,
                        base::MessageLoop* loop)
   : io_loop_(loop),
     local_addr_(loc),
@@ -29,7 +29,7 @@ TcpChannel::TcpChannel(int socket_fd,
 
   CHECK(io_loop_);
 
-  name_ = local_addr_.IpPortAsString();
+  name_ = local_addr_.IpPort();
   fd_event_ = base::FdEvent::Create(socket_fd, 0);
   fd_event_->SetReadCallback(std::bind(&TcpChannel::HandleRead, this));
   fd_event_->SetWriteCallback(std::bind(&TcpChannel::HandleWrite, this));
@@ -56,8 +56,8 @@ std::string TcpChannel::ChannelInfo() const {
   std::ostringstream oss;
   oss << " [name:" << name_
       << ", fd:" << fd_event_->fd()
-      << ", loc:" << local_addr_.IpPortAsString()
-      << ", peer:" << peer_addr_.IpPortAsString()
+      << ", loc:" << local_addr_.IpPort()
+      << ", peer:" << peer_addr_.IpPort()
       << ", status:" << StatusAsString() << "]";
   return oss.str();
 }

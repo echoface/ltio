@@ -7,7 +7,7 @@
 
 namespace net {
 
-ServiceAcceptor::ServiceAcceptor(base::EventPump* pump, const InetAddress& address)
+ServiceAcceptor::ServiceAcceptor(base::EventPump* pump, const SocketAddress& address)
   : listening_(false),
     address_(address),
     event_pump_(pump) {
@@ -21,7 +21,7 @@ ServiceAcceptor::~ServiceAcceptor() {
 }
 
 bool ServiceAcceptor::InitListener() {
-  int socket_fd = socketutils::CreateNonBlockingSocket(address_.SocketFamily());
+  int socket_fd = socketutils::CreateNonBlockingSocket(address_.Family());
   if (socket_fd < 0) {
   	LOG(ERROR) << " failed create none blocking socket fd";
     return false;
@@ -41,7 +41,7 @@ bool ServiceAcceptor::InitListener() {
   socket_event_->SetReadCallback(std::bind(&ServiceAcceptor::HandleCommingConnection, this));
 
   VLOG(GLOG_VTRACE) << __FUNCTION__ << " init acceptor fd event success, fd:[" << socket_fd
-                    << "] bind to local:[" << address_.IpPortAsString() << "]";
+                    << "] bind to local:[" << address_.IpPort() << "]";
   return true;
 }
 
@@ -49,7 +49,7 @@ bool ServiceAcceptor::StartListen() {
   CHECK(event_pump_->IsInLoopThread());
 
   if (listening_) {
-    LOG(ERROR) << " Aready Listen on:" << address_.IpPortAsString();
+    LOG(ERROR) << " Aready Listen on:" << address_.IpPort();
     return true;
   }
 
@@ -60,10 +60,10 @@ bool ServiceAcceptor::StartListen() {
   if (!success) {
     socket_event_->DisableAll();
     event_pump_->RemoveFdEvent(socket_event_.get());
-    LOG(INFO) << __FUNCTION__ << " failed listen on" << address_.IpPortAsString();
+    LOG(INFO) << __FUNCTION__ << " failed listen on" << address_.IpPort();
     return false;
   }
-  LOG(INFO) << __FUNCTION__ << " start listen on:" << address_.IpPortAsString();
+  LOG(INFO) << __FUNCTION__ << " start listen on:" << address_.IpPort();
   listening_ = true;
   return true;
 }
@@ -78,7 +78,7 @@ void ServiceAcceptor::StopListen() {
   socket_event_->DisableAll();
   event_pump_->RemoveFdEvent(socket_event_.get());
   listening_ = false;
-  LOG(INFO) << " Stop Listen on:" << address_.IpPortAsString();
+  LOG(INFO) << " Stop Listen on:" << address_.IpPort();
 }
 
 void ServiceAcceptor::SetNewConnectionCallback(const NewConnectionCallback& cb) {
@@ -96,9 +96,9 @@ void ServiceAcceptor::HandleCommingConnection() {
     return ;
   }
 
-  InetAddress client_addr(client_socket_in);
+  SocketAddress client_addr(client_socket_in);
 
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << " accept a connection:" << client_addr.IpPortAsString();
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << " accept a connection:" << client_addr.IpPort();
   if (new_conn_callback_) {
     new_conn_callback_(peer_fd, client_addr);
   } else {
@@ -114,7 +114,7 @@ void ServiceAcceptor::OnAcceptorError() {
   // Relaunch This server 
   if (InitListener()) {
     bool re_listen_ok = StartListen();
-    LOG_IF(ERROR, !re_listen_ok) << __FUNCTION__ << " acceptor:[" << address_.IpPortAsString() << "] re-listen failed";
+    LOG_IF(ERROR, !re_listen_ok) << __FUNCTION__ << " acceptor:[" << address_.IpPort() << "] re-listen failed";
   }
 }
 
