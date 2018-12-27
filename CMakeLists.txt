@@ -9,9 +9,9 @@ set(CMAKE_CONFIG_DIR ${CMAKE_SOURCE_DIR}/cmake)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CONFIG_DIR}/Modules)
 MESSAGE(STATUS "CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
 
+include(${CMAKE_CONFIG_DIR}/common.cmake)
 include(${CMAKE_CONFIG_DIR}/global_config.cmake)
 include(${CMAKE_CONFIG_DIR}/include_path.cmake)
-include(${CMAKE_CONFIG_DIR}/package_deps.cmake)
 #include(${CMAKE_CONFIG_DIR}/googletest.cmake)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)

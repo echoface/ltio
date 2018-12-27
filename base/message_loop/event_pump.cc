@@ -8,10 +8,12 @@ namespace base {
 
 EventPump::EventPump() : delegate_(NULL), running_(false) {
   multiplexer_.reset(new base::IoMultiplexerEpoll());
+  InitializeTimeWheel();
 }
 
 EventPump::EventPump(PumpDelegate *d) : delegate_(d), running_(false) {
   multiplexer_.reset(new base::IoMultiplexerEpoll());
+  InitializeTimeWheel();
 }
 
 EventPump::~EventPump() {
@@ -30,7 +32,6 @@ void EventPump::Run() {
   }
 
   running_ = true;
-  InitializeTimeWheel();
 
   std::vector<FdEvent *> active_events;
   static uint64_t default_epoll_timeout_us = 2000000;

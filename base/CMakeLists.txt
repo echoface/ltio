@@ -33,7 +33,6 @@ SET(BASE_SOURCES
 SET(LTBASE_LINKLIBS
   3rd
   coro
-  gflags
   unwind
   pthread
   timeout

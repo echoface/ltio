@@ -24,23 +24,22 @@ CoroWlDispatcher* dispatcher_ = new CoroWlDispatcher(true);
 WorkLoadDispatcher* common_dispatcher = new WorkLoadDispatcher(true);
 
 std::atomic_int64_t http_count;
+static std::string kresponse(3650, 'c');
 void HandleHttp(const HttpRequest* req, HttpResponse* res) {
   http_count++;
-  LOG(INFO) << "http count:" << http_count << " enter";
+  //LOG(INFO) << "http count:" << http_count << " enter";
   if (req->RequestUrl() == "/br") {
       SendRawRequest();
   }
   res->SetResponseCode(200);
-  res->MutableBody() = "hello world";
-  LOG(INFO) << "http count: " << http_count << " leave";
+  res->MutableBody() = kresponse;
+  //LOG(INFO) << "http count: " << http_count << " leave";
 }
 
 void HandleRaw(const LtRawMessage* req, LtRawMessage* res) {
   res->MutableHeader()->code = 0;
   res->MutableHeader()->method = 2;
   res->SetContent("Raw Message");
-
-  LOG(INFO) << "Got A Raw Message:" << req->Dump() << "response:" << res->Dump();
 }
 
 net::ClientRouter*  raw_router; //(base::MessageLoop*, const SocketAddress&);
@@ -67,7 +66,7 @@ void StartRawClient() {
 
   raw_router = new net::ClientRouter(&main_loop, server_info);
   net::RouterConf router_config;
-  router_config.connections = 1;
+  router_config.connections = 16;
   router_config.recon_interval = 100;
   router_config.message_timeout = 1000;
   raw_router->SetupRouter(router_config);
@@ -199,8 +198,7 @@ void PrepareLoops(uint32_t io_count, uint32_t worker_count) {
 }
 
 int main(int argc, char* argv[]) {
-
-  google::ParseCommandLineFlags(&argc, &argv, true);  // 初始化 gflags
+  gflags::ParseCommandLineFlags(&argc, &argv, true);  // 初始化 gflags
   main_loop.Start();
   http_count.store(0);
   PrepareLoops(std::thread::hardware_concurrency(), 1);
