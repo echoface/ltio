@@ -73,8 +73,9 @@ void HttpClientBenchMark(int grp, int count) {
 
 // usage
 int main(int argc, char* argv[]) {
-  gflags::ParseCommandLineFlags(&argc, &argv, true);  // 初始化 gflags
+  //gflags::ParseCommandLineFlags(&argc, &argv, true);  // 初始化 gflags
   google::SetStderrLogging(google::GLOG_ERROR);
+  //google::ParseCommandLineFlags(&argc, &argv, true);
 
   loop.SetLoopName("clientloop");
   wloop.SetLoopName("workloop");

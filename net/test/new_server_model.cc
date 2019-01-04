@@ -198,7 +198,7 @@ void PrepareLoops(uint32_t io_count, uint32_t worker_count) {
 }
 
 int main(int argc, char* argv[]) {
-  gflags::ParseCommandLineFlags(&argc, &argv, true);  // 初始化 gflags
+  //gflags::ParseCommandLineFlags(&argc, &argv, true);  // 初始化 gflags
   main_loop.Start();
   http_count.store(0);
   PrepareLoops(std::thread::hardware_concurrency(), 1);
