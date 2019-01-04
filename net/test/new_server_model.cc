@@ -40,11 +40,26 @@ void HandleRaw(const LtRawMessage* req, LtRawMessage* res) {
   res->MutableHeader()->code = 0;
   res->MutableHeader()->method = 2;
   res->SetContent("Raw Message");
+  LOG_EVERY_N(INFO, 100) << " got 100 Raw request";
 }
 
 net::ClientRouter*  raw_router; //(base::MessageLoop*, const SocketAddress&);
 net::ClientRouter*  http_router; //(base::MessageLoop*, const SocketAddress&);
 net::ClientRouter*  redis_router;
+
+static std::atomic_int io_round_count;
+class RouterManager: public net::RouterDelegate {
+public:
+  base::MessageLoop* NextIOLoopForClient() {
+    if (loops.empty()) {
+      return NULL;
+    }
+    io_round_count++;
+    return loops[io_round_count % loops.size()];
+  }
+};
+
+RouterManager router_manager;
 
 void StartRedisClient() {
   net::url::SchemeIpPort server_info;
@@ -57,6 +72,8 @@ void StartRedisClient() {
   router_config.message_timeout = 1000;
   redis_router->SetupRouter(router_config);
   redis_router->SetWorkLoadTransfer(dispatcher_);
+  redis_router->SetDelegate(&router_manager);
+
   redis_router->StartRouter();
 }
 
@@ -71,6 +88,8 @@ void StartRawClient() {
   router_config.message_timeout = 1000;
   raw_router->SetupRouter(router_config);
   raw_router->SetWorkLoadTransfer(dispatcher_);
+  raw_router->SetDelegate(&router_manager);
+
   raw_router->StartRouter();
 }
 
@@ -84,6 +103,8 @@ void StartHttpClients() {
   router_config.message_timeout = 1000;
   http_router->SetupRouter(router_config);
   http_router->SetWorkLoadTransfer(dispatcher_);
+  http_router->SetDelegate(&router_manager);
+
   http_router->StartRouter();
 }
 
@@ -212,7 +233,6 @@ int main(int argc, char* argv[]) {
 
   net::HttpServer http_server;
   http_server.SetIoLoops(loops);
-  //http_server.SetDispatcher(dispatcher_);
   http_server.SetDispatcher(dispatcher_);
   http_server.ServeAddressSync("http://0.0.0.0:5006", std::bind(HandleHttp, std::placeholders::_1, std::placeholders::_2));
 

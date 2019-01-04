@@ -262,3 +262,101 @@ TEST_CASE("client.timer.request", "[fetch resource every interval]") {
 
   LOG(INFO) << " end test client.timer.request, raw client send request";
 }
+
+
+std::vector<base::MessageLoop*> loops;
+TEST_CASE("client.raw.bench", "[raw client send request benchmark]") {
+
+  LOG(INFO) << " start test client.raw.bench, raw client send request benchmark";
+  base::MessageLoop loop;
+  for (uint32_t i = 0; i < std::thread::hardware_concurrency(); i++) {
+    base::MessageLoop* l = new base::MessageLoop();
+    l->SetLoopName("io_" + std::to_string(i));
+    l->Start();
+    loops.push_back(l);
+  }
+
+  loop.SetLoopName("client");
+  loop.Start();
+
+  static std::atomic_int io_round_count;
+  class RouterManager: public net::RouterDelegate {
+    public:
+      base::MessageLoop* NextIOLoopForClient() {
+        if (loops.empty()) {
+          return NULL;
+        }
+        io_round_count++;
+        return loops[io_round_count % loops.size()];
+      }
+  };
+  RouterManager router_delegate;
+
+  net::url::SchemeIpPort server_info;
+  LOG_IF(ERROR, !net::url::ParseURI("raw://127.0.0.1:5005", server_info)) << " server can't be resolve";
+
+  net::ClientRouter raw_router(&loop, server_info);
+  net::CoroWlDispatcher* dispatcher_ = new net::CoroWlDispatcher(true);
+  dispatcher_->SetWorkerLoops(loops);
+
+  static const int connections = 10;
+
+  net::RouterConf router_config;
+  router_config.recon_interval = 1000;
+  router_config.message_timeout = 5000;
+  router_config.connections = connections;
+
+  raw_router.SetupRouter(router_config);
+  raw_router.SetWorkLoadTransfer(dispatcher_);
+  raw_router.SetDelegate(&router_delegate);
+  raw_router.StartRouter();
+
+  const int test_count = 10000000;
+  std::atomic_int64_t  total_task;
+  total_task = test_count;
+
+  std::atomic_int64_t failed_request;
+  failed_request = 0;
+  std::atomic_int64_t success_request;
+  success_request = 0;
+
+  sleep(5);
+
+  auto raw_request_task = [&]() {
+
+    while(total_task > 0) {
+      auto request = net::LtRawMessage::Create(true);
+      auto lt_header = request->MutableHeader();
+      lt_header->code = 0;
+      lt_header->method = 12;
+      request->SetContent("RawRequest");
+
+      net::LtRawMessage* response = raw_router.SendRecieve(request);
+      total_task--;
+
+      if (response && request->FailCode() == net::MessageCode::kSuccess) {
+        success_request++;
+      } else {
+        LOG(INFO) << " failed reason:" << request->FailCode();
+        failed_request++;
+      }
+      if (failed_request + success_request == test_count) {
+        LOG(INFO) << " start bench finished.............<<<<<<";
+        loop.QuitLoop();
+      }
+    };
+  };
+
+  LOG(INFO) << " start bench start.............>>>>>>";
+
+  for (int i = 0; i < 10; i++) {
+    loops[i%loops.size()]->PostTask(NewClosure([=]() {
+      co_go raw_request_task;
+    }));
+    //base::MessageLoop* l = loops[i%loops.size()];
+    //co_go l << raw_request_task;
+  }
+
+  loop.WaitLoopEnd();
+  LOG(INFO) << " end test client.raw.request, raw client send request";
+}
