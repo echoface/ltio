@@ -49,7 +49,11 @@ const KeyValMap& HttpRequest::Headers() const {
   return headers_;
 }
 
-bool HttpRequest::HasHeaderField(const std::string field) const {
+bool HttpRequest::HasHeaderField(const char* f) const {
+  return headers_.find(f) != headers_.end();
+}
+
+bool HttpRequest::HasHeaderField(const std::string& field) const {
   return headers_.find(field) != headers_.end();
 }
 

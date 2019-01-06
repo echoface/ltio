@@ -303,6 +303,10 @@ void HttpProtoService::BeforeSendRequest(HttpRequest* out_message) {
       request->body_ = std::move(compressed_body);
     }
   }
+
+  if (!out_message->HasHeaderField(HttpConstant::kHost)) {
+    request->InsertHeader(HttpConstant::kHost, request->RemoteHost());
+  }
 }
 
 bool HttpProtoService::BeforeSendResponse(HttpRequest* request, HttpResponse* response) {

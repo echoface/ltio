@@ -27,7 +27,7 @@ WorkLoadDispatcher* common_dispatcher = new WorkLoadDispatcher(true);
 std::atomic_int64_t http_count;
 static std::string kresponse(3650, 'c');
 void HandleHttp(const HttpRequest* req, HttpResponse* res) {
-  LOG_EVERY_N(INFO, 10000) << " got 1w Http request";
+  LOG_EVERY_N(INFO, 10000) << " got 1w Http request, body:" << req->Dump();
 
   http_count++;
 
@@ -42,7 +42,7 @@ void HandleHttp(const HttpRequest* req, HttpResponse* res) {
 }
 
 void HandleRaw(const LtRawMessage* req, LtRawMessage* res) {
-  LOG_EVERY_N(INFO, 10000) << " got 1w Raw request";
+  LOG_EVERY_N(INFO, 10000) << " got 1w Raw request" << req->Dump();
 
   res->MutableHeader()->code = 0;
   res->MutableHeader()->method = 2;
@@ -124,7 +124,7 @@ void SendHttpRequest() {
   if (http_response) {
     LOG(INFO) << "http client got response:" << http_response->Body();
   } else {
-    LOG(ERROR) << "http client request failed:" << http_request->FailMessage();
+    LOG(ERROR) << "http client request failed:";
   }
 }
 
@@ -135,7 +135,7 @@ void SendRawRequest() {
 
   LtRawMessage* raw_response = raw_router->SendRecieve(raw_request);
   if (!raw_response) {
-    LOG(ERROR) << "raw client request failed:" << raw_request->FailMessage();
+    LOG(ERROR) << "raw client request failed:" << raw_request->FailCode();
   }
 }
 
@@ -206,7 +206,7 @@ void SendRedisMessage() {
   if (redis_response) {
     DumpRedisResponse(redis_response);
   } else {
-    LOG(ERROR) << "redis client request failed:" << redis_request->FailMessage();
+    LOG(ERROR) << "redis client request failed:" << redis_request->FailCode();
   }
 }
 

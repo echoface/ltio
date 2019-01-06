@@ -36,18 +36,6 @@ void ProtocolMessage::SetResponse(const RefProtocolMessage& response) {
   responded_ = true;
 }
 
-const std::string& ProtocolMessage::FailMessage() const {
-  return fail_;
-}
-
-void ProtocolMessage::AppendFailMessage(std::string m) {
-  if (!fail_.empty()) {
-    fail_.append("->").append(m);
-    return;
-  }
-  fail_ = m;
-}
-
 const char* ProtocolMessage::TypeAsStr() const {
   switch(type_) {
     case MessageType::kRequest:

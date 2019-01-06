@@ -38,7 +38,7 @@ bool SendRequest(int sequence_id) {
     LOG(ERROR) << "receive a closed response from server" << response->Dump();
   }
   if (request->FailCode() != net::MessageCode::kSuccess) {
-    LOG(ERROR) << "request failed reason:" << request->FailCode() << " message:" << request->FailMessage();
+    LOG(ERROR) << "request failed reason:" << request->FailCode();
   }
   return response != NULL && request->FailCode() == net::MessageCode::kSuccess;
 }

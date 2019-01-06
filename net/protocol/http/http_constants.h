@@ -7,6 +7,7 @@ namespace net {
 
 struct HttpConstant {
   static const std::string kCRCN;
+  static const std::string kHost;
   static const std::string kBlankSpace;
   static const std::string kConnection;
   static const std::string kContentType;

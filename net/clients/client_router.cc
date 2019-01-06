@@ -151,6 +151,7 @@ ProtocolMessage* ClientRouter::SendClientRequest(RefProtocolMessage& message) {
     LOG(FATAL) << __FUNCTION__ << " this task can't by yield, send failed";
     return NULL;
   }
+  message->SetRemoteHost(server_info_.host);
 
   auto channels = std::atomic_load(&roundrobin_channes_);
 

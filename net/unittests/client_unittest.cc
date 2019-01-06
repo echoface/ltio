@@ -399,7 +399,12 @@ TEST_CASE("client.http.bench", "[http client send request benchmark]") {
   }
 
   net::url::SchemeIpPort server_info;
-  LOG_IF(ERROR, !net::url::ParseURI("http://127.0.0.1:5006", server_info)) << " server can't be resolve";
+  LOG_IF(ERROR, !net::url::ParseURI("http://www.ltio.com:5006", server_info)) << " server can't be resolve";
+
+  LOG(INFO) << "parse result, host:" << server_info.host
+    << " ip:" << server_info.host_ip
+    << " port:" << server_info.port
+    << " protocol:" << server_info.protocol;
 
   net::ClientRouter http_router(&loop, server_info);
   net::CoroWlDispatcher* dispatcher_ = new net::CoroWlDispatcher(true);
@@ -435,7 +440,6 @@ TEST_CASE("client.http.bench", "[http client send request benchmark]") {
       request->SetKeepAlive(true);
       request->SetRequestURL("/");
       request->InsertHeader("Accept", "*/*");
-      request->InsertHeader("Host", "127.0.0.1");
       request->InsertHeader("User-Agent", "curl/7.58.0");
 
       net::HttpResponse* response = http_router.SendRecieve(request);
