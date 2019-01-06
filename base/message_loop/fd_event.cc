@@ -83,29 +83,39 @@ void FdEvent::SetCloseCallback(const EventCallback &cb) {
 void FdEvent::HandleEvent() {
   VLOG(GLOG_VTRACE) << __FUNCTION__ << EventInfo() << " rcv event:" << RcvEventAsString();
   do {
-    if ((revents_ & EPOLLHUP) && !(revents_ & EPOLLIN)) {
-      if (close_callback_) {
-        close_callback_();
-      }
-    }
-
-    if (revents_ & (EPOLLERR | POLLNVAL)) {
-      if (error_callback_) {
+    if (revents_ & EPOLLERR) {
+      if (read_callback_) {
         error_callback_();
       }
+      break;
     }
 
-    if (revents_ & (EPOLLIN | EPOLLPRI | EPOLLRDHUP)) {
+    if (revents_ & EPOLLHUP) {
+      if (read_callback_) {
+        read_callback_();
+      }
+      break;
+    }
+
+    if (revents_ & EPOLLIN) {
       if (read_callback_) {
         read_callback_();
       }
     }
 
-    if ((revents_ & EPOLLOUT) && write_callback_) {
-      write_callback_();
+    if (revents_ & EPOLLOUT) {
+      if (write_callback_) {
+        write_callback_();
+      }
     }
 
+    if (revents_ & EPOLLRDHUP) { //peer close
+      if (close_callback_) {
+        close_callback_();
+      }
+    }
   } while(0);
+
   revents_ = 0;
 }
 

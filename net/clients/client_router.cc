@@ -123,6 +123,7 @@ void ClientRouter::OnClientChannelClosed(const RefClientChannel& channel) {
   std::atomic_store(&roundrobin_channes_, list);
 
   if (!is_stopping_ && channels_.size() < config_.connections) {
+
     auto f = std::bind(&Connector::Launch, connector_, address_);
     work_loop_->PostDelayTask(NewClosure(f), config_.recon_interval);
 
@@ -144,7 +145,7 @@ void ClientRouter::OnRequestGetResponse(const RefProtocolMessage& request,
 }
 
 ProtocolMessage* ClientRouter::SendClientRequest(RefProtocolMessage& message) {
-  CHECK(dispatcher_);
+  DCHECK(dispatcher_);
 
   if (!dispatcher_->SetWorkContext(message->GetWorkCtx())) {
     LOG(FATAL) << __FUNCTION__ << " this task can't by yield, send failed";

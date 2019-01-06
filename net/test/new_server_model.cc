@@ -1,4 +1,3 @@
-
 #include <vector>
 #include "base/message_loop/message_loop.h"
 #include "protocol/redis/redis_request.h"
@@ -14,6 +13,8 @@
 using namespace net;
 using namespace base;
 
+//#define ENBALE_RAW_CLIENT
+
 void SendRawRequest();
 
 base::MessageLoop main_loop;
@@ -26,21 +27,26 @@ WorkLoadDispatcher* common_dispatcher = new WorkLoadDispatcher(true);
 std::atomic_int64_t http_count;
 static std::string kresponse(3650, 'c');
 void HandleHttp(const HttpRequest* req, HttpResponse* res) {
+  LOG_EVERY_N(INFO, 10000) << " got 1w Http request";
+
   http_count++;
-  //LOG(INFO) << "http count:" << http_count << " enter";
+
+#ifdef ENBALE_RAW_CLIENT
   if (req->RequestUrl() == "/br") {
       SendRawRequest();
   }
+#endif
+
   res->SetResponseCode(200);
   res->MutableBody() = kresponse;
-  //LOG(INFO) << "http count: " << http_count << " leave";
 }
 
 void HandleRaw(const LtRawMessage* req, LtRawMessage* res) {
+  LOG_EVERY_N(INFO, 10000) << " got 1w Raw request";
+
   res->MutableHeader()->code = 0;
   res->MutableHeader()->method = 2;
   res->SetContent("Raw Message");
-  LOG_EVERY_N(INFO, 100) << " got 100 Raw request";
 }
 
 net::ClientRouter*  raw_router; //(base::MessageLoop*, const SocketAddress&);
@@ -219,7 +225,8 @@ void PrepareLoops(uint32_t io_count, uint32_t worker_count) {
 }
 
 int main(int argc, char* argv[]) {
-  //gflags::ParseCommandLineFlags(&argc, &argv, true);  // 初始化 gflags
+  //google::ParseCommandLineFlags(&argc, &argv, true);  // 初始化 gflags
+
   main_loop.Start();
   http_count.store(0);
   PrepareLoops(std::thread::hardware_concurrency(), 1);
@@ -239,20 +246,10 @@ int main(int argc, char* argv[]) {
 #if 0
   StartHttpClients();
 #endif
-#if 0
-  std::this_thread::sleep_for(std::chrono::seconds(5));
-  for (int i = 0; i < 10; i++) {
-    main_loop.PostCoroTask(std::bind(SendHttpRequest));
-  }
-#endif
 
-#if 1
+
+#ifdef ENBALE_RAW_CLIENT
   StartRawClient();
-#endif
-#if 0
-  for (int i = 0; i < 10; i++) {
-    main_loop.PostCoroTask(std::bind(SendRawRequest));
-  }
 #endif
 
 #if 0

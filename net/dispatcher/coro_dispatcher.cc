@@ -34,9 +34,7 @@ bool CoroWlDispatcher::ResumeWorkContext(WorkContext& ctx) {
 }
 
 bool CoroWlDispatcher::SetWorkContext(WorkContext& ctx) {
-  if (base::MessageLoop::Current() &&
-      base::CoroRunner::CanYield()) {
-
+  if (base::MessageLoop::Current() && base::CoroRunner::CanYield()) {
     ctx.loop = base::MessageLoop::Current();
     ctx.resume_ctx = co_resumer; //base::CoroRunner::CurrentCoroResumeCtx();
     return true;

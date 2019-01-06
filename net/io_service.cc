@@ -117,22 +117,19 @@ void IOService::OnProtocolServiceGone(const net::RefProtoService &service) {
     acceptor_loop_->PostTask(NewClosure(std::move(functor)));
     return;
   }
-  LOG(INFO) << __FUNCTION__ << " a channel broken, remove this protocol service";
   RemoveProtocolService(service);
 }
 
 void IOService::StoreProtocolService(const RefProtoService service) {
   CHECK(acceptor_loop_->IsInLoopThread());
+
   protocol_services.insert(service);
-  LOG(INFO) << __FUNCTION__ << " keep a new protocol service, count:" << protocol_services.size();
   delegate_->IncreaseChannelCount();
 }
 
 void IOService::RemoveProtocolService(const RefProtoService service) {
   CHECK(acceptor_loop_->IsInLoopThread());
   protocol_services.erase(service);
-
-  LOG(INFO) << __FUNCTION__ << " remove a new protocol service, count:" << protocol_services.size();
 
   delegate_->DecreaseChannelCount();
   if (is_stopping_ && protocol_services.size() == 0) {

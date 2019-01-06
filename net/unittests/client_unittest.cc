@@ -30,6 +30,35 @@
 #include "net/protocol/raw/raw_message.h"
 #include "net/protocol/raw/raw_proto_service.h"
 
+static std::atomic_int io_round_count;
+
+const int bench_count = 1000000;
+
+std::vector<base::MessageLoop*> InitLoop() {
+  std::vector<base::MessageLoop*> lops;
+  for (uint32_t i = 0; i < std::thread::hardware_concurrency(); i++) {
+    base::MessageLoop* l = new base::MessageLoop();
+    l->SetLoopName("io_" + std::to_string(i));
+    l->Start();
+    lops.push_back(l);
+  }
+  return lops;
+}
+
+std::vector<base::MessageLoop*> loops;
+
+class RouterManager: public net::RouterDelegate {
+  public:
+    base::MessageLoop* NextIOLoopForClient() {
+      if (loops.empty()) {
+        return NULL;
+      }
+      io_round_count++;
+      return loops[io_round_count % loops.size()];
+    }
+};
+RouterManager router_delegate;
+
 TEST_CASE("client.base", "[http client]") {
   LOG(INFO) << " start test client.base, http client connections";
 
@@ -91,7 +120,7 @@ TEST_CASE("client.http.request", "[http client send request]") {
 
   http_router.StartRouter();
 
-  int total_task = 10;
+  int total_task = 1;
   int failed_request = 0;
   int success_request = 0;
 
@@ -156,7 +185,7 @@ TEST_CASE("client.raw.request", "[raw client send request]") {
 
   raw_router.StartRouter();
 
-  int total_task = 10;
+  int total_task = 1;
   int failed_request = 0;
   int success_request = 0;
 
@@ -264,20 +293,16 @@ TEST_CASE("client.timer.request", "[fetch resource every interval]") {
 }
 
 
-std::vector<base::MessageLoop*> loops;
 TEST_CASE("client.raw.bench", "[raw client send request benchmark]") {
 
   LOG(INFO) << " start test client.raw.bench, raw client send request benchmark";
   base::MessageLoop loop;
-  for (uint32_t i = 0; i < std::thread::hardware_concurrency(); i++) {
-    base::MessageLoop* l = new base::MessageLoop();
-    l->SetLoopName("io_" + std::to_string(i));
-    l->Start();
-    loops.push_back(l);
-  }
-
   loop.SetLoopName("client");
   loop.Start();
+
+  if (loops.empty()) {
+    loops = InitLoop();
+  }
 
   static std::atomic_int io_round_count;
   class RouterManager: public net::RouterDelegate {
@@ -302,7 +327,7 @@ TEST_CASE("client.raw.bench", "[raw client send request benchmark]") {
   static const int connections = 10;
 
   net::RouterConf router_config;
-  router_config.recon_interval = 1000;
+  router_config.recon_interval = 10;
   router_config.message_timeout = 5000;
   router_config.connections = connections;
 
@@ -311,9 +336,8 @@ TEST_CASE("client.raw.bench", "[raw client send request benchmark]") {
   raw_router.SetDelegate(&router_delegate);
   raw_router.StartRouter();
 
-  const int test_count = 10000000;
   std::atomic_int64_t  total_task;
-  total_task = test_count;
+  total_task = bench_count;
 
   std::atomic_int64_t failed_request;
   failed_request = 0;
@@ -324,7 +348,8 @@ TEST_CASE("client.raw.bench", "[raw client send request benchmark]") {
 
   auto raw_request_task = [&]() {
 
-    while(total_task > 0) {
+    while(total_task-- > 0) {
+
       auto request = net::LtRawMessage::Create(true);
       auto lt_header = request->MutableHeader();
       lt_header->code = 0;
@@ -332,31 +357,111 @@ TEST_CASE("client.raw.bench", "[raw client send request benchmark]") {
       request->SetContent("RawRequest");
 
       net::LtRawMessage* response = raw_router.SendRecieve(request);
-      total_task--;
 
       if (response && request->FailCode() == net::MessageCode::kSuccess) {
         success_request++;
       } else {
-        LOG(INFO) << " failed reason:" << request->FailCode();
         failed_request++;
       }
-      if (failed_request + success_request == test_count) {
-        LOG(INFO) << " start bench finished.............<<<<<<";
+
+      if (failed_request + success_request == bench_count) {
+        LOG(INFO) << " start bench finished.............<<<<<<"
+          << "success:" << success_request
+          << " failed: " << failed_request
+          << " test_count:" << bench_count;
+        raw_router.StopRouterSync();
         loop.QuitLoop();
       }
     };
   };
 
-  LOG(INFO) << " start bench start.............>>>>>>";
-
-  for (int i = 0; i < 10; i++) {
-    loops[i%loops.size()]->PostTask(NewClosure([=]() {
+  LOG(INFO) << " start bench started.............<<<<<<";
+  for (int i = 0; i < 50; i++) {
+    auto l = loops[i % loops.size()];
+    l->PostTask(NewClosure([=]() {
       co_go raw_request_task;
     }));
-    //base::MessageLoop* l = loops[i%loops.size()];
-    //co_go l << raw_request_task;
   }
 
   loop.WaitLoopEnd();
-  LOG(INFO) << " end test client.raw.request, raw client send request";
+}
+
+TEST_CASE("client.http.bench", "[http client send request benchmark]") {
+  LOG(INFO) << " start test client.http.bench, http client send request benchmark";
+
+  base::MessageLoop loop;
+  loop.SetLoopName("client");
+  loop.Start();
+
+  if (loops.empty()) {
+    loops = InitLoop();
+  }
+
+  net::url::SchemeIpPort server_info;
+  LOG_IF(ERROR, !net::url::ParseURI("http://127.0.0.1:5006", server_info)) << " server can't be resolve";
+
+  net::ClientRouter http_router(&loop, server_info);
+  net::CoroWlDispatcher* dispatcher_ = new net::CoroWlDispatcher(true);
+  dispatcher_->SetWorkerLoops(loops);
+
+  const int connections = 10;
+
+  net::RouterConf router_config;
+  router_config.recon_interval = 10;
+  router_config.message_timeout = 5000;
+  router_config.connections = connections;
+
+  http_router.SetupRouter(router_config);
+  http_router.SetWorkLoadTransfer(dispatcher_);
+  http_router.SetDelegate(&router_delegate);
+  http_router.StartRouter();
+
+  std::atomic_int64_t  total_task;
+  total_task = bench_count;
+
+  std::atomic_int64_t failed_request;
+  failed_request = 0;
+  std::atomic_int64_t success_request;
+  success_request = 0;
+
+  sleep(5);
+
+  auto request_task = [&]() {
+
+    while(total_task-- > 0) {
+
+      net::RefHttpRequest request = std::make_shared<net::HttpRequest>();
+      request->SetKeepAlive(true);
+      request->SetRequestURL("/");
+      request->InsertHeader("Accept", "*/*");
+      request->InsertHeader("Host", "127.0.0.1");
+      request->InsertHeader("User-Agent", "curl/7.58.0");
+
+      net::HttpResponse* response = http_router.SendRecieve(request);
+
+      if (response && request->FailCode() == net::MessageCode::kSuccess) {
+        success_request++;
+      } else {
+        failed_request++;
+      }
+
+      if (failed_request + success_request == bench_count) {
+        LOG(INFO) << " start bench finished.............<<<<<<"
+          << "success:" << success_request
+          << " failed: " << failed_request
+          << " test_count:" << bench_count;
+        http_router.StopRouterSync();
+        loop.QuitLoop();
+      }
+    };
+  };
+
+  LOG(INFO) << " start bench started.............<<<<<<";
+  for (int i = 0; i < 100; i++) {
+    auto l = loops[i % loops.size()];
+    l->PostTask(NewClosure([=]() {
+      co_go request_task;
+    }));
+  }
+  loop.WaitLoopEnd();
 }

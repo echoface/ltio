@@ -87,30 +87,32 @@ void TcpChannel::SetChannelConsumer(ChannelConsumer *consumer) {
 }
 
 void TcpChannel::HandleRead() {
-  int error = 0;
+  static const int32_t block_size = 4 * 1024;
+  do {
+    in_buffer_.EnsureWritableSize(block_size);
 
-  int64_t bytes_read = in_buffer_.ReadFromSocketFd(fd_event_->fd(), &error);
-  if (bytes_read > 0) {
+    ssize_t bytes_read = ::read(fd_event_->fd(), in_buffer_.GetWrite(), in_buffer_.CanWriteSize());
     VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo() << " read [" << bytes_read << "] bytes";
-	  channel_consumer_->OnDataReceived(shared_from_this(), &in_buffer_);
 
-  } else if (0 == bytes_read) { //read eof, remote close
+    if (bytes_read > 0) {
 
-    VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo() << " peer close";
-    HandleClose();
+      in_buffer_.Produce(bytes_read);
+      channel_consumer_->OnDataReceived(shared_from_this(), &in_buffer_);
 
-  } else {
+    } else if (0 == bytes_read) {
 
-    if (error == EAGAIN || error == EWOULDBLOCK) {
-      return;
+      HandleClose();
+      break;
+
+    } else if (bytes_read == -1) {
+      if (errno == EAGAIN || errno == EWOULDBLOCK) {
+        break;
+      }
+      LOG(ERROR) << __FUNCTION__ << ChannelInfo() << " read error:" << base::StrError();
+      HandleClose();
+      break;
     }
-    LOG(ERROR) << __FUNCTION__ << ChannelInfo() << " read error";
-
-    errno = error;
-    HandleError();
-
-    HandleClose();
-  }
+  } while(1);
 }
 
 void TcpChannel::HandleWrite() {
@@ -121,9 +123,8 @@ void TcpChannel::HandleWrite() {
 
     ssize_t writen_bytes = socketutils::Write(socket_fd, out_buffer_.GetRead(), out_buffer_.CanReadSize());
     if (writen_bytes < 0) {
-      int err = errno;
-      if (err != EAGAIN && err != EWOULDBLOCK) {
-        fatal_err = err;
+      if (errno != EAGAIN && errno != EWOULDBLOCK) {
+        fatal_err = errno;
       }
       break;
     }
@@ -131,46 +132,43 @@ void TcpChannel::HandleWrite() {
   };
 
   if (fatal_err != 0) {
-    HandleClose();
     LOG(ERROR) << __FUNCTION__ << ChannelInfo() << " write err:" << base::StrError(fatal_err);
+    HandleClose();
 	  return;
   }
 
-  if (out_buffer_.CanReadSize()) {
-
-  	if (!fd_event_->IsWriteEnable()) {
-  	  fd_event_->EnableWriting();
-  	}
-
-  } else { //all data writen done
+  if (out_buffer_.CanReadSize() == 0) {
 
     fd_event_->DisableWriting();
     channel_consumer_->OnDataFinishSend(shared_from_this());
 
     if (schedule_shutdown_) {
       HandleClose();
-      //socketutils::ShutdownWrite(socket_fd);
     }
   }
 }
 
 void TcpChannel::HandleError() {
-  int socket_fd = fd_event_->fd();
-  int err = socketutils::GetSocketError(socket_fd);
+
+  int err = socketutils::GetSocketError(fd_event_->fd());
   LOG(ERROR) << __FUNCTION__ << ChannelInfo() << " error: [" << base::StrError(err) << "]";
+
+  HandleClose();
 }
 
 void TcpChannel::HandleClose() {
-  CHECK(io_loop_->IsInLoopThread());
+  DCHECK(io_loop_->IsInLoopThread());
 
   RefTcpChannel guard(shared_from_this());
+  if (Status() == Status::CLOSED) {
+    return;
+  }
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
 
 	io_loop_->Pump()->RemoveFdEvent(fd_event_.get());
 	fd_event_->ResetCallback();
-
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
-
   SetChannelStatus(Status::CLOSED);
+
   channel_consumer_->OnChannelClosed(guard);
 }
 
@@ -184,6 +182,7 @@ void TcpChannel::ShutdownChannel() {
   CHECK(InIOLoop());
 
   VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
+
   if (status_ == Status::CLOSED) {
     return;
   }
@@ -193,13 +192,13 @@ void TcpChannel::ShutdownChannel() {
 
   if (!fd_event_->IsWriteEnable()) {
     HandleClose();
-
     schedule_shutdown_ = false;
   }
 }
 
 int32_t TcpChannel::Send(const uint8_t* data, const int32_t len) {
-  CHECK(io_loop_->IsInLoopThread());
+  DCHECK(io_loop_->IsInLoopThread());
+
   if (!IsConnected()) {
     return -1;
   }
@@ -221,23 +220,26 @@ int32_t TcpChannel::Send(const uint8_t* data, const int32_t len) {
     ssize_t part_write = socketutils::Write(fd_event_->fd(), data + n_write, n_remain);
 
     if (part_write < 0) {
+
       if (errno == EAGAIN || errno == EWOULDBLOCK) {
+
         out_buffer_.WriteRawData(data + n_write, n_remain);
+
       } else {
+        // to avoid A -> B -> callback  delete A problem, we use a writecallback handle this
       	fatal_err = errno;
-        HandleClose();
+        LOG(ERROR) << __FUNCTION__ << ChannelInfo() << " send err:" << base::StrError() << " schedule close channel";
+        schedule_shutdown_ = true;
       }
       break;
     }
     n_write += part_write;
     n_remain = n_remain - part_write;
+
     DCHECK((n_write + n_remain) == size_t(len));
   } while(n_remain != 0);
 
-  if (!fatal_err &&
-      !fd_event_->IsWriteEnable() &&
-      out_buffer_.CanReadSize() > 0) {
-
+  if (!fd_event_->IsWriteEnable() && (out_buffer_.CanReadSize() || schedule_shutdown_)) {
     fd_event_->EnableWriting();
   }
   return fatal_err != 0 ? -1 : n_write;
