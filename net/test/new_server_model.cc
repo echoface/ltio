@@ -213,12 +213,16 @@ void SendRedisMessage() {
 void PrepareLoops(uint32_t io_count, uint32_t worker_count) {
   for (uint32_t i = 0; i < io_count; i++) {
     auto loop = new(base::MessageLoop);
+
+    loop->SetLoopName("io_" + std::to_string(i));
     loop->Start();
     loops.push_back(loop);
   }
 
   for (uint32_t i = 0; i < worker_count; i++) {
     auto worker = new(base::MessageLoop);
+
+    worker->SetLoopName("worker_" + std::to_string(i));
     worker->Start();
     workers.push_back(worker);
   }
@@ -227,9 +231,11 @@ void PrepareLoops(uint32_t io_count, uint32_t worker_count) {
 int main(int argc, char* argv[]) {
   //google::ParseCommandLineFlags(&argc, &argv, true);  // 初始化 gflags
 
+  main_loop.SetLoopName("main");
   main_loop.Start();
   http_count.store(0);
   PrepareLoops(std::thread::hardware_concurrency(), 1);
+
   dispatcher_->SetWorkerLoops(workers);
   common_dispatcher->SetWorkerLoops(workers);
 

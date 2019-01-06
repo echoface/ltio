@@ -91,6 +91,7 @@ class MessageLoop : public PumpDelegate {
     void AfterPumpRun() override;
   private:
     void ThreadMain();
+    void SetThreadNativeName();
     class ReplyTaskHelper;
 
     void OnHandleCommand();  // NOLINT

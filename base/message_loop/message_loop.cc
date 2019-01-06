@@ -211,6 +211,7 @@ void MessageLoop::AfterPumpRun() {
 
 void MessageLoop::ThreadMain() {
   threadlocal_current_ = this;
+  SetThreadNativeName();
   event_pump_->SetLoopThreadId(std::this_thread::get_id());
 
   event_pump_->InstallFdEvent(wakeup_event_.get());
@@ -418,6 +419,13 @@ int MessageLoop::Notify(int fd, const void* data, size_t count) {
   } while(retry++ < max_retry_times);
 
   return ret;
+}
+
+void MessageLoop::SetThreadNativeName() {
+  if (loop_name_.empty()) return;
+
+  auto handle = thread_ptr_->native_handle();
+  pthread_setname_np(handle, loop_name_.c_str());
 }
 
 };

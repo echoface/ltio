@@ -33,6 +33,7 @@
 static std::atomic_int io_round_count;
 
 const int bench_count = 1000000;
+const int bench_concurrent = 50;
 
 std::vector<base::MessageLoop*> InitLoop() {
   std::vector<base::MessageLoop*> lops;
@@ -376,7 +377,7 @@ TEST_CASE("client.raw.bench", "[raw client send request benchmark]") {
   };
 
   LOG(INFO) << " start bench started.............<<<<<<";
-  for (int i = 0; i < 50; i++) {
+  for (int i = 0; i < bench_concurrent; i++) {
     auto l = loops[i % loops.size()];
     l->PostTask(NewClosure([=]() {
       co_go raw_request_task;
@@ -457,7 +458,7 @@ TEST_CASE("client.http.bench", "[http client send request benchmark]") {
   };
 
   LOG(INFO) << " start bench started.............<<<<<<";
-  for (int i = 0; i < 100; i++) {
+  for (int i = 0; i < bench_concurrent; i++) {
     auto l = loops[i % loops.size()];
     l->PostTask(NewClosure([=]() {
       co_go request_task;
