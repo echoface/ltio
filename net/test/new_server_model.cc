@@ -21,7 +21,7 @@ base::MessageLoop main_loop;
 std::vector<base::MessageLoop*> loops;
 std::vector<base::MessageLoop*> workers;
 
-CoroWlDispatcher* dispatcher_ = new CoroWlDispatcher(true);
+CoroWlDispatcher* dispatcher_ = new CoroWlDispatcher(false);
 WorkLoadDispatcher* common_dispatcher = new WorkLoadDispatcher(true);
 
 std::atomic_int64_t http_count;
@@ -236,8 +236,8 @@ int main(int argc, char* argv[]) {
   http_count.store(0);
   PrepareLoops(std::thread::hardware_concurrency(), 1);
 
-  dispatcher_->SetWorkerLoops(workers);
-  common_dispatcher->SetWorkerLoops(workers);
+  dispatcher_->SetWorkerLoops(loops);
+  common_dispatcher->SetWorkerLoops(loops);
 
   net::RawServer raw_server;
   raw_server.SetIoLoops(loops);

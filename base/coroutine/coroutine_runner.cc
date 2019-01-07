@@ -44,7 +44,6 @@ CoroRunner::CoroRunner()
     bind_loop_(MessageLoop::Current()),
     max_reuse_coroutines_(kMaxReuseCoroutineNumbersPerThread) {
   tls_runner = &tls_runner_impl;
-  LOG(INFO) << __FUNCTION__ << " coroutine runner born";
 
   RefCoroutine coro_ptr = Coroutine::Create(this, true);
   coro_ptr->SelfHolder(coro_ptr);

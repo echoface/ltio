@@ -347,7 +347,6 @@ TEST_CASE("client.raw.bench", "[raw client send request benchmark]") {
   sleep(5);
 
   auto raw_request_task = [&]() {
-
     while(total_task-- > 0) {
 
       auto request = net::LtRawMessage::Create(true);
@@ -379,11 +378,6 @@ TEST_CASE("client.raw.bench", "[raw client send request benchmark]") {
   for (int i = 0; i < bench_concurrent; i++) {
     auto l = loops[i % loops.size()];
     co_go l << raw_request_task;
-    /*
-    l->PostTask(NewClosure([=]() {
-      co_go raw_request_task;
-    }));
-    */
   }
 
   loop.WaitLoopEnd();
@@ -401,7 +395,8 @@ TEST_CASE("client.http.bench", "[http client send request benchmark]") {
   }
 
   net::url::SchemeIpPort server_info;
-  LOG_IF(ERROR, !net::url::ParseURI("http://www.ltio.com:5006", server_info)) << " server can't be resolve";
+  //LOG_IF(ERROR, !net::url::ParseURI("http://www.ltio.com:5006", server_info)) << " server can't be resolve";
+  LOG_IF(ERROR, !net::url::ParseURI("http://127.0.0.1:5006", server_info)) << " server can't be resolve";
 
   LOG(INFO) << "parse result, host:" << server_info.host
     << " ip:" << server_info.host_ip

@@ -24,6 +24,7 @@ public:
 
     template <typename Functor>
     inline void operator-(Functor arg) {
+
       CoroRunner& runner = Runner();
       runner.coro_tasks_.push_back(std::move(CreateClosure(location_, arg)));
       if (!runner.invoke_coro_shceduled_ && target_loop_) {
@@ -36,15 +37,15 @@ public:
     }
     template <typename Functor>
     inline void operator<<(Functor closure_fn) {
-
-    	base::StlClosure func = [this, closure_fn]() {
+      // here must make sure all things wraper(copy) into closue, becuase __go object will gone
+    	auto func = [=](base::MessageLoop* loop, const Location& location) {
         CoroRunner& runner = Runner();
-        runner.coro_tasks_.push_back(std::move(CreateClosure(location_, closure_fn)));
-        if (!runner.invoke_coro_shceduled_ && target_loop_) {
-          target_loop_->PostTask(NewClosure(std::bind(&CoroRunner::InvokeCoroutineTasks, &runner)));
+        runner.coro_tasks_.push_back(std::move(CreateClosure(location, closure_fn)));
+        if (!runner.invoke_coro_shceduled_ && loop) {
+          loop->PostTask(NewClosure(std::bind(&CoroRunner::InvokeCoroutineTasks, &runner)));
         }
     	};
-      target_loop_->PostTask(NewClosure(func));
+      target_loop_->PostTask(NewClosure(std::bind(func, target_loop_, location_)));
     }
     Location location_;
     base::MessageLoop* target_loop_ = MessageLoop::Current();
