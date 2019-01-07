@@ -378,9 +378,12 @@ TEST_CASE("client.raw.bench", "[raw client send request benchmark]") {
   LOG(INFO) << " start bench started.............<<<<<<";
   for (int i = 0; i < bench_concurrent; i++) {
     auto l = loops[i % loops.size()];
+    co_go l << raw_request_task;
+    /*
     l->PostTask(NewClosure([=]() {
       co_go raw_request_task;
     }));
+    */
   }
 
   loop.WaitLoopEnd();

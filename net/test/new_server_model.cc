@@ -13,7 +13,7 @@
 using namespace net;
 using namespace base;
 
-//#define ENBALE_RAW_CLIENT
+#define ENBALE_RAW_CLIENT
 
 void SendRawRequest();
 
