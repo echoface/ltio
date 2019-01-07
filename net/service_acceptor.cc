@@ -35,7 +35,7 @@ bool ServiceAcceptor::InitListener() {
     socketutils::CloseSocket(socket_fd);
     return false;
   }
-  socket_event_ = base::FdEvent::Create(socket_fd, 0);
+  socket_event_ = base::FdEvent::Create(socket_fd, base::LtEv::LT_EVENT_NONE);
   socket_event_->SetCloseCallback(std::bind(&ServiceAcceptor::OnAcceptorError, this));
   socket_event_->SetErrorCallback(std::bind(&ServiceAcceptor::OnAcceptorError, this));
   socket_event_->SetReadCallback(std::bind(&ServiceAcceptor::HandleCommingConnection, this));

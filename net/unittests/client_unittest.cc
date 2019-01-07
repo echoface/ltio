@@ -161,8 +161,7 @@ TEST_CASE("client.http.request", "[http client send request]") {
 }
 
 TEST_CASE("client.raw.request", "[raw client send request]") {
-
-  LOG(INFO) << " start test client.raw.request, raw client send request";
+  LOG(INFO) << ">>>>>>> start test client.raw.request, raw client send request";
 
   base::MessageLoop loop;
   loop.SetLoopName("client");
@@ -223,7 +222,7 @@ TEST_CASE("client.raw.request", "[raw client send request]") {
   }), 5000);
 
   loop.WaitLoopEnd();
-  LOG(INFO) << " end test client.raw.request, raw client send request";
+  LOG(INFO) << "<<<<<< end test client.raw.request, raw client send request";
 }
 
 TEST_CASE("client.timer.request", "[fetch resource every interval]") {

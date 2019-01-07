@@ -118,17 +118,17 @@ MessageLoop::MessageLoop()
   wakeup_pipe_out_ = fds[0];
   wakeup_pipe_in_ = fds[1];
 
-  wakeup_event_ = FdEvent::Create(wakeup_pipe_out_, EPOLLIN);
+  wakeup_event_ = FdEvent::Create(wakeup_pipe_out_, LtEv::LT_EVENT_READ);
   CHECK(wakeup_event_);
   wakeup_event_->SetReadCallback(std::bind(&MessageLoop::OnHandleCommand, this));
 
   task_event_fd_ = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
-  task_event_ = FdEvent::Create(task_event_fd_, EPOLLIN);
+  task_event_ = FdEvent::Create(task_event_fd_, LtEv::LT_EVENT_READ);
   CHECK(task_event_);
   task_event_->SetReadCallback(std::bind(&MessageLoop::RunScheduledTask, this, ScheduledTaskType::TaskTypeDefault));
 
   reply_event_fd_ = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
-  reply_event_ = FdEvent::Create(reply_event_fd_, EPOLLIN);
+  reply_event_ = FdEvent::Create(reply_event_fd_, LtEv::LT_EVENT_READ);
   CHECK(reply_event_);
   reply_event_->SetReadCallback(std::bind(&MessageLoop::RunScheduledTask, this, ScheduledTaskType::TaskTypeReply));
 

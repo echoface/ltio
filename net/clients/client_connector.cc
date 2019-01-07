@@ -1,5 +1,5 @@
-
 #include "client_connector.h"
+#include "message_loop/event.h"
 #include <base/utils/sys_error.h>
 
 namespace net {
@@ -33,7 +33,7 @@ bool Connector::Launch(const net::SocketAddress &address) {
     case EINPROGRESS: {
 
       success = true;
-      base::RefFdEvent fd_event = base::FdEvent::Create(sock_fd, 0);
+      base::RefFdEvent fd_event = base::FdEvent::Create(sock_fd, base::LtEv::LT_EVENT_NONE);
 
       WeakPtrFdEvent weak_fd_event(fd_event);
       fd_event->SetWriteCallback(std::bind(&Connector::OnWrite, this, weak_fd_event));

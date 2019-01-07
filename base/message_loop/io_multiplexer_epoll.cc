@@ -1,6 +1,5 @@
 #include "io_multiplexer_epoll.h"
 
-#include <assert.h>
 #include "glog/logging.h"
 #include <base/utils/sys_error.h>
 
@@ -21,7 +20,7 @@ IoMultiplexerEpoll::~IoMultiplexerEpoll() {
 int IoMultiplexerEpoll::WaitingIO(FdEventList& active_list, int32_t timeout_ms) {
 
   int turn_active_count = ::epoll_wait(epoll_fd_,
-                                       &(*ep_events_.begin()),
+                                       &ep_events_[0],
                                        kMax_EPOLL_FD_NUM,
                                        timeout_ms);
 
@@ -32,18 +31,57 @@ int IoMultiplexerEpoll::WaitingIO(FdEventList& active_list, int32_t timeout_ms) 
   }
 
   for (int idx = 0; idx < turn_active_count; idx++) {
+    struct epoll_event& ev = ep_events_[idx];
 
-    FdEvent* fd_ev = (FdEvent*)(ep_events_[idx].data.ptr);
-    CHECK(fd_ev);
+    FdEvent* fd_ev = (FdEvent*)(ev.data.ptr);
+    DCHECK(fd_ev);
 
-    fd_ev->SetRcvEvents(ep_events_[idx].events);
+    fd_ev->SetRcvEvents(ToLtEvent(ev.events));
     active_list.push_back(fd_ev);
   }
   return turn_active_count;
 }
 
+LtEvent IoMultiplexerEpoll::ToLtEvent(const uint32_t epoll_ev) {
+  LtEvent event = LtEv::LT_EVENT_NONE;
+
+  if (epoll_ev & EPOLLERR) {
+    event |=  LtEv::LT_EVENT_ERROR;
+  }
+  //case readable:
+  //case hang out: but can read till EOF
+  if (epoll_ev & EPOLLHUP || epoll_ev & EPOLLIN) {
+    event |=  LtEv::LT_EVENT_READ;
+  }
+  //writable
+  if (epoll_ev & EPOLLOUT) {
+    event |=  LtEv::LT_EVENT_WRITE;
+  }
+  //peer close
+  if (epoll_ev & EPOLLRDHUP) {
+    event |= LtEv::LT_EVENT_CLOSE;
+  }
+  return event;
+}
+
+uint32_t IoMultiplexerEpoll::ToEpollEvent(const LtEvent& lt_ev, bool add_extr) {
+  uint32_t epoll_ev = 0;
+  if (lt_ev & LtEv::LT_EVENT_READ) {
+    epoll_ev |= EPOLLIN;
+  }
+  if (lt_ev & LtEv::LT_EVENT_WRITE) {
+    epoll_ev |= EPOLLOUT;
+  }
+  if ((lt_ev & LtEv::LT_EVENT_CLOSE) || add_extr) {
+    epoll_ev |= EPOLLRDHUP;
+  }
+  return epoll_ev;
+}
+
 void IoMultiplexerEpoll::AddFdEvent(FdEvent* fd_ev) {
+
   EpollCtl(fd_ev, EPOLL_CTL_ADD);
+
   if (listen_events_.Attatched(fd_ev)) {
     listen_events_.Remove(fd_ev);
   }
@@ -74,7 +112,7 @@ int IoMultiplexerEpoll::EpollCtl(FdEvent* fdev, int opt) {
 
   int fd = fdev->fd();
   ev.data.ptr = fdev;
-  ev.events = fdev->MonitorEvents();
+  ev.events = ToEpollEvent(fdev->MonitorEvents());
 
   int ret = ::epoll_ctl(epoll_fd_, opt, fd, &ev);
 

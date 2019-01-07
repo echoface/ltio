@@ -30,7 +30,7 @@ TcpChannel::TcpChannel(int socket_fd,
   CHECK(io_loop_);
 
   name_ = local_addr_.IpPort();
-  fd_event_ = base::FdEvent::Create(socket_fd, 0);
+  fd_event_ = base::FdEvent::Create(socket_fd, base::LtEv::LT_EVENT_NONE);
   fd_event_->SetReadCallback(std::bind(&TcpChannel::HandleRead, this));
   fd_event_->SetWriteCallback(std::bind(&TcpChannel::HandleWrite, this));
   fd_event_->SetCloseCallback(std::bind(&TcpChannel::HandleClose, this));
