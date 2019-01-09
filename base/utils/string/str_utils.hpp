@@ -1,7 +1,7 @@
 #ifndef LIGHTING_BASE_UTILS_StrUtils_H
 #define LIGHTING_BASE_UTILS_StrUtils_H
 
-// COPY FROM http://tum-i5.github.io/utils/index.html BSD-3 LICIENCE
+// thanks for http://tum-i5.github.io/utils/index.html BSD-3 LICIENCE
 
 #include <algorithm>
 #include <cctype>
@@ -11,8 +11,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
-#include <istream>
-#include <iterator>
+#include "str_detail.hpp"
 
 namespace base {
 
@@ -149,6 +148,13 @@ public:
       prev = pos + delims.length();
     } while (pos < text.length() && prev < text.length());
     return std::move(tokens);
+  }
+
+  template<typename ...Args>
+  static std::string Concat(Args&&... args) {
+    std::ostringstream oss;
+    _str_detail::concat_impl(oss, std::forward<Args>(args)...);
+     return oss.str();
   }
 };
 

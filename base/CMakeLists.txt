@@ -6,6 +6,7 @@ SET(BASE_SOURCES
   time/time_utils.cc
   utils/sys_error.cc
   utils/ns_convertor.cc
+  utils/string/str_utils.cc
   #coroutine
   coroutine/coroutine.cc
   coroutine/coroutine_runner.cc
