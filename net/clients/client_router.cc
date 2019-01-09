@@ -5,8 +5,9 @@
 
 namespace net {
 
-ClientRouter::ClientRouter(base::MessageLoop* loop, const InetAddress& server)
-  : server_addr_(server),
+ClientRouter::ClientRouter(base::MessageLoop* loop, const url::SchemeIpPort& info)
+  : address_(info.host_ip, info.port),
+    server_info_(info),
     work_loop_(loop),
     is_stopping_(false),
     delegate_(NULL),
@@ -33,7 +34,7 @@ void ClientRouter::SetupRouter(const RouterConf& config) {
 
 void ClientRouter::StartRouter() {
   for (uint32_t i = 0; i < config_.connections; i++) {
-    auto functor = std::bind(&Connector::LaunchConnection, connector_, server_addr_);
+    auto functor = std::bind(&Connector::Launch, connector_, address_);
     work_loop_->PostTask(NewClosure(functor));
   }
 }
@@ -64,7 +65,7 @@ void ClientRouter::OnClientConnectFailed() {
   if (is_stopping_ || config_.connections <= channels_.size()) {
     return;
   }
-  auto functor = std::bind(&Connector::LaunchConnection, connector_, server_addr_);
+  auto functor = std::bind(&Connector::Launch, connector_, address_);
   work_loop_->PostDelayTask(NewClosure(functor), config_.recon_interval);
   VLOG(GLOG_VERROR) << __FUNCTION__ << RouterInfo() << " try after " << config_.recon_interval << " ms";
 }
@@ -77,14 +78,14 @@ base::MessageLoop* ClientRouter::GetLoopForClient() {
   return io_loop ? io_loop : work_loop_;
 }
 
-void ClientRouter::OnNewClientConnected(int socket_fd, InetAddress& local, InetAddress& remote) {
+void ClientRouter::OnNewClientConnected(int socket_fd, SocketAddress& local, SocketAddress& remote) {
   CHECK(work_loop_->IsInLoopThread());
 
   base::MessageLoop* io_loop = GetLoopForClient();
 
   auto new_channel = TcpChannel::Create(socket_fd, local, remote, io_loop);
 
-  RefProtoService proto_service = ProtoServiceFactory::Create(config_.protocol);
+  RefProtoService proto_service = ProtoServiceFactory::Create(server_info_.protocol);
   proto_service->SetServiceType(ProtocolServiceType::kClient);
   proto_service->BindChannel(new_channel);
 
@@ -122,7 +123,8 @@ void ClientRouter::OnClientChannelClosed(const RefClientChannel& channel) {
   std::atomic_store(&roundrobin_channes_, list);
 
   if (!is_stopping_ && channels_.size() < config_.connections) {
-    auto f = std::bind(&Connector::LaunchConnection, connector_, server_addr_);
+
+    auto f = std::bind(&Connector::Launch, connector_, address_);
     work_loop_->PostDelayTask(NewClosure(f), config_.recon_interval);
 
     VLOG(GLOG_VTRACE) << __FUNCTION__ << RouterInfo() << " reconnect after:" << config_.recon_interval;
@@ -139,22 +141,22 @@ void ClientRouter::OnRequestGetResponse(const RefProtocolMessage& request,
                                         const RefProtocolMessage& response) {
   CHECK(request);
   request->SetResponse(response);
-
   dispatcher_->ResumeWorkContext(request->GetWorkCtx());
 }
 
 ProtocolMessage* ClientRouter::SendClientRequest(RefProtocolMessage& message) {
-  CHECK(dispatcher_);
+  DCHECK(dispatcher_);
 
   if (!dispatcher_->SetWorkContext(message->GetWorkCtx())) {
     LOG(FATAL) << __FUNCTION__ << " this task can't by yield, send failed";
     return NULL;
   }
+  message->SetRemoteHost(server_info_.host);
 
   auto channels = std::atomic_load(&roundrobin_channes_);
 
   if (channels->empty()) { //avoid x/0 Error
-    LOG(ERROR) << " No Connection Established To Server:" << server_addr_.IpPortAsString();
+    LOG(ERROR) << " No Connection Established To Server:" << address_.IpPort();
     return NULL;
   }
   uint32_t client_index = router_counter_.fetch_add(1) % channels->size();
@@ -180,7 +182,7 @@ uint64_t ClientRouter::ClientCount() const {
 
 std::string ClientRouter::RouterInfo() const {
   std::ostringstream oss;
-  oss << " [remote:" << server_addr_.IpPortAsString()
+  oss << " [remote:" << address_.IpPort()
       << ", clients:" << ClientCount() << "]";
   return oss.str();
 }

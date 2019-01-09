@@ -24,7 +24,7 @@ class ConnectorDelegate {
 public:
   virtual ~ConnectorDelegate() {};
   virtual void OnClientConnectFailed() = 0;
-  virtual void OnNewClientConnected(int socket_fd, InetAddress& local, InetAddress& remote) = 0;
+  virtual void OnNewClientConnected(int socket_fd, SocketAddress& local, SocketAddress& remote) = 0;
 };
 
 class Connector {
@@ -32,7 +32,7 @@ public:
   Connector(base::MessageLoop* loop, ConnectorDelegate* delegate);
   ~Connector() {};
 
-  bool LaunchConnection(net::InetAddress &address);
+  bool Launch(const net::SocketAddress &address);
 
   void OnWrite(WeakPtrFdEvent weak_fdevent);
   void OnError(WeakPtrFdEvent weak_fdevent);

@@ -10,7 +10,7 @@ SpinLock::SpinLock( void ) {
 
 //for less cpu consume
 void SpinLock::lock( void ) {
-  while( d_atomic_bool.exchange( true, std::memory_order_acquire )) {
+  while(d_atomic_bool.exchange( true, std::memory_order_acquire)) {
     while( 1 )  {
       _mm_pause();
       if (!d_atomic_bool.load( std::memory_order_relaxed ))

@@ -48,14 +48,15 @@ public:
   const MessageType& GetMessageType() const {return type_;};
   bool IsRequest() const {return type_ == MessageType::kRequest;};
 
+  void SetRemoteHost(const std::string& h) {remote_host_ = h;}
+  const std::string& RemoteHost() const {return remote_host_;}
+
   IOContext& GetIOCtx() {return io_context_;}
   WorkContext& GetWorkCtx() {return work_context_;}
   void SetIOContext(const RefProtoService& service);
 
   MessageCode FailCode() const;
   void SetFailCode(MessageCode reason);
-  void AppendFailMessage(std::string m);
-  const std::string& FailMessage() const;
 
   void SetResponse(const RefProtocolMessage& response);
   ProtocolMessage* RawResponse() {return response_.get();}
@@ -76,9 +77,9 @@ private:
   // Work Context
   MessageType type_;
   std::string proto_;
+  std::string remote_host_;
 
   MessageCode fail_code_;
-  std::string fail_;
   bool responded_;
   RefProtocolMessage response_;
   uint64_t async_id_ = SequenceIdentify::KNullId;

@@ -1,4 +1,3 @@
-
 #include <vector>
 #include "base/message_loop/message_loop.h"
 #include "protocol/redis/redis_request.h"
@@ -14,80 +13,105 @@
 using namespace net;
 using namespace base;
 
+#define ENBALE_RAW_CLIENT
+
 void SendRawRequest();
 
 base::MessageLoop main_loop;
 std::vector<base::MessageLoop*> loops;
 std::vector<base::MessageLoop*> workers;
 
-CoroWlDispatcher* dispatcher_ = new CoroWlDispatcher(true);
+CoroWlDispatcher* dispatcher_ = new CoroWlDispatcher(false);
 WorkLoadDispatcher* common_dispatcher = new WorkLoadDispatcher(true);
 
 std::atomic_int64_t http_count;
+static std::string kresponse(3650, 'c');
 void HandleHttp(const HttpRequest* req, HttpResponse* res) {
+  LOG_EVERY_N(INFO, 10000) << " got 1w Http request, body:" << req->Dump();
+
   http_count++;
-  LOG(INFO) << "http count:" << http_count << " enter";
+
+#ifdef ENBALE_RAW_CLIENT
   if (req->RequestUrl() == "/br") {
       SendRawRequest();
   }
+#endif
+
   res->SetResponseCode(200);
-  res->MutableBody() = "hello world";
-  LOG(INFO) << "http count: " << http_count << " leave";
+  res->MutableBody() = kresponse;
 }
 
 void HandleRaw(const LtRawMessage* req, LtRawMessage* res) {
+  LOG_EVERY_N(INFO, 10000) << " got 1w Raw request" << req->Dump();
+
   res->MutableHeader()->code = 0;
   res->MutableHeader()->method = 2;
   res->SetContent("Raw Message");
-
-  LOG(INFO) << "Got A Raw Message:" << req->Dump() << "response:" << res->Dump();
 }
 
-net::ClientRouter*  raw_router; //(base::MessageLoop*, const InetAddress&);
-net::ClientRouter*  http_router; //(base::MessageLoop*, const InetAddress&);
+net::ClientRouter*  raw_router; //(base::MessageLoop*, const SocketAddress&);
+net::ClientRouter*  http_router; //(base::MessageLoop*, const SocketAddress&);
 net::ClientRouter*  redis_router;
+
+static std::atomic_int io_round_count;
+class RouterManager: public net::RouterDelegate {
+public:
+  base::MessageLoop* NextIOLoopForClient() {
+    if (loops.empty()) {
+      return NULL;
+    }
+    io_round_count++;
+    return loops[io_round_count % loops.size()];
+  }
+};
+
+RouterManager router_manager;
+
 void StartRedisClient() {
-  {
-    net::InetAddress server_address("127.0.0.1", 6379);
-    redis_router = new net::ClientRouter(&main_loop, server_address);
-    net::RouterConf router_config;
-    router_config.protocol = "redis";
-    router_config.connections = 2;
-    router_config.recon_interval = 5000;
-    router_config.message_timeout = 1000;
-    redis_router->SetupRouter(router_config);
-    redis_router->SetWorkLoadTransfer(dispatcher_);
-    redis_router->StartRouter();
-  }
+  net::url::SchemeIpPort server_info;
+  LOG_IF(ERROR, !net::url::ParseURI("redis://127.0.0.1:6379", server_info)) << " server can't be resolve";
+
+  redis_router = new net::ClientRouter(&main_loop, server_info);
+  net::RouterConf router_config;
+  router_config.connections = 2;
+  router_config.recon_interval = 5000;
+  router_config.message_timeout = 1000;
+  redis_router->SetupRouter(router_config);
+  redis_router->SetWorkLoadTransfer(dispatcher_);
+  redis_router->SetDelegate(&router_manager);
+
+  redis_router->StartRouter();
 }
+
 void StartRawClient() {
-  {
-    net::InetAddress server_address("0.0.0.0", 5005);
-    raw_router = new net::ClientRouter(&main_loop, server_address);
-    net::RouterConf router_config;
-    router_config.protocol = "raw";
-    router_config.connections = 1;
-    router_config.recon_interval = 100;
-    router_config.message_timeout = 1000;
-    raw_router->SetupRouter(router_config);
-    raw_router->SetWorkLoadTransfer(dispatcher_);
-    raw_router->StartRouter();
-  }
+  net::url::SchemeIpPort server_info;
+  LOG_IF(ERROR, !net::url::ParseURI("raw://127.0.0.1:5005", server_info)) << " server can't be resolve";
+
+  raw_router = new net::ClientRouter(&main_loop, server_info);
+  net::RouterConf router_config;
+  router_config.connections = 4;
+  router_config.recon_interval = 100;
+  router_config.message_timeout = 1000;
+  raw_router->SetupRouter(router_config);
+  raw_router->SetWorkLoadTransfer(dispatcher_);
+  raw_router->SetDelegate(&router_manager);
+
+  raw_router->StartRouter();
 }
 
 void StartHttpClients() {
-  {
-    net::InetAddress server_address("0.0.0.0", 5006);
-    http_router = new net::ClientRouter(&main_loop, server_address);
-    net::RouterConf router_config;
-    router_config.protocol = "http";
-    router_config.connections = 2;
-    router_config.recon_interval = 100;
-    router_config.message_timeout = 1000;
-    http_router->SetupRouter(router_config);
-    http_router->SetWorkLoadTransfer(dispatcher_);
-    http_router->StartRouter();
-  }
+  net::url::SchemeIpPort server_info;
+  LOG_IF(ERROR, !net::url::ParseURI("http://127.0.0.1:5006", server_info)) << " server can't be resolve";
+  http_router = new net::ClientRouter(&main_loop, server_info);
+  net::RouterConf router_config;
+  router_config.connections = 2;
+  router_config.recon_interval = 100;
+  router_config.message_timeout = 1000;
+  http_router->SetupRouter(router_config);
+  http_router->SetWorkLoadTransfer(dispatcher_);
+  http_router->SetDelegate(&router_manager);
+
+  http_router->StartRouter();
 }
 
 void SendHttpRequest() {
@@ -100,7 +124,7 @@ void SendHttpRequest() {
   if (http_response) {
     LOG(INFO) << "http client got response:" << http_response->Body();
   } else {
-    LOG(ERROR) << "http client request failed:" << http_request->FailMessage();
+    LOG(ERROR) << "http client request failed:";
   }
 }
 
@@ -111,12 +135,13 @@ void SendRawRequest() {
 
   LtRawMessage* raw_response = raw_router->SendRecieve(raw_request);
   if (!raw_response) {
-    LOG(ERROR) << "raw client request failed:" << raw_request->FailMessage();
+    LOG(ERROR) << "raw client request failed:" << raw_request->FailCode();
   }
 }
 
 void DumpRedisResponse(RedisResponse* redis_response) {
   for (size_t i = 0; i < redis_response->Count(); i++) {
+
     auto& value = redis_response->ResultAtIndex(i);
     switch(value.type()) {
       case resp::ty_string: {
@@ -128,7 +153,7 @@ void DumpRedisResponse(RedisResponse* redis_response) {
       }
       break;
       case resp::ty_integer: {
-        LOG(INFO) << "iterger:" << value.integer();
+        LOG(INFO) << "interger:" << value.integer();
       }
       break;
       case resp::ty_null: {
@@ -181,32 +206,38 @@ void SendRedisMessage() {
   if (redis_response) {
     DumpRedisResponse(redis_response);
   } else {
-    LOG(ERROR) << "redis client request failed:" << redis_request->FailMessage();
+    LOG(ERROR) << "redis client request failed:" << redis_request->FailCode();
   }
 }
 
 void PrepareLoops(uint32_t io_count, uint32_t worker_count) {
   for (uint32_t i = 0; i < io_count; i++) {
     auto loop = new(base::MessageLoop);
+
+    loop->SetLoopName("io_" + std::to_string(i));
     loop->Start();
     loops.push_back(loop);
   }
 
   for (uint32_t i = 0; i < worker_count; i++) {
     auto worker = new(base::MessageLoop);
+
+    worker->SetLoopName("worker_" + std::to_string(i));
     worker->Start();
     workers.push_back(worker);
   }
 }
 
 int main(int argc, char* argv[]) {
+  //google::ParseCommandLineFlags(&argc, &argv, true);  // 初始化 gflags
 
-  google::ParseCommandLineFlags(&argc, &argv, true);  // 初始化 gflags
+  main_loop.SetLoopName("main");
   main_loop.Start();
   http_count.store(0);
   PrepareLoops(std::thread::hardware_concurrency(), 1);
-  dispatcher_->SetWorkerLoops(workers);
-  common_dispatcher->SetWorkerLoops(workers);
+
+  dispatcher_->SetWorkerLoops(loops);
+  common_dispatcher->SetWorkerLoops(loops);
 
   net::RawServer raw_server;
   raw_server.SetIoLoops(loops);
@@ -215,27 +246,16 @@ int main(int argc, char* argv[]) {
 
   net::HttpServer http_server;
   http_server.SetIoLoops(loops);
-  //http_server.SetDispatcher(dispatcher_);
   http_server.SetDispatcher(dispatcher_);
   http_server.ServeAddressSync("http://0.0.0.0:5006", std::bind(HandleHttp, std::placeholders::_1, std::placeholders::_2));
 
 #if 0
   StartHttpClients();
 #endif
-#if 0
-  std::this_thread::sleep_for(std::chrono::seconds(5));
-  for (int i = 0; i < 10; i++) {
-    main_loop.PostCoroTask(std::bind(SendHttpRequest));
-  }
-#endif
 
-#if 1
+
+#ifdef ENBALE_RAW_CLIENT
   StartRawClient();
-#endif
-#if 0
-  for (int i = 0; i < 10; i++) {
-    main_loop.PostCoroTask(std::bind(SendRawRequest));
-  }
 #endif
 
 #if 0

@@ -26,6 +26,8 @@ void AsyncChannel::StartClient() {
 
 void AsyncChannel::SendRequest(RefProtocolMessage request)  {
   CHECK(IOLoop()->IsInLoopThread());
+  // guard herer ?
+  // A -> b -> c -> call something it delete this Channel --> Back to A
 
   request->SetIOContext(protocol_service_);
   bool success = protocol_service_->SendRequestMessage(request);
@@ -46,7 +48,6 @@ void AsyncChannel::SendRequest(RefProtocolMessage request)  {
 }
 
 void AsyncChannel::OnRequestTimeout(WeakProtocolMessage weak) {
-
   RefProtocolMessage request = weak.lock();
   if (!request || request->IsResponded()) {
     return;
@@ -71,8 +72,7 @@ void AsyncChannel::OnResponseMessage(const RefProtocolMessage& res) {
 
   auto iter = in_progress_.find(identify);
   if (iter == in_progress_.end()) {
-  	VLOG(GLOG_VINFO) << __FUNCTION__ << " response:" << identify << " not found corresponding request";
-    LOG(INFO) << __FUNCTION__ << " not found matching request,request:" << res->Dump();
+    VLOG(GLOG_VINFO) << __FUNCTION__ << " response:" << identify << " not found corresponding request";
     return;
   }
 

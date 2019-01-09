@@ -12,7 +12,7 @@
 
 namespace net {
 
-IOService::IOService(const InetAddress addr,
+IOService::IOService(const SocketAddress addr,
                      const std::string protocol,
                      base::MessageLoop* workloop,
                      IOServiceDelegate* delegate)
@@ -23,7 +23,7 @@ IOService::IOService(const InetAddress addr,
 
   CHECK(delegate_);
 
-  service_name_ = addr.IpPortAsString();
+  service_name_ = addr.IpPort();
   acceptor_.reset(new ServiceAcceptor(acceptor_loop_->Pump(), addr));
   acceptor_->SetNewConnectionCallback(std::bind(&IOService::OnNewConnection,
                                                 this,
@@ -73,7 +73,7 @@ void IOService::StopIOService() {
   }
 }
 
-void IOService::OnNewConnection(int local_socket, const InetAddress& peer_addr) {
+void IOService::OnNewConnection(int local_socket, const SocketAddress& peer_addr) {
   CHECK(acceptor_loop_->IsInLoopThread());
 
   //max connction reached
@@ -99,7 +99,7 @@ void IOService::OnNewConnection(int local_socket, const InetAddress& peer_addr) 
   proto_service->SetMessageHandler(message_handler_);
   proto_service->SetServiceType(ProtocolServiceType::kServer);
 
-  net::InetAddress local_addr(socketutils::GetLocalAddrIn(local_socket));
+  net::SocketAddress local_addr(socketutils::GetLocalAddrIn(local_socket));
 
   auto new_channel = TcpChannel::Create(local_socket, local_addr, peer_addr, io_loop);
 
@@ -112,27 +112,22 @@ void IOService::OnNewConnection(int local_socket, const InetAddress& peer_addr) 
 }
 
 void IOService::OnProtocolServiceGone(const net::RefProtoService &service) {
-  if (!acceptor_loop_->IsInLoopThread()) {
-    auto functor = std::bind(&IOService::OnProtocolServiceGone, this, service);
-    acceptor_loop_->PostTask(NewClosure(std::move(functor)));
-    return;
-  }
-  LOG(INFO) << __FUNCTION__ << " a channel broken, remove this protocol service";
-  RemoveProtocolService(service);
+  // use another task remove a service is a more safe way delete channel& protocol things
+  // avoid somewhere->B(do close a channel) ->  ~A  -> use A again in somewhere
+  auto functor = std::bind(&IOService::RemoveProtocolService, this, service);
+  acceptor_loop_->PostTask(NewClosure(std::move(functor)));
 }
 
 void IOService::StoreProtocolService(const RefProtoService service) {
   CHECK(acceptor_loop_->IsInLoopThread());
+
   protocol_services.insert(service);
-  LOG(INFO) << __FUNCTION__ << " keep a new protocol service, count:" << protocol_services.size();
   delegate_->IncreaseChannelCount();
 }
 
 void IOService::RemoveProtocolService(const RefProtoService service) {
   CHECK(acceptor_loop_->IsInLoopThread());
   protocol_services.erase(service);
-
-  LOG(INFO) << __FUNCTION__ << " remove a new protocol service, count:" << protocol_services.size();
 
   delegate_->DecreaseChannelCount();
   if (is_stopping_ && protocol_services.size() == 0) {

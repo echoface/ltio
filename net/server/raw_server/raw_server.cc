@@ -62,7 +62,7 @@ void RawServer::ServeAddress(const std::string address, RawMessageHandler handle
 
   ProtoMessageHandler func = std::bind(&RawServer::OnRawRequest, this, std::placeholders::_1);
 
-  net::InetAddress addr(sch_ip_port.host_ip, sch_ip_port.port);
+  net::SocketAddress addr(sch_ip_port.host_ip, sch_ip_port.port);
 
   {
 #if defined SO_REUSEPORT && defined NET_ENABLE_REUSER_PORT
@@ -157,11 +157,13 @@ base::MessageLoop* RawServer::GetNextIOWorkLoop() {
 
 bool RawServer::IncreaseChannelCount() {
   connection_count_.fetch_add(1);
+  LOG(INFO) << __FUNCTION__ << " rawserver connections +1 count:" << connection_count_;
   return true;
 }
 
 void RawServer::DecreaseChannelCount() {
   connection_count_.fetch_sub(1);
+  LOG(INFO) << __FUNCTION__ << " rawserver connections -1 count:" << connection_count_;
 }
 
 bool RawServer::BeforeIOServiceStart(IOService* ioservice) {

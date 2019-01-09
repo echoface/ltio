@@ -37,10 +37,12 @@ public:
   friend void coro_main(void* coro);
 
   static std::shared_ptr<Coroutine> Create(CoroDelegate* d, bool main = false);
-
   ~Coroutine();
+
   std::string StateToString() const;
   CoroState Status() const {return state_;}
+  bool IsPaused() const {return state_ == kPaused;}
+  bool IsRunning() const {return state_ == kRunning;}
   uint64_t Identify() const {return identify_;}
 private:
   Coroutine(CoroDelegate* d, bool main);
@@ -49,10 +51,7 @@ private:
   void SetTask(ClosurePtr&& task);
   void SelfHolder(RefCoroutine& self);
   void SetCoroState(CoroState st) {state_ = st;}
-  void ReleaseSelfHolder() {
-    LOG(INFO) << ">>> use count:" << self_holder_.use_count();
-    self_holder_.reset();
-  };
+  void ReleaseSelfHolder() {self_holder_.reset();};
   std::weak_ptr<Coroutine> AsWeakPtr() {return shared_from_this();}
 
 private:

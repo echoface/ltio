@@ -5,6 +5,7 @@ namespace net {
 
 //static
 const std::string HttpConstant::kCRCN = "\r\n";
+const std::string HttpConstant::kHost = "Host";
 const std::string HttpConstant::kBlankSpace = " ";
 const std::string HttpConstant::kConnection = "Connection";
 const std::string HttpConstant::kContentType = "Content-Type";

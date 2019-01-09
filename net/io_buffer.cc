@@ -10,6 +10,7 @@
 #include <sys/uio.h>
 #include <sys/ioctl.h>
 #include <algorithm>
+#include <base/utils/sys_error.h>
 
 static const char kCRLF[] = "\r\n";
 static const int32_t kWarningBufferSize = 64 * 1024 * 1024;
@@ -32,39 +33,6 @@ IOBuffer::~IOBuffer() {
   data_.clear();
   read_index_ = 0;
   write_index_ = 0;
-}
-
-ssize_t IOBuffer::ReadFromSocketFd(int socket, int *error) {
-  int64_t bytes_can_read = -1;
-
-  ::ioctl(socket, FIONREAD, &bytes_can_read);
-  if (bytes_can_read == -1) {
-    *error = errno;
-    return -1;
-  }
-
-  if (bytes_can_read > 0) {
-    EnsureWritableSize(bytes_can_read);
-  }
-
-  CHECK(int64_t(CanWriteSize()) >= bytes_can_read);
-
-  struct iovec vec;
-  vec.iov_base = GetWrite();
-  vec.iov_len = CanWriteSize();
-
-  const ssize_t bytes_read = ::readv(socket, &vec, 1);
-
-  if (bytes_read > 0) {
-
-    Produce(uint64_t(bytes_read));
-
-  } else if (bytes_read < 0) {
-
-    *error= errno;
-
-  }
-  return bytes_read;
 }
 
 bool IOBuffer::EnsureWritableSize(int64_t len) {

@@ -4,31 +4,27 @@
 #include <inttypes.h>
 #include "socket_utils.h"
 
-/* Thanks for Chensuo's muduo code, give me a good reference for this,
- * but still not good enough*/
-
 namespace net {
 
-class InetAddress {
+class SocketAddress {
 public:
-  InetAddress(uint16_t port);
+  SocketAddress(uint16_t port);
+  explicit SocketAddress(const struct sockaddr_in&);
   // @c ip should be "1.2.3.4"
-  InetAddress(std::string ip, uint16_t port);
-  explicit InetAddress(const struct sockaddr_in& addr);
+  SocketAddress(const std::string ip, const uint16_t port);
 
-  static InetAddress FromSocketFd(int fd);
+  static SocketAddress FromSocketFd(int fd);
 
-  uint16_t PortAsUInt();
-  sa_family_t SocketFamily();
-  std::string IpAsString();
-  std::string PortAsString();
-  std::string IpPortAsString() const;
+  uint16_t Port() const;
+  std::string Ip() const;
+  std::string IpPort() const;
 
-  uint32_t NetworkEndianIp();
-  uint16_t NetworkEndianPort();
+  sa_family_t Family() const;
+  uint32_t NetworkEndianIp() const;
+  uint16_t NetworkEndianPort() const;
 
-  struct sockaddr_in* SockAddrIn() { return &addr_in_;}
-  struct sockaddr* AsSocketAddr();
+  const struct sockaddr* AsSocketAddr() const;
+  const struct sockaddr_in* SockAddrIn() const { return &addr_in_;}
 private:
   struct sockaddr_in addr_in_;
 };

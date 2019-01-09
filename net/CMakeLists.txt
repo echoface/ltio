@@ -51,8 +51,6 @@ SET(LTNETEXECUTE_LINKLIBS
   ${ZLIB_LIBRARIES}
   3rd
   coro
-  gflags
-  unwind
   pthread
 )
 

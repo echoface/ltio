@@ -44,11 +44,11 @@ TEST_CASE("event_pump.timer", "[test event pump timer]") {
   quit_toe->InstallTimerHandler(NewClosure([&]() {
     end = base::time_ms();
     std::cout << "end at ms:" << end << std::endl;
-    REQUIRE(end - start == 30000);
+    REQUIRE(end - start >= 30000);
     pump.RemoveTimeoutEvent(repeated_toe);
     pump.RemoveTimeoutEvent(oneshot_toe);
     pump.RemoveTimeoutEvent(zerooneshot_toe);
-    quit_toe = nullptr;
+    pump.RemoveTimeoutEvent(quit_toe);
     pump.Quit();
   }));
 
@@ -129,7 +129,7 @@ TEST_CASE("messageloop.tasklocation", "[new task tracking location ]") {
 
   loop.PostTask(NewClosure([&]() {
     LOG(INFO) << " task_location exception by throw";
-    throw "task throw";
+    //throw "task throw";
   }));
 
   loop.PostDelayTask(NewClosure([&](){

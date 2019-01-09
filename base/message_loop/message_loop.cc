@@ -46,7 +46,7 @@ void IgnoreSigPipeSignalOnCurrentThread2() {
 
 class TimeoutTaskHelper : public TaskBase {
 public:
-  TimeoutTaskHelper(ClosurePtr task, EventPump* pump, uint64_t ms) 
+  TimeoutTaskHelper(ClosurePtr task, EventPump* pump, uint64_t ms)
     : TaskBase(task->TaskLocation()),
       timeout_fn_(std::move(task)),
       event_pump_(pump),
@@ -58,13 +58,12 @@ public:
     uint64_t has_passed_time = time_ms() - schedule_time_;
     int64_t new_delay_ms = delay_ms_ - has_passed_time;
     if (new_delay_ms <= 0) {
-      LOG(INFO) << __FUNCTION__ << " directly run task:" << timeout_fn_->ClosureInfo();
       return timeout_fn_->Run();
     }
 
     VLOG(GLOG_VINFO) <<  "Re-Schedule timer " << new_delay_ms << " ms";
 
-    TimeoutEvent* timeout_ev = 
+    TimeoutEvent* timeout_ev =
       TimeoutEvent::CreateSelfDeleteTimeoutEvent(new_delay_ms);
 
     timeout_ev->InstallTimerHandler(std::move(timeout_fn_));
@@ -118,17 +117,17 @@ MessageLoop::MessageLoop()
   wakeup_pipe_out_ = fds[0];
   wakeup_pipe_in_ = fds[1];
 
-  wakeup_event_ = FdEvent::Create(wakeup_pipe_out_, EPOLLIN);
+  wakeup_event_ = FdEvent::Create(wakeup_pipe_out_, LtEv::LT_EVENT_READ);
   CHECK(wakeup_event_);
   wakeup_event_->SetReadCallback(std::bind(&MessageLoop::OnHandleCommand, this));
 
   task_event_fd_ = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
-  task_event_ = FdEvent::Create(task_event_fd_, EPOLLIN);
+  task_event_ = FdEvent::Create(task_event_fd_, LtEv::LT_EVENT_READ);
   CHECK(task_event_);
   task_event_->SetReadCallback(std::bind(&MessageLoop::RunScheduledTask, this, ScheduledTaskType::TaskTypeDefault));
 
   reply_event_fd_ = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
-  reply_event_ = FdEvent::Create(reply_event_fd_, EPOLLIN);
+  reply_event_ = FdEvent::Create(reply_event_fd_, LtEv::LT_EVENT_READ);
   CHECK(reply_event_);
   reply_event_->SetReadCallback(std::bind(&MessageLoop::RunScheduledTask, this, ScheduledTaskType::TaskTypeReply));
 
@@ -211,6 +210,7 @@ void MessageLoop::AfterPumpRun() {
 
 void MessageLoop::ThreadMain() {
   threadlocal_current_ = this;
+  SetThreadNativeName();
   event_pump_->SetLoopThreadId(std::this_thread::get_id());
 
   event_pump_->InstallFdEvent(wakeup_event_.get());
@@ -261,7 +261,7 @@ bool MessageLoop::PostTask(std::unique_ptr<TaskBase> task) {
   //bz waitIO timeout can also will trigger this
   if (IsInLoopThread()) {
     in_loop_tasks_.push_back(std::move(task));
-    LOG_IF(ERROR, Notify(task_event_fd_, &count, sizeof(count)) < 0) << "notify failed:" << StrError(); 
+    LOG_IF(ERROR, Notify(task_event_fd_, &count, sizeof(count)) < 0) << "notify failed:" << StrError();
     return true;
   }
 
@@ -418,6 +418,13 @@ int MessageLoop::Notify(int fd, const void* data, size_t count) {
   } while(retry++ < max_retry_times);
 
   return ret;
+}
+
+void MessageLoop::SetThreadNativeName() {
+  if (loop_name_.empty()) return;
+
+  auto handle = thread_ptr_->native_handle();
+  pthread_setname_np(handle, loop_name_.c_str());
 }
 
 };

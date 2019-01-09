@@ -4,11 +4,11 @@
 
 namespace base {
 
-RefFdEvent FdEvent::Create(int fd, uint32_t events) {
+RefFdEvent FdEvent::Create(int fd, LtEvent events) {
   return std::make_shared<FdEvent>(fd, events);
 }
 
-FdEvent::FdEvent(int fd, uint32_t event):
+FdEvent::FdEvent(int fd, LtEvent event):
   fd_(fd),
   events_(event),
   revents_(0),
@@ -25,7 +25,7 @@ void FdEvent::SetFdWatcher(FdEventWatcher *d) {
   watcher_ = d;
 }
 
-uint32_t FdEvent::MonitorEvents() const {
+LtEvent FdEvent::MonitorEvents() const {
   return events_;
 }
 
@@ -41,7 +41,7 @@ void FdEvent::SetErrorCallback(const EventCallback &cb) {
   error_callback_ = cb;
 }
 
-void FdEvent::SetRcvEvents(uint32_t ev) {
+void FdEvent::SetRcvEvents(const LtEvent& ev) {
   revents_ = ev;
 }
 
@@ -57,7 +57,7 @@ void FdEvent::EnableReading() {
   if (IsReadEnable()) {
     return;
   }
-  events_ |= EPOLLIN;
+  events_ |= LtEv::LT_EVENT_READ;
   Update();
 }
 
@@ -65,7 +65,7 @@ void FdEvent::EnableWriting() {
   if (IsWriteEnable()) {
     return;
   }
-  events_ |= EPOLLOUT;
+  events_ |= LtEv::LT_EVENT_WRITE;
   Update();
 }
 
@@ -81,32 +81,35 @@ void FdEvent::SetCloseCallback(const EventCallback &cb) {
 }
 
 void FdEvent::HandleEvent() {
+
   VLOG(GLOG_VTRACE) << __FUNCTION__ << EventInfo() << " rcv event:" << RcvEventAsString();
   do {
-    if ((revents_ & EPOLLHUP) && !(revents_ & EPOLLIN)) {
-      if (close_callback_) {
-        close_callback_();
-      }
-    }
-
-    if (revents_ & (EPOLLERR | POLLNVAL)) {
-      if (error_callback_) {
+    if (revents_ & LtEv::LT_EVENT_ERROR) {
+      if (read_callback_) {
         error_callback_();
       }
+      break;
     }
 
-    if (revents_ & (EPOLLIN | EPOLLPRI | EPOLLRDHUP)) {
+    if (revents_ & LtEv::LT_EVENT_WRITE) {
+      if (write_callback_) {
+        write_callback_();
+      }
+    }
+
+    if (revents_ & LtEv::LT_EVENT_READ) {
       if (read_callback_) {
         read_callback_();
       }
     }
 
-    if ((revents_ & EPOLLOUT) && write_callback_) {
-      write_callback_();
+    if (revents_ & LtEv::LT_EVENT_CLOSE) {
+      if (close_callback_) {
+        close_callback_();
+      }
     }
-
   } while(0);
-  revents_ = 0;
+  revents_ = LtEv::LT_EVENT_NONE;
 }
 
 std::string FdEvent::EventInfo() const {
@@ -122,27 +125,6 @@ std::string FdEvent::RcvEventAsString() const {
 
 std::string FdEvent::MonitorEventAsString() const {
   return events2string(events_);
-}
-
-std::string FdEvent::events2string(uint32_t events) const {
-  std::ostringstream oss;
-  oss << "fd: " << fd_ << ": [";
-  if (events & EPOLLIN)
-    oss << "IN ";
-  if (events & EPOLLPRI)
-    oss << "PRI ";
-  if (events & EPOLLOUT)
-    oss << "OUT ";
-  if (events & EPOLLHUP)
-    oss << "HUP ";
-  if (events & EPOLLRDHUP)
-    oss << "RDHUP ";
-  if (events & EPOLLERR)
-    oss << "ERR ";
-  if (events & POLLNVAL)
-    oss << "NVAL";
-  oss << "]";
-  return oss.str().c_str();
 }
 
 } //namespace

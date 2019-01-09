@@ -17,22 +17,15 @@ public:
   IOBuffer(const IOBuffer&& r);
   ~IOBuffer();
 
-  ssize_t ReadFromSocketFd(int socket, int *error);
-
-  bool EnsureWritableSize(int64_t len);
   bool HasALine();
+  const uint8_t* FindCRLF();
+  bool EnsureWritableSize(int64_t len);
 
   uint8_t* GetWrite();
   const uint8_t* GetRead();
 
-  inline uint64_t CanReadSize() {
-    return write_index_ - read_index_;
-  }
-  inline uint64_t CanWriteSize() {
-    return data_.size() - write_index_;
-  }
-
-  const uint8_t* FindCRLF();
+  inline uint64_t CanReadSize() {return write_index_ - read_index_;}
+  inline uint64_t CanWriteSize() {return data_.size() - write_index_;}
 
   void WriteString(const std::string& str);
   void WriteRawData(const void* data, size_t len);
@@ -51,10 +44,7 @@ public:
   std::string AsString();
 
   void Consume(uint64_t len);
-
-  inline void Produce(uint64_t len) {
-    write_index_ += len;
-  }
+  inline void Produce(uint64_t len) {write_index_ += len;}
 private:
   uint8_t* MutableRead();
   uint8_t* MutableWrite();

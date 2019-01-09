@@ -63,7 +63,7 @@ void HttpServer::ServeAddress(const std::string address, HttpMessageHandler hand
 
   ProtoMessageHandler func = std::bind(&HttpServer::OnHttpRequest, this, std::placeholders::_1);
 
-  net::InetAddress addr(sch_ip_port.host_ip, sch_ip_port.port);
+  net::SocketAddress addr(sch_ip_port.host_ip, sch_ip_port.port);
 
   {
 #if defined SO_REUSEPORT && defined NET_ENABLE_REUSER_PORT
@@ -158,11 +158,15 @@ base::MessageLoop* HttpServer::GetNextIOWorkLoop() {
 
 bool HttpServer::IncreaseChannelCount() {
   connection_count_.fetch_add(1);
+  LOG(INFO) << __FUNCTION__ << " rawserver connections +1 count:" << connection_count_;
   return true;
 }
+
 void HttpServer::DecreaseChannelCount() {
   connection_count_.fetch_sub(1);
+  LOG(INFO) << __FUNCTION__ << " rawserver connections -1 count:" << connection_count_;
 }
+
 bool HttpServer::BeforeIOServiceStart(IOService* ioservice) {
   return true;
 }

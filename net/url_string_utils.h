@@ -5,6 +5,7 @@
 #include <inttypes.h>
 
 namespace net {
+
 namespace url {
 
 typedef struct {

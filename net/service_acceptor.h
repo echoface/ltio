@@ -13,7 +13,7 @@ namespace net {
 
 class ServiceAcceptor {
 public:
-  ServiceAcceptor(base::EventPump*, const InetAddress&);
+  ServiceAcceptor(base::EventPump*, const SocketAddress&);
   ~ServiceAcceptor();
 
   bool StartListen();
@@ -21,14 +21,14 @@ public:
   bool IsListening() { return listening_; }
 
   void SetNewConnectionCallback(const NewConnectionCallback& cb);
-  const InetAddress& ListeningAddress() const { return address_; };
+  const SocketAddress& ListeningAddress() const { return address_; };
 private:
   bool InitListener();
   void OnAcceptorError();
   void HandleCommingConnection();
 
   bool listening_;
-  InetAddress address_;
+  SocketAddress address_;
 
   base::EventPump* event_pump_;
   base::RefFdEvent socket_event_;
