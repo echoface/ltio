@@ -46,7 +46,7 @@ void IgnoreSigPipeSignalOnCurrentThread2() {
 
 class TimeoutTaskHelper : public TaskBase {
 public:
-  TimeoutTaskHelper(ClosurePtr task, EventPump* pump, uint64_t ms) 
+  TimeoutTaskHelper(ClosurePtr task, EventPump* pump, uint64_t ms)
     : TaskBase(task->TaskLocation()),
       timeout_fn_(std::move(task)),
       event_pump_(pump),
@@ -58,13 +58,12 @@ public:
     uint64_t has_passed_time = time_ms() - schedule_time_;
     int64_t new_delay_ms = delay_ms_ - has_passed_time;
     if (new_delay_ms <= 0) {
-      LOG(INFO) << __FUNCTION__ << " directly run task:" << timeout_fn_->ClosureInfo();
       return timeout_fn_->Run();
     }
 
     VLOG(GLOG_VINFO) <<  "Re-Schedule timer " << new_delay_ms << " ms";
 
-    TimeoutEvent* timeout_ev = 
+    TimeoutEvent* timeout_ev =
       TimeoutEvent::CreateSelfDeleteTimeoutEvent(new_delay_ms);
 
     timeout_ev->InstallTimerHandler(std::move(timeout_fn_));
@@ -262,7 +261,7 @@ bool MessageLoop::PostTask(std::unique_ptr<TaskBase> task) {
   //bz waitIO timeout can also will trigger this
   if (IsInLoopThread()) {
     in_loop_tasks_.push_back(std::move(task));
-    LOG_IF(ERROR, Notify(task_event_fd_, &count, sizeof(count)) < 0) << "notify failed:" << StrError(); 
+    LOG_IF(ERROR, Notify(task_event_fd_, &count, sizeof(count)) < 0) << "notify failed:" << StrError();
     return true;
   }
 
