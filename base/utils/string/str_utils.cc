@@ -59,7 +59,7 @@ std::vector<std::string> StrUtils::Split(const std::string &str, const char deli
 
 std::vector<std::string> StrUtils::Split(const std::string &text,
                                          const std::string &delims,
-                                         bool ignore_empty = true) {
+                                         bool ignore_empty) {
 
   std::vector<std::string> tokens;
   size_t prev = 0, pos = 0;

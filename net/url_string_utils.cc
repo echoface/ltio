@@ -16,7 +16,7 @@
 
 #include "glog/logging.h"
 #include "url_string_utils.h"
-#include "utils/string/str_utils.hpp"
+#include "utils/string/str_utils.h"
 
 namespace net {
 namespace url {

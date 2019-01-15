@@ -110,9 +110,7 @@ inline bool StrUtils::Parse(const std::string &str) {
   std::string s = str;
   ToLower(s);
 
-  return s == "1" ||
-    s == "ok" || s == "on" ||
-    s == "yes" || s == "true";
+  return s == "1" || s == "on" || s == "yes" || s == "true";
 }
 
 }  // namespace base

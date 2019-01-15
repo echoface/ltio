@@ -5,7 +5,7 @@
 #include "column_parser.h"
 #include <glog/logging.h>
 #include "base/base_constants.h"
-#include "base/utils/string/str_utils.hpp"
+#include "base/utils/string/str_utils.h"
 
 /*
  *   eg: AngleZhou#21#{"email":"gopher@gmail.com"}#extra_what_ever
