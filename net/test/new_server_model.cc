@@ -89,7 +89,7 @@ void StartRawClient() {
 
   raw_router = new net::ClientRouter(&main_loop, server_info);
   net::RouterConf router_config;
-  router_config.connections = 16;
+  router_config.connections = 4;
   router_config.recon_interval = 100;
   router_config.message_timeout = 1000;
   raw_router->SetupRouter(router_config);

@@ -9,7 +9,6 @@
 typedef struct timeout Timeout;
 namespace base {
 
-
 class TimeoutEvent : public Timeout {
 public:
   static TimeoutEvent* CreateSelfDeleteTimeoutEvent(uint64_t ms);

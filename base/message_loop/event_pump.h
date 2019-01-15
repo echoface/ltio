@@ -30,7 +30,7 @@ public:
   virtual void RunTimerClosure(const TimerEventList&) {};
 };
 
-/* pump fd event and timeout event*/
+/* pump fd event and timeout event and pass them to handler by delegate interface*/
 class EventPump : public FdEvent::FdEventWatcher {
 public:
   EventPump();
@@ -76,9 +76,9 @@ private:
   bool running_;
 
   std::unique_ptr<IoMultiplexer> multiplexer_;
-  
+
 #if 0
-  // replace by new timeout_wheel for more effective perfomance
+  // replace by new timeout_wheel for more effective perfomance [ O(1) ]
   //TimerTaskQueue timer_queue_;
 #endif
   TimeoutWheel* timeout_wheel_ = NULL;

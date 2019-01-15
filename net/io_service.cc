@@ -112,12 +112,10 @@ void IOService::OnNewConnection(int local_socket, const SocketAddress& peer_addr
 }
 
 void IOService::OnProtocolServiceGone(const net::RefProtoService &service) {
-  if (!acceptor_loop_->IsInLoopThread()) {
-    auto functor = std::bind(&IOService::OnProtocolServiceGone, this, service);
-    acceptor_loop_->PostTask(NewClosure(std::move(functor)));
-    return;
-  }
-  RemoveProtocolService(service);
+  // use another task remove a service is a more safe way delete channel& protocol things
+  // avoid somewhere->B(do close a channel) ->  ~A  -> use A again in somewhere
+  auto functor = std::bind(&IOService::RemoveProtocolService, this, service);
+  acceptor_loop_->PostTask(NewClosure(std::move(functor)));
 }
 
 void IOService::StoreProtocolService(const RefProtoService service) {
