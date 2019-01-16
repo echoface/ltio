@@ -257,38 +257,23 @@ bool MessageLoop::PostTask(std::unique_ptr<TaskBase> task) {
   const static uint64_t count = 1;
   CHECK(status_ == ST_STARTED);
 
-  //nested task handle; alway true for this case; why?
-  //bz waitIO timeout can also will trigger this
   if (IsInLoopThread()) {
     in_loop_tasks_.push_back(std::move(task));
     LOG_IF(ERROR, Notify(task_event_fd_, &count, sizeof(count)) < 0) << "notify failed:" << StrError();
     return true;
   }
 
-  TaskBase* task_id = task.get();  // Only used for comparison.
-  CHECK(task_id);
-
   const Location& loc = task->TaskLocation();
-  {
-    base::SpinLockGuard guard(task_lock_);
-    scheduled_task_.push_back(std::move(task));
+  if (scheduled_tasks_.enqueue(std::move(task))) {
+    int ret = Notify(task_event_fd_, &count, sizeof(count));
+    LOG_IF(ERROR, ret < 0) << __FUNCTION__ << " task schedule failed:" << StrError() << " task:" << loc.ToString();
+    return true;
   }
-  if (Notify(task_event_fd_, &count, sizeof(count)) < 0) {
-    LOG(ERROR) << __FUNCTION__ << " task schedule failed:" << StrError() << " task:" << loc.ToString();
-    {
-      base::SpinLockGuard guard(task_lock_);
-      scheduled_task_.remove_if([task_id](std::unique_ptr<TaskBase>& t) {
-        return t.get() == task_id;
-      });
-    }
-    return false;
-  }
-  return true;
+  return false;
 }
 
 void MessageLoop::RunNestedTask() {
   CHECK(IsInLoopThread());
-
   for (auto& task : in_loop_tasks_) {
     task->Run();
   }
@@ -302,26 +287,17 @@ void MessageLoop::RunTimerClosure(const TimerEventList& timer_evs) {
 }
 
 void MessageLoop::RunScheduledTask(ScheduledTaskType type) {
-
   switch(type) {
     case ScheduledTaskType::TaskTypeDefault: {
       uint64_t count = 0;
       int ret = read(task_event_fd_, &count, sizeof(count));
-      if (ret < 0) {
-        LOG(INFO) << "run scheduled task failed:" << StrError();
-        return;
-      }
+      LOG_IF(INFO, ret < 0) << __FUNCTION__ << " run scheduled task failed:" << StrError(); 
 
-      std::list<std::unique_ptr<TaskBase>> scheduled_tasks;
-      {
-        base::SpinLockGuard guard(task_lock_);
-        scheduled_tasks = std::move(scheduled_task_);
-        scheduled_task_.clear();
-      }
-      for (auto& task : scheduled_tasks) {
+      TaskBasePtr task;  // instead of pinco *p;
+      while (scheduled_tasks_.try_dequeue(task)) {
+        DCHECK(task);
         task->Run();
       }
-
     } break;
     case ScheduledTaskType::TaskTypeReply: {
 

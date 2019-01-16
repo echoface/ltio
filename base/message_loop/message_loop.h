@@ -18,7 +18,18 @@
 
 #include <condition_variable>
 
+#include <concurrentqueue/concurrentqueue.h>
+
 namespace base {
+
+struct LargeImplicitIndexTraits : moodycamel::ConcurrentQueueDefaultTraits {
+	static const size_t BLOCK_SIZE = 1024;
+  static const size_t IMPLICIT_INITIAL_INDEX_SIZE = 32;
+};
+
+typedef std::unique_ptr<TaskBase> TaskBasePtr;
+
+typedef moodycamel::ConcurrentQueue<TaskBasePtr> ConcurrentTaskQueue;
 
 enum LoopState {
   ST_INITING = 1,
@@ -106,6 +117,7 @@ class MessageLoop : public PumpDelegate {
 
     int Notify(int fd, const void* data, size_t count);
   private:
+
     std::atomic_int status_;
     std::atomic_int has_join_;
     std::atomic_flag running_;
@@ -118,18 +130,13 @@ class MessageLoop : public PumpDelegate {
 
     int task_event_fd_ = -1;
     RefFdEvent task_event_;
-    base::SpinLock task_lock_;
-    std::list<std::unique_ptr<TaskBase>> scheduled_task_;
-    // those task was post in loop thread, no lock needed
+    ConcurrentTaskQueue scheduled_tasks_;
     std::list<std::unique_ptr<TaskBase>> in_loop_tasks_;
 
     int reply_event_fd_ = -1;
     RefFdEvent reply_event_;
     base::SpinLock future_reply_lock_;
     std::list<std::shared_ptr<ReplyHolder>> future_replys_;
-
-
-    //new version <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
     // pipe just use for loop control
     int wakeup_pipe_in_ = -1;
