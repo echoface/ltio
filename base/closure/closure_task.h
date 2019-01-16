@@ -11,6 +11,8 @@
 #include "base/base_micro.h"
 #include <atomic>
 
+#include <concurrentqueue/concurrentqueue.h>
+
 #define NewClosureAlias(Location, Functor) ::base::CreateClosure(Location, Functor)
 #define NewClosureWithCallbackAlias(Location, Functor, Cleanup) ::base::CreateClosureWithCallback(Location, Functor, Cleanup)
 
@@ -30,7 +32,6 @@ public:
 private:
   Location location_;
 };
-
 
 template <typename Functor>
 class ClosureTask : public TaskBase {
@@ -85,6 +86,7 @@ static std::unique_ptr<TaskBase> CreateClosureWithCallback(const Location& locat
 typedef std::function<void()> SigHandler;
 typedef std::function<void()> StlClosure;
 typedef std::unique_ptr<TaskBase> ClosurePtr;
+typedef std::unique_ptr<TaskBase> TaskBasePtr;
 
 }// end namespace
 #endif

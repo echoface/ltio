@@ -5,13 +5,9 @@
 #include <set>
 #include <vector>
 #include <cinttypes>
-#include <unordered_map>
-#include <unordered_set>
 #include "base_micro.h"
-#include <base/closure/closure_task.h>
 #include "coroutine/coroutine.h"
 #include <base/message_loop/message_loop.h>
-//#include "base/queue/double_linked_ref_list.h"
 
 namespace base {
 
@@ -35,9 +31,10 @@ public:
       target_loop_ = loop;
       return *this;
     }
+    // here must make sure all things wraper(copy) into closue, 
+    // becuase __go object will destruction before task closure run
     template <typename Functor>
     inline void operator<<(Functor closure_fn) {
-      // here must make sure all things wraper(copy) into closue, becuase __go object will gone
     	auto func = [=](base::MessageLoop* loop, const Location& location) {
         CoroRunner& runner = Runner();
         runner.coro_tasks_.push_back(std::move(CreateClosure(location, closure_fn)));
@@ -54,7 +51,8 @@ public:
 public:
   static bool CanYield();
   static CoroRunner& Runner();
-  /* give up cpu; main coro will automatic resume; other coro should resume by manager*/
+  /* give up cpu; main coro will automatic resume;
+   * other coro should resume by manager*/
   static void YieldCurrent(int32_t wc = 1);
   static StlClosure CurrentCoroResumeCtx();
 
@@ -92,10 +90,11 @@ private:
   MessageLoop* bind_loop_;
 
   bool invoke_coro_shceduled_;
+
   std::list<ClosurePtr> coro_tasks_;
   std::vector<Coroutine*> expired_coros_;
 
-  /* 根据系统实际负载分配的每个线程最大的可复用coroutine数量*/
+  /*every thread max resuable coroutines*/
   size_t max_reuse_coroutines_;
   std::list<Coroutine*> free_list_;
 
