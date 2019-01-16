@@ -7,22 +7,27 @@ std::atomic_int g_flag;
 std::atomic_int64_t g_post_counter;
 std::atomic_int64_t thread_end;
 
+int64_t start_at;
+
 base::MessageLoop g_loop;
 
-const static  int max_task_per_producer = 100000; //100w
+const static  int max_task_per_producer = 10000000;
 static int64_t finished_task_counter = 0;
 
 void TaskProducer(int i) {
+
   while(g_flag == 0) { //when g_flag !=  0, start run
       sleep(0);
   }
+
   int64_t total = 0;
   for (int i = 0; i < max_task_per_producer; i++) {
 
     bool ok = g_loop.PostTask(NewClosure([&]() {
       finished_task_counter++;
-      if (finished_task_counter == g_post_counter && thread_end == std::thread::hardware_concurrency()) {
-        LOG(INFO) << " all task finished @" << base::time_ms();
+      if (max_task_per_producer * std::thread::hardware_concurrency() == finished_task_counter) {
+        int64_t end = base::time_ms();
+        LOG(INFO) << " all task finished @" << end << " total spend:" << end - start_at << "(ms)";
         g_loop.QuitLoop();
       }
     }));
@@ -50,11 +55,13 @@ int main() {
   for (int i = 0; i < system_concurrency; i++) {
     threads[i] = new std::thread(std::bind(&TaskProducer, i));
   }
-
-  LOG(INFO) << " end all task start @" << base::time_ms();
+  
+  start_at = base::time_ms();
+  LOG(INFO) << " all task start @" << start_at;
   g_flag.store(1);
 
   g_loop.WaitLoopEnd();
+
   for (auto& t : threads) {
     t->join();
   }
