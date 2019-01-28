@@ -58,7 +58,7 @@ void FdEvent::EnableReading() {
     return;
   }
   events_ |= LtEv::LT_EVENT_READ;
-  Update();
+  notify_watcher();
 }
 
 void FdEvent::EnableWriting() {
@@ -66,14 +66,26 @@ void FdEvent::EnableWriting() {
     return;
   }
   events_ |= LtEv::LT_EVENT_WRITE;
-  Update();
+  notify_watcher();
 }
 
-void FdEvent::Update() {
+void FdEvent::DisableReading() {
+  if (!IsReadEnable()) return;
+  events_ &= ~LtEv::LT_EVENT_READ;
+  notify_watcher();
+}
+
+void FdEvent::DisableWriting() {
+  if (!IsWriteEnable()) return;
+  events_ &= ~LtEv::LT_EVENT_WRITE;
+  notify_watcher();
+}
+
+void FdEvent::notify_watcher() {
   if (watcher_) {
     watcher_->OnEventChanged(this);
   }
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << EventInfo() << " updated";
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << EventInfo() << " notify_watcherd";
 }
 
 void FdEvent::SetCloseCallback(const EventCallback &cb) {

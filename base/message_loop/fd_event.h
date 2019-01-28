@@ -16,7 +16,7 @@ namespace base {
  * Create With a fd and take it owner  close it when it's gone*/
 class FdEvent : public EnableDoubleLinked<FdEvent> {
 public:
-  /* interface notify poller update polling events*/
+  /* interface notify poller notify_watcher polling events*/
   class FdEventWatcher {
   public:
     virtual ~FdEventWatcher() {}
@@ -51,17 +51,17 @@ public:
   LtEvent MonitorEvents() const;
   void SetRcvEvents(const LtEvent& ev);
 
-  void Update();
+  void SetEvent(const LtEv& lt_ev) {events_ = lt_ev; notify_watcher();}
 
   void EnableReading();
-  inline bool IsReadEnable() {return events_ & LtEv::LT_EVENT_READ;}
+  inline bool IsReadEnable() const {return events_ & LtEv::LT_EVENT_READ;}
 
   void EnableWriting();
-  inline bool IsWriteEnable() {return events_ & LtEv::LT_EVENT_WRITE;}
+  inline bool IsWriteEnable() const {return events_ & LtEv::LT_EVENT_WRITE;}
 
-  void DisableAll() { events_ = LtEv::LT_EVENT_NONE; Update();}
-  void DisableReading() { events_ &= ~LtEv::LT_EVENT_READ; Update();}
-  void DisableWriting() { events_ &= ~LtEv::LT_EVENT_WRITE; Update();}
+  void DisableAll() { events_ = LtEv::LT_EVENT_NONE; notify_watcher();}
+  void DisableReading();
+  void DisableWriting();
 
   inline int fd() const {return fd_;};
   inline void GiveupOwnerFd() {owner_fd_life_ = false;}
@@ -70,6 +70,8 @@ public:
   std::string RcvEventAsString() const;
   std::string MonitorEventAsString() const;
 private:
+  void notify_watcher();
+
   const int fd_;
   LtEvent events_;
   LtEvent revents_;
