@@ -1,11 +1,11 @@
 
 #include "glog/logging.h"
 
+#include "io_buffer.h"
 #include "tcp_channel.h"
-#include "net/io_buffer.h"
 #include "http_proto_service.h"
 #include "http_constants.h"
-#include "net/protocol/proto_message.h"
+#include "protocol/proto_message.h"
 #include "base/utils/gzip/gzip_utils.h"
 
 namespace net {

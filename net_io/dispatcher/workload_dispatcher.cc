@@ -2,7 +2,7 @@
 #include "glog/logging.h"
 #include "workload_dispatcher.h"
 
-#include "net/protocol/proto_message.h"
+#include "protocol/proto_message.h"
 
 namespace net {
 

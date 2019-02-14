@@ -2,7 +2,8 @@
 #include "proto_service.h"
 #include "proto_message.h"
 #include "glog/logging.h"
-#include "net/tcp_channel.h"
+
+#include "tcp_channel.h"
 
 namespace net {
 ProtoService::ProtoService()

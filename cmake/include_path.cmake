@@ -5,7 +5,7 @@ include_directories(
   ${CMAKE_SOURCE_DIR}/base
 
   #net
-  ${CMAKE_SOURCE_DIR}/net
+  ${CMAKE_SOURCE_DIR}/net_io
 
   ${CMAKE_SOURCE_DIR}/thirdparty
   ${CMAKE_BINARY_DIR}/thirdparty

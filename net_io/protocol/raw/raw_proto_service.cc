@@ -1,9 +1,10 @@
 #include <memory>
+#include "glog/logging.h"
+
 #include "io_buffer.h"
 #include "tcp_channel.h"
-#include "glog/logging.h"
 #include "raw_message.h"
-#include "net/net_endian.h"
+#include "net_endian.h"
 #include "raw_proto_service.h"
 
 namespace net {

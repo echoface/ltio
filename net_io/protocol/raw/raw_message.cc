@@ -1,5 +1,5 @@
+#include "net_endian.h"
 #include "raw_message.h"
-#include "net/net_endian.h"
 
 namespace net {
 

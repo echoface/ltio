@@ -1,10 +1,11 @@
 #ifndef _NET_PROTOCOL_SERVICE_H_H
 #define _NET_PROTOCOL_SERVICE_H_H
 
-#include "../net_callback.h"
+#include "channel.h"
+#include "net_callback.h"
+#include "tcp_channel.h"
+
 #include "proto_message.h"
-#include "net/tcp_channel.h"
-#include "net/channel.h"
 
 namespace net {
 

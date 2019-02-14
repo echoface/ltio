@@ -5,7 +5,7 @@
 #include <memory>
 #include <functional>
 #include "proto_service.h"
-#include "../net_callback.h"
+#include "net_callback.h"
 
 namespace net {
 

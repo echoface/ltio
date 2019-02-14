@@ -3,11 +3,12 @@
 
 #include <list>
 #include <vector>
-#include "io_service.h"
-#include <functional>
 #include <chrono>             // std::chrono::seconds
+#include <functional>
 #include <mutex>              // std::mutex, std::unique_lock
 #include <condition_variable> // std::condition_variable, std::cv_status
+
+#include "io_service.h"
 #include "base/base_micro.h"
 #include "protocol/proto_message.h"
 #include "protocol/raw/raw_message.h"

@@ -1,9 +1,9 @@
-
-#include "../protocol/proto_service.h"
-#include "../protocol/proto_service_factory.h"
 #include "glog/logging.h"
-#include "../tcp_channel.h"
-#include "../io_service.h"
+#include "tcp_channel.h"
+#include "io_service.h"
+
+#include "protocol/proto_service.h"
+#include "protocol/proto_service_factory.h"
 #include "base/message_loop/linux_signal.h"
 
 namespace net {

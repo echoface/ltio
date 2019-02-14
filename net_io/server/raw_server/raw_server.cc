@@ -105,7 +105,6 @@ void RawServer::OnRawRequest(const RefProtocolMessage& request) {
 
 void RawServer::HandleRawRequest(const RefProtocolMessage request) {
 
-  //RefTcpChannel channel = request->GetIOCtx().channel.lock();
   RefProtoService raw_service = request->GetIOCtx().protocol_service.lock();
   if (!raw_service) {
     VLOG(GLOG_VERROR) << __FUNCTION__ << " Channel Has Broken After Handle Request Message";

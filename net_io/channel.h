@@ -5,6 +5,8 @@
 #ifndef LIGHTINGIO_NET_CHANNEL_H
 #define LIGHTINGIO_NET_CHANNEL_H
 
+#include "net_callback.h"
+
 // socket chennel interface and base class
 namespace net {
 

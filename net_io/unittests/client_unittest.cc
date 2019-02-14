@@ -13,22 +13,22 @@
 #include <catch/catch.hpp>
 
 #include <glog/logging.h>
-#include "../tcp_channel.h"
-#include "../socket_utils.h"
-#include "../service_acceptor.h"
-#include "../protocol/proto_service.h"
-#include "../protocol/line/line_message.h"
-#include "../protocol/http/http_request.h"
-#include "../protocol/http/http_response.h"
-#include "../protocol/proto_service_factory.h"
-#include "../inet_address.h"
+#include "tcp_channel.h"
+#include "inet_address.h"
+#include "socket_utils.h"
+#include "service_acceptor.h"
+#include "protocol/proto_service.h"
+#include "protocol/line/line_message.h"
+#include "protocol/http/http_request.h"
+#include "protocol/http/http_response.h"
+#include "protocol/proto_service_factory.h"
 #include "clients/client_connector.h"
 #include "clients/client_router.h"
 #include "dispatcher/coro_dispatcher.h"
 #include "base/closure/closure_task.h"
-#include "net/dispatcher/coro_dispatcher.h"
-#include "net/protocol/raw/raw_message.h"
-#include "net/protocol/raw/raw_proto_service.h"
+#include "dispatcher/coro_dispatcher.h"
+#include "protocol/raw/raw_message.h"
+#include "protocol/raw/raw_proto_service.h"
 
 static std::atomic_int io_round_count;
 

@@ -1,16 +1,15 @@
-#include "../service_acceptor.h"
-
-#include "../net_callback.h"
-#include "../tcp_channel.h"
-#include "../socket_utils.h"
-
+#include <sstream>
 #include <functional>
 #include <glog/logging.h>
-#include <net/io_buffer.h>
-#include <net/protocol/http/http_request.h>
-#include <net/protocol/http/http_response.h>
-#include <net/protocol/http/http_proto_service.h>
-#include <sstream>
+
+#include <io_buffer.h>
+#include "net_callback.h"
+#include "tcp_channel.h"
+#include "socket_utils.h"
+#include "service_acceptor.h"
+#include <protocol/http/http_request.h>
+#include <protocol/http/http_response.h>
+#include <protocol/http/http_proto_service.h>
 
 
 int main(int argc, char** argv) {

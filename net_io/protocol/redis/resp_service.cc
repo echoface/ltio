@@ -1,9 +1,10 @@
 #include "io_buffer.h"
+#include "tcp_channel.h"
+
 #include "resp_service.h"
 #include "glog/logging.h"
 #include "redis_request.h"
 #include "protocol/proto_service.h"
-#include "net/tcp_channel.h"
 
 namespace net {
 

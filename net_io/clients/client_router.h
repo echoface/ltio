@@ -3,24 +3,25 @@
 
 #include <vector>
 
+#include <memory>
+#include <chrono>             // std::chrono::seconds
+#include <mutex>              // std::mutex, std::unique_lock
+#include <cinttypes>
+#include <condition_variable> // std::condition_variable, std::cv_status
+#include <url_string_utils.h>
+
 #include "inet_address.h"
 #include "tcp_channel.h"
 #include "socket_utils.h"
 #include "service_acceptor.h"
+#include "url_string_utils.h"
 #include "protocol/proto_service.h"
 #include "protocol/proto_message.h"
 #include "protocol/proto_service_factory.h"
-#include <memory>
-#include <chrono>             // std::chrono::seconds
-#include <mutex>              // std::mutex, std::unique_lock
-#include <condition_variable> // std::condition_variable, std::cv_status
-#include <cinttypes>
-#include <net/url_string_utils.h>
 #include "clients/queued_channel.h"
 #include "clients/client_router.h"
 #include "clients/client_connector.h"
 #include "dispatcher/coro_dispatcher.h"
-#include "url_string_utils.h"
 
 namespace net {
 
