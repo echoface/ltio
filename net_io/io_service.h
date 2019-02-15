@@ -33,6 +33,9 @@ public:
   virtual void IOServiceStoped(const IOService* ioservice) {};
 };
 
+/* Every IOService own a acceptor and listing on a adress,
+ * handle incomming connection from acceptor and manager
+ * them on working-messageloop */
 class IOService : public ProtoServiceDelegate {
 public:
   /* Must Construct in ownerloop, why? bz we want all io level is clear and tiny
@@ -51,7 +54,7 @@ public:
   void StartIOService();
   void StopIOService();
 
-  base::MessageLoop* AcceptorLoop() { return acceptor_loop_; }
+  base::MessageLoop* AcceptorLoop() { return accept_loop_; }
   const std::string& IOServiceName() const {return service_name_;}
   bool IsRunning() {return acceptor_ && acceptor_->IsListening();}
 
@@ -69,9 +72,9 @@ private:
 
   //bool as_dispatcher_;
   std::string protocol_;
-  RefServiceAcceptor acceptor_;
 
-  base::MessageLoop* acceptor_loop_;
+  ServiceAcceptorPtr acceptor_;
+  base::MessageLoop* accept_loop_;
 
   /* interface to owner and handler */
   IOServiceDelegate* delegate_;

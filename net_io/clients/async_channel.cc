@@ -10,18 +10,19 @@ RefAsyncChannel AsyncChannel::Create(Delegate* d, RefProtoService& s) {
 
 AsyncChannel::AsyncChannel(Delegate* d, RefProtoService& s)
   : ClientChannel(d, s) {
+
 }
 
 AsyncChannel::~AsyncChannel() {
 }
 
 void AsyncChannel::StartClient() {
+  //common part
+  ClientChannel::StartClient();
 
   ProtoMessageHandler res_handler =
       std::bind(&AsyncChannel::OnResponseMessage,this, std::placeholders::_1);
-
   protocol_service_->SetMessageHandler(std::move(res_handler));
-  protocol_service_->Channel()->Start();
 }
 
 void AsyncChannel::SendRequest(RefProtocolMessage request)  {

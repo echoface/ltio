@@ -10,10 +10,13 @@ it has implemnet follow code/component
 - lazyinstance
 
 - net io based on loop
+
 - raw protocol
 - line protocol
 - http 1.x protocol
 - async redis client side support
+
++ add sendfile support for zero copy between kernel and user space
 
 - thread safe lru component
 - inverted indexer table

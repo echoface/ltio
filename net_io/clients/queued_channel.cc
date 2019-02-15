@@ -17,13 +17,13 @@ QueuedChannel::~QueuedChannel() {
 }
 
 void QueuedChannel::StartClient() {
+  //common part
+  ClientChannel::StartClient();
 
   ProtoMessageHandler res_handler =
       std::bind(&QueuedChannel::OnResponseMessage,this, std::placeholders::_1);
 
   protocol_service_->SetMessageHandler(std::move(res_handler));
-
-  protocol_service_->Channel()->Start();
 }
 
 void QueuedChannel::SendRequest(RefProtocolMessage request)  {

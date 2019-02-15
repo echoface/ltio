@@ -23,6 +23,16 @@ ClientChannel::ClientChannel(Delegate* d, RefProtoService& service)
 		  protocol_service_(service) {
 }
 
+void ClientChannel::StartClient() {
+  protocol_service_->SetDelegate(this);
+
+  // if has client side heart beat, start it
+  uint32_t heart_beat_interval = delegate_->HeartBeatInterval();
+  if (heart_beat_interval > 0) {
+    protocol_service_->StartHeartBeat(heart_beat_interval);
+  }
+}
+
 void ClientChannel::CloseClientChannel() {
 	base::MessageLoop* io = IOLoop();
 	if (io->IsInLoopThread()) {

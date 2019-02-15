@@ -24,13 +24,21 @@ void ProtoService::SetDelegate(ProtoServiceDelegate* d) {
 	delegate_ = d;
 }
 
-void ProtoService::BindChannel(RefTcpChannel& channel) {
-	channel_ = channel;
-	channel_->SetChannelConsumer(this);
-}
-
 bool ProtoService::IsConnected() const {
 	return channel_ ? channel_->IsConnected() : false;
+}
+
+bool ProtoService::BindChannel(int fd,
+                               const SocketAddress& local,
+                               const SocketAddress& peer,
+                               base::MessageLoop* loop) {
+
+  channel_ = TcpChannel::Create(fd, local, peer, loop);
+
+	channel_->SetChannelConsumer(this);
+
+  channel_->Start();
+  return true;
 }
 
 void ProtoService::CloseService() {

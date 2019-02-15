@@ -15,6 +15,7 @@ class ClientChannel : public ProtoServiceDelegate {
 public:
   class Delegate {
   public:
+    virtual uint32_t HeartBeatInterval() const {return 0;};
     virtual void OnClientChannelClosed(const RefClientChannel& channel) = 0;
     virtual void OnRequestGetResponse(const RefProtocolMessage&, const RefProtocolMessage&) = 0;
   };
@@ -23,7 +24,7 @@ public:
 
   virtual ~ClientChannel() {}
 
-  virtual void StartClient() = 0;
+  virtual void StartClient();
   virtual void SendRequest(RefProtocolMessage request) = 0;
 
   void CloseClientChannel();

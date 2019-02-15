@@ -29,10 +29,17 @@ public:
 
   void SetDelegate(ProtoServiceDelegate* d);
   void BindChannel(RefTcpChannel& channel);
+
+  virtual bool BindChannel(int fd,
+                           const SocketAddress& local,
+                           const SocketAddress& peer,
+                           base::MessageLoop* loop);
+
   void SetMessageHandler(ProtoMessageHandler);
   TcpChannel* Channel() {return channel_.get();};
   base::MessageLoop* IOLoop() {return channel_ ? channel_->IOLoop() : NULL;}
 
+  void StartService();
   void CloseService();
   bool IsConnected() const;
 

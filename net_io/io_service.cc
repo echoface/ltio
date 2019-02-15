@@ -14,17 +14,17 @@ namespace net {
 
 IOService::IOService(const SocketAddress addr,
                      const std::string protocol,
-                     base::MessageLoop* workloop,
+                     base::MessageLoop* ioloop,
                      IOServiceDelegate* delegate)
   : protocol_(protocol),
-    acceptor_loop_(workloop),
+    accept_loop_(ioloop),
     delegate_(delegate),
     is_stopping_(false) {
 
   CHECK(delegate_);
 
   service_name_ = addr.IpPort();
-  acceptor_.reset(new ServiceAcceptor(acceptor_loop_->Pump(), addr));
+  acceptor_.reset(new ServiceAcceptor(accept_loop_->Pump(), addr));
   acceptor_->SetNewConnectionCallback(std::bind(&IOService::OnNewConnection,
                                                 this,
                                                 std::placeholders::_1,
@@ -37,9 +37,9 @@ IOService::~IOService() {
 
 void IOService::StartIOService() {
 
-  if (!acceptor_loop_->IsInLoopThread()) {
+  if (!accept_loop_->IsInLoopThread()) {
     auto functor = std::bind(&IOService::StartIOService, this);
-    acceptor_loop_->PostTask(NewClosure(std::move(functor)));
+    accept_loop_->PostTask(NewClosure(std::move(functor)));
     return;
   }
 
@@ -50,13 +50,13 @@ void IOService::StartIOService() {
 
 /* step1: close the acceptor */
 void IOService::StopIOService() {
-  if (!acceptor_loop_->IsInLoopThread()) {
+  if (!accept_loop_->IsInLoopThread()) {
     auto functor = std::bind(&IOService::StopIOService, this);
-    acceptor_loop_->PostTask(NewClosure(std::move(functor)));
+    accept_loop_->PostTask(NewClosure(std::move(functor)));
     return;
   }
 
-  CHECK(acceptor_loop_->IsInLoopThread());
+  CHECK(accept_loop_->IsInLoopThread());
 
   //sync
   acceptor_->StopListen();
@@ -73,60 +73,58 @@ void IOService::StopIOService() {
   }
 }
 
-void IOService::OnNewConnection(int local_socket, const SocketAddress& peer_addr) {
-  CHECK(acceptor_loop_->IsInLoopThread());
+void IOService::OnNewConnection(int fd, const SocketAddress& peer_addr) {
 
-  //max connction reached
+  CHECK(accept_loop_->IsInLoopThread());
+
+  //check connection limit and others
   if (!delegate_->CanCreateNewChannel()) {
-    socketutils::CloseSocket(local_socket);
+    socketutils::CloseSocket(fd);
     LOG(INFO) << "Max Channels Limit, Current Has:[" << protocol_services.size() << "] Channels";
     return;
   }
 
   base::MessageLoop* io_loop = delegate_->GetNextIOWorkLoop();
   if (!io_loop) {
-    socketutils::CloseSocket(local_socket);
+    socketutils::CloseSocket(fd);
     return;
   }
 
   RefProtoService proto_service = ProtoServiceFactory::Create(protocol_);
   if (!proto_service || !message_handler_) {
     LOG(ERROR) << "no proto parser or no message handler, close this connection.";
-    socketutils::CloseSocket(local_socket);
+    socketutils::CloseSocket(fd);
     return;
   }
+  SocketAddress local_addr(socketutils::GetLocalAddrIn(fd));
+
   proto_service->SetDelegate(this);
   proto_service->SetMessageHandler(message_handler_);
   proto_service->SetServiceType(ProtocolServiceType::kServer);
 
-  net::SocketAddress local_addr(socketutils::GetLocalAddrIn(local_socket));
+  proto_service->BindChannel(fd, local_addr, peer_addr, io_loop);
 
-  auto new_channel = TcpChannel::Create(local_socket, local_addr, peer_addr, io_loop);
-
-  proto_service->BindChannel(new_channel);
-
-  new_channel->Start();
-
-  VLOG(GLOG_VTRACE) << " New Connection from:" << new_channel->ChannelName();
   StoreProtocolService(proto_service);
+
+  VLOG(GLOG_VTRACE) << " New Connection from:" << peer_addr.IpPort() << " establisted";
 }
 
 void IOService::OnProtocolServiceGone(const net::RefProtoService &service) {
   // use another task remove a service is a more safe way delete channel& protocol things
   // avoid somewhere->B(do close a channel) ->  ~A  -> use A again in somewhere
   auto functor = std::bind(&IOService::RemoveProtocolService, this, service);
-  acceptor_loop_->PostTask(NewClosure(std::move(functor)));
+  accept_loop_->PostTask(NewClosure(std::move(functor)));
 }
 
 void IOService::StoreProtocolService(const RefProtoService service) {
-  CHECK(acceptor_loop_->IsInLoopThread());
+  CHECK(accept_loop_->IsInLoopThread());
 
   protocol_services.insert(service);
   delegate_->IncreaseChannelCount();
 }
 
 void IOService::RemoveProtocolService(const RefProtoService service) {
-  CHECK(acceptor_loop_->IsInLoopThread());
+  CHECK(accept_loop_->IsInLoopThread());
   protocol_services.erase(service);
 
   delegate_->DecreaseChannelCount();

@@ -65,6 +65,7 @@ TEST_CASE("client.base", "[http client]") {
 
   base::MessageLoop loop;
   loop.SetLoopName("client");
+
   loop.Start();
   static const int connections = 10;
 

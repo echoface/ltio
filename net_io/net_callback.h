@@ -28,6 +28,7 @@ typedef std::function<void(RefTcpChannel&, IOBuffer*)> RcvDataCallback;
 
 /* ============= Service Acceptor relative ===========*/
 typedef std::shared_ptr<ServiceAcceptor> RefServiceAcceptor;
+typedef std::unique_ptr<ServiceAcceptor> ServiceAcceptorPtr;
 typedef std::function<void(int/*socket_fd*/, const SocketAddress&)> NewConnectionCallback;
 
 /* protoservice handle tcpmessage to different type protocol request and message */

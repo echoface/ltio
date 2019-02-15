@@ -69,6 +69,7 @@ public:
   void OnNewClientConnected(int fd, SocketAddress& loc, SocketAddress& remote) override;
 
   //override from ClientChannel::Delegate
+  uint32_t HeartBeatInterval() const override {return config_.heart_beat_ms;};
   void OnClientChannelClosed(const RefClientChannel& channel) override;
   void OnRequestGetResponse(const RefProtocolMessage&, const RefProtocolMessage&) override;
 
@@ -92,6 +93,7 @@ private:
   RouterDelegate* delegate_;
   CoroWlDispatcher* dispatcher_;
   typedef std::vector<RefClientChannel> ClientChannelList;
+  typedef std::shared_ptr<ClientChannelList> RefClientChannelList;
 
   ClientChannelList channels_;
   std::atomic<uint32_t> router_counter_;

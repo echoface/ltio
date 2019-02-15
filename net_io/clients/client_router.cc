@@ -83,23 +83,20 @@ void ClientRouter::OnNewClientConnected(int socket_fd, SocketAddress& local, Soc
 
   base::MessageLoop* io_loop = GetLoopForClient();
 
-  auto new_channel = TcpChannel::Create(socket_fd, local, remote, io_loop);
+  auto proto_service = ProtoServiceFactory::Create(server_info_.protocol);
 
-  RefProtoService proto_service = ProtoServiceFactory::Create(server_info_.protocol);
   proto_service->SetServiceType(ProtocolServiceType::kClient);
-  proto_service->BindChannel(new_channel);
+  proto_service->BindChannel(socket_fd, local, remote, io_loop);
 
-  RefClientChannel client_channel = CreateClientChannel(this, proto_service);
+  auto client_channel = CreateClientChannel(this, proto_service);
+
   client_channel->SetRequestTimeout(config_.message_timeout);
-
-  proto_service->SetDelegate(client_channel.get());
-  proto_service->StartHeartBeat(config_.heart_beat_ms);
 
   client_channel->StartClient();
 
   channels_.push_back(client_channel);
+  RefClientChannelList list(new ClientChannelList(channels_));
 
-  std::shared_ptr<ClientChannelList> list(new ClientChannelList(channels_));
   std::atomic_store(&roundrobin_channes_, list);
 
   VLOG(GLOG_VINFO) << __FUNCTION__ << RouterInfo() << " new protocol service started";
