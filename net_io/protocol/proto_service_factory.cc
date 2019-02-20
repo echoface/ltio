@@ -20,12 +20,14 @@ ProtoServiceFactory::ProtoServiceFactory() {
 }
 
 //Static
-RefProtoService ProtoServiceFactory::Create(const std::string& proto) {
+RefProtoService ProtoServiceFactory::Create(const std::string& proto, bool server_side) {
   static RefProtoService _null;
 
   auto& builder = Instance().creators_[proto];
   if (builder) {
-    return builder();
+    auto protocol_service = builder();
+    protocol_service->SetIsServerSide(server_side);
+    return protocol_service;
   }
   LOG(ERROR) << __FUNCTION__ << " Protocol:" << proto << " Not Supported";
   return _null;

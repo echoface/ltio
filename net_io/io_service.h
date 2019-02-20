@@ -73,7 +73,7 @@ private:
   //bool as_dispatcher_;
   std::string protocol_;
 
-  ServiceAcceptorPtr acceptor_;
+  SocketAcceptorPtr acceptor_;
   base::MessageLoop* accept_loop_;
 
   /* interface to owner and handler */

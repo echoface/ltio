@@ -22,7 +22,7 @@ void RespService::OnDataFinishSend(const RefTcpChannel&) {
 }
 
 void RespService::OnDataReceived(const RefTcpChannel &channel, IOBuffer *buffer) {
-  CHECK(ProtoService::ServiceType() == ProtocolServiceType::kClient);
+  CHECK(!IsServerSide());
 
   if (!current_response) {
     current_response = std::make_shared<RedisResponse>();

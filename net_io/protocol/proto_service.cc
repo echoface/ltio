@@ -6,15 +6,9 @@
 #include "tcp_channel.h"
 
 namespace net {
-ProtoService::ProtoService()
-	: type_(ProtocolServiceType::kServer) {
-}
 
+ProtoService::ProtoService(){}
 ProtoService::~ProtoService() {};
-
-void ProtoService::SetServiceType(ProtocolServiceType t) {
-  type_ = t;
-}
 
 void ProtoService::SetMessageHandler(ProtoMessageHandler handler) {
   message_handler_ = handler;
@@ -43,6 +37,7 @@ bool ProtoService::BindChannel(int fd,
 
 void ProtoService::CloseService() {
 	CHECK(channel_->InIOLoop());
+
 	BeforeCloseService();
 	channel_->ShutdownChannel();
 }

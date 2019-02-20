@@ -9,7 +9,7 @@ namespace net {
 
 class IOBuffer;
 class SocketAddress;
-class ServiceAcceptor;
+class SocketAcceptor;
 class TcpChannel;
 class IOService;
 class ProtoService;
@@ -27,8 +27,8 @@ typedef std::function<void(RefTcpChannel&, IOBuffer*)> RcvDataCallback;
 
 
 /* ============= Service Acceptor relative ===========*/
-typedef std::shared_ptr<ServiceAcceptor> RefServiceAcceptor;
-typedef std::unique_ptr<ServiceAcceptor> ServiceAcceptorPtr;
+typedef std::shared_ptr<SocketAcceptor> RefSocketAcceptor;
+typedef std::unique_ptr<SocketAcceptor> SocketAcceptorPtr;
 typedef std::function<void(int/*socket_fd*/, const SocketAddress&)> NewConnectionCallback;
 
 /* protoservice handle tcpmessage to different type protocol request and message */

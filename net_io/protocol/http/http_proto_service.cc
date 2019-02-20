@@ -62,7 +62,7 @@ void HttpProtoService::OnDataFinishSend(const RefTcpChannel& channel) {
 }
 
 void HttpProtoService::OnDataReceived(const RefTcpChannel &channel, IOBuffer *buf) {;
-  bool success = IsServerService() ? ParseHttpRequest(channel, buf) : ParseHttpResponse(channel, buf);
+  bool success = IsServerSide() ? ParseHttpRequest(channel, buf) : ParseHttpResponse(channel, buf);
   if (!success) {
   	CloseService();
   }

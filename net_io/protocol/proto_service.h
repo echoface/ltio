@@ -9,11 +9,6 @@
 
 namespace net {
 
-enum class ProtocolServiceType{
-  kServer,
-  kClient
-};
-
 class ProtoServiceDelegate {
 public:
   virtual void OnProtocolServiceGone(const RefProtoService& service) = 0;
@@ -28,18 +23,17 @@ public:
   virtual ~ProtoService();
 
   void SetDelegate(ProtoServiceDelegate* d);
-  void BindChannel(RefTcpChannel& channel);
-
+  /* this can be override if some protocol need difference channel, eg SSLChannel, UdpChannel */
   virtual bool BindChannel(int fd,
                            const SocketAddress& local,
                            const SocketAddress& peer,
                            base::MessageLoop* loop);
 
   void SetMessageHandler(ProtoMessageHandler);
+
   TcpChannel* Channel() {return channel_.get();};
   base::MessageLoop* IOLoop() {return channel_ ? channel_->IOLoop() : NULL;}
 
-  void StartService();
   void CloseService();
   bool IsConnected() const;
 
@@ -56,15 +50,15 @@ public:
   virtual bool CloseAfterMessage(ProtocolMessage*, ProtocolMessage*) { return true;};
   virtual const RefProtocolMessage NewResponseFromRequest(const RefProtocolMessage &) {return NULL;}
 
-  void SetServiceType(ProtocolServiceType t);
-  inline ProtocolServiceType ServiceType() const {return type_;}
-  inline bool IsServerService() const {return type_ == ProtocolServiceType::kServer;};
-  inline MessageType InComingType() const {return IsServerService()? MessageType::kRequest : MessageType::kResponse;};
+  bool IsServerSide() const {return is_server_side_;}
+  void SetIsServerSide(bool server_side) { is_server_side_ = server_side;}
+  inline MessageType InComingType() const {return is_server_side_ ? MessageType::kRequest : MessageType::kResponse;};
+
 protected:
   void OnChannelClosed(const RefTcpChannel&) override;
-protected:
-  ProtocolServiceType type_;
+
   RefTcpChannel channel_;
+  bool is_server_side_;
   ProtoServiceDelegate* delegate_ = NULL;
   ProtoMessageHandler message_handler_;
 };

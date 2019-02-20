@@ -49,7 +49,7 @@ void RawProtoService::OnDataReceived(const RefTcpChannel &channel, IOBuffer *buf
       }
     }
 
-    auto raw_message = LtRawMessage::Create(IsServerService());
+    auto raw_message = LtRawMessage::Create(IsServerSide());
     raw_message->SetIOContext(shared_from_this());
 
     LtRawHeader* header = raw_message->MutableHeader();
@@ -62,7 +62,7 @@ void RawProtoService::OnDataReceived(const RefTcpChannel &channel, IOBuffer *buf
     // header heart beat
     if (header->sequence_id_ == LtRawHeader::kHeartBeatId) {
       heart_beat_alive_ = true;  // reset heart beat flag
-      if (IsServerService()) {
+      if (IsServerSide()) {
         LOG_IF(ERROR, !SendHeartBeat()) << __FUNCTION__ << channel_->ChannelInfo() << " heart beat broken";
       }
       continue;
@@ -140,8 +140,8 @@ void RawProtoService::AfterChannelClosed() {
 }
 
 void RawProtoService::StartHeartBeat(int32_t ms) {
-  if (IsServerService() || ms < 5) {
-    LOG_IF(ERROR, IsServerService()) << __FUNCTION__ << " should not keep heart beat on server side";
+  LOG_IF(ERROR, IsServerSide()) << __FUNCTION__ << " should not keep heart beat on server side";
+  if (IsServerSide() || ms < 5) {
     return;
   }
   timeout_ev_ = new base::TimeoutEvent(ms, true);
@@ -156,7 +156,7 @@ bool RawProtoService::SendHeartBeat() {
 }
 
 void RawProtoService::OnHeartBeat() {
-  DCHECK(!IsServerService());
+  DCHECK(!IsServerSide());
 
   if (!heart_beat_alive_) {
     CloseService();

@@ -7,7 +7,7 @@
 
 namespace net {
 
-ServiceAcceptor::ServiceAcceptor(base::EventPump* pump, const SocketAddress& address)
+SocketAcceptor::SocketAcceptor(base::EventPump* pump, const SocketAddress& address)
   : listening_(false),
     address_(address),
     event_pump_(pump) {
@@ -15,12 +15,12 @@ ServiceAcceptor::ServiceAcceptor(base::EventPump* pump, const SocketAddress& add
   CHECK(InitListener());
 }
 
-ServiceAcceptor::~ServiceAcceptor() {
+SocketAcceptor::~SocketAcceptor() {
   CHECK(listening_ == false);
   socket_event_.reset();
 }
 
-bool ServiceAcceptor::InitListener() {
+bool SocketAcceptor::InitListener() {
   int socket_fd = socketutils::CreateNonBlockingSocket(address_.Family());
   if (socket_fd < 0) {
   	LOG(ERROR) << " failed create none blocking socket fd";
@@ -36,16 +36,16 @@ bool ServiceAcceptor::InitListener() {
     return false;
   }
   socket_event_ = base::FdEvent::Create(socket_fd, base::LtEv::LT_EVENT_NONE);
-  socket_event_->SetCloseCallback(std::bind(&ServiceAcceptor::OnAcceptorError, this));
-  socket_event_->SetErrorCallback(std::bind(&ServiceAcceptor::OnAcceptorError, this));
-  socket_event_->SetReadCallback(std::bind(&ServiceAcceptor::HandleCommingConnection, this));
+  socket_event_->SetCloseCallback(std::bind(&SocketAcceptor::OnAcceptorError, this));
+  socket_event_->SetErrorCallback(std::bind(&SocketAcceptor::OnAcceptorError, this));
+  socket_event_->SetReadCallback(std::bind(&SocketAcceptor::HandleCommingConnection, this));
 
   VLOG(GLOG_VTRACE) << __FUNCTION__ << " init acceptor fd event success, fd:[" << socket_fd
                     << "] bind to local:[" << address_.IpPort() << "]";
   return true;
 }
 
-bool ServiceAcceptor::StartListen() {
+bool SocketAcceptor::StartListen() {
   CHECK(event_pump_->IsInLoopThread());
 
   if (listening_) {
@@ -68,7 +68,7 @@ bool ServiceAcceptor::StartListen() {
   return true;
 }
 
-void ServiceAcceptor::StopListen() {
+void SocketAcceptor::StopListen() {
   CHECK(event_pump_->IsInLoopThread());
 
   if (!listening_) {
@@ -81,11 +81,11 @@ void ServiceAcceptor::StopListen() {
   LOG(INFO) << " Stop Listen on:" << address_.IpPort();
 }
 
-void ServiceAcceptor::SetNewConnectionCallback(const NewConnectionCallback& cb) {
+void SocketAcceptor::SetNewConnectionCallback(const NewConnectionCallback& cb) {
   new_conn_callback_ = std::move(cb);
 }
 
-void ServiceAcceptor::HandleCommingConnection() {
+void SocketAcceptor::HandleCommingConnection() {
 
   struct sockaddr_in client_socket_in;
 
@@ -106,12 +106,12 @@ void ServiceAcceptor::HandleCommingConnection() {
   }
 }
 
-void ServiceAcceptor::OnAcceptorError() {
+void SocketAcceptor::OnAcceptorError() {
   LOG(ERROR) << __FUNCTION__ << " accept fd [" << socket_event_->fd() << "] error:[" << base::StrError() << "]";
 
   listening_ = false;
 
-  // Relaunch This server 
+  // Relaunch This server
   if (InitListener()) {
     bool re_listen_ok = StartListen();
     LOG_IF(ERROR, !re_listen_ok) << __FUNCTION__ << " acceptor:[" << address_.IpPort() << "] re-listen failed";

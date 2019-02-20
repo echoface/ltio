@@ -24,7 +24,7 @@ IOService::IOService(const SocketAddress addr,
   CHECK(delegate_);
 
   service_name_ = addr.IpPort();
-  acceptor_.reset(new ServiceAcceptor(accept_loop_->Pump(), addr));
+  acceptor_.reset(new SocketAcceptor(accept_loop_->Pump(), addr));
   acceptor_->SetNewConnectionCallback(std::bind(&IOService::OnNewConnection,
                                                 this,
                                                 std::placeholders::_1,
@@ -90,7 +90,7 @@ void IOService::OnNewConnection(int fd, const SocketAddress& peer_addr) {
     return;
   }
 
-  RefProtoService proto_service = ProtoServiceFactory::Create(protocol_);
+  RefProtoService proto_service = ProtoServiceFactory::Create(protocol_, true);
   if (!proto_service || !message_handler_) {
     LOG(ERROR) << "no proto parser or no message handler, close this connection.";
     socketutils::CloseSocket(fd);
@@ -100,7 +100,6 @@ void IOService::OnNewConnection(int fd, const SocketAddress& peer_addr) {
 
   proto_service->SetDelegate(this);
   proto_service->SetMessageHandler(message_handler_);
-  proto_service->SetServiceType(ProtocolServiceType::kServer);
 
   proto_service->BindChannel(fd, local_addr, peer_addr, io_loop);
 

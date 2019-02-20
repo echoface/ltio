@@ -83,9 +83,8 @@ void ClientRouter::OnNewClientConnected(int socket_fd, SocketAddress& local, Soc
 
   base::MessageLoop* io_loop = GetLoopForClient();
 
-  auto proto_service = ProtoServiceFactory::Create(server_info_.protocol);
+  auto proto_service = ProtoServiceFactory::Create(server_info_.protocol, false);
 
-  proto_service->SetServiceType(ProtocolServiceType::kClient);
   proto_service->BindChannel(socket_fd, local, remote, io_loop);
 
   auto client_channel = CreateClientChannel(this, proto_service);

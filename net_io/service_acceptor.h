@@ -11,10 +11,10 @@
 
 namespace net {
 
-class ServiceAcceptor {
+class SocketAcceptor {
 public:
-  ServiceAcceptor(base::EventPump*, const SocketAddress&);
-  ~ServiceAcceptor();
+  SocketAcceptor(base::EventPump*, const SocketAddress&);
+  ~SocketAcceptor();
 
   bool StartListen();
   void StopListen();
@@ -33,7 +33,7 @@ private:
   base::EventPump* event_pump_;
   base::RefFdEvent socket_event_;
   NewConnectionCallback new_conn_callback_;
-  DISALLOW_COPY_AND_ASSIGN(ServiceAcceptor);
+  DISALLOW_COPY_AND_ASSIGN(SocketAcceptor);
 };
 
 } //end net
