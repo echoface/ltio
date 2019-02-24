@@ -97,7 +97,7 @@ bool HttpProtoService::ParseHttpRequest(const RefTcpChannel& channel, IOBuffer* 
     return false;
   }
 
-  if (!message_handler_) {
+  if (!delegate_) {
     LOG(ERROR) << "No message handler for this http protocol service message, shutdown this channel";
     return false;
   }
@@ -108,7 +108,8 @@ bool HttpProtoService::ParseHttpRequest(const RefTcpChannel& channel, IOBuffer* 
 
     message->SetIOContext(shared_from_this());
     CHECK(message->GetMessageType() == MessageType::kRequest);
-    message_handler_(std::static_pointer_cast<ProtocolMessage>(message));
+
+    delegate_->OnProtocolMessage(std::static_pointer_cast<ProtocolMessage>(message));
   }
   return true;
 }
@@ -133,7 +134,7 @@ bool HttpProtoService::ParseHttpResponse(const RefTcpChannel& channel, IOBuffer*
     response_context_->current_.reset();
     return false;
   }
-  if (!message_handler_) {
+  if (!delegate_) {
     LOG(ERROR) << __FUNCTION__ << " no message handler message, ";
     return false;
   }
@@ -145,9 +146,7 @@ bool HttpProtoService::ParseHttpResponse(const RefTcpChannel& channel, IOBuffer*
     message->SetIOContext(shared_from_this());
     CHECK(message->GetMessageType() == MessageType::kResponse);
 
-    if (message_handler_) {
-      message_handler_(std::static_pointer_cast<ProtocolMessage>(message));
-    }
+    delegate_->OnProtocolMessage(std::static_pointer_cast<ProtocolMessage>(message));
   }
   return true;
 }
@@ -215,11 +214,11 @@ bool HttpProtoService::SendRequestMessage(const RefProtocolMessage &message) {
   return channel_->Send(buffer.GetRead(), buffer.CanReadSize()) >= 0;
 }
 
-bool HttpProtoService::ReplyRequest(const RefProtocolMessage& req, const RefProtocolMessage& res) {
+bool HttpProtoService::SendResponseMessage(const RefProtocolMessage& req, const RefProtocolMessage& res) {
   HttpRequest* request = static_cast<HttpRequest*>(req.get());
   HttpResponse* response = static_cast<HttpResponse*>(res.get());
 
-  BeforeSendResponse(request, response);
+  BeforeSendResponseMessage(request, response);
 
   IOBuffer buffer;
   if (!ResponseToBuffer(response, &buffer)) {
@@ -309,7 +308,7 @@ void HttpProtoService::BeforeSendRequest(HttpRequest* out_message) {
   }
 }
 
-bool HttpProtoService::BeforeSendResponse(HttpRequest* request, HttpResponse* response) {
+bool HttpProtoService::BeforeSendResponseMessage(HttpRequest* request, HttpResponse* response) {
   //response compression if needed
   if (response->Body().size() > kCompressionThreshold &&
       !response->HasHeaderField(HttpConstant::kContentEncoding)) {

@@ -11,6 +11,7 @@ namespace net {
 
 class ProtoServiceDelegate {
 public:
+  virtual void OnProtocolMessage(const RefProtocolMessage& message) = 0;
   virtual void OnProtocolServiceGone(const RefProtoService& service) = 0;
 };
 
@@ -29,8 +30,6 @@ public:
                            const SocketAddress& peer,
                            base::MessageLoop* loop);
 
-  void SetMessageHandler(ProtoMessageHandler);
-
   TcpChannel* Channel() {return channel_.get();};
   base::MessageLoop* IOLoop() {return channel_ ? channel_->IOLoop() : NULL;}
 
@@ -45,7 +44,7 @@ public:
   virtual bool KeepSequence() {return true;};
 
   virtual bool SendRequestMessage(const RefProtocolMessage& message) = 0;
-  virtual bool ReplyRequest(const RefProtocolMessage& req, const RefProtocolMessage& res) = 0;
+  virtual bool SendResponseMessage(const RefProtocolMessage& req, const RefProtocolMessage& res) = 0;
 
   virtual bool CloseAfterMessage(ProtocolMessage*, ProtocolMessage*) { return true;};
   virtual const RefProtocolMessage NewResponseFromRequest(const RefProtocolMessage &) {return NULL;}
@@ -60,7 +59,6 @@ protected:
   RefTcpChannel channel_;
   bool is_server_side_;
   ProtoServiceDelegate* delegate_ = NULL;
-  ProtoMessageHandler message_handler_;
 };
 
 }

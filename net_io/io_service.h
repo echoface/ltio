@@ -31,6 +31,8 @@ public:
   virtual bool BeforeIOServiceStart(IOService* ioservice) {return true;};
   virtual void IOServiceStarted(const IOService* ioservice) {};
   virtual void IOServiceStoped(const IOService* ioservice) {};
+
+  virtual void OnRequestMessage(const RefProtocolMessage& request) = 0;
 };
 
 /* Every IOService own a acceptor and listing on a adress,
@@ -58,13 +60,13 @@ public:
   const std::string& IOServiceName() const {return service_name_;}
   bool IsRunning() {return acceptor_ && acceptor_->IsListening();}
 
-  void SetProtoMessageHandler(ProtoMessageHandler handler);
 private:
   //void HandleProtoMessage(RefProtocolMessage message);
   /* create a new connection channel */
   void OnNewConnection(int, const SocketAddress&);
 
   // override from ProtoServiceDelegate to manager[remove] from managed list
+  void OnProtocolMessage(const RefProtocolMessage& message) override;
   void OnProtocolServiceGone(const RefProtoService& service) override;
 
   void StoreProtocolService(const RefProtoService);
@@ -80,9 +82,6 @@ private:
   IOServiceDelegate* delegate_;
   //RefProtoService proto_service_;
   bool is_stopping_ = false;
-
-  // install this callback to protoservice
-  ProtoMessageHandler message_handler_;
 
   uint64_t channel_count_;
   std::string service_name_;

@@ -61,21 +61,17 @@ void HttpServer::ServeAddress(const std::string address, HttpMessageHandler hand
   message_handler_ = handler;
   CHECK(!io_loops_.empty());
 
-  ProtoMessageHandler func = std::bind(&HttpServer::OnHttpRequest, this, std::placeholders::_1);
-
   net::SocketAddress addr(sch_ip_port.host_ip, sch_ip_port.port);
 
   {
 #if defined SO_REUSEPORT && defined NET_ENABLE_REUSER_PORT
     for (base::MessageLoop* loop : io_loops_) {
       RefIOService service = std::make_shared<IOService>(addr, "http", loop, this);
-      service->SetProtoMessageHandler(func);
       ioservices_.push_back(std::move(service));
     }
 #else
     base::MessageLoop* loop = io_loops_[ioservices_.size() % io_loops_.size()];
     RefIOService service = std::make_shared<IOService>(addr, "http", loop, this);
-    service->SetProtoMessageHandler(func);
     ioservices_.push_back(std::move(service));
 #endif
 
@@ -86,7 +82,7 @@ void HttpServer::ServeAddress(const std::string address, HttpMessageHandler hand
 
 }
 
-void HttpServer::OnHttpRequest(const RefProtocolMessage& request) {
+void HttpServer::OnRequestMessage(const RefProtocolMessage& request) {
   VLOG(GLOG_VTRACE) << __FUNCTION__ << "a http request message come";
 
   if (!dispatcher_) {
@@ -125,7 +121,7 @@ void HttpServer::HandleHttpRequest(const RefProtocolMessage request) {
   bool close = service->CloseAfterMessage(request.get(), response.get());
   if (service->IOLoop()->IsInLoopThread()) { //send reply directly
 
-    bool send_success = service->ReplyRequest(request, response);
+    bool send_success = service->SendResponseMessage(request, response);
     if (close || !send_success) { //failed
       service->CloseService();
     }
@@ -133,7 +129,7 @@ void HttpServer::HandleHttpRequest(const RefProtocolMessage request) {
   } else  { //Send Response to Channel's IO Loop
 
     auto functor = [=]() {
-      bool send_success = service->ReplyRequest(request, response);
+      bool send_success = service->SendResponseMessage(request, response);
 
       if (close || !send_success) { //failed
         service->CloseService();

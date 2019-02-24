@@ -27,7 +27,9 @@ public:
 private:
 	AsyncChannel(Delegate*, RefProtoService&);
   void OnRequestTimeout(WeakProtocolMessage request);
-  void OnResponseMessage(const RefProtocolMessage& res);
+
+  //override protocolServiceDelegate
+  void OnProtocolMessage(const RefProtocolMessage& res) override;
 	void OnProtocolServiceGone(const RefProtoService& service) override;
 private:
   std::unordered_map<uint64_t, RefProtocolMessage> in_progress_;

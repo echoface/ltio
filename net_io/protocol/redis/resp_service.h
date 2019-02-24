@@ -17,7 +17,7 @@ public:
   void OnDataReceived(const RefTcpChannel &, IOBuffer *) override;
 
 	bool SendRequestMessage(const RefProtocolMessage &message) override;
-	bool ReplyRequest(const RefProtocolMessage& req, const RefProtocolMessage& res) override;
+	bool SendResponseMessage(const RefProtocolMessage& req, const RefProtocolMessage& res) override;
 private:
   uint32_t next_incoming_count_ = 0;
   RefRedisResponse current_response;// = std::make_shared<RedisResponse>();

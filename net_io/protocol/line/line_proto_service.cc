@@ -38,8 +38,8 @@ void LineProtoService::OnDataReceived(const RefTcpChannel&, IOBuffer *buf) {
 
     buf->Consume(len + 2/*lenth of /r/n*/);
 
-    if (message_handler_) {
-      message_handler_(std::static_pointer_cast<ProtocolMessage>(msg));
+    if (delegate_) {
+      delegate_->OnProtocolMessage(std::static_pointer_cast<ProtocolMessage>(msg));
     }
   }
 }
@@ -55,7 +55,7 @@ bool LineProtoService::SendRequestMessage(const RefProtocolMessage &message) {
   return ret >= 0;
 }
 
-bool LineProtoService::ReplyRequest(const RefProtocolMessage& req, const RefProtocolMessage& res) {
+bool LineProtoService::SendResponseMessage(const RefProtocolMessage& req, const RefProtocolMessage& res) {
   return SendRequestMessage(res);
 };
 

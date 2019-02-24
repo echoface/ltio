@@ -18,7 +18,7 @@ public:
   bool SendRequestMessage(const RefProtocolMessage &message) override {
     return true;
   };
-  bool ReplyRequest(const RefProtocolMessage& req, const RefProtocolMessage& res) override {
+  bool SendResponseMessage(const RefProtocolMessage& req, const RefProtocolMessage& res) override {
     return true;
   };
 
@@ -98,6 +98,9 @@ public:
   ProtoService* GetProtocolService(const std::string protocol) {
     return tcp_protoservice_.get();
   }
+  void OnRequestMessage(const RefProtocolMessage& request) {
+
+  };
 private:
   void RegisterExitSignal() {
     //CHECK(acceptor_loop_.IsInLoopThread());

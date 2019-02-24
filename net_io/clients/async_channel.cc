@@ -19,10 +19,6 @@ AsyncChannel::~AsyncChannel() {
 void AsyncChannel::StartClient() {
   //common part
   ClientChannel::StartClient();
-
-  ProtoMessageHandler res_handler =
-      std::bind(&AsyncChannel::OnResponseMessage,this, std::placeholders::_1);
-  protocol_service_->SetMessageHandler(std::move(res_handler));
 }
 
 void AsyncChannel::SendRequest(RefProtocolMessage request)  {
@@ -64,7 +60,7 @@ void AsyncChannel::OnRequestTimeout(WeakProtocolMessage weak) {
   delegate_->OnRequestGetResponse(request, ProtocolMessage::kNullMessage);
 }
 
-void AsyncChannel::OnResponseMessage(const RefProtocolMessage& res) {
+void AsyncChannel::OnProtocolMessage(const RefProtocolMessage& res) {
   DCHECK(IOLoop()->IsInLoopThread());
 
   uint64_t identify = res->AsyncIdentify();
@@ -94,6 +90,7 @@ void AsyncChannel::OnProtocolServiceGone(const RefProtoService& service) {
   auto guard = shared_from_this();
   delegate_->OnClientChannelClosed(guard);
 }
+
 
 }//net
 

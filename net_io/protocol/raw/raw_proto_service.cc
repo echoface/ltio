@@ -73,8 +73,8 @@ void RawProtoService::OnDataReceived(const RefTcpChannel &channel, IOBuffer *buf
       buffer->Consume(header->content_size_);
     }
 
-    if (message_handler_) {
-      message_handler_(std::static_pointer_cast<ProtocolMessage>(raw_message));
+    if (delegate_) {
+      delegate_->OnProtocolMessage(std::static_pointer_cast<ProtocolMessage>(raw_message));
     }
   } while(1);
 }
@@ -114,7 +114,7 @@ bool RawProtoService::SendRequestMessage(const RefProtocolMessage &message) {
   return channel_->Send((const uint8_t*)raw_message->Content().data(), raw_message->ContentLength()) >= 0;
 };
 
-bool RawProtoService::ReplyRequest(const RefProtocolMessage& req, const RefProtocolMessage& res) {
+bool RawProtoService::SendResponseMessage(const RefProtocolMessage& req, const RefProtocolMessage& res) {
   auto raw_request = static_cast<LtRawMessage*>(req.get());
   auto raw_response = static_cast<LtRawMessage*>(res.get());
 

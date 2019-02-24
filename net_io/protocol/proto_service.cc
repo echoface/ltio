@@ -10,10 +10,6 @@ namespace net {
 ProtoService::ProtoService(){}
 ProtoService::~ProtoService() {};
 
-void ProtoService::SetMessageHandler(ProtoMessageHandler handler) {
-  message_handler_ = handler;
-}
-
 void ProtoService::SetDelegate(ProtoServiceDelegate* d) {
 	delegate_ = d;
 }

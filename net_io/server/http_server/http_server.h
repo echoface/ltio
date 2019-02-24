@@ -19,6 +19,7 @@ namespace net {
 
 typedef std::function<void(const HttpRequest*, HttpResponse*)> HttpMessageHandler;
 
+//?? use traits replace IOserviceDelegate override?
 class HttpServer : public IOServiceDelegate {
 public:
   HttpServer();
@@ -39,9 +40,8 @@ protected:
   bool BeforeIOServiceStart(IOService* ioservice) override;
   void IOServiceStarted(const IOService* ioservice) override;
   void IOServiceStoped(const IOService* ioservice) override;
+  void OnRequestMessage(const RefProtocolMessage& request) override;
 
-  // handle http io loop
-  void OnHttpRequest(const RefProtocolMessage&);
   // handle http request in target loop
   void HandleHttpRequest(const RefProtocolMessage message);
 private:

@@ -60,21 +60,17 @@ void RawServer::ServeAddress(const std::string address, RawMessageHandler handle
 
   message_handler_ = handler;
 
-  ProtoMessageHandler func = std::bind(&RawServer::OnRawRequest, this, std::placeholders::_1);
-
   net::SocketAddress addr(sch_ip_port.host_ip, sch_ip_port.port);
 
   {
 #if defined SO_REUSEPORT && defined NET_ENABLE_REUSER_PORT
     for (base::MessageLoop* loop : io_loops_) {
       RefIOService service = std::make_shared<IOService>(addr, "raw", loop, this);
-      service->SetProtoMessageHandler(func);
       ioservices_.push_back(std::move(service));
     }
 #else
     base::MessageLoop* loop = io_loops_[ioservices_.size() % io_loops_.size()];
     RefIOService service = std::make_shared<IOService>(addr, "raw", loop, this);
-    service->SetProtoMessageHandler(func);
     ioservices_.push_back(std::move(service));
 #endif
 
@@ -85,7 +81,7 @@ void RawServer::ServeAddress(const std::string address, RawMessageHandler handle
 
 }
 
-void RawServer::OnRawRequest(const RefProtocolMessage& request) {
+void RawServer::OnRequestMessage(const RefProtocolMessage& request) {
   VLOG(GLOG_VTRACE) << "IOService::HandleRequest handle a request";
 
   if (!dispatcher_) {
@@ -124,7 +120,7 @@ void RawServer::HandleRawRequest(const RefProtocolMessage request) {
 
   if (raw_service->IOLoop()->IsInLoopThread()) { //send reply directly
 
-    bool send_success = raw_service->ReplyRequest(request, response);
+    bool send_success = raw_service->SendResponseMessage(request, response);
     if (close || !send_success) { //failed
       raw_service->CloseService();
     }
@@ -132,7 +128,7 @@ void RawServer::HandleRawRequest(const RefProtocolMessage request) {
   } else  { //Send Response to Channel's IO Loop
 
     auto functor = [=]() {
-      bool send_success = raw_service->ReplyRequest(request, response);
+      bool send_success = raw_service->SendResponseMessage(request, response);
       if (close || !send_success) { //failed
         raw_service->CloseService();
       }

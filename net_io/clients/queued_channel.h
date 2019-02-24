@@ -27,7 +27,8 @@ private:
   bool TrySendNext();
   void OnRequestTimeout(WeakProtocolMessage request);
 
-  void OnResponseMessage(const RefProtocolMessage& res);
+  // override form ProtocolServiceDelegate
+  void OnProtocolMessage(const RefProtocolMessage& res) override;
   void OnProtocolServiceGone(const RefProtoService& service) override;
 private:
   RefProtocolMessage ing_request_;

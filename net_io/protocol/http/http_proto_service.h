@@ -28,8 +28,8 @@ public:
   void BeforeSendRequest(HttpRequest*);
   bool SendRequestMessage(const RefProtocolMessage &message) override;
 
-  bool BeforeSendResponse(HttpRequest*, HttpResponse*);
-  bool ReplyRequest(const RefProtocolMessage& req, const RefProtocolMessage& res) override;
+  bool BeforeSendResponseMessage(HttpRequest*, HttpResponse*);
+  bool SendResponseMessage(const RefProtocolMessage& req, const RefProtocolMessage& res) override;
 
   const RefProtocolMessage NewResponseFromRequest(const RefProtocolMessage &) override;
   bool CloseAfterMessage(ProtocolMessage* request, ProtocolMessage* response) override;

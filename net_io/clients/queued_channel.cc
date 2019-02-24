@@ -19,11 +19,6 @@ QueuedChannel::~QueuedChannel() {
 void QueuedChannel::StartClient() {
   //common part
   ClientChannel::StartClient();
-
-  ProtoMessageHandler res_handler =
-      std::bind(&QueuedChannel::OnResponseMessage,this, std::placeholders::_1);
-
-  protocol_service_->SetMessageHandler(std::move(res_handler));
 }
 
 void QueuedChannel::SendRequest(RefProtocolMessage request)  {
@@ -85,7 +80,7 @@ void QueuedChannel::OnRequestTimeout(WeakProtocolMessage weak) {
   }
 }
 
-void QueuedChannel::OnResponseMessage(const RefProtocolMessage& res) {
+void QueuedChannel::OnProtocolMessage(const RefProtocolMessage& res) {
   DCHECK(IOLoop()->IsInLoopThread());
 
   if (!ing_request_) {

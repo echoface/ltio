@@ -38,9 +38,8 @@ protected:
   bool BeforeIOServiceStart(IOService* ioservice) override;
   void IOServiceStarted(const IOService* ioservice) override;
   void IOServiceStoped(const IOService* ioservice) override;
+  void OnRequestMessage(const RefProtocolMessage&) override;
 
-  // handle raw io loop
-  void OnRawRequest(const RefProtocolMessage&);
   // handle raw request in target loop
   void HandleRawRequest(const RefProtocolMessage message);
 private:

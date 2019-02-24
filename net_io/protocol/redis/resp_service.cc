@@ -41,9 +41,11 @@ void RespService::OnDataReceived(const RefTcpChannel &channel, IOBuffer *buffer)
     current_response->AddResult(res);
   } while(next_incoming_count_ > 0);
 
-  if (next_incoming_count_ == 0 && message_handler_) {
+  if (next_incoming_count_ == 0) {
+
     current_response->SetIOContext(shared_from_this());
-    message_handler_(std::static_pointer_cast<ProtocolMessage>(current_response));
+    delegate_->OnProtocolMessage(std::static_pointer_cast<ProtocolMessage>(current_response));
+
     current_response.reset();
     next_incoming_count_ = 0;
   }
@@ -62,7 +64,7 @@ bool RespService::SendRequestMessage(const RefProtocolMessage &message) {
   return channel_->Send((uint8_t*)request->body_.data(), request->body_.size()) >= 0;
 }
 
-bool RespService::ReplyRequest(const RefProtocolMessage& req, const RefProtocolMessage& res) {
+bool RespService::SendResponseMessage(const RefProtocolMessage& req, const RefProtocolMessage& res) {
 	LOG(FATAL) << __FUNCTION__ << " should not reached here, resp only client service supported";
   return false;
 };

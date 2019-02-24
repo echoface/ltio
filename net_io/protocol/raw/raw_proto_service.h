@@ -29,7 +29,7 @@ public:
   bool BeforeSendRequest(RawMessage<LtRawHeader>* message);
   bool SendRequestMessage(const RefProtocolMessage &message) override;
 
-  bool ReplyRequest(const RefProtocolMessage& req, const RefProtocolMessage& res) override;
+  bool SendResponseMessage(const RefProtocolMessage& req, const RefProtocolMessage& res) override;
 private:
   void OnHeartBeat();
   bool SendHeartBeat();

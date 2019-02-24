@@ -91,7 +91,7 @@ void IOService::OnNewConnection(int fd, const SocketAddress& peer_addr) {
   }
 
   RefProtoService proto_service = ProtoServiceFactory::Create(protocol_, true);
-  if (!proto_service || !message_handler_) {
+  if (!proto_service) {
     LOG(ERROR) << "no proto parser or no message handler, close this connection.";
     socketutils::CloseSocket(fd);
     return;
@@ -99,13 +99,16 @@ void IOService::OnNewConnection(int fd, const SocketAddress& peer_addr) {
   SocketAddress local_addr(socketutils::GetLocalAddrIn(fd));
 
   proto_service->SetDelegate(this);
-  proto_service->SetMessageHandler(message_handler_);
 
   proto_service->BindChannel(fd, local_addr, peer_addr, io_loop);
 
   StoreProtocolService(proto_service);
 
   VLOG(GLOG_VTRACE) << " New Connection from:" << peer_addr.IpPort() << " establisted";
+}
+
+void IOService::OnProtocolMessage(const RefProtocolMessage& message) {
+  delegate_->OnRequestMessage(message);
 }
 
 void IOService::OnProtocolServiceGone(const net::RefProtoService &service) {
@@ -130,10 +133,6 @@ void IOService::RemoveProtocolService(const RefProtoService service) {
   if (is_stopping_ && protocol_services.size() == 0) {
     delegate_->IOServiceStoped(this);
   }
-}
-
-void IOService::SetProtoMessageHandler(ProtoMessageHandler handler) {
-  message_handler_ = handler;
 }
 
 }// endnamespace net
