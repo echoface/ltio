@@ -246,7 +246,6 @@ int main(int argc, char* argv[]) {
 
   net::HttpServer http_server;
   http_server.SetIOLoops(loops);
-  http_server.SetWorkerLoops(workers);
   http_server.SetDispatcher(dispatcher_);
   http_server.ServeAddressSync("http://0.0.0.0:5006", std::bind(HandleHttp, std::placeholders::_1));
 
