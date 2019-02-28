@@ -21,7 +21,7 @@ base::MessageLoop main_loop;
 std::vector<base::MessageLoop*> loops;
 std::vector<base::MessageLoop*> workers;
 
-CoroDispatcher* dispatcher_ = new CoroDispatcher(false);
+CoroDispatcher* dispatcher_ = new CoroDispatcher(true);
 Dispatcher* common_dispatcher = new Dispatcher(true);
 
 std::atomic_int64_t http_count;
@@ -77,7 +77,6 @@ void StartRedisClient() {
   router_config.recon_interval = 5000;
   router_config.message_timeout = 1000;
   redis_router->SetupRouter(router_config);
-  redis_router->SetWorkLoadTransfer(dispatcher_);
   redis_router->SetDelegate(&router_manager);
 
   redis_router->StartRouter();
@@ -93,7 +92,6 @@ void StartRawClient() {
   router_config.recon_interval = 100;
   router_config.message_timeout = 1000;
   raw_router->SetupRouter(router_config);
-  raw_router->SetWorkLoadTransfer(dispatcher_);
   raw_router->SetDelegate(&router_manager);
 
   raw_router->StartRouter();
@@ -108,7 +106,6 @@ void StartHttpClients() {
   router_config.recon_interval = 100;
   router_config.message_timeout = 1000;
   http_router->SetupRouter(router_config);
-  http_router->SetWorkLoadTransfer(dispatcher_);
   http_router->SetDelegate(&router_manager);
 
   http_router->StartRouter();

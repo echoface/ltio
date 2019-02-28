@@ -10,8 +10,7 @@ ClientRouter::ClientRouter(base::MessageLoop* loop, const url::SchemeIpPort& inf
     server_info_(info),
     work_loop_(loop),
     is_stopping_(false),
-    delegate_(NULL),
-    dispatcher_(NULL) {
+    delegate_(NULL) {
 
   router_counter_ = 0;
   CHECK(work_loop_);
@@ -136,18 +135,52 @@ void ClientRouter::OnClientChannelClosed(const RefClientChannel& channel) {
 void ClientRouter::OnRequestGetResponse(const RefProtocolMessage& request,
                                         const RefProtocolMessage& response) {
   request->SetResponse(response);
+  request->GetWorkCtx().resumer_fn();
+}
 
-  request->GetWorkCtx().resume_ctx();
+bool ClientRouter::AsyncSendRequest(RefProtocolMessage& req, AsyncCallBack callback) {
+  base::MessageLoop* worker = base::MessageLoop::Current();
+  if (!worker) {
+    LOG(ERROR) << " not in a MessageLoop, can't send request here:";
+    return false;
+  }
+
+  //!!!! avoid self holder
+  ProtocolMessage* raw_request = req.get();
+  base::StlClosure resumer = [=]() {
+    if (worker->IsInLoopThread()) {
+      callback(raw_request->RawResponse());
+      return;
+    }
+    worker->PostTask(NewClosure(std::bind(callback, raw_request->RawResponse())));
+  };
+
+  req->SetWorkerCtx(worker, std::move(resumer));
+
+  req->SetRemoteHost(server_info_.host);
+
+  auto channels = std::atomic_load(&roundrobin_channes_);
+  if (channels->empty()) { //avoid x/0 Error
+    LOG(ERROR) << " No Connection Established To Server:" << address_.IpPort();
+    return false;
+  }
+  uint32_t client_index = router_counter_.fetch_add(1) % channels->size();
+
+  RefClientChannel& client = channels->at(client_index);
+  base::MessageLoop* io = client->IOLoop();
+
+  return io->PostTask(NewClosure(std::bind(&ClientChannel::SendRequest, client, req)));
 }
 
 ProtocolMessage* ClientRouter::SendClientRequest(RefProtocolMessage& message) {
-  DCHECK(dispatcher_);
 
-  if (!dispatcher_->SetWorkContext(message.get())) {
-    LOG(FATAL) << __FUNCTION__ << " this task can't by yield, send failed";
+  if (!base::MessageLoop::Current() || !base::CoroRunner::CanYield()) {
+    LOG(ERROR) << __FUNCTION__ << " must call on coroutine task";
     return NULL;
   }
+
   message->SetRemoteHost(server_info_.host);
+  message->SetWorkerCtx(base::MessageLoop::Current(), co_resumer);
 
   auto channels = std::atomic_load(&roundrobin_channes_);
 
@@ -160,15 +193,14 @@ ProtocolMessage* ClientRouter::SendClientRequest(RefProtocolMessage& message) {
   RefClientChannel& client = channels->at(client_index);
   base::MessageLoop* io_loop = client->IOLoop();
   CHECK(io_loop);
+  bool success = io_loop->PostTask(NewClosure(std::bind(&ClientChannel::SendRequest, client, message)));
+  if (!success) {
+    return NULL;
+  }
 
-  base::StlClosure func = std::bind(&ClientChannel::SendRequest, client, message);
-  dispatcher_->TransferAndYield(io_loop, func);
+  co_yield;
 
   return message->RawResponse();
-}
-
-void ClientRouter::SetWorkLoadTransfer(CoroDispatcher* dispatcher) {
-  dispatcher_ = dispatcher;
 }
 
 uint64_t ClientRouter::ClientCount() const {

@@ -21,7 +21,6 @@
 #include "clients/queued_channel.h"
 #include "clients/client_router.h"
 #include "clients/client_connector.h"
-#include "dispatcher/coro_dispatcher.h"
 
 namespace net {
 
@@ -44,6 +43,8 @@ public:
 class ClientRouter;
 typedef std::shared_ptr<ClientRouter> RefClientRouter;
 
+typedef std::function<void(ProtocolMessage*)> AsyncCallBack;
+
 class ClientRouter : public ConnectorDelegate,
                      public ClientChannel::Delegate {
 public:
@@ -51,7 +52,6 @@ public:
   ~ClientRouter();
   void SetDelegate(RouterDelegate* delegate);
   void SetupRouter(const RouterConf& config);
-  void SetWorkLoadTransfer(CoroDispatcher* dispatcher);
 
   void StartRouter();
   void StopRouter();
@@ -63,6 +63,8 @@ public:
     return (typename T::element_type::ResponseType*)(SendClientRequest(message));
   }
   ProtocolMessage* SendClientRequest(RefProtocolMessage& message);
+
+  bool AsyncSendRequest(RefProtocolMessage& req, AsyncCallBack);
 
   //override from ConnectorDelegate
   void OnClientConnectFailed() override;
@@ -91,7 +93,6 @@ private:
   RouterConf config_;
   RefConnector connector_;
   RouterDelegate* delegate_;
-  CoroDispatcher* dispatcher_;
   typedef std::vector<RefClientChannel> ClientChannelList;
   typedef std::shared_ptr<ClientChannelList> RefClientChannelList;
 

@@ -31,7 +31,7 @@ typedef enum {
 
 typedef struct {
   base::MessageLoop* loop;
-  base::StlClosure resume_ctx;
+  base::StlClosure resumer_fn;
 } WorkContext;
 
 class ProtocolMessage;

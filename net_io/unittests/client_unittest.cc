@@ -28,6 +28,7 @@
 #include "base/closure/closure_task.h"
 #include "dispatcher/coro_dispatcher.h"
 #include "protocol/raw/raw_message.h"
+#include "protocol/proto_message.h"
 #include "protocol/raw/raw_proto_service.h"
 
 static std::atomic_int io_round_count;
@@ -73,8 +74,6 @@ TEST_CASE("client.base", "[http client]") {
   LOG_IF(ERROR, !net::url::ParseURI("http://127.0.0.1:80", server_info)) << " server can't be resolve";
 
   net::ClientRouter http_router(&loop, server_info);
-  net::CoroDispatcher* dispatcher_ = new net::CoroDispatcher(true);
-
 
   net::RouterConf router_config;
   router_config.recon_interval = 100;
@@ -82,7 +81,6 @@ TEST_CASE("client.base", "[http client]") {
   router_config.connections = connections;
 
   http_router.SetupRouter(router_config);
-  http_router.SetWorkLoadTransfer(dispatcher_);
 
   http_router.StartRouter();
 
@@ -90,6 +88,59 @@ TEST_CASE("client.base", "[http client]") {
 	  REQUIRE(http_router.ClientCount() == connections);
 	  http_router.StopRouterSync();
     loop.QuitLoop();
+  }), 500);
+
+  loop.WaitLoopEnd();
+
+  LOG(INFO) << " end test client.base, http client connections";
+}
+
+TEST_CASE("client.async", "[http client]") {
+  LOG(INFO) << " start test client.base, http client connections";
+
+  base::MessageLoop loop;
+  loop.SetLoopName("async_client");
+
+  loop.Start();
+  static const int connections = 3;
+
+  net::url::SchemeIpPort server_info;
+  LOG_IF(ERROR, !net::url::ParseURI("http://127.0.0.1:80", server_info)) << " server can't be resolve";
+
+  net::ClientRouter http_router(&loop, server_info);
+
+  net::RouterConf router_config;
+  router_config.recon_interval = 100;
+  router_config.message_timeout = 5000;
+  router_config.connections = connections;
+
+  http_router.SetupRouter(router_config);
+
+  http_router.StartRouter();
+
+  net::AsyncCallBack callback = [&](net::ProtocolMessage* response) {
+    LOG(INFO) << __FUNCTION__ << " request back";
+    LOG_IF(INFO, response) << "response:" << response->Dump();
+
+    LOG(INFO) << __FUNCTION__ << " call StopRouterSync";
+    http_router.StopRouterSync();
+
+    LOG(INFO) << __FUNCTION__ << " call quit loop";
+    loop.QuitLoop();
+  };
+
+  loop.PostDelayTask(NewClosure([&](){
+	  REQUIRE(http_router.ClientCount() == connections);
+
+    net::RefHttpRequest request = std::make_shared<net::HttpRequest>();
+    request->SetKeepAlive(true);
+    request->SetRequestURL("/abck.txt");
+    request->InsertHeader("Accept", "*/*");
+    request->InsertHeader("Host", "127.0.0.1");
+    request->InsertHeader("User-Agent", "curl/7.58.0");
+    auto message = std::static_pointer_cast<net::ProtocolMessage>(request);
+    http_router.AsyncSendRequest(message, callback);
+
   }), 500);
 
   loop.WaitLoopEnd();
@@ -105,7 +156,6 @@ TEST_CASE("client.http.request", "[http client send request]") {
   loop.Start();
 
   static const int connections = 10;
-  net::CoroDispatcher* dispatcher_ = new net::CoroDispatcher(true);
 
   net::url::SchemeIpPort server_info;
   LOG_IF(ERROR, !net::url::ParseURI("http://127.0.0.1:80", server_info)) << " server can't be resolve";
@@ -118,7 +168,6 @@ TEST_CASE("client.http.request", "[http client send request]") {
   router_config.connections = connections;
 
   http_router.SetupRouter(router_config);
-  http_router.SetWorkLoadTransfer(dispatcher_);
 
   http_router.StartRouter();
 
@@ -172,7 +221,6 @@ TEST_CASE("client.raw.request", "[raw client send request]") {
   LOG_IF(ERROR, !net::url::ParseURI("raw://127.0.0.1:5005", server_info)) << " server can't be resolve";
 
   net::ClientRouter raw_router(&loop, server_info);
-  net::CoroDispatcher* dispatcher_ = new net::CoroDispatcher(true);
 
   static const int connections = 10;
 
@@ -182,7 +230,6 @@ TEST_CASE("client.raw.request", "[raw client send request]") {
   router_config.connections = connections;
 
   raw_router.SetupRouter(router_config);
-  raw_router.SetWorkLoadTransfer(dispatcher_);
 
   raw_router.StartRouter();
 
@@ -237,7 +284,6 @@ TEST_CASE("client.timer.request", "[fetch resource every interval]") {
   LOG_IF(ERROR, !net::url::ParseURI("raw://127.0.0.1:5005", server_info)) << " server can't be resolve";
 
   net::ClientRouter raw_router(&loop, server_info);
-  net::CoroDispatcher* dispatcher_ = new net::CoroDispatcher(true);
 
   static const int connections = 10;
 
@@ -249,7 +295,6 @@ TEST_CASE("client.timer.request", "[fetch resource every interval]") {
     router_config.connections = connections;
 
     raw_router.SetupRouter(router_config);
-    raw_router.SetWorkLoadTransfer(dispatcher_);
 
     raw_router.StartRouter();
   }
@@ -322,8 +367,6 @@ TEST_CASE("client.raw.bench", "[raw client send request benchmark]") {
   LOG_IF(ERROR, !net::url::ParseURI("raw://127.0.0.1:5005", server_info)) << " server can't be resolve";
 
   net::ClientRouter raw_router(&loop, server_info);
-  net::CoroDispatcher* dispatcher_ = new net::CoroDispatcher(true);
-  dispatcher_->SetWorkerLoops(loops);
 
   static const int connections = 10;
 
@@ -333,7 +376,6 @@ TEST_CASE("client.raw.bench", "[raw client send request benchmark]") {
   router_config.connections = connections;
 
   raw_router.SetupRouter(router_config);
-  raw_router.SetWorkLoadTransfer(dispatcher_);
   raw_router.SetDelegate(&router_delegate);
   raw_router.StartRouter();
 
@@ -405,8 +447,6 @@ TEST_CASE("client.http.bench", "[http client send request benchmark]") {
     << " protocol:" << server_info.protocol;
 
   net::ClientRouter http_router(&loop, server_info);
-  net::CoroDispatcher* dispatcher_ = new net::CoroDispatcher(true);
-  dispatcher_->SetWorkerLoops(loops);
 
   const int connections = 10;
 
@@ -416,7 +456,6 @@ TEST_CASE("client.http.bench", "[http client send request benchmark]") {
   router_config.connections = connections;
 
   http_router.SetupRouter(router_config);
-  http_router.SetWorkLoadTransfer(dispatcher_);
   http_router.SetDelegate(&router_delegate);
   http_router.StartRouter();
 

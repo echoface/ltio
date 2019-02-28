@@ -25,14 +25,6 @@ void CoroDispatcher::TransferAndYield(base::MessageLoop* ioloop, base::StlClosur
   co_yield;
 }
 
-bool CoroDispatcher::ResumeWorkContext(WorkContext& ctx) {
-	if (!ctx.resume_ctx) {
-	  return false;
-	}
-	ctx.resume_ctx();
-	return true;
-}
-
 bool CoroDispatcher::SetWorkContext(ProtocolMessage* message) {
   //base::CoroRunner::CurrentCoroResumeCtx();
   message->SetWorkerCtx(base::MessageLoop::Current(), co_resumer);

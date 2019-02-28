@@ -1,4 +1,4 @@
-
+#include "glog/logging.h"
 #include "proto_message.h"
 #include "proto_service.h"
 
@@ -29,12 +29,12 @@ void ProtocolMessage::SetIOCtx(const RefProtoService& service) {
 }
 
 void ProtocolMessage::SetWorkerCtx(base::MessageLoop* loop) {
-    work_context_.loop = loop;
+  work_context_.loop = loop;
 }
 
 void ProtocolMessage::SetWorkerCtx(base::MessageLoop* loop, base::StlClosure coro_resumer) {
   work_context_.loop = loop;
-  work_context_.resume_ctx = coro_resumer;
+  work_context_.resumer_fn = coro_resumer;
 }
 
 void ProtocolMessage::SetResponse(const RefProtocolMessage& response) {

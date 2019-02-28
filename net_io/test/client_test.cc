@@ -95,7 +95,6 @@ int main(int argc, char* argv[]) {
     router_config.recon_interval = 100;
     router_config.message_timeout = 5000;
     http_router->SetupRouter(router_config);
-    http_router->SetWorkLoadTransfer(dispatcher_);
 
     http_router->StartRouter();
   }

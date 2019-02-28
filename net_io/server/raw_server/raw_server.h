@@ -51,7 +51,6 @@ private:
   std::condition_variable cv_;
 
   std::vector<base::MessageLoop*> io_loops_;
-  std::vector<base::MessageLoop*> work_loops_;
   std::list<IOServicePtr> ioservices_;
 
   std::atomic<bool> serving_flag_;

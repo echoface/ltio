@@ -84,12 +84,13 @@ void QueuedChannel::OnProtocolMessage(const RefProtocolMessage& res) {
   DCHECK(IOLoop()->IsInLoopThread());
 
   if (!ing_request_) {
-    LOG(ERROR) << __FUNCTION__ << " got response without request or request has canceled";
     return ;
   }
 
-  delegate_->OnRequestGetResponse(ing_request_, res);
+  const RefProtocolMessage guard_req(ing_request_);
   ing_request_.reset();
+
+  delegate_->OnRequestGetResponse(guard_req, res);
 
   TrySendNext();
 }

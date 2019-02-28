@@ -15,7 +15,6 @@ public:
 
   bool Dispatch(base::StlClosure& clourse) override;
   bool SetWorkContext(ProtocolMessage* message) override;
-  bool ResumeWorkContext(WorkContext& ctx);
 };
 
 }
