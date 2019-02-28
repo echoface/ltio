@@ -6,31 +6,31 @@
 
 namespace net {
 
-WorkLoadDispatcher::WorkLoadDispatcher(bool work_in_io)
-  : work_in_io_(work_in_io) {
+Dispatcher::Dispatcher(bool handle_in_io)
+  : handle_in_io_(handle_in_io) {
   round_robin_counter_.store(0);
 }
 
-base::MessageLoop* WorkLoadDispatcher::GetNextWorkLoop() {
-  if (work_loops_.size()) {
-    uint32_t counter = round_robin_counter_.fetch_add(1);
-    int32_t index = counter % work_loops_.size();
-    return work_loops_[index];
+base::MessageLoop* Dispatcher::NextWorker() {
+  if (workers_.empty()) {
+    return NULL;
   }
-  return NULL;
+  uint32_t index = ++round_robin_counter_ % workers_.size();
+  return workers_[index];
 }
 
-bool WorkLoadDispatcher::SetWorkContext(WorkContext& ctx) {
-  ctx.loop = base::MessageLoop::Current();
-  return ctx.loop != NULL;
+bool Dispatcher::SetWorkContext(ProtocolMessage* message) {
+  auto loop = base::MessageLoop::Current();
+  message->SetWorkerCtx(loop);
+  return loop != NULL;
 }
 
-bool WorkLoadDispatcher::TransmitToWorker(base::StlClosure& clourse) {
+bool Dispatcher::Dispatch(base::StlClosure& clourse) {
   if (HandleWorkInIOLoop()) {
     clourse();
     return true;
   }
-  base::MessageLoop* loop = GetNextWorkLoop();
+  base::MessageLoop* loop = NextWorker();
   if (nullptr == loop) {
     return false;
   }

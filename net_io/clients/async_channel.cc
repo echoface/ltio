@@ -25,8 +25,8 @@ void AsyncChannel::SendRequest(RefProtocolMessage request)  {
   CHECK(IOLoop()->IsInLoopThread());
   // guard herer ?
   // A -> b -> c -> call something it delete this Channel --> Back to A
+  request->SetIOCtx(protocol_service_);
 
-  request->SetIOContext(protocol_service_);
   bool success = protocol_service_->SendRequestMessage(request);
   if (!success) {
     request->SetFailCode(MessageCode::kConnBroken);

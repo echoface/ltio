@@ -12,20 +12,20 @@
 
 namespace net {
 
-CoroWlDispatcher::CoroWlDispatcher(bool handle_in_io)
-  : WorkLoadDispatcher(handle_in_io) {
+CoroDispatcher::CoroDispatcher(bool handle_in_io)
+  : Dispatcher(handle_in_io) {
 }
 
-CoroWlDispatcher::~CoroWlDispatcher() {
+CoroDispatcher::~CoroDispatcher() {
 }
 
-void CoroWlDispatcher::TransferAndYield(base::MessageLoop* ioloop, base::StlClosure clourse) {
+void CoroDispatcher::TransferAndYield(base::MessageLoop* ioloop, base::StlClosure clourse) {
   CHECK(ioloop);
   ioloop->PostTask(NewClosure(std::move(clourse)));
   co_yield;
 }
 
-bool CoroWlDispatcher::ResumeWorkContext(WorkContext& ctx) {
+bool CoroDispatcher::ResumeWorkContext(WorkContext& ctx) {
 	if (!ctx.resume_ctx) {
 	  return false;
 	}
@@ -33,28 +33,19 @@ bool CoroWlDispatcher::ResumeWorkContext(WorkContext& ctx) {
 	return true;
 }
 
-bool CoroWlDispatcher::SetWorkContext(WorkContext& ctx) {
-  if (base::MessageLoop::Current() && base::CoroRunner::CanYield()) {
-    ctx.loop = base::MessageLoop::Current();
-    ctx.resume_ctx = co_resumer; //base::CoroRunner::CurrentCoroResumeCtx();
-    return true;
-  }
-  return false;
+bool CoroDispatcher::SetWorkContext(ProtocolMessage* message) {
+  //base::CoroRunner::CurrentCoroResumeCtx();
+  message->SetWorkerCtx(base::MessageLoop::Current(), co_resumer);
+  return base::MessageLoop::Current() && base::CoroRunner::CanYield();
 }
 
-bool CoroWlDispatcher::TransmitToWorker(base::StlClosure& closure) {
-  base::MessageLoop* loop = HandleWorkInIOLoop() ? base::MessageLoop::Current() : GetNextWorkLoop();
+bool CoroDispatcher::Dispatch(base::StlClosure& closure) {
 
-  if (NULL == loop) {
-    LOG(ERROR) << "no message loop handler this task";
-    return false;
-  }
-
-  if (loop->IsInLoopThread()) {
+  if (HandleWorkInIOLoop()) {
     co_go closure;
-  } else {
-    co_go loop << closure;
+    return true;
   }
+  co_go NextWorker() << closure;
   return true;
 }
 

@@ -106,7 +106,7 @@ bool HttpProtoService::ParseHttpRequest(const RefTcpChannel& channel, IOBuffer* 
     RefHttpRequest message = request_context_->messages_.front();
     request_context_->messages_.pop_front();
 
-    message->SetIOContext(shared_from_this());
+    message->SetIOCtx(shared_from_this());
     CHECK(message->GetMessageType() == MessageType::kRequest);
 
     delegate_->OnProtocolMessage(std::static_pointer_cast<ProtocolMessage>(message));
@@ -143,7 +143,7 @@ bool HttpProtoService::ParseHttpResponse(const RefTcpChannel& channel, IOBuffer*
     RefHttpResponse message = response_context_->messages_.front();
     response_context_->messages_.pop_front();
 
-    message->SetIOContext(shared_from_this());
+    message->SetIOCtx(shared_from_this());
     CHECK(message->GetMessageType() == MessageType::kResponse);
 
     delegate_->OnProtocolMessage(std::static_pointer_cast<ProtocolMessage>(message));
@@ -281,12 +281,6 @@ const RefProtocolMessage HttpProtoService::NewResponseFromRequest(const RefProto
   http_res->InsertHeader("Content-Type", "text/plain");
 
   return std::move(http_res);
-}
-
-bool HttpProtoService::CloseAfterMessage(ProtocolMessage* request, ProtocolMessage* response) {
-  if (!request) {return true;}
-
-  return !static_cast<HttpRequest*>(request)->IsKeepAlive();
 }
 
 void HttpProtoService::BeforeSendRequest(HttpRequest* out_message) {

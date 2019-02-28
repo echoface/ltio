@@ -15,8 +15,6 @@ public:
   void OnDataFinishSend(const RefTcpChannel&) override;
   void OnDataReceived(const RefTcpChannel &, IOBuffer *) override;
 
-  bool CloseAfterMessage(ProtocolMessage* request, ProtocolMessage* response) override;
-
   bool SendRequestMessage(const RefProtocolMessage &message) override;
   bool SendResponseMessage(const RefProtocolMessage& req, const RefProtocolMessage& res) override;
 };

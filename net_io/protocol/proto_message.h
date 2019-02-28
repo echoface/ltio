@@ -21,6 +21,7 @@ typedef enum {
 } MessageCode;
 
 typedef struct {
+  base::MessageLoop* io_loop;
   WeakProtoService protocol_service;
 } IOContext;
 
@@ -34,17 +35,18 @@ typedef struct {
 } WorkContext;
 
 class ProtocolMessage;
-typedef std::shared_ptr<ProtocolMessage> RefProtocolMessage;
 typedef std::weak_ptr<ProtocolMessage> WeakProtocolMessage;
-typedef std::function<void(const RefProtocolMessage&/*request*/)> ProtoMessageHandler;
+typedef std::shared_ptr<ProtocolMessage> RefProtocolMessage;
+typedef std::function<void(const RefProtocolMessage&)> ProtoMessageHandler;
+
+#define RefCast(Type, RefObj) std::static_pointer_cast<Type>(RefObj)
 
 class ProtocolMessage {
 public:
   const static RefProtocolMessage kNullMessage;
-  ProtocolMessage(const std::string, MessageType t);
+  ProtocolMessage(MessageType t);
   virtual ~ProtocolMessage();
 
-  const std::string& Protocol() const;
   const MessageType& GetMessageType() const {return type_;};
   bool IsRequest() const {return type_ == MessageType::kRequest;};
 
@@ -52,8 +54,11 @@ public:
   const std::string& RemoteHost() const {return remote_host_;}
 
   IOContext& GetIOCtx() {return io_context_;}
+  void SetIOCtx(const RefProtoService& service);
+
   WorkContext& GetWorkCtx() {return work_context_;}
-  void SetIOContext(const RefProtoService& service);
+  void SetWorkerCtx(base::MessageLoop* loop);
+  void SetWorkerCtx(base::MessageLoop* loop, base::StlClosure coro_resumer);
 
   MessageCode FailCode() const;
   void SetFailCode(MessageCode reason);
@@ -65,7 +70,8 @@ public:
   const char* TypeAsStr() const;
   bool IsResponded() const {return responded_;}
 
-  /* use for those async-able protocol message, use for matching request and response*/
+  /* use for those async-able protocol message,
+   * use for matching request and response*/
   void SetAsyncIdentify(uint64_t id) {async_id_ = id;}
   const uint64_t AsyncIdentify() const {return async_id_;};
 
@@ -74,9 +80,7 @@ protected:
   IOContext io_context_;
   WorkContext work_context_;
 private:
-  // Work Context
   MessageType type_;
-  std::string proto_;
   std::string remote_host_;
 
   MessageCode fail_code_;

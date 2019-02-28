@@ -9,22 +9,27 @@
 
 namespace net {
 
-class WorkLoadDispatcher {
+typedef std::vector<base::MessageLoop*> LoopList;
+
+class Dispatcher {
 public:
-  WorkLoadDispatcher(bool work_in_io);
-  virtual ~WorkLoadDispatcher() {};
+  Dispatcher(bool handle_in_io);
+  virtual ~Dispatcher() {};
 
-  base::MessageLoop* GetNextWorkLoop();
-  bool HandleWorkInIOLoop() const {return work_in_io_;}
-  void SetWorkerLoops(std::vector<base::MessageLoop*>& loops) {work_loops_ = loops;};
+  bool HandleWorkInIOLoop() const {return handle_in_io_;}
+  void SetWorkerLoops(LoopList& loops) {workers_ = loops;};
 
-  // must call at Worker Loop, may ioworker or woker according to HandleWorkInIOLoop
-  virtual bool SetWorkContext(WorkContext& ctx);
+  // must call at Worker Loop, may ioworker
+  // or woker according to HandleWorkInIOLoop
+  virtual bool SetWorkContext(ProtocolMessage* message);
   // transmit task from IO TO worker loop
-  virtual bool TransmitToWorker(base::StlClosure& closuse);
+  virtual bool Dispatch(base::StlClosure& closuse);
+protected:
+  base::MessageLoop* NextWorker();
 private:
-  const bool work_in_io_;
-  std::vector<base::MessageLoop*> work_loops_;
+
+  const bool handle_in_io_;
+  std::vector<base::MessageLoop*> workers_;
   std::atomic<uint64_t> round_robin_counter_;
 };
 

@@ -32,7 +32,7 @@ GeneralServerApp::GeneralServerApp() {
   LoadConfig();
 
   //client must be corodispatcher
-  dispatcher_.reset(new net::CoroWlDispatcher(HandleRequstInIO()));
+  dispatcher_.reset(new net::CoroDispatcher(HandleRequstInIO()));
   dispatcher_->InitWorkLoop(GetWorkerLoopCount());
   dispatcher_->StartDispatcher();
 }
@@ -80,8 +80,8 @@ void GeneralServerApp::ContentMain() {
 
       router->SetDelegate(server_.get());
       router->SetupRouter(config);
-      net::CoroWlDispatcher* coro_transfer_ =
-        static_cast<net::CoroWlDispatcher*>(dispatcher_.get());
+      net::CoroDispatcher* coro_transfer_ =
+        static_cast<net::CoroDispatcher*>(dispatcher_.get());
       router->SetWorkLoadTransfer(coro_transfer_);
 
       router->StartRouter();

@@ -51,7 +51,7 @@ public:
   ~ClientRouter();
   void SetDelegate(RouterDelegate* delegate);
   void SetupRouter(const RouterConf& config);
-  void SetWorkLoadTransfer(CoroWlDispatcher* dispatcher);
+  void SetWorkLoadTransfer(CoroDispatcher* dispatcher);
 
   void StartRouter();
   void StopRouter();
@@ -91,7 +91,7 @@ private:
   RouterConf config_;
   RefConnector connector_;
   RouterDelegate* delegate_;
-  CoroWlDispatcher* dispatcher_;
+  CoroDispatcher* dispatcher_;
   typedef std::vector<RefClientChannel> ClientChannelList;
   typedef std::shared_ptr<ClientChannelList> RefClientChannelList;
 

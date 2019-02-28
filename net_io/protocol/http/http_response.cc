@@ -16,7 +16,7 @@ RefHttpResponse HttpResponse::CreatWithCode(uint16_t code) {
 }
 
 HttpResponse::HttpResponse()
-  : ProtocolMessage("http", MessageType::kResponse),
+  : ProtocolMessage(MessageType::kResponse),
     keepalive_(false),
     http_major_(1),
     http_minor_(1) {

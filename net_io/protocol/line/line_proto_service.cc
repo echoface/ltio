@@ -28,7 +28,7 @@ void LineProtoService::OnDataReceived(const RefTcpChannel&, IOBuffer *buf) {
 
   {
     std::shared_ptr<LineMessage> msg(new LineMessage(InComingType()));
-    msg->SetIOContext(shared_from_this());
+    msg->SetIOCtx(shared_from_this());
 
     const uint8_t* start = buf->GetRead();
     uint64_t len = line_crlf - start;
@@ -58,9 +58,5 @@ bool LineProtoService::SendRequestMessage(const RefProtocolMessage &message) {
 bool LineProtoService::SendResponseMessage(const RefProtocolMessage& req, const RefProtocolMessage& res) {
   return SendRequestMessage(res);
 };
-
-bool LineProtoService::CloseAfterMessage(ProtocolMessage*, ProtocolMessage*) {
-  return false;
-}
 
 }//end of file

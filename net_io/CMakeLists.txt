@@ -33,6 +33,7 @@ set(LTNET_SOURCE
   #server
   server/raw_server/raw_server.cc
   server/http_server/http_server.cc
+  server/http_server/http_context.cc
 
   #clients source
   clients/client_channel.cc

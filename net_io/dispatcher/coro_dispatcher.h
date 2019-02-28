@@ -6,16 +6,15 @@
 
 namespace net {
 
-class CoroWlDispatcher : public WorkLoadDispatcher {
+class CoroDispatcher : public Dispatcher {
 public:
-  CoroWlDispatcher(bool handle_in_io);
-  ~CoroWlDispatcher();
+  CoroDispatcher(bool handle_in_io);
+  ~CoroDispatcher();
 
   void TransferAndYield(base::MessageLoop* ioloop, base::StlClosure);
 
-  // brand new api
-  bool SetWorkContext(WorkContext& ctx) override;
-  bool TransmitToWorker(base::StlClosure& clourse) override;
+  bool Dispatch(base::StlClosure& clourse) override;
+  bool SetWorkContext(ProtocolMessage* message) override;
   bool ResumeWorkContext(WorkContext& ctx);
 };
 

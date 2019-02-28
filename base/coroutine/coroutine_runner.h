@@ -11,6 +11,8 @@
 
 namespace base {
 
+typedef std::function<void()> CoroResumer;
+
 class CoroRunner : public CoroDelegate {
 public:
   typedef struct __go {

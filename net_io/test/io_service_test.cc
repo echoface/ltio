@@ -109,12 +109,12 @@ private:
   void ExitSignalHandle() {
     LOG(INFO) << " ExitSignalHandle quit AcceptorLoop";
     acceptor_loop_.PostTask(
-      NewClosure(std::bind(&IOService::StopIOService, ioservice_)));
+      NewClosure(std::bind(&IOService::StopIOService, ioservice_.get())));
   }
   base::MessageLoop iowork_loop_;
   base::MessageLoop acceptor_loop_;
 
-  RefIOService ioservice_;
+  IOServicePtr ioservice_;
   ProtoServicePtr tcp_protoservice_;
 };
 

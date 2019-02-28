@@ -398,9 +398,11 @@ int MessageLoop::Notify(int fd, const void* data, size_t count) {
 
 void MessageLoop::SetThreadNativeName() {
   if (loop_name_.empty()) return;
-
-  auto handle = thread_ptr_->native_handle();
-  pthread_setname_np(handle, loop_name_.c_str());
+  LOG(INFO) << __FUNCTION__ << " change message loop name to " << loop_name_;
+  pthread_setname_np(pthread_self(), loop_name_.c_str());
+  //pthread_setname_np(pthread_self(), s.c_str());
+  // set the name (pthread_self() returns the pthread_t of the current thread)
+  //pthread_getname_np(pthread_self(), &name[0], sizeof(name));
 }
 
 };

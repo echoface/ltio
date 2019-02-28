@@ -21,9 +21,10 @@ typedef std::function<void(const LtRawMessage*, LtRawMessage*)> RawMessageHandle
 class RawServer : public IOServiceDelegate {
 public:
   RawServer();
-  void SetIoLoops(std::vector<base::MessageLoop*>& loops);
+
+  void SetDispatcher(Dispatcher* dispatcher);
+  void SetIOLoops(std::vector<base::MessageLoop*>& loops);
   void SetWorkLoops(std::vector<base::MessageLoop*>& loops);
-  void SetDispatcher(WorkLoadDispatcher* dispatcher);
 
   void ServeAddress(const std::string, RawMessageHandler);
   void ServeAddressSync(const std::string, RawMessageHandler);
@@ -43,7 +44,7 @@ protected:
   // handle raw request in target loop
   void HandleRawRequest(const RefProtocolMessage message);
 private:
-  WorkLoadDispatcher* dispatcher_;
+  Dispatcher* dispatcher_;
   RawMessageHandler message_handler_;
 
   std::mutex mtx_;
@@ -51,7 +52,7 @@ private:
 
   std::vector<base::MessageLoop*> io_loops_;
   std::vector<base::MessageLoop*> work_loops_;
-  std::list<RefIOService> ioservices_;
+  std::list<IOServicePtr> ioservices_;
 
   std::atomic<bool> serving_flag_;
   std::atomic_uint32_t connection_count_;

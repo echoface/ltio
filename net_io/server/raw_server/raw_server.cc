@@ -16,7 +16,7 @@ RawServer::RawServer():
   connection_count_.store(0);
 }
 
-void RawServer::SetIoLoops(std::vector<base::MessageLoop*>& loops) {
+void RawServer::SetIOLoops(std::vector<base::MessageLoop*>& loops) {
   if (serving_flag_.load()) {
     LOG(ERROR) << "io loops can only set before server start";
     return;
@@ -24,7 +24,7 @@ void RawServer::SetIoLoops(std::vector<base::MessageLoop*>& loops) {
   io_loops_ = loops;
 }
 
-void RawServer::SetDispatcher(WorkLoadDispatcher* dispatcher) {
+void RawServer::SetDispatcher(Dispatcher* dispatcher) {
   dispatcher_ = dispatcher;
 }
 
@@ -65,16 +65,16 @@ void RawServer::ServeAddress(const std::string address, RawMessageHandler handle
   {
 #if defined SO_REUSEPORT && defined NET_ENABLE_REUSER_PORT
     for (base::MessageLoop* loop : io_loops_) {
-      RefIOService service = std::make_shared<IOService>(addr, "raw", loop, this);
+      IOServicePtr service(new IOService(addr, "raw", loop, this));
       ioservices_.push_back(std::move(service));
     }
 #else
     base::MessageLoop* loop = io_loops_[ioservices_.size() % io_loops_.size()];
-    RefIOService service = std::make_shared<IOService>(addr, "raw", loop, this);
+    IOServicePtr service(new IOService(addr, "raw", loop, this));
     ioservices_.push_back(std::move(service));
 #endif
 
-    for (RefIOService& service : ioservices_) {
+    for (IOServicePtr& service : ioservices_) {
       service->StartIOService();
     }
   }
@@ -90,18 +90,19 @@ void RawServer::OnRequestMessage(const RefProtocolMessage& request) {
   }
 
   base::StlClosure functor = std::bind(&RawServer::HandleRawRequest, this, request);
-  if (false == dispatcher_->TransmitToWorker(functor)) {
-    RefProtoService service = request->GetIOCtx().protocol_service.lock();
-    if (service) {
-      service->CloseService();
+  if (false == dispatcher_->Dispatch(functor)) {
+    LOG(ERROR) << __FUNCTION__ << " dispatcher_->Dispatch failed";
+
+    auto proto_service = request->GetIOCtx().protocol_service.lock();
+    if (proto_service) {
+      proto_service->CloseService();
     }
-    LOG(ERROR) << __FUNCTION__ << " dispatcher_->TransmitToWorker failed";
   }
 }
 
 void RawServer::HandleRawRequest(const RefProtocolMessage request) {
 
-  RefProtoService raw_service = request->GetIOCtx().protocol_service.lock();
+  auto raw_service = request->GetIOCtx().protocol_service.lock();
   if (!raw_service) {
     VLOG(GLOG_VERROR) << __FUNCTION__ << " Channel Has Broken After Handle Request Message";
     return;
@@ -109,19 +110,17 @@ void RawServer::HandleRawRequest(const RefProtocolMessage request) {
 
   RefProtocolMessage response = raw_service->NewResponseFromRequest(request);
   do {
-    if (dispatcher_ && !dispatcher_->SetWorkContext(request->GetWorkCtx())) {
-      LOG(ERROR) << "Set WorkerContext failed";
+    if (dispatcher_ && !dispatcher_->SetWorkContext(request.get())) {
+      LOG(ERROR) << __FUNCTION__ << " Set WorkerContext failed";
       break;
     }
     message_handler_((LtRawMessage*)request.get(), (LtRawMessage*)response.get());
   } while(0);
 
-  bool close = raw_service->CloseAfterMessage(request.get(), response.get());
-
   if (raw_service->IOLoop()->IsInLoopThread()) { //send reply directly
 
     bool send_success = raw_service->SendResponseMessage(request, response);
-    if (close || !send_success) { //failed
+    if (!send_success) { //failed
       raw_service->CloseService();
     }
 
@@ -129,7 +128,7 @@ void RawServer::HandleRawRequest(const RefProtocolMessage request) {
 
     auto functor = [=]() {
       bool send_success = raw_service->SendResponseMessage(request, response);
-      if (close || !send_success) { //failed
+      if (!send_success) { //failed
         raw_service->CloseService();
       }
     };
@@ -182,7 +181,7 @@ void RawServer::IOServiceStoped(const IOService* service) {
 
   {
     std::unique_lock<std::mutex> lck(mtx_);
-    ioservices_.remove_if([&](RefIOService& s) -> bool {
+    ioservices_.remove_if([&](IOServicePtr& s) -> bool {
       return s.get() == service;
     });
   }

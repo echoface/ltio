@@ -4,7 +4,7 @@
 namespace net {
 
 LineMessage::LineMessage(MessageType t)
-  : ProtocolMessage("line", t) {
+  : ProtocolMessage(t) {
 }
 
 LineMessage::~LineMessage() {

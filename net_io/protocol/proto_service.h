@@ -46,7 +46,6 @@ public:
   virtual bool SendRequestMessage(const RefProtocolMessage& message) = 0;
   virtual bool SendResponseMessage(const RefProtocolMessage& req, const RefProtocolMessage& res) = 0;
 
-  virtual bool CloseAfterMessage(ProtocolMessage*, ProtocolMessage*) { return true;};
   virtual const RefProtocolMessage NewResponseFromRequest(const RefProtocolMessage &) {return NULL;}
 
   bool IsServerSide() const {return is_server_side_;}

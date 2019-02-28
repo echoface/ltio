@@ -24,7 +24,7 @@ void QueuedChannel::StartClient() {
 void QueuedChannel::SendRequest(RefProtocolMessage request)  {
   CHECK(IOLoop()->IsInLoopThread());
 
-  request->SetIOContext(protocol_service_);
+  request->SetIOCtx(protocol_service_);
   waiting_list_.push_back(std::move(request));
 
   TrySendNext();

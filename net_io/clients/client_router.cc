@@ -135,15 +135,15 @@ void ClientRouter::OnClientChannelClosed(const RefClientChannel& channel) {
 
 void ClientRouter::OnRequestGetResponse(const RefProtocolMessage& request,
                                         const RefProtocolMessage& response) {
-  CHECK(request);
   request->SetResponse(response);
-  dispatcher_->ResumeWorkContext(request->GetWorkCtx());
+
+  request->GetWorkCtx().resume_ctx();
 }
 
 ProtocolMessage* ClientRouter::SendClientRequest(RefProtocolMessage& message) {
   DCHECK(dispatcher_);
 
-  if (!dispatcher_->SetWorkContext(message->GetWorkCtx())) {
+  if (!dispatcher_->SetWorkContext(message.get())) {
     LOG(FATAL) << __FUNCTION__ << " this task can't by yield, send failed";
     return NULL;
   }
@@ -167,7 +167,7 @@ ProtocolMessage* ClientRouter::SendClientRequest(RefProtocolMessage& message) {
   return message->RawResponse();
 }
 
-void ClientRouter::SetWorkLoadTransfer(CoroWlDispatcher* dispatcher) {
+void ClientRouter::SetWorkLoadTransfer(CoroDispatcher* dispatcher) {
   dispatcher_ = dispatcher;
 }
 

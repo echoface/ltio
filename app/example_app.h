@@ -27,7 +27,7 @@ public:
   };
 
   //override
-  net::WorkLoadDispatcher* WorkLoadTransfer() {
+  net::Dispatcher* WorkLoadTransfer() {
     return dispatcher_.get();
   };
 protected:
@@ -38,7 +38,7 @@ private:
 
   //typedef std::vector<RefClientRouter> ClientRouterList;
   std::map<std::string, net::RefClientRouter> clients_;
-  std::unique_ptr<net::CoroWlDispatcher> dispatcher_;
+  std::unique_ptr<net::CoroDispatcher> dispatcher_;
 };
 
 }

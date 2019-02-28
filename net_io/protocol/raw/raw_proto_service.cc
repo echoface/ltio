@@ -50,7 +50,7 @@ void RawProtoService::OnDataReceived(const RefTcpChannel &channel, IOBuffer *buf
     }
 
     auto raw_message = LtRawMessage::Create(IsServerSide());
-    raw_message->SetIOContext(shared_from_this());
+    raw_message->SetIOCtx(shared_from_this());
 
     LtRawHeader* header = raw_message->MutableHeader();
 
@@ -77,10 +77,6 @@ void RawProtoService::OnDataReceived(const RefTcpChannel &channel, IOBuffer *buf
       delegate_->OnProtocolMessage(std::static_pointer_cast<ProtocolMessage>(raw_message));
     }
   } while(1);
-}
-
-bool RawProtoService::CloseAfterMessage(ProtocolMessage*, ProtocolMessage*) {
-  return false;
 }
 
 const RefProtocolMessage RawProtoService::NewResponseFromRequest(const RefProtocolMessage &req) {

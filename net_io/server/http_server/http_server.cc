@@ -7,11 +7,11 @@
 #include "protocol/proto_service.h"
 #include "message_loop/linux_signal.h"
 #include "protocol/proto_service_factory.h"
+#include "base/coroutine/coroutine_runner.h"
 
 namespace net {
 
-HttpServer::HttpServer():
-  dispatcher_(nullptr) {
+HttpServer::HttpServer() {
   serving_flag_.store(false);
   connection_count_.store(0);
 }
@@ -19,16 +19,16 @@ HttpServer::~HttpServer() {
   serving_flag_.store(false);
 }
 
-void HttpServer::SetIoLoops(std::vector<base::MessageLoop*>& loops) {
-  if (io_loops_.size()) {
+void HttpServer::SetDispatcher(Dispatcher* dispatcher) {
+  dispatcher_ = dispatcher;
+}
+
+void HttpServer::SetIOLoops(std::vector<base::MessageLoop*>& loops) {
+  if (serving_flag_) {
     LOG(ERROR) << "io loops can only set before http server start";
     return;
   }
   io_loops_ = loops;
-}
-
-void HttpServer::SetDispatcher(WorkLoadDispatcher* dispatcher) {
-  dispatcher_ = dispatcher;
 }
 
 void HttpServer::ServeAddressSync(const std::string addr, HttpMessageHandler handler) {
@@ -66,16 +66,16 @@ void HttpServer::ServeAddress(const std::string address, HttpMessageHandler hand
   {
 #if defined SO_REUSEPORT && defined NET_ENABLE_REUSER_PORT
     for (base::MessageLoop* loop : io_loops_) {
-      RefIOService service = std::make_shared<IOService>(addr, "http", loop, this);
+      IOServicePtr service(new IOService(addr, "http", loop, this));
       ioservices_.push_back(std::move(service));
     }
 #else
     base::MessageLoop* loop = io_loops_[ioservices_.size() % io_loops_.size()];
-    RefIOService service = std::make_shared<IOService>(addr, "http", loop, this);
+    IOServicePtr service(new IOService(addr, "http", loop, this));
     ioservices_.push_back(std::move(service));
 #endif
 
-    for (RefIOService& service : ioservices_) {
+    for (IOServicePtr& service : ioservices_) {
       service->StartIOService();
     }
   }
@@ -85,58 +85,32 @@ void HttpServer::ServeAddress(const std::string address, HttpMessageHandler hand
 void HttpServer::OnRequestMessage(const RefProtocolMessage& request) {
   VLOG(GLOG_VTRACE) << __FUNCTION__ << "a http request message come";
 
+  HttpContext* context = new HttpContext(RefCast(HttpRequest, request));
   if (!dispatcher_) {
-    return HandleHttpRequest(request);
+    return HandleHttpRequest(context);
   }
-
-  base::StlClosure functor = std::bind(&HttpServer::HandleHttpRequest, this, request);
-  if (!dispatcher_->TransmitToWorker(functor)) {
-    LOG(ERROR) << __FUNCTION__ << " dispatcher_->TransmitToWorker failed";
-    RefProtoService service = request->GetIOCtx().protocol_service.lock();
-    if (service) {
-      service->CloseService();
-    }
+  base::StlClosure func = std::bind(&HttpServer::HandleHttpRequest, this, context);
+  bool success = dispatcher_->Dispatch(func);
+  if (!success) {
+    context->ReplyString("Internal Server Error", 500);
+    delete context;
+    LOG(ERROR) << __FUNCTION__ << " HttpServer Internal Error, Dispach Request Failed";
   }
 }
 
-void HttpServer::HandleHttpRequest(const RefProtocolMessage request) {
-
-  RefProtoService service = request->GetIOCtx().protocol_service.lock();
-  if (!service) {
-    VLOG(GLOG_VERROR) << __FUNCTION__ << " Channel Has Broken After Handle Request Message";
-    return;
+void HttpServer::HandleHttpRequest(HttpContext* context) {
+  if (!dispatcher_) {
+    context->Request()->SetWorkerCtx(base::MessageLoop::Current());
+  } else {
+    dispatcher_->SetWorkContext(context->Request());
   }
 
-  RefProtocolMessage response = service->NewResponseFromRequest(request);
-  do {
-    if (dispatcher_) {
-      if (!dispatcher_->SetWorkContext(request->GetWorkCtx())) {
-        LOG(ERROR) << "Set WorkerContext failed";
-        break;
-      }
-    }
-    message_handler_((HttpRequest*)request.get(), (HttpResponse*)response.get());
-  } while(0);
+  message_handler_(context);
 
-  bool close = service->CloseAfterMessage(request.get(), response.get());
-  if (service->IOLoop()->IsInLoopThread()) { //send reply directly
-
-    bool send_success = service->SendResponseMessage(request, response);
-    if (close || !send_success) { //failed
-      service->CloseService();
-    }
-
-  } else  { //Send Response to Channel's IO Loop
-
-    auto functor = [=]() {
-      bool send_success = service->SendResponseMessage(request, response);
-
-      if (close || !send_success) { //failed
-        service->CloseService();
-      }
-    };
-    service->IOLoop()->PostTask(NewClosure(std::move(functor)));
+  if (!context->DidReply()) {
+    context->ReplyString("Not Found", 404);
   }
+  delete context;
 }
 
 bool HttpServer::CanCreateNewChannel() {
@@ -154,18 +128,19 @@ base::MessageLoop* HttpServer::GetNextIOWorkLoop() {
 
 bool HttpServer::IncreaseChannelCount() {
   connection_count_.fetch_add(1);
-  LOG(INFO) << __FUNCTION__ << " rawserver connections +1 count:" << connection_count_;
+  LOG(INFO) << __FUNCTION__ << " httpserver connections +1 count:" << connection_count_;
   return true;
 }
 
 void HttpServer::DecreaseChannelCount() {
   connection_count_.fetch_sub(1);
-  LOG(INFO) << __FUNCTION__ << " rawserver connections -1 count:" << connection_count_;
+  LOG(INFO) << __FUNCTION__ << " httpserver connections -1 count:" << connection_count_;
 }
 
 bool HttpServer::BeforeIOServiceStart(IOService* ioservice) {
   return true;
 }
+
 void HttpServer::IOServiceStarted(const IOService* service) {
   LOG(INFO) << "Http Server IO Service " << service->IOServiceName() << " Started .......";
 
@@ -183,7 +158,7 @@ void HttpServer::IOServiceStoped(const IOService* service) {
 
   {
     std::unique_lock<std::mutex> lck(mtx_);
-    ioservices_.remove_if([&](RefIOService& s) -> bool {
+    ioservices_.remove_if([&](IOServicePtr& s) -> bool {
       return s.get() == service;
     });
   }

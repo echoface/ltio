@@ -43,7 +43,7 @@ public:
     return std::make_shared<ConcreteRawMessage>(t);
   };
 
-  RawMessage(MessageType t) :ProtocolMessage("raw", t) {};
+  RawMessage(MessageType t) :ProtocolMessage(t) {};
   virtual ~RawMessage() {};
 
   const std::string& Content() const {return content_;}

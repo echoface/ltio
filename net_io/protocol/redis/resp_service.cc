@@ -43,8 +43,8 @@ void RespService::OnDataReceived(const RefTcpChannel &channel, IOBuffer *buffer)
 
   if (next_incoming_count_ == 0) {
 
-    current_response->SetIOContext(shared_from_this());
-    delegate_->OnProtocolMessage(std::static_pointer_cast<ProtocolMessage>(current_response));
+    current_response->SetIOCtx(shared_from_this());
+    delegate_->OnProtocolMessage(RefCast(ProtocolMessage, current_response));
 
     current_response.reset();
     next_incoming_count_ = 0;

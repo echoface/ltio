@@ -9,7 +9,7 @@
 namespace net {
 
 HttpRequest::HttpRequest()
-  : ProtocolMessage("http", MessageType::kRequest),
+  : ProtocolMessage(MessageType::kRequest),
     keepalive_(false),
     method_("GET"),
     url_("/"),

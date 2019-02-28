@@ -73,7 +73,7 @@ TEST_CASE("client.base", "[http client]") {
   LOG_IF(ERROR, !net::url::ParseURI("http://127.0.0.1:80", server_info)) << " server can't be resolve";
 
   net::ClientRouter http_router(&loop, server_info);
-  net::CoroWlDispatcher* dispatcher_ = new net::CoroWlDispatcher(true);
+  net::CoroDispatcher* dispatcher_ = new net::CoroDispatcher(true);
 
 
   net::RouterConf router_config;
@@ -105,7 +105,7 @@ TEST_CASE("client.http.request", "[http client send request]") {
   loop.Start();
 
   static const int connections = 10;
-  net::CoroWlDispatcher* dispatcher_ = new net::CoroWlDispatcher(true);
+  net::CoroDispatcher* dispatcher_ = new net::CoroDispatcher(true);
 
   net::url::SchemeIpPort server_info;
   LOG_IF(ERROR, !net::url::ParseURI("http://127.0.0.1:80", server_info)) << " server can't be resolve";
@@ -172,7 +172,7 @@ TEST_CASE("client.raw.request", "[raw client send request]") {
   LOG_IF(ERROR, !net::url::ParseURI("raw://127.0.0.1:5005", server_info)) << " server can't be resolve";
 
   net::ClientRouter raw_router(&loop, server_info);
-  net::CoroWlDispatcher* dispatcher_ = new net::CoroWlDispatcher(true);
+  net::CoroDispatcher* dispatcher_ = new net::CoroDispatcher(true);
 
   static const int connections = 10;
 
@@ -237,7 +237,7 @@ TEST_CASE("client.timer.request", "[fetch resource every interval]") {
   LOG_IF(ERROR, !net::url::ParseURI("raw://127.0.0.1:5005", server_info)) << " server can't be resolve";
 
   net::ClientRouter raw_router(&loop, server_info);
-  net::CoroWlDispatcher* dispatcher_ = new net::CoroWlDispatcher(true);
+  net::CoroDispatcher* dispatcher_ = new net::CoroDispatcher(true);
 
   static const int connections = 10;
 
@@ -322,7 +322,7 @@ TEST_CASE("client.raw.bench", "[raw client send request benchmark]") {
   LOG_IF(ERROR, !net::url::ParseURI("raw://127.0.0.1:5005", server_info)) << " server can't be resolve";
 
   net::ClientRouter raw_router(&loop, server_info);
-  net::CoroWlDispatcher* dispatcher_ = new net::CoroWlDispatcher(true);
+  net::CoroDispatcher* dispatcher_ = new net::CoroDispatcher(true);
   dispatcher_->SetWorkerLoops(loops);
 
   static const int connections = 10;
@@ -405,7 +405,7 @@ TEST_CASE("client.http.bench", "[http client send request benchmark]") {
     << " protocol:" << server_info.protocol;
 
   net::ClientRouter http_router(&loop, server_info);
-  net::CoroWlDispatcher* dispatcher_ = new net::CoroWlDispatcher(true);
+  net::CoroDispatcher* dispatcher_ = new net::CoroDispatcher(true);
   dispatcher_->SetWorkerLoops(loops);
 
   const int connections = 10;

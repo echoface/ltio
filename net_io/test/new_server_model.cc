@@ -21,14 +21,16 @@ base::MessageLoop main_loop;
 std::vector<base::MessageLoop*> loops;
 std::vector<base::MessageLoop*> workers;
 
-CoroWlDispatcher* dispatcher_ = new CoroWlDispatcher(false);
-WorkLoadDispatcher* common_dispatcher = new WorkLoadDispatcher(true);
+CoroDispatcher* dispatcher_ = new CoroDispatcher(false);
+Dispatcher* common_dispatcher = new Dispatcher(true);
 
 std::atomic_int64_t http_count;
-static std::string kresponse(3650, 'c');
-void HandleHttp(const HttpRequest* req, HttpResponse* res) {
-  LOG_EVERY_N(INFO, 10000) << " got 1w Http request, body:" << req->Dump();
+static const std::string kresponse(3650, 'c');
 
+void HandleHttp(net::HttpContext* context) {
+  net::HttpRequest* req = context->Request();
+
+  LOG_EVERY_N(INFO, 10000) << " got 1w Http request, body:" << req->Dump();
   http_count++;
 
 #ifdef ENBALE_RAW_CLIENT
@@ -36,9 +38,7 @@ void HandleHttp(const HttpRequest* req, HttpResponse* res) {
       SendRawRequest();
   }
 #endif
-
-  res->SetResponseCode(200);
-  res->MutableBody() = kresponse;
+  context->ReplyString(kresponse);
 }
 
 void HandleRaw(const LtRawMessage* req, LtRawMessage* res) {
@@ -240,14 +240,15 @@ int main(int argc, char* argv[]) {
   common_dispatcher->SetWorkerLoops(loops);
 
   net::RawServer raw_server;
-  raw_server.SetIoLoops(loops);
+  raw_server.SetIOLoops(loops);
   raw_server.SetDispatcher(dispatcher_);
   raw_server.ServeAddressSync("raw://0.0.0.0:5005", std::bind(HandleRaw, std::placeholders::_1, std::placeholders::_2));
 
   net::HttpServer http_server;
-  http_server.SetIoLoops(loops);
+  http_server.SetIOLoops(loops);
+  http_server.SetWorkerLoops(workers);
   http_server.SetDispatcher(dispatcher_);
-  http_server.ServeAddressSync("http://0.0.0.0:5006", std::bind(HandleHttp, std::placeholders::_1, std::placeholders::_2));
+  http_server.ServeAddressSync("http://0.0.0.0:5006", std::bind(HandleHttp, std::placeholders::_1));
 
 #if 0
   StartHttpClients();
