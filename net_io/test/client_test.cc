@@ -81,8 +81,6 @@ int main(int argc, char* argv[]) {
   loop.SetLoopName("clientloop");
   wloop.SetLoopName("workloop");
 
-  net::CoroDispatcher* dispatcher_ = new net::CoroDispatcher(true);
-
   loop.Start();
   wloop.Start();
   {

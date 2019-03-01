@@ -35,7 +35,7 @@ void HandleHttp(net::HttpContext* context) {
 
 #ifdef ENBALE_RAW_CLIENT
   if (req->RequestUrl() == "/br") {
-      SendRawRequest();
+    SendRawRequest();
   }
 #endif
   context->ReplyString(kresponse);
@@ -82,9 +82,9 @@ void StartRedisClient() {
   redis_router->StartRouter();
 }
 
-void StartRawClient() {
+void StartRawClient(std::string server_addr) {
   net::url::SchemeIpPort server_info;
-  LOG_IF(ERROR, !net::url::ParseURI("raw://127.0.0.1:5005", server_info)) << " server can't be resolve";
+  LOG_IF(ERROR, !net::url::ParseURI(server_addr, server_info)) << " server can't be resolve";
 
   raw_router = new net::ClientRouter(&main_loop, server_info);
   net::RouterConf router_config;
@@ -97,9 +97,9 @@ void StartRawClient() {
   raw_router->StartRouter();
 }
 
-void StartHttpClients() {
+void StartHttpClients(std::string url) {
   net::url::SchemeIpPort server_info;
-  LOG_IF(ERROR, !net::url::ParseURI("http://127.0.0.1:5006", server_info)) << " server can't be resolve";
+  LOG_IF(ERROR, !net::url::ParseURI(url, server_info)) << " server can't be resolve";
   http_router = new net::ClientRouter(&main_loop, server_info);
   net::RouterConf router_config;
   router_config.connections = 2;
@@ -233,6 +233,8 @@ int main(int argc, char* argv[]) {
   http_count.store(0);
   PrepareLoops(std::thread::hardware_concurrency(), 1);
 
+  StartHttpClients("http://127.0.0.1:80");
+
   dispatcher_->SetWorkerLoops(loops);
   common_dispatcher->SetWorkerLoops(loops);
 
@@ -246,25 +248,13 @@ int main(int argc, char* argv[]) {
   http_server.SetDispatcher(dispatcher_);
   http_server.ServeAddressSync("http://0.0.0.0:5006", std::bind(HandleHttp, std::placeholders::_1));
 
-#if 0
-  StartHttpClients();
-#endif
-
-
 #ifdef ENBALE_RAW_CLIENT
-  StartRawClient();
-#endif
-
-#if 0
-  std::this_thread::sleep_for(std::chrono::seconds(5));
-  http_server.StopServerSync();
-  raw_router->StopRouter();
+  StartRawClient("raw://127.0.0.1:5005");
 #endif
 
 #if 0
   StartRedisClient();
   std::this_thread::sleep_for(std::chrono::seconds(5));
-  main_loop.PostCoroTask(std::bind(SendRedisMessage));
 #endif
 
   main_loop.WaitLoopEnd();

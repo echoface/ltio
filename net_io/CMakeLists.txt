@@ -49,6 +49,7 @@ SET(LTNETEXECUTE_LINKLIBS
   ltnet
   ltbase
   ${GLOG_LIBRARY}
+  ${GFLAG_LIBRARY}
   ${ZLIB_LIBRARIES}
   3rd
   coro
@@ -88,4 +89,7 @@ ADD_EXECUTABLE(client_test
 )
 ADD_EXECUTABLE(new_server_model
   test/new_server_model.cc
+)
+ADD_EXECUTABLE(raw_client
+  test/raw_client.cc
 )
