@@ -63,8 +63,7 @@ public:
 
     VLOG(GLOG_VINFO) <<  "Re-Schedule timer " << new_delay_ms << " ms";
 
-    TimeoutEvent* timeout_ev =
-      TimeoutEvent::CreateSelfDeleteTimeoutEvent(new_delay_ms);
+    TimeoutEvent* timeout_ev = TimeoutEvent::CreateOneShotTimer(new_delay_ms, true);
 
     timeout_ev->InstallTimerHandler(std::move(timeout_fn_));
     event_pump_->AddTimeoutEvent(timeout_ev);
@@ -248,7 +247,7 @@ void MessageLoop::PostDelayTask(std::unique_ptr<TaskBase> task, uint32_t ms) {
     PostTask(ClosurePtr(new TimeoutTaskHelper(std::move(task), event_pump_.get(), ms)));
     return;
   }
-  TimeoutEvent* timeout_ev = TimeoutEvent::CreateSelfDeleteTimeoutEvent(ms);
+  TimeoutEvent* timeout_ev = TimeoutEvent::CreateOneShotTimer(ms, true);
   timeout_ev->InstallTimerHandler(std::move(task));
   event_pump_->AddTimeoutEvent(timeout_ev);
 }

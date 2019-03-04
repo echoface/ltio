@@ -129,10 +129,8 @@ void EventPump::ProcessTimerEvent() {
 
     if (timeout_ev->IsRepeated()) { // re-add to timeout wheel
       add_timer_internal(now, timeout_ev);
-    } else {
-      if (timeout_ev->SelfDelete()) {
-        to_be_deleted.push_back(timeout_ev);
-      }
+    } else if (timeout_ev->DelAfterInvoke()) {
+      to_be_deleted.push_back(timeout_ev);
     }
     // Must at end; avoid case: ABA
     // timer A invoke ->
@@ -174,7 +172,7 @@ void EventPump::FinalizeTimeWheel() {
     TimeoutEvent *toe = static_cast<TimeoutEvent *>(to);
 
     ::timeouts_del(timeout_wheel_, to);
-    if (toe->SelfDelete()) {
+    if (toe->DelAfterInvoke()) {
       to_be_delete.push_back(toe);
     }
   }
