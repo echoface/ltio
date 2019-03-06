@@ -17,6 +17,7 @@ it has implemnet follow code/component
 - async redis client side support
 
 + add sendfile support for zero copy between kernel and user space
++ client support full async call when task not running on coroutine task
 
 - thread safe lru component
 - inverted indexer table
