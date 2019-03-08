@@ -81,3 +81,7 @@ ADD_EXECUTABLE(inverted_indexer_unittest
 	./inverted_indexer/unittests/catch_main.cc
 	./inverted_indexer/unittests/inverted_indexer_unittest.cc)
 set_target_properties(inverted_indexer_unittest PROPERTIES EXCLUDE_FROM_ALL TRUE)
+
+
+# build cm unittest
+ADD_SUBDIRECTORY(unittest)

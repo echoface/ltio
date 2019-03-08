@@ -4,7 +4,6 @@
 #include <atomic>
 #include "count_min_sketch.h"
 
-
 #define CATCH_CONFIG_MAIN //only once
 #include <catch/catch.hpp>
 

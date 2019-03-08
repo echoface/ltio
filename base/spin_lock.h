@@ -21,7 +21,7 @@ private:
   DISALLOW_COPY_AND_ASSIGN(SpinLock);
 };
 
-//be carefor use is
+//be careful use is
 class SpinLockGuard {
 public:
   SpinLockGuard(SpinLock& lock);
