@@ -45,7 +45,7 @@ void HandleRaw(const LtRawMessage* req, LtRawMessage* res) {
   LOG_EVERY_N(INFO, 10000) << " got 1w Raw request" << req->Dump();
 
   res->MutableHeader()->code = 0;
-  res->MutableHeader()->method = 2;
+  res->MutableHeader()->method = req->Header().method;
   res->SetContent("Raw Message");
 }
 

@@ -7,6 +7,8 @@ SET(LTCOMPONENT_DEPENDENCY
   3rd
 )
 
+ADD_SUBDIRECTORY(log_metrics)
+
 SET(COMPONENT_SOURCES
 	./bloomfilter/bloom_filter.cc
 	./count_min_sketch/count_min_sketch.cc
@@ -29,11 +31,6 @@ SET(COMPONENT_SOURCES
 	./inverted_indexer/posting_field/posting_list_manager.cc
 )
 
-SET(COMPONENT_LINKLIBS
-	3rd
-	ltbase
-	${GLOG_LIBRARY})
-
 ADD_LIBRARY(ltcomponent STATIC ${COMPONENT_SOURCES})
 ADD_LIBRARY(ltcomponent_shared SHARED ${COMPONENT_SOURCES})
 
@@ -43,17 +40,16 @@ set_target_properties(ltcomponent PROPERTIES CLEAN_DIRECT_OUTPUT 1)
 set_target_properties(ltcomponent_shared PROPERTIES CLEAN_DIRECT_OUTPUT 1)
 
 TARGET_LINK_LIBRARIES(ltcomponent
-	${COMPONENT_LINKLIBS}
+	3rd
+	ltbase
+	${GLOG_LIBRARY}
 )
 
-SET(COMPONENT_EXECUTE_LINKLIBS
+LINK_LIBRARIES(
 	3rd
 	ltbase
 	ltcomponent
-	${GLOG_LIBRARY})
-
-LINK_LIBRARIES(
-	${COMPONENT_EXECUTE_LINKLIBS}
+	${GLOG_LIBRARY}
 )
 
 # all follow target or library will dependency the ltcomponent
