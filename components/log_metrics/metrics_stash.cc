@@ -1,5 +1,6 @@
 #include <thread>
 #include <unistd.h>
+#include <iostream>
 #include <glog/logging.h>
 #include "metrics_stash.h"
 #include <nlohmann/json.hpp>
@@ -41,7 +42,7 @@ void MetricsStash::StopSync() {
 
 void MetricsStash::Start() {
   CHECK(!running_ && !th_);
-  running_ = true; 
+  running_ = true;
   th_ = new std::thread(&MetricsStash::StashMain, this);
 }
 
@@ -49,17 +50,25 @@ uint64_t MetricsStash::ProcessMetric() {
   uint64_t item_count = 0;
 
   RefMetricContainer container = std::atomic_load(&container_);
-  //handle queue
+
   for (uint32_t i = 0; i < queue_groups_.GroupSize(); i++) {
-    StashQueue& queue = queue_groups_.NextQueue(); 
-    MetricsItemPtr item = NULL; 
-    while (queue.try_dequeue(item)) {
+
+    StashQueue& queue = queue_groups_.At(i);
+
+    std::vector<MetricsItemPtr> items(1000);
+	  size_t count = queue.try_dequeue_bulk(items.begin(), items.size());
+    if (count == 0) {
+      continue;
+    }
+
+    for (size_t i = 0; i < count; i++) {
       item_count++;
-      switch(item->type_) {
+
+      switch(items[i]->type_) {
         case MetricsType::kGauge:
           break;
         case MetricsType::kHistogram:
-          container->MergeHistogram(item.get()); 
+          container->MergeHistogram(items[i].get());
           break;
         default:
           break;
@@ -69,10 +78,10 @@ uint64_t MetricsStash::ProcessMetric() {
   return item_count;
 }
 
-void MetricsStash::GenReport() {
+void MetricsStash::GenerateReport() {
   time_t now = ::time(NULL);
-  if (now - last_report_time_ < 30) {
-    return; 
+  if (now - last_report_time_ < 5) {
+    return;
   }
   last_report_time_ = now;
 
@@ -81,19 +90,21 @@ void MetricsStash::GenReport() {
   std::atomic_store(&container_, new_container);
 
   Json report;
-  old->GenerateJsonReport(report); 
-  LOG(INFO) << report;
+  old->GenerateJsonReport(report);
+  std::cout << report << std::endl;
 }
 
 void MetricsStash::StashMain() {
+
   while(running_) {
+
     uint32_t handle_count = ProcessMetric();
 
     if (handle_count == 0) {
       ::usleep(100000);
     }
 
-    GenReport();
+    GenerateReport();
   }
 }
 

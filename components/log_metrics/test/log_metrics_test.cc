@@ -36,6 +36,7 @@ int main(int argc, char** argv) {
     ::usleep(10000);
   }
 
-  ::sleep(30);
+  ::sleep(5);
+  stash.StopSync();
   return 0;
 }

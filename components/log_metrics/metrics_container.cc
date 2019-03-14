@@ -36,41 +36,69 @@ uint32_t MetricDist::Qps() const {
 }
 
 uint32_t MetricDist::CalculatePecentile(uint32_t percent) const {
-  uint32_t count = counter * 100 / percent;
+  uint32_t count = counter * percent / 100;
   uint64_t sum = 0;
-  uint32_t i = 0; 
+  uint32_t i = 0;
   for (;sum < count && i < percentile_bucket.size(); i++) {
     sum += percentile_bucket[i];
   }
-  i = i > 0 ? i -1 : 0; 
   return kPercentilePrecise * i;
 }
 
+std::vector<uint32_t> MetricDist::CalculatePecentile(std::vector<uint32_t> percent) const {
+  std::vector<uint32_t> result(percent.size());
+  std::sort(percent.begin(), percent.end());
+
+  uint64_t sum = 0;
+  uint32_t bucket = 0;
+  uint32_t result_i = 0;
+  for (; bucket < percentile_bucket.size() && result_i < percent.size(); bucket++) {
+    sum += percentile_bucket[bucket];
+    if (sum > (counter / 100) * percent[result_i]) {
+      result[result_i] = kPercentilePrecise * bucket;
+      result_i++;
+    }
+  }
+  return std::move(result);
+}
+
 void to_json(Json& j, const MetricDist& dist) {
-  Json percentile;
-  percentile["99"] = dist.CalculatePecentile(99);
-  percentile["95"] = dist.CalculatePecentile(95);
-  percentile["90"] = dist.CalculatePecentile(90);
-  percentile["80"] = dist.CalculatePecentile(80);
-  percentile["50"] = dist.CalculatePecentile(50);
- 
+
+  auto percentiles = dist.CalculatePecentile({50, 80, 90, 95, 99});
+  std::ostringstream oss;
+  oss << 50 << ":" << percentiles[0] << ", "
+      << 80 << ":" << percentiles[1] << ", "
+      << 90 << ":" << percentiles[2] << ", "
+      << 95 << ":" << percentiles[3] << ", "
+      << 99 << ":" << percentiles[4];
+
+  j["dist"] = oss.str();
+  /*
+  //Json percentile;
+  percentile["99"] = percentiles[4];
+  percentile["95"] = percentiles[3];
+  percentile["90"] = percentiles[2];
+  percentile["80"] = percentiles[1];
+  percentile["50"] = percentiles[0];
   j["dist"] = percentile;
+  */
+
   j["qps"] = dist.Qps();
-  j["sum"] = dist.total_value; 
+  j["sum"] = dist.total_value;
   j["min"] = dist.min_value;
   j["max"] = dist.max_value;
   if (dist.counter > 0) {
-    j["avg"] = dist.total_value / dist.counter;
+    j["avg"] = uint32_t(dist.total_value / dist.counter);
   }
 }
 
-MetricContainer::MetricContainer() 
-  : start_time(::time(NULL)){
+MetricContainer::MetricContainer()
+  : start_time(::time(NULL)) {
 }
 
 void MetricContainer::MergeHistogram(const MetricsItem* item) {
   CHECK(item->type_ == MetricsType::kHistogram);
-  
+
   auto iter = datas_.find(item->name_);
   if (iter == datas_.end()) {
     auto pair = datas_.insert(std::make_pair(item->name_, MetricDist(start_time)));

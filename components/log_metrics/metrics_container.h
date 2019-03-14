@@ -6,6 +6,8 @@
 #include <unordered_map>
 #include "metrics_item.h"
 #include <nlohmann/json_fwd.hpp>
+#include <initializer_list>
+
 
 using Json = nlohmann::json;
 
@@ -17,6 +19,7 @@ struct MetricDist {
   uint32_t Qps() const;
   uint32_t Duration() const;
   uint32_t CalculatePecentile(uint32_t percent) const;
+  std::vector<uint32_t> CalculatePecentile(std::vector<uint32_t> percent) const;
 
   uint64_t counter;
   double min_value;

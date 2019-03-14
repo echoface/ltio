@@ -35,7 +35,7 @@ public:
   bool Stash(MetricsItemPtr&& item);
 private:
   void StashMain();
-  void GenReport();
+  void GenerateReport();
   uint64_t ProcessMetric();
 
   bool running_;
