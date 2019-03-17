@@ -15,13 +15,19 @@ StashQueueGroup::StashQueueGroup(uint32_t count)
 MetricsStash::MetricsStash()
   : running_(false),
     th_(NULL),
+    report_interval_(30),
     last_report_time_(::time(NULL)),
     queue_groups_(std::thread::hardware_concurrency()) {
-  std::atomic_store(&container_, RefMetricContainer(new MetricContainer()));
+
+  RefMetricContainer container(new MetricContainer(this));
+  std::atomic_store(&container_, container);
 }
 
-void MetricsStash::SetDelegate(Delegate* d) {
-  delegate_ = d;
+void MetricsStash::SetHandler(Handler* d) {
+  handler_ = d;
+}
+void MetricsStash::SetReportInterval(uint32_t interval) {
+  report_interval_ = interval >= 5 ? interval : 5;
 }
 
 bool MetricsStash::Stash(MetricsItemPtr&& item) {
@@ -55,7 +61,7 @@ uint64_t MetricsStash::ProcessMetric() {
 
     StashQueue& queue = queue_groups_.At(i);
 
-    std::vector<MetricsItemPtr> items(1000);
+    std::vector<MetricsItemPtr> items(10000);
 	  size_t count = queue.try_dequeue_bulk(items.begin(), items.size());
     if (count == 0) {
       continue;
@@ -63,12 +69,18 @@ uint64_t MetricsStash::ProcessMetric() {
 
     for (size_t i = 0; i < count; i++) {
       item_count++;
+      MetricsItem* item = items[i].get();
+
+      if (handler_ && handler_->HandleMetric(item)) {
+       continue;
+      }
 
       switch(items[i]->type_) {
         case MetricsType::kGauge:
+          container->HandleGuage(item);
           break;
         case MetricsType::kHistogram:
-          container->MergeHistogram(items[i].get());
+          container->HandleHistogram(item);
           break;
         default:
           break;
@@ -86,12 +98,14 @@ void MetricsStash::GenerateReport() {
   last_report_time_ = now;
 
   RefMetricContainer old = std::atomic_load(&container_);
-  RefMetricContainer new_container(new MetricContainer());
+  RefMetricContainer new_container(new MetricContainer(this));
   std::atomic_store(&container_, new_container);
 
-  Json report;
-  old->GenerateJsonReport(report);
-  std::cout << report << std::endl;
+  //Json report;
+  //old->GenerateJsonReport(report);
+  std::ostringstream oss;
+  old->GenerateJsonLineReport(oss);
+  std::cout << oss.str() << std::endl;
 }
 
 void MetricsStash::StashMain() {
@@ -106,6 +120,22 @@ void MetricsStash::StashMain() {
 
     GenerateReport();
   }
+}
+
+void MetricsStash::RegistDistArgs(const std::string& name, const MetricDistArgs arg) {
+  if (running_) {
+    LOG(FATAL) << "FATAL: must regist before stash running";
+    return;
+  }
+  dist_args_map_[name] = arg;
+}
+
+const MetricDistArgs* MetricsStash::GetDistArgs(const std::string& name) {
+  auto iter = dist_args_map_.find(name);
+  if (iter == dist_args_map_.end()) {
+    return nullptr;
+  }
+  return &(iter->second);
 }
 
 }

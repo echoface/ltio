@@ -23,16 +23,28 @@ private:
   std::vector<StashQueue> queues_;
 };
 
-class MetricsStash {
+class MetricsStash : public MetricContainer::Provider {
 public:
-  typedef struct Delegate {
-  }Delegate;
+  typedef struct Handler {
+    /* handle this metric, can do other things like prometheus monitor, or just by
+     * judge the thread presure by check the metric birth time
+     * return true mean metric had been handled, MetricStash will not handle again
+     * the stash will continue sumup this metric when return false;
+     * */
+    virtual bool HandleMetric(const MetricsItem* item) {return false;};
+  } Handler;
+
+  void RegistDistArgs(const std::string&, const MetricDistArgs);
+
   MetricsStash();
-  void SetDelegate(Delegate* d);
+  void SetHandler(Handler* d);
+  void SetReportInterval(uint32_t interval);
+
   void Start();
   void StopSync();
 
   bool Stash(MetricsItemPtr&& item);
+  const MetricDistArgs* GetDistArgs(const std::string& name) override;
 private:
   void StashMain();
   void GenerateReport();
@@ -40,10 +52,12 @@ private:
 
   bool running_;
   std::thread* th_;
-  uint32_t last_report_time_;
-  Delegate* delegate_ = nullptr;
+  uint32_t report_interval_; //in second
+  uint32_t last_report_time_; //timestamp in second
+  Handler* handler_ = nullptr;
   StashQueueGroup queue_groups_;
   RefMetricContainer container_;
+  std::unordered_map<std::string, MetricDistArgs> dist_args_map_;
 };
 
 }
