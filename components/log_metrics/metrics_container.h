@@ -76,6 +76,7 @@ public:
 
   bool GenerateJsonReport(Json& report);
   bool GenerateJsonLineReport(std::ostringstream& oss);
+  bool GenerateFileReport(const std::string full_paht);
 private:
   /* craete new dist item and insert to map, return null
    * when failed insert to map*/

@@ -7,10 +7,13 @@
 #include "metrics_item.h"
 #include "metrics_define.h"
 #include "metrics_container.h"
+#include <concurrentqueue/blockingconcurrentqueue.h>
 
 namespace component {
 
 typedef std::shared_ptr<MetricContainer> RefMetricContainer;
+
+typedef moodycamel::BlockingConcurrentQueue<RefMetricContainer> HandleQueue;
 
 class StashQueueGroup {
 public:
@@ -37,7 +40,9 @@ public:
   void RegistDistArgs(const std::string&, const MetricDistArgs);
 
   MetricsStash();
+  ~MetricsStash();
   void SetHandler(Handler* d);
+  void EnableTurboMode(bool turbo);
   void SetReportInterval(uint32_t interval);
 
   void Start();
@@ -47,16 +52,23 @@ public:
   const MetricDistArgs* GetDistArgs(const std::string& name) override;
 private:
   void StashMain();
+  void TurboMain();
   void GenerateReport();
-  uint64_t ProcessMetric();
+  uint64_t ProcessMetric(RefMetricContainer& c);
 
   bool running_;
-  std::thread* th_;
+  std::thread* stash_th_;
   uint32_t report_interval_; //in second
   uint32_t last_report_time_; //timestamp in second
   Handler* handler_ = nullptr;
   StashQueueGroup queue_groups_;
   RefMetricContainer container_;
+
+  bool enable_turbo_;
+  std::thread* turbo_th_;
+  HandleQueue dispatch_quque_;
+  HandleQueue merger_quque_;
+
   std::unordered_map<std::string, MetricDistArgs> dist_args_map_;
 };
 

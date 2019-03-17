@@ -248,6 +248,10 @@ bool MetricContainer::GenerateJsonLineReport(std::ostringstream& oss) {
   return true;
 }
 
+bool MetricContainer::GenerateFileReport(const std::string full_paht) {
+  return false;
+}
+
 MetricGuage* MetricContainer::GetGuage(const std::string& name) {
   auto iter = datas_.find(name);
   if (iter != datas_.end()) {

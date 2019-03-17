@@ -26,13 +26,14 @@ void log_main(std::string log_topic) {
       auto item = MetricsItemPtr(new_histogram(log_topic, 100 + e() % 500));
       stash.Stash(std::move(item));
     }
-    ::usleep(10000);
+    ::usleep(1000);
   }
 }
 
 int main(int argc, char** argv) {
   stash.RegistDistArgs("http_requests",
                        {.dist_precise = 1,.dist_range_min = 50,.dist_range_max = 1000});
+  stash.EnableTurboMode(true);
   stash.Start();
 
   std::thread t1(std::bind(log_main, "failed_count"));
