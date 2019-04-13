@@ -21,7 +21,16 @@ ADD_EXECUTABLE(mysql_lt_client
 )
 TARGET_LINK_LIBRARIES(mysql_lt_client
   ltbase
-  mariadbclient
+  #mariadbclient
+  ${MYSQL_LIBRARIES}
   ${LTBASE_LINKLIBS}
 )
 
+ADD_EXECUTABLE(v8_node
+  v8_shell.cc
+)
+TARGET_LINK_LIBRARIES(v8_node
+  ltbase
+  #mariadbclient
+  ${LTBASE_LINKLIBS}
+)

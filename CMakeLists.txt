@@ -9,6 +9,7 @@ set(CMAKE_CONFIG_DIR ${CMAKE_SOURCE_DIR}/cmake)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CONFIG_DIR}/Modules)
 MESSAGE(STATUS "CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
 
+include(${CMAKE_CONFIG_DIR}/mysql.cmake)
 include(${CMAKE_CONFIG_DIR}/common.cmake)
 include(${CMAKE_CONFIG_DIR}/global_config.cmake)
 include(${CMAKE_CONFIG_DIR}/include_path.cmake)
