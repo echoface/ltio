@@ -1,6 +1,6 @@
 #include <iostream>
 #include <string>
-#include "./mysql_client.h"
+#include "mysql_async_con.h"
 
 const char* g_mysql_host="10.9.158.21";
 const int   g_mysql_port=3306;
@@ -17,7 +17,7 @@ MysqlConnection::MysqlConnection(MysqlClient* client, base::MessageLoop* bind_lo
   : err_no_(0),
     client_(client),
     loop_(bind_loop) {
-  current_state_ = CONNECTION_IDLE;
+  current_state_ = CONNECT_IDLE;
 }
 
 //static
@@ -49,94 +49,119 @@ int MysqlConnection::LtEvToMysqlStatus(base::LtEvent event) {
   return status;
 }
 
+// return true when state can go next state imediately
+bool MysqlConnection::go_next_state(int opt_status,
+                                    const State wait_st,
+                                    const State next_st) {
+  if (opt_status) {
+    this->current_state_ = next_st;
+    return true;
+  }
+
+  // need to wait for data(add event to libevent)
+  this->current_state_ = wait_st;
+
+  WaitMysqlStatus(opt_status);
+
+  return false;
+}
+
 void MysqlConnection::HandleState(int in_event) {
 
-#define NEXT_IMMEDIATE(new_state) do { \
-  continue_state = true;               \
-  this->current_state_ = new_state;     \
-} while(0)
+  bool st_continue = true;
 
-  bool continue_state = false;
-  do {
-    continue_state = false;
+  while(st_continue) {
 
     switch(current_state_) {
 
-      case CONNECTION_IDLE: {
+      case CONNECT_IDLE: {
         if (g_query_sql) {
-          LOG(INFO) << "go to QUERY_START";
-          NEXT_IMMEDIATE(QUERY_START);
-        }
-      }break;
-      case QUERY_START: {
-        if (HandleQueryStart(in_event)) {
-          NEXT_IMMEDIATE(START_USE_RESULT);
+          st_continue = true;
+          current_state_ = QUERY_START;
         }
       } break;
-      case QUERY_CONTINUE: {
-        if (HandleQueryContinue(in_event)) {
-          LOG(INFO) << "go to START_USE_RESULT";
-          NEXT_IMMEDIATE(START_USE_RESULT);
-        }
+      case QUERY_START: {
+
+        int status = ::mysql_real_query_start(&err_no_,
+                                              &mysql_,
+                                              g_query_sql,
+                                              (unsigned int)strlen(g_query_sql));
+
+        st_continue = go_next_state(status, QUERY_WAIT, QUERY_RESULT_READY);
+      } break;
+      case QUERY_WAIT: {
+
+        int status = ::mysql_real_query_cont(&err_no_, &mysql_, in_event);
+        st_continue = go_next_state(status, QUERY_WAIT, QUERY_RESULT_READY);
       }break;
-      case START_USE_RESULT: {
-        result_ = ::mysql_use_result(&mysql_);
-        if (result_) {
-          LOG(INFO) << "go to FETCH_ROW_START";
-          NEXT_IMMEDIATE(FETCH_ROW_START);
+      case QUERY_RESULT_READY: {
+
+        st_continue = true;
+        if (err_no_ != 0) {
+          current_state_ = CONNECT_DONE;
+          LOG(ERROR) << "query error:" << ::mysql_error(&mysql_);
         } else {
-          LOG(FATAL) << "fatal error" << ::mysql_error(&mysql_);
+          result_ = ::mysql_use_result(&mysql_);
+          //TODO: when fail, go to CONNECT_DONE
+          //current_state = (result_ != NULL) ? FETCH_ROW_START : QUERY_START;
+          current_state_ = (result_ != NULL) ? FETCH_ROW_START : CONNECT_DONE;
+          LOG_IF(ERROR, (result_ != NULL)) << "action query got null result";
         }
       } break;
       case FETCH_ROW_START: {
-        LOG(INFO) << "FETCH_ROW_START enter";
-        int status = mysql_fetch_row_start(&result_row_, result_);
-        if (status) {
-          WaitMysqlStatus(status);
-          current_state_ = FETCH_ROW_CONTINUE;
-          LOG(INFO) << "wait FETCH_ROW_CONTINUE";
-        } else {
-          LOG(INFO) << "go to FETCH_ROW_RESULT_READY";
-          NEXT_IMMEDIATE(FETCH_ROW_RESULT_READY);
-        }
+
+        int status = ::mysql_fetch_row_start(&result_row_, result_);
+        st_continue = go_next_state(status, FETCH_ROW_WAIT, FETCH_ROW_RESULT_READY);
       }break;
-      case FETCH_ROW_CONTINUE: {
-        LOG(INFO) << "FETCH_ROW_CONTINUE enter";
+      case FETCH_ROW_WAIT: {
+
         int status = mysql_fetch_row_cont(&result_row_, result_, in_event);
-        if (status) {
-          WaitMysqlStatus(status);
-          this->current_state_ = FETCH_ROW_CONTINUE;
-          LOG(INFO) << "wait FETCH_ROW_CONTINUE again";
-        } else {
-          NEXT_IMMEDIATE(FETCH_ROW_RESULT_READY);
-          LOG(INFO) << "go to FETCH_ROW_RESULT_READY";
-        }
+        st_continue = go_next_state(status, FETCH_ROW_WAIT, FETCH_ROW_RESULT_READY);
       }break;
       case FETCH_ROW_RESULT_READY: {
-        LOG(INFO) << "FETCH_ROW_RESULT_READY enter";
-        if (result_row_) { /* Got a row. */
-          unsigned int i;
-          for (i= 0; i < ::mysql_num_fields(result_); i++)
-            printf("%s%s", (i ? "\t | \t" : ""), (result_row_[i] ? result_row_[i] : "(null)"));
 
-          NEXT_IMMEDIATE(FETCH_ROW_START);
-        } else {
-          if (mysql_errno(&mysql_)) {
-            /* An error occurred. */
+        LOG(INFO) << "FETCH_ROW_RESULT_READY enter";
+        if (!result_row_) {
+          if (::mysql_errno(&mysql_)) {
             printf("Error: %s\n", mysql_error(&mysql_));
           } else {
-            printf("EOF query finished\n");
+            /* EOF.no more rows */
+            printf("EOF. no more result rows\n");
           }
-          this->current_state_ = CONNECTION_IDLE;
+          ::mysql_free_result(result_);
+
+          //TODO: go to next query or to idle
+          current_state_ = CONNECT_IDLE;
+          break;
         }
+
+        //TODO: add to result
+        for (uint32_t i = 0; i < ::mysql_num_fields(result_); i++) {
+          printf("%s%s", (i ? "\t | \t" : ""), (result_row_[i] ? result_row_[i] : "(null)"));
+        }
+
+        st_continue = go_next_state(0, FETCH_ROW_START, FETCH_ROW_START);
       } break;
-      default:
+      case CLOSE_START: {
+
+        int status = mysql_close_start(&mysql_);
+        st_continue = go_next_state(status, CLOSE_WAIT, CLOSE_DONE);
+      }break;
+      case CLOSE_WAIT: {
+
+        int status= ::mysql_close_cont(&mysql_, in_event);
+        st_continue = go_next_state(status,CLOSE_WAIT, CLOSE_DONE);
+      } break;
+      case CLOSE_DONE:
+
+        st_continue = false;
+        current_state_ = CONNECT_IDLE;
         break;
+      default: {
+        abort();
+      }break;
     }
-
-  } while(continue_state);
-
-#undef NEXT_IMMEDIATE
+  };
 }
 
 void MysqlConnection::OnTimeOut() {
@@ -211,36 +236,8 @@ void MysqlConnection::ConnectToServer() {
     LOG(INFO) << " connect to database failed" << ::mysql_error(&mysql_);
     return;
   }
-  current_state_ = CONNECTION_IDLE;
+  current_state_ = CONNECT_IDLE;
   LOG(INFO) << "mysql:" << g_mysql_host << " connected successful";
-}
-
-bool MysqlConnection::HandleQueryStart(int in_event) {
-  LOG(INFO) << __FUNCTION__ << " enter";
-  int status = ::mysql_real_query_start(&err_no_,
-                                        &mysql_,
-                                        g_query_sql,
-                                        (unsigned int)strlen(g_query_sql));
-  if (status) {
-    LOG(INFO) << "wait QUERY_CONTINUE";
-    WaitMysqlStatus(status);
-    current_state_ = QUERY_CONTINUE;
-    return false;
-  }
-  LOG(INFO) << "go to START_USE_RESULT";
-  return true;
-}
-
-bool MysqlConnection::HandleQueryContinue(int in_event) {
-  LOG(INFO) << __FUNCTION__ << " enter";
-  int status = ::mysql_real_query_cont(&err_no_, &mysql_, in_event);
-  if (status) {
-    LOG(INFO) << "wait QUERY_CONTINUE again";
-    WaitMysqlStatus(status);
-    current_state_ = QUERY_CONTINUE;
-    return false;
-  }
-  return true;
 }
 
 int main(int argc, char** argv) {

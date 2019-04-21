@@ -2,7 +2,7 @@
 #define _LT_MYSQL_ASYNC_CONNECTION_H_H
 
 #include <string>
-#include <mysql/mysql.h>
+#include <mariadb/mysql.h>
 #include "base/message_loop/message_loop.h"
 
 struct MysqlOptions {
@@ -18,6 +18,7 @@ class MysqlConnection {
 public:
   static int LtEvToMysqlStatus(base::LtEvent event);
   static std::string MysqlWaitStatusString(int status);
+
   struct MysqlClient {
     virtual void ConnectionBroken(MysqlConnection* con);
   };
@@ -30,16 +31,23 @@ public:
   void HandleState(int status = 0);
 private:
   enum State{
-    QUERY_START,
-    QUERY_CONTINUE,
+    CONNECT_IDLE,
 
-    START_USE_RESULT,
+    CONNECT_START,
+    CONNECT_WAIT,
+    CONNECT_DONE,
+
+    QUERY_START,
+    QUERY_WAIT,
+    QUERY_RESULT_READY,
 
     FETCH_ROW_START,
-    FETCH_ROW_CONTINUE,
+    FETCH_ROW_WAIT,
     FETCH_ROW_RESULT_READY,
 
-    CONNECTION_IDLE
+    CLOSE_START,
+    CLOSE_WAIT,
+    CLOSE_DONE,
   };
 
   void OnError();
@@ -48,10 +56,9 @@ private:
   void OnWaitEventInvoked();
 
   void WaitMysqlStatus(int status);
-
-  bool HandleQueryStart(int in_event);
-  bool HandleQueryContinue(int in_event);
 private:
+  bool go_next_state(int status, const State wait_st, const State next_st);
+
   int err_no_;
   int current_state_;                   // State machine current state
 

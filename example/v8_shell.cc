@@ -1,6 +1,6 @@
-#include <include/v8.h>
+#include <v8.h>
 
-#include <include/libplatform/libplatform.h>
+#include <libplatform/libplatform.h>
 
 #include <assert.h>
 #include <fcntl.h>
