@@ -25,6 +25,8 @@ public:
 
   MysqlConnection(MysqlClient* client, base::MessageLoop* bind_loop);
 
+  void StartAQuery(const char* query);
+
   void InitConnection(const MysqlOptions& option);
   void ConnectToServer();
 
@@ -55,15 +57,16 @@ private:
   void OnTimeOut();
   void OnWaitEventInvoked();
 
-  void WaitMysqlStatus(int status);
 private:
+  void reset_wait_event();
+  void WaitMysqlStatus(int status);
   bool go_next_state(int status, const State wait_st, const State next_st);
 
   int err_no_;
   int current_state_;                   // State machine current state
 
   MYSQL mysql_;
-  MYSQL *mysql_ret = NULL;
+  MYSQL *mysql_ret_ = NULL;
 
   MYSQL_RES* result_ = NULL;
   //typedef char** MYSQL_ROW
@@ -74,6 +77,8 @@ private:
   base::MessageLoop* loop_ = NULL;
   base::RefFdEvent fd_event_;
   std::unique_ptr<base::TimeoutEvent> timeout_;
+
+  std::string next_query_;
 };
 
 #endif

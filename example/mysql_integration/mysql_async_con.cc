@@ -2,17 +2,6 @@
 #include <string>
 #include "mysql_async_con.h"
 
-const char* g_mysql_host="10.9.158.21";
-const int   g_mysql_port=3306;
-const char* g_mysql_user="fancy_test";
-const char* g_mysql_pwd="fancy_test";
-const char* g_mysql_database="mysql";
-
-//const char* g_query_sql = "select User,Password from user where User!=''";
-//const char* g_query_sql = "desc user";
-//const char* g_query_sql = "select * from ftx_pre.order";
-const char* g_query_sql = "use mysql";
-
 MysqlConnection::MysqlConnection(MysqlClient* client, base::MessageLoop* bind_loop)
   : err_no_(0),
     client_(client),
@@ -23,10 +12,12 @@ MysqlConnection::MysqlConnection(MysqlClient* client, base::MessageLoop* bind_lo
 //static
 std::string MysqlConnection::MysqlWaitStatusString(int status) {
   std::ostringstream oss;
-  if (status & MYSQL_WAIT_READ) oss << "READ,";
-  if (status & MYSQL_WAIT_WRITE) oss << "WRITE,";
-  if (status & MYSQL_WAIT_TIMEOUT) oss << "TIMEOUT,";
-  if (status & MYSQL_WAIT_EXCEPT) oss << "EXCEPT,";
+  if (status == 0) oss << "None";
+
+  if (status & MYSQL_WAIT_READ) oss << "READ|";
+  if (status & MYSQL_WAIT_WRITE) oss << "WRITE|";
+  if (status & MYSQL_WAIT_TIMEOUT) oss << "TIMEOUT|";
+  if (status & MYSQL_WAIT_EXCEPT) oss << "EXCEPT|";
   return oss.str();
 }
 
@@ -53,17 +44,27 @@ int MysqlConnection::LtEvToMysqlStatus(base::LtEvent event) {
 bool MysqlConnection::go_next_state(int opt_status,
                                     const State wait_st,
                                     const State next_st) {
-  if (opt_status) {
-    this->current_state_ = next_st;
+  LOG(INFO) << "go next, wait_option:" << MysqlWaitStatusString(opt_status)
+    << " wait_st:" << wait_st << " next_st:" << next_st;
+
+  if (opt_status == 0) {
+    current_state_ = next_st;
     return true;
   }
 
   // need to wait for data(add event to libevent)
-  this->current_state_ = wait_st;
+  current_state_ = wait_st;
 
   WaitMysqlStatus(opt_status);
 
   return false;
+}
+
+void MysqlConnection::StartAQuery(const char* query) {
+  next_query_ = query;
+  if (current_state_ == CONNECT_IDLE) {
+    HandleState(0);
+  }
 }
 
 void MysqlConnection::HandleState(int in_event) {
@@ -73,73 +74,105 @@ void MysqlConnection::HandleState(int in_event) {
   while(st_continue) {
 
     switch(current_state_) {
-
       case CONNECT_IDLE: {
-        if (g_query_sql) {
-          st_continue = true;
-          current_state_ = QUERY_START;
-        }
+
+        st_continue = !next_query_.empty();
+        current_state_ = next_query_.empty() ? CONNECT_IDLE : QUERY_START; 
       } break;
+      case CONNECT_START: {
+        LOG(INFO) << " connect start";
+        int status = mysql_real_connect_start(&mysql_ret_, &mysql_,
+                                              option_.host.c_str(),
+                                              option_.user.c_str(),
+                                              option_.passwd.c_str(),
+                                              option_.dbname.c_str(),
+                                              option_.port, NULL, 0);
+
+        st_continue = go_next_state(status, CONNECT_WAIT, CONNECT_DONE);   
+      }break;
+      case CONNECT_WAIT: {
+        LOG(INFO) << " connect wait";
+
+        int status = mysql_real_connect_cont(&mysql_ret_, &mysql_, in_event);
+        st_continue = go_next_state(status, CONNECT_WAIT, CONNECT_DONE);   
+      }break;
+      case CONNECT_DONE: {
+        LOG(INFO) << " connect done";
+
+        if (!mysql_ret_)  {
+          LOG(FATAL) << " connect failed, host:" << option_.host;
+        }
+        st_continue = go_next_state(0, CONNECT_IDLE, CONNECT_IDLE); 
+        LOG(INFO) << " connect mysql success:" << option_.host;
+      }break;
       case QUERY_START: {
+        LOG(INFO) << " query start";
 
         int status = ::mysql_real_query_start(&err_no_,
                                               &mysql_,
-                                              g_query_sql,
-                                              (unsigned int)strlen(g_query_sql));
+                                              next_query_.c_str(),
+                                              next_query_.size());
 
         st_continue = go_next_state(status, QUERY_WAIT, QUERY_RESULT_READY);
       } break;
       case QUERY_WAIT: {
+        LOG(INFO) << " query wait";
 
         int status = ::mysql_real_query_cont(&err_no_, &mysql_, in_event);
         st_continue = go_next_state(status, QUERY_WAIT, QUERY_RESULT_READY);
       }break;
       case QUERY_RESULT_READY: {
+        LOG(INFO) << " query result ready";
 
         st_continue = true;
+
         if (err_no_ != 0) {
           current_state_ = CONNECT_DONE;
           LOG(ERROR) << "query error:" << ::mysql_error(&mysql_);
         } else {
           result_ = ::mysql_use_result(&mysql_);
+          LOG_IF(ERROR, (result_ == NULL)) << "action query got null result";
+
           //TODO: when fail, go to CONNECT_DONE
-          //current_state = (result_ != NULL) ? FETCH_ROW_START : QUERY_START;
-          current_state_ = (result_ != NULL) ? FETCH_ROW_START : CONNECT_DONE;
-          LOG_IF(ERROR, (result_ != NULL)) << "action query got null result";
+          State next_st = (result_ != NULL) ? FETCH_ROW_START : CLOSE_START;
+          st_continue = go_next_state(0, next_st, next_st);
         }
       } break;
       case FETCH_ROW_START: {
+        LOG(INFO) << " fetch result start";
 
         int status = ::mysql_fetch_row_start(&result_row_, result_);
         st_continue = go_next_state(status, FETCH_ROW_WAIT, FETCH_ROW_RESULT_READY);
       }break;
       case FETCH_ROW_WAIT: {
+        LOG(INFO) << " fetch result wait";
 
         int status = mysql_fetch_row_cont(&result_row_, result_, in_event);
         st_continue = go_next_state(status, FETCH_ROW_WAIT, FETCH_ROW_RESULT_READY);
       }break;
       case FETCH_ROW_RESULT_READY: {
+        LOG(INFO) << " handle fetch row resut ready";
 
-        LOG(INFO) << "FETCH_ROW_RESULT_READY enter";
         if (!result_row_) {
           if (::mysql_errno(&mysql_)) {
-            printf("Error: %s\n", mysql_error(&mysql_));
-          } else {
-            /* EOF.no more rows */
-            printf("EOF. no more result rows\n");
+            LOG(ERROR) << "fetch result error:" << mysql_error(&mysql_);
+          } else { /* EOF.no more rows */
+            LOG(INFO) << "EOF. no more result rows";
           }
-          ::mysql_free_result(result_);
-
           //TODO: go to next query or to idle
+          
+          ::mysql_free_result(result_);
+          st_continue = false;
           current_state_ = CONNECT_IDLE;
           break;
         }
-
+        
+        LOG(INFO) << "go count:" << ::mysql_num_fields(result_);
         //TODO: add to result
         for (uint32_t i = 0; i < ::mysql_num_fields(result_); i++) {
           printf("%s%s", (i ? "\t | \t" : ""), (result_row_[i] ? result_row_[i] : "(null)"));
+          LOG(INFO) << "result_row:" << i << ", content:" << (result_row_[i] ? result_row_[i] : "(null)");
         }
-
         st_continue = go_next_state(0, FETCH_ROW_START, FETCH_ROW_START);
       } break;
       case CLOSE_START: {
@@ -165,30 +198,45 @@ void MysqlConnection::HandleState(int in_event) {
 }
 
 void MysqlConnection::OnTimeOut() {
-  std::cout << __FUNCTION__ << " reached" << std::endl;
+  reset_wait_event();
+  LOG(INFO) << __FUNCTION__ << " event back:" << MysqlWaitStatusString(MYSQL_WAIT_TIMEOUT);
+
   HandleState(MYSQL_WAIT_TIMEOUT);
 }
 
 void MysqlConnection::OnClose() {
-  std::cout << __FUNCTION__ << " reached" << std::endl;
   int status = MysqlConnection::LtEvToMysqlStatus(fd_event_->ActivedEvent());
+  LOG(INFO) << __FUNCTION__ << " event back:" << MysqlWaitStatusString(status);
+
+  reset_wait_event();
+
   HandleState(status);
 }
 
 void MysqlConnection::OnError() {
-  std::cout << __FUNCTION__ << " reached" << std::endl;
   int status = MysqlConnection::LtEvToMysqlStatus(fd_event_->ActivedEvent());
+  LOG(INFO) << __FUNCTION__ << " event back:" << MysqlWaitStatusString(status);
+  reset_wait_event();
+
   HandleState(status);
 }
 
 void MysqlConnection::OnWaitEventInvoked() {
-  std::cout << __FUNCTION__ << " reached" << std::endl;
   int status = MysqlConnection::LtEvToMysqlStatus(fd_event_->ActivedEvent());
+  LOG(INFO) << __FUNCTION__ << " event back:" << MysqlWaitStatusString(status);
+  reset_wait_event();
+
   HandleState(status);
 }
 
+void MysqlConnection::reset_wait_event() {
+  base::EventPump* pump = loop_->Pump();
+  pump->RemoveTimeoutEvent(timeout_.get());
+
+  fd_event_->DisableAll();
+}
+
 void MysqlConnection::WaitMysqlStatus(int status) {
-  LOG(INFO) << __FUNCTION__ << " wait event:" << MysqlConnection::MysqlWaitStatusString(status) << std::endl;
 
   base::EventPump* pump = base::MessageLoop::Current()->Pump();
   if (!fd_event_) {
@@ -215,7 +263,6 @@ void MysqlConnection::WaitMysqlStatus(int status) {
     fd_event_->DisableWriting();
   }
 
-
   if (status & MYSQL_WAIT_TIMEOUT) {
     if (timeout_->IsAttached()) {
       pump->RemoveTimeoutEvent(timeout_.get());
@@ -228,48 +275,16 @@ void MysqlConnection::WaitMysqlStatus(int status) {
 
 void MysqlConnection::ConnectToServer() {
   if (!mysql_real_connect(&mysql_,
-                           g_mysql_host,
-                           g_mysql_user,
-                           g_mysql_pwd,
-                           g_mysql_database,
-                           g_mysql_port, NULL, 0)) {
+                          option_.host.c_str(),
+                          option_.user.c_str(),
+                          option_.passwd.c_str(),
+                          option_.dbname.c_str(),
+                          option_.port, NULL, 0)) {
     LOG(INFO) << " connect to database failed" << ::mysql_error(&mysql_);
     return;
   }
   current_state_ = CONNECT_IDLE;
-  LOG(INFO) << "mysql:" << g_mysql_host << " connected successful";
-}
-
-int main(int argc, char** argv) {
-  mysql_library_init(0, NULL, NULL);
-
-  base::MessageLoop loop;
-
-  loop.SetLoopName("main");
-  loop.Start();
-
-  MysqlConnection* g_conn = new MysqlConnection(NULL, &loop);
-  MysqlOptions option = {
-    .host = "10.9.158.21",
-    .port = 3306,
-    .user = "fancy_test",
-    .passwd = "fancy_test",
-    .dbname = "mysql",
-    .query_timeout = 5000,
-  };
-  g_conn->InitConnection(option);
-  g_conn->ConnectToServer();
-
-  loop.PostDelayTask(NewClosure([&]() {
-    LOG(INFO) << "start query mysql db";
-    g_conn->HandleState(0);
-  }), 3000);
-
-  loop.WaitLoopEnd();
-
-  delete g_conn;
-  mysql_library_end();
-  return 0;
+  LOG(INFO) << "mysql:" << option_.host << " connected successful";
 }
 
 void MysqlConnection::InitConnection(const MysqlOptions& option) {
@@ -288,5 +303,8 @@ void MysqlConnection::InitConnection(const MysqlOptions& option) {
 
   timeout_.reset(new base::TimeoutEvent(option.query_timeout, false));
   timeout_->InstallTimerHandler(NewClosure(std::bind(&MysqlConnection::OnTimeOut, this)));
+  
+  current_state_ = CONNECT_START;
+  return HandleState(0);
 }
 
