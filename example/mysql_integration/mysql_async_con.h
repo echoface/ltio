@@ -2,7 +2,7 @@
 #define _LT_MYSQL_ASYNC_CONNECTION_H_H
 
 #include <string>
-#include <mariadb/mysql.h>
+#include <mysql.h>
 #include "base/message_loop/message_loop.h"
 
 struct MysqlOptions {

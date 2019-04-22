@@ -62,12 +62,14 @@ bool MysqlConnection::go_next_state(int opt_status,
 
 void MysqlConnection::StartAQuery(const char* query) {
   next_query_ = query;
+  LOG(INFO) << " new next_query: " << next_query_;
   if (current_state_ == CONNECT_IDLE) {
     HandleState(0);
   }
 }
 
 void MysqlConnection::HandleState(int in_event) {
+  LOG(INFO) << " MysqlConnection::HandleState enter, " << current_state_;
 
   bool st_continue = true;
 
@@ -75,9 +77,10 @@ void MysqlConnection::HandleState(int in_event) {
 
     switch(current_state_) {
       case CONNECT_IDLE: {
+        st_continue = next_query_.size() > 0;
+        current_state_ = st_continue ? QUERY_START : CONNECT_IDLE;
 
-        st_continue = !next_query_.empty();
-        current_state_ = next_query_.empty() ? CONNECT_IDLE : QUERY_START; 
+        LOG(INFO) << " connect idle go next:" << current_state_ << " next query:" << next_query_;
       } break;
       case CONNECT_START: {
         LOG(INFO) << " connect start";
@@ -88,13 +91,13 @@ void MysqlConnection::HandleState(int in_event) {
                                               option_.dbname.c_str(),
                                               option_.port, NULL, 0);
 
-        st_continue = go_next_state(status, CONNECT_WAIT, CONNECT_DONE);   
+        st_continue = go_next_state(status, CONNECT_WAIT, CONNECT_DONE);
       }break;
       case CONNECT_WAIT: {
         LOG(INFO) << " connect wait";
 
         int status = mysql_real_connect_cont(&mysql_ret_, &mysql_, in_event);
-        st_continue = go_next_state(status, CONNECT_WAIT, CONNECT_DONE);   
+        st_continue = go_next_state(status, CONNECT_WAIT, CONNECT_DONE);
       }break;
       case CONNECT_DONE: {
         LOG(INFO) << " connect done";
@@ -102,7 +105,7 @@ void MysqlConnection::HandleState(int in_event) {
         if (!mysql_ret_)  {
           LOG(FATAL) << " connect failed, host:" << option_.host;
         }
-        st_continue = go_next_state(0, CONNECT_IDLE, CONNECT_IDLE); 
+        st_continue = go_next_state(0, CONNECT_IDLE, CONNECT_IDLE);
         LOG(INFO) << " connect mysql success:" << option_.host;
       }break;
       case QUERY_START: {
@@ -124,9 +127,8 @@ void MysqlConnection::HandleState(int in_event) {
       case QUERY_RESULT_READY: {
         LOG(INFO) << " query result ready";
 
-        st_continue = true;
-
         if (err_no_ != 0) {
+          st_continue = true;
           current_state_ = CONNECT_DONE;
           LOG(ERROR) << "query error:" << ::mysql_error(&mysql_);
         } else {
@@ -158,21 +160,28 @@ void MysqlConnection::HandleState(int in_event) {
             LOG(ERROR) << "fetch result error:" << mysql_error(&mysql_);
           } else { /* EOF.no more rows */
             LOG(INFO) << "EOF. no more result rows";
+            next_query_.clear();
           }
           //TODO: go to next query or to idle
-          
+
           ::mysql_free_result(result_);
+
           st_continue = false;
           current_state_ = CONNECT_IDLE;
           break;
         }
-        
-        LOG(INFO) << "go count:" << ::mysql_num_fields(result_);
-        //TODO: add to result
-        for (uint32_t i = 0; i < ::mysql_num_fields(result_); i++) {
-          printf("%s%s", (i ? "\t | \t" : ""), (result_row_[i] ? result_row_[i] : "(null)"));
-          LOG(INFO) << "result_row:" << i << ", content:" << (result_row_[i] ? result_row_[i] : "(null)");
+
+        uint32_t field_count = ::mysql_num_fields(result_);
+
+        std::ostringstream oss;
+        for (uint32_t i = 0; i < field_count; i++) {
+          oss << (result_row_[i] ? result_row_[i] : "(null)");
+          if (i != field_count - 1) {
+            oss << "\t|\t";
+          }
         }
+        LOG(INFO) << oss.str();
+
         st_continue = go_next_state(0, FETCH_ROW_START, FETCH_ROW_START);
       } break;
       case CLOSE_START: {
@@ -303,7 +312,7 @@ void MysqlConnection::InitConnection(const MysqlOptions& option) {
 
   timeout_.reset(new base::TimeoutEvent(option.query_timeout, false));
   timeout_->InstallTimerHandler(NewClosure(std::bind(&MysqlConnection::OnTimeOut, this)));
-  
+
   current_state_ = CONNECT_START;
   return HandleState(0);
 }

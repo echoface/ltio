@@ -16,4 +16,8 @@ include_directories(
   ${CMAKE_BINARY_DIR}/thirdparty/libcoro
 
   ${GLOG_INCLUDE_DIR}
+
+  ${MYSQL_INCLUDE_DIRS}
+  ${MYSQL_INCLUDE_DIRS}/mysql
+  ${MYSQL_INCLUDE_DIRS}/mariadb
 )
