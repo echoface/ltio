@@ -17,7 +17,7 @@ typedef std::shared_ptr<QuerySession> RefQuerySession;
 class QuerySession {
   public:
     typedef struct {
-      virtual void PendingQuery()
+      virtual void PendingQuery(RefQuerySession& query);
     } QueryActor;
     ~QuerySession();
 
