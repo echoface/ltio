@@ -12,6 +12,7 @@ class MysqlAsyncClientImpl : public MysqlClient,
     MysqlAsyncClientImpl();
     ~MysqlAsyncClientImpl();
 
+    RefQuerySession StartQuery();
     void PendingQuery(RefQuerySession& query);
     void ConnectionBroken(MysqlConnection* con) override;
   private:
