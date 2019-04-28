@@ -18,6 +18,7 @@ ADD_DEFINITIONS(-std=c++11)
   #)
 ADD_EXECUTABLE(mysql_lt_client
   mysql_integration/async_main.cc
+  mysql_integration/query_session.cc
   mysql_integration/mysql_async_con.cc
 )
 TARGET_LINK_LIBRARIES(mysql_lt_client

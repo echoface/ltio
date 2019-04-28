@@ -11,6 +11,9 @@
 #include "base/message_loop/message_loop.h"
 
 class QuerySession;
+class MysqlConnection;
+class MysqlAsyncClientImpl;
+
 typedef std::vector<std::string> ResultRow;
 typedef std::shared_ptr<QuerySession> RefQuerySession;
 
@@ -25,12 +28,23 @@ class QuerySession {
     QuerySession& Query(const std::string& sql);
     QuerySession& Then(base::StlClosure callback);
     void Do();
-  private:
-    QuerySession(QueryActor* actor);
 
+    const char* DB() const {return db_name_.c_str()};
+    const std::string& QueryContent() const {return query_;}
+  private:
+    friend class MysqlConnection;
+    friend class MysqlAsyncClientImpl;
+    QuerySession(QueryActor* actor);
+    void SetCode(int code, std::string& err_message);
+
+    QueryActor* actor_;
     int code_;
     uint32_t affected_rows_;
     std::string error_message_;
+
+    std::string query_;
+    std::string db_name_;
+
     std::vector<ResultRow> results_;
     std::vector<std::string> colum_names_;
     base::StlClosure finish_callback_;

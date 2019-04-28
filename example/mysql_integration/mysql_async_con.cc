@@ -79,7 +79,6 @@ void MysqlConnection::HandleState(int in_event) {
       case CONNECT_IDLE: {
         st_continue = next_query_.size() > 0;
         current_state_ = st_continue ? QUERY_START : CONNECT_IDLE;
-
         LOG(INFO) << " connect idle go next:" << current_state_ << " next query:" << next_query_;
       } break;
       case CONNECT_START: {
@@ -101,36 +100,47 @@ void MysqlConnection::HandleState(int in_event) {
       }break;
       case CONNECT_DONE: {
         LOG(INFO) << " connect done";
-
         if (!mysql_ret_)  {
           LOG(FATAL) << " connect failed, host:" << option_.host;
         }
         st_continue = go_next_state(0, CONNECT_IDLE, CONNECT_IDLE);
         LOG(INFO) << " connect mysql success:" << option_.host;
+        last_selected_db_ = option_.dbname;
       }break;
       case QUERY_START: {
         LOG(INFO) << " query start";
+        CHECK(!in_process_query_ && query_list_.size());
+
+        in_process_query_ = query_list_.back(); 
+        query_list_.pop_back();
+
+        if (last_selected_db_ != in_process_query_->DB()) {
+          ::mysql_select_db(&mysql_, in_process_query_->DB()); 
+        }
+
+        const std::string& content = in_process_query_->QueryContent();
 
         int status = ::mysql_real_query_start(&err_no_,
                                               &mysql_,
-                                              next_query_.c_str(),
-                                              next_query_.size());
+                                              content.c_str(),
+                                              content.size());
 
         st_continue = go_next_state(status, QUERY_WAIT, QUERY_RESULT_READY);
       } break;
       case QUERY_WAIT: {
         LOG(INFO) << " query wait";
-
         int status = ::mysql_real_query_cont(&err_no_, &mysql_, in_event);
         st_continue = go_next_state(status, QUERY_WAIT, QUERY_RESULT_READY);
       }break;
       case QUERY_RESULT_READY: {
         LOG(INFO) << " query result ready";
+        CHECK(in_process_query_);
 
         if (err_no_ != 0) {
           st_continue = true;
           current_state_ = CONNECT_DONE;
           LOG(ERROR) << "query error:" << ::mysql_error(&mysql_);
+          in_process_query_->SetCode(err_no_, ::mysql_error(&mysql_));
         } else {
           result_ = ::mysql_use_result(&mysql_);
           LOG_IF(ERROR, (result_ == NULL)) << "action query got null result";
@@ -296,6 +306,15 @@ void MysqlConnection::ConnectToServer() {
   LOG(INFO) << "mysql:" << option_.host << " connected successful";
 }
 
+void MysqlConnection::StartQuery(RefQuerySession& query) {
+  CHECK(loop_->IsInLoopThread());
+
+  query_list_.push_back(query);
+  if (current_state_ == State::CONNECT_IDLE) {
+    HandleState(0);
+  }
+}
+
 void MysqlConnection::InitConnection(const MysqlOptions& option) {
   ::mysql_init(&mysql_);
   option_ = option;
@@ -314,6 +333,11 @@ void MysqlConnection::InitConnection(const MysqlOptions& option) {
   timeout_->InstallTimerHandler(NewClosure(std::bind(&MysqlConnection::OnTimeOut, this)));
 
   current_state_ = CONNECT_START;
-  return HandleState(0);
+
+  /*
+  if (loop_->IsInLoopThread()) {
+    return HandleState(0);
+  }*/
+  loop_->PostTask(NewClosure(std::bind(&MysqlConnection::HandleState, this, 0)));
 }
 
