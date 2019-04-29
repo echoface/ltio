@@ -38,7 +38,8 @@ public:
   static std::string MysqlWaitStatusString(int status);
 
   struct MysqlClient {
-    virtual void ConnectionBroken(MysqlConnection* con);
+    virtual void OnQueryFinish(RefQuerySession query) = 0;
+    virtual void OnConnectionBroken(MysqlConnection* con) = 0;
   };
 
   MysqlConnection(MysqlClient* client, base::MessageLoop* bind_loop);
@@ -51,6 +52,8 @@ public:
 
   void HandleState(int status = 0);
   base::MessageLoop* BindLoop() {return loop_;}
+
+  void FinishCurrentQuery(State next_st);
 private:
   void OnError();
   void OnClose();
@@ -60,6 +63,9 @@ private:
   void reset_wait_event();
   void WaitMysqlStatus(int status);
   bool go_next_state(int status, const State wait_st, const State next_st);
+
+
+  bool ParseResultDesc(MYSQL_RES* result, QuerySession* query);
 private:
 
 

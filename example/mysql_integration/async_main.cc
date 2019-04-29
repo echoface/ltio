@@ -33,7 +33,6 @@ int main(int argc, char** argv) {
 
   loop.PostDelayTask(NewClosure([&]() {
     LOG(INFO) << "start query mysql db";
-    g_conn->StartAQuery("select Host, User, Password from user where User!=''");
   }), 3000);
 
   std::string content;
@@ -42,7 +41,6 @@ int main(int argc, char** argv) {
     LOG(INFO) << "got query content:" << content;
     if (content != "exit") {
       loop.PostTask(NewClosure([=]()->void {
-        g_conn->StartAQuery(content.c_str());
       }));
     }
   }

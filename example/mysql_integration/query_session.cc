@@ -1,7 +1,6 @@
 #include "query_session.h"
 
-QuerySession::QuerySession(QueryActor* actor)
-: actor_(actor) {
+QuerySession::QuerySession() {
 }
 QuerySession::~QuerySession() {
 }
@@ -15,13 +14,36 @@ QuerySession& QuerySession::Query(const std::string& sql) {
   return *this;
 }
 QuerySession& QuerySession::Then(base::StlClosure callback) {
+  finish_callback_ = callback;
   return *this;
-}
-
-void QuerySession::Do() {
 }
 
 void QuerySession::SetCode(int code, std::string& err_message) {
   code_ = code;
   error_message_ = err_message;
 }
+
+void QuerySession::SetCode(int code, const char* err_message) {
+  code_ = code;
+  error_message_ = err_message;
+}
+
+void QuerySession::PendingRow(ResultRow&& one_row) {
+  results_.push_back(std::move(one_row));
+}
+
+void QuerySession::SetResultDesc(ResultDescPtr desc) {
+  desc_ = std::move(desc);
+}
+
+void QuerySession::OnQueryDone() {
+  if (finish_callback_) {
+    finish_callback_();
+  }
+}
+
+RefQuerySession QuerySession::New() {
+  RefQuerySession query_session(new QuerySession());
+  return query_session;
+}
+

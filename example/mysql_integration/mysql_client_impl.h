@@ -16,12 +16,12 @@ class MysqlAsyncClientImpl : public MysqlClient,
     MysqlAsyncClientImpl(base::MessageLoop* loop, int count);
     ~MysqlAsyncClientImpl();
 
-    RefQuerySession StartQuery();
-
     void InitWithOption(MysqlOptions& opt);
 
-    void PendingQuery(RefQuerySession& query);
-    void ConnectionBroken(MysqlConnection* con) override;
+    void Pending(RefQuerySession& query,uint32_t timeout = 0);
+
+    void OnQueryFinish(RefQuerySession query) override;
+    void OnConnectionBroken(MysqlConnection* con) override;
   private:
     const int count_ = 4;
     base::MessageLoop* loop_ = NULL;

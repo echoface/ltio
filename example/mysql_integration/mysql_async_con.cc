@@ -60,14 +60,6 @@ bool MysqlConnection::go_next_state(int opt_status,
   return false;
 }
 
-void MysqlConnection::StartAQuery(const char* query) {
-  next_query_ = query;
-  LOG(INFO) << " new next_query: " << next_query_;
-  if (current_state_ == CONNECT_IDLE) {
-    HandleState(0);
-  }
-}
-
 void MysqlConnection::HandleState(int in_event) {
   LOG(INFO) << " MysqlConnection::HandleState enter, " << current_state_;
 
@@ -77,9 +69,9 @@ void MysqlConnection::HandleState(int in_event) {
 
     switch(current_state_) {
       case CONNECT_IDLE: {
-        st_continue = next_query_.size() > 0;
+        st_continue = query_list_.size() > 0;
         current_state_ = st_continue ? QUERY_START : CONNECT_IDLE;
-        LOG(INFO) << " connect idle go next:" << current_state_ << " next query:" << next_query_;
+        LOG(INFO) << " connect idle go next:" << current_state_;
       } break;
       case CONNECT_START: {
         LOG(INFO) << " connect start";
@@ -111,11 +103,12 @@ void MysqlConnection::HandleState(int in_event) {
         LOG(INFO) << " query start";
         CHECK(!in_process_query_ && query_list_.size());
 
-        in_process_query_ = query_list_.back(); 
+        in_process_query_ = query_list_.back();
         query_list_.pop_back();
 
-        if (last_selected_db_ != in_process_query_->DB()) {
-          ::mysql_select_db(&mysql_, in_process_query_->DB()); 
+        if (!in_process_query_->DB().empty() &&
+            last_selected_db_ != in_process_query_->DB()) {
+          ::mysql_select_db(&mysql_, in_process_query_->DB().c_str());
         }
 
         const std::string& content = in_process_query_->QueryContent();
@@ -164,33 +157,36 @@ void MysqlConnection::HandleState(int in_event) {
       }break;
       case FETCH_ROW_RESULT_READY: {
         LOG(INFO) << " handle fetch row resut ready";
+        CHECK(in_process_query_);
 
         if (!result_row_) {
           if (::mysql_errno(&mysql_)) {
-            LOG(ERROR) << "fetch result error:" << mysql_error(&mysql_);
-          } else { /* EOF.no more rows */
-            LOG(INFO) << "EOF. no more result rows";
-            next_query_.clear();
+            std::string error_message(mysql_error(&mysql_));
+            in_process_query_->SetCode(err_no_, error_message);
+            LOG(ERROR) << "fetch result error:" << error_message;
           }
-          //TODO: go to next query or to idle
-
+          //else mean /* EOF.no more rows */
           ::mysql_free_result(result_);
 
-          st_continue = false;
-          current_state_ = CONNECT_IDLE;
+          FinishCurrentQuery(CONNECT_IDLE);
+          st_continue = true;
           break;
         }
 
-        uint32_t field_count = ::mysql_num_fields(result_);
+        if (NULL == in_process_query_->RawResultDesc()) {
+          ParseResultDesc(result_, in_process_query_.get());
+        }
 
-        std::ostringstream oss;
+        ResultRow row;
+        uint32_t field_count = ::mysql_num_fields(result_);
         for (uint32_t i = 0; i < field_count; i++) {
-          oss << (result_row_[i] ? result_row_[i] : "(null)");
-          if (i != field_count - 1) {
-            oss << "\t|\t";
+          if (result_row_[i]) {
+            row.push_back(result_row_[i]);
+          } else {
+            row.push_back("NULL");
           }
         }
-        LOG(INFO) << oss.str();
+        in_process_query_->PendingRow(std::move(row));
 
         st_continue = go_next_state(0, FETCH_ROW_START, FETCH_ROW_START);
       } break;
@@ -205,7 +201,6 @@ void MysqlConnection::HandleState(int in_event) {
         st_continue = go_next_state(status,CLOSE_WAIT, CLOSE_DONE);
       } break;
       case CLOSE_DONE:
-
         st_continue = false;
         current_state_ = CONNECT_IDLE;
         break;
@@ -214,6 +209,29 @@ void MysqlConnection::HandleState(int in_event) {
       }break;
     }
   };
+}
+
+bool MysqlConnection::ParseResultDesc(MYSQL_RES* result, QuerySession* query) {
+  ResultDescPtr desc(new ResultDesc);
+  desc->affected_rows_ = ::mysql_affected_rows(&mysql_);
+
+  MYSQL_FIELD *field_desc;
+  //uint32_t field_count = ::mysql_num_fields(result);
+  field_desc = ::mysql_fetch_field(result_);
+  while(field_desc != NULL) {
+    desc->colum_names_.push_back(field_desc->name);
+    field_desc = ::mysql_fetch_field(result_);
+  }
+  query->SetResultDesc(std::move(desc));
+  return true;
+}
+
+void MysqlConnection::FinishCurrentQuery(State next_st) {
+  CHECK(in_process_query_);
+  client_->OnQueryFinish(in_process_query_);
+
+  in_process_query_.reset();
+  current_state_ = next_st;
 }
 
 void MysqlConnection::OnTimeOut() {
