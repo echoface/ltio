@@ -10,15 +10,14 @@ typedef std::shared_ptr<MysqlConnection> RefMysqlConnection;
 
 //root:passwd@192.168.1.1:3306?db=&timeout=&charset=
 
-class MysqlAsyncClientImpl : public MysqlClient,
-                             public QuerySession::QueryActor {
+class MysqlAsyncClientImpl : public MysqlConnection::MysqlClient {
   public:
     MysqlAsyncClientImpl(base::MessageLoop* loop, int count);
     ~MysqlAsyncClientImpl();
 
     void InitWithOption(MysqlOptions& opt);
 
-    void Pending(RefQuerySession& query,uint32_t timeout = 0);
+    void PendingQuery(RefQuerySession& query, int timeout = 0);
 
     void OnQueryFinish(RefQuerySession query) override;
     void OnConnectionBroken(MysqlConnection* con) override;

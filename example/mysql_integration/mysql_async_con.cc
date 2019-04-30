@@ -91,7 +91,7 @@ void MysqlConnection::HandleState(int in_event) {
         st_continue = go_next_state(status, CONNECT_WAIT, CONNECT_DONE);
       }break;
       case CONNECT_DONE: {
-        LOG(INFO) << " connect done";
+        LOG(INFO) << " connect finish";
         if (!mysql_ret_)  {
           LOG(FATAL) << " connect failed, host:" << option_.host;
         }
@@ -103,8 +103,8 @@ void MysqlConnection::HandleState(int in_event) {
         LOG(INFO) << " query start";
         CHECK(!in_process_query_ && query_list_.size());
 
-        in_process_query_ = query_list_.back();
-        query_list_.pop_back();
+        in_process_query_ = query_list_.front();
+        query_list_.pop_front();
 
         if (!in_process_query_->DB().empty() &&
             last_selected_db_ != in_process_query_->DB()) {
@@ -117,31 +117,48 @@ void MysqlConnection::HandleState(int in_event) {
                                               &mysql_,
                                               content.c_str(),
                                               content.size());
+        if (err_no_ != 0) {
+          LOG(ERROR) << "query error:" << ::mysql_error(&mysql_);
+          in_process_query_->SetCode(err_no_, ::mysql_error(&mysql_));
+
+          FinishCurrentQuery(CONNECT_IDLE);
+          st_continue = true;
+          break;
+        }
 
         st_continue = go_next_state(status, QUERY_WAIT, QUERY_RESULT_READY);
       } break;
       case QUERY_WAIT: {
         LOG(INFO) << " query wait";
         int status = ::mysql_real_query_cont(&err_no_, &mysql_, in_event);
+        if (err_no_ != 0) {
+          LOG(ERROR) << "query continue error:" << ::mysql_error(&mysql_);
+          in_process_query_->SetCode(err_no_, ::mysql_error(&mysql_));
+
+          FinishCurrentQuery(CONNECT_IDLE);
+          st_continue = true;
+          break;
+        }
+
         st_continue = go_next_state(status, QUERY_WAIT, QUERY_RESULT_READY);
       }break;
       case QUERY_RESULT_READY: {
         LOG(INFO) << " query result ready";
         CHECK(in_process_query_);
 
-        if (err_no_ != 0) {
-          st_continue = true;
-          current_state_ = CONNECT_DONE;
-          LOG(ERROR) << "query error:" << ::mysql_error(&mysql_);
-          in_process_query_->SetCode(err_no_, ::mysql_error(&mysql_));
-        } else {
-          result_ = ::mysql_use_result(&mysql_);
-          LOG_IF(ERROR, (result_ == NULL)) << "action query got null result";
+        result_ = ::mysql_use_result(&mysql_);
+        LOG_IF(ERROR, (result_ == NULL)) << "action query got null result";
 
-          //TODO: when fail, go to CONNECT_DONE
-          State next_st = (result_ != NULL) ? FETCH_ROW_START : CLOSE_START;
-          st_continue = go_next_state(0, next_st, next_st);
+        if (result_ == NULL) {
+          std::string error_message(mysql_error(&mysql_));
+          in_process_query_->SetCode(err_no_, error_message);
+
+          FinishCurrentQuery(CONNECT_IDLE);
+          st_continue = true;
+          break;
         }
+
+        st_continue = go_next_state(0, FETCH_ROW_START, FETCH_ROW_START);
       } break;
       case FETCH_ROW_START: {
         LOG(INFO) << " fetch result start";

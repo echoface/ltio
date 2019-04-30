@@ -20,6 +20,7 @@ ADD_EXECUTABLE(mysql_lt_client
   mysql_integration/async_main.cc
   mysql_integration/query_session.cc
   mysql_integration/mysql_async_con.cc
+  mysql_integration/mysql_client_impl.cc
 )
 TARGET_LINK_LIBRARIES(mysql_lt_client
   ltbase

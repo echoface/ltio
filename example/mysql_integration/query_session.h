@@ -25,15 +25,17 @@ typedef std::unique_ptr<ResultDesc> ResultDescPtr;
 
 class QuerySession {
   public:
-    RefQuerySession New();
+    static RefQuerySession New();
     ~QuerySession();
 
     QuerySession& UseDB(const std::string& db);
     QuerySession& Query(const std::string& sql);
     QuerySession& Then(base::StlClosure callback);
 
-    const std::string& DB() const {return db_name_;};
-    const std::string& QueryContent() const {return query_;}
+    const int Code() const {return code_;}
+    const std::string& ErrorMessage() const {return err_message_;}
+    const ResultDesc* RawResultDesc() const {return desc_.get();}
+    const std::vector<ResultRow>& Result() const {return results_;}
   private:
     friend class MysqlConnection;
     friend class MysqlAsyncClientImpl;
@@ -41,17 +43,17 @@ class QuerySession {
     QuerySession();
 
     void OnQueryDone();
-    void SetCode(int code, std::string& err_message);
-    void SetCode(int code, const char* err_message);
+
+    const std::string& DB() const {return db_name_;};
+    const std::string& QueryContent() const {return query_;}
 
     void PendingRow(ResultRow&& one_row);
-    const std::vector<ResultRow>& Result() const {return results_;}
-
     void SetResultDesc(ResultDescPtr desc);
-    const ResultDesc* RawResultDesc() const {return desc_.get();}
+    void SetCode(int code, const char* err_message);
+    void SetCode(int code, std::string& err_message);
 
     int code_ = 0;
-    std::string error_message_;
+    std::string err_message_;
 
     std::string query_;
     std::string db_name_;

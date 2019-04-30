@@ -1,5 +1,11 @@
 #include "query_session.h"
 
+//static
+RefQuerySession QuerySession::New() {
+  RefQuerySession query_session(new QuerySession());
+  return query_session;
+}
+
 QuerySession::QuerySession() {
 }
 QuerySession::~QuerySession() {
@@ -20,12 +26,12 @@ QuerySession& QuerySession::Then(base::StlClosure callback) {
 
 void QuerySession::SetCode(int code, std::string& err_message) {
   code_ = code;
-  error_message_ = err_message;
+  err_message_ = err_message;
 }
 
 void QuerySession::SetCode(int code, const char* err_message) {
   code_ = code;
-  error_message_ = err_message;
+  err_message_ = err_message;
 }
 
 void QuerySession::PendingRow(ResultRow&& one_row) {
@@ -40,10 +46,6 @@ void QuerySession::OnQueryDone() {
   if (finish_callback_) {
     finish_callback_();
   }
-}
-
-RefQuerySession QuerySession::New() {
-  RefQuerySession query_session(new QuerySession());
-  return query_session;
+  finish_callback_ = nullptr;
 }
 

@@ -16,18 +16,19 @@ void MysqlAsyncClientImpl::InitWithOption(MysqlOptions& opt) {
   }
 }
 
-void MysqlAsyncClientImpl::PendingQuery(RefQuerySession& query) {
+void MysqlAsyncClientImpl::PendingQuery(RefQuerySession& query, int timeout) {
   use_index_++;
   RefMysqlConnection con = connections_[use_index_ % connections_.size()];
-  con->BindLoop()->PostTask(NewClosure(std::bind(MysqlConnection::StartQuery, con, query)));
+  con->BindLoop()->PostTask(NewClosure(std::bind(&MysqlConnection::StartQuery, con, query)));
 }
 
 void MysqlAsyncClientImpl::OnQueryFinish(RefQuerySession query) {
+  query->OnQueryDone();
 }
 
 void MysqlAsyncClientImpl::OnConnectionBroken(MysqlConnection* con) {
-  auto iter = std::find(connections_.begin(), connections_.end(), con);
-  if (iter != connections_.end()) {
-    connections_.erase(iter);
-  }
+  //auto iter = std::find(connections_.begin(), connections_.end(), con);
+  //if (iter != connections_.end()) {
+    //connections_.erase(iter);
+  //}
 }
