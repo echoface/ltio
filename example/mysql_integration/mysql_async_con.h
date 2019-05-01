@@ -48,7 +48,6 @@ public:
   void StartQuery(RefQuerySession& query);
 
   void InitConnection(const MysqlOptions& option);
-  void ConnectToServer();
 
   void HandleState(int status = 0);
   base::MessageLoop* BindLoop() {return loop_;}

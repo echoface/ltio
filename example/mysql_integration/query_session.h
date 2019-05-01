@@ -18,7 +18,6 @@ typedef std::vector<std::string> ResultRow;
 typedef std::shared_ptr<QuerySession> RefQuerySession;
 
 struct ResultDesc {
-  uint32_t affected_rows_ = 0;
   std::vector<std::string> colum_names_;
 };
 typedef std::unique_ptr<ResultDesc> ResultDescPtr;
@@ -36,6 +35,9 @@ class QuerySession {
     const std::string& ErrorMessage() const {return err_message_;}
     const ResultDesc* RawResultDesc() const {return desc_.get();}
     const std::vector<ResultRow>& Result() const {return results_;}
+    const std::string& QueryContent() const {return query_;}
+    const int32_t ResultRows() const {return result_count_;}
+    const int32_t AffectedRows() const {return affected_rows_;}
   private:
     friend class MysqlConnection;
     friend class MysqlAsyncClientImpl;
@@ -45,12 +47,13 @@ class QuerySession {
     void OnQueryDone();
 
     const std::string& DB() const {return db_name_;};
-    const std::string& QueryContent() const {return query_;}
 
     void PendingRow(ResultRow&& one_row);
     void SetResultDesc(ResultDescPtr desc);
     void SetCode(int code, const char* err_message);
     void SetCode(int code, std::string& err_message);
+    void SetResultRows(int rows) { result_count_ = rows;}
+    void SetAffectedRows(int line){ affected_rows_ = line;}
 
     int code_ = 0;
     std::string err_message_;
@@ -59,6 +62,9 @@ class QuerySession {
     std::string db_name_;
 
     ResultDescPtr desc_;
+
+    int32_t result_count_ = 0;
+    int32_t affected_rows_ = 0;
 
     std::vector<ResultRow> results_;
     base::StlClosure finish_callback_;
