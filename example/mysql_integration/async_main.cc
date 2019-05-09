@@ -2,6 +2,9 @@
 #include "mysql_async_con.h"
 #include "mysql_client_impl.h"
 
+
+using namespace lt;
+
 MysqlOptions option = {
   .host = "localhost",
   .port = 3306,
@@ -26,16 +29,27 @@ int main(int argc, char** argv) {
   client->InitWithOption(option);
 
   auto callback = [&](RefQuerySession qs)->void {
+    std::ostringstream oss;
+    for (const auto&  field : qs->ColumnHeaders()) {
+      oss <<  field << " \t| ";
+    }
+    for (const auto& row : qs->Result()) {
+      oss << "\n";
+      for (auto& v : row) {
+        oss << v << "\t| ";
+      }
+    }
     LOG(INFO) << "query:" << qs->QueryContent()
       << "\ncode:" << qs->Code()
       << "\nmessage:" << qs->ErrorMessage()
       << "\nresultcount:" << qs->ResultRows()
-      << "\naffectedline:" << qs->AffectedRows();
+      << "\naffectedline:" << qs->AffectedRows()
+      << "\nresult:\n" << oss.str();
   };
 
 
   std::string content;
-#if 1
+#if 0
   std::cout << "press any charactor key start" << std::endl;
   std::cin >> content;
   std::vector<std::string> querys = {

@@ -6,11 +6,13 @@
 #include "mysql_async_con.h"
 #include "query_session.h"
 
-typedef std::shared_ptr<MysqlConnection> RefMysqlConnection;
+namespace lt {
+
+typedef std::shared_ptr<MysqlAsyncConnect> RefMysqlAsyncConnect;
 
 //root:passwd@192.168.1.1:3306?db=&timeout=&charset=
 
-class MysqlAsyncClientImpl : public MysqlConnection::MysqlClient {
+class MysqlAsyncClientImpl : public MysqlAsyncConnect::MysqlClient {
   public:
     MysqlAsyncClientImpl(base::MessageLoop* loop, int count);
     ~MysqlAsyncClientImpl();
@@ -20,12 +22,14 @@ class MysqlAsyncClientImpl : public MysqlConnection::MysqlClient {
     void PendingQuery(RefQuerySession& query, int timeout = 0);
 
     void OnQueryFinish(RefQuerySession query) override;
-    void OnConnectionBroken(MysqlConnection* con) override;
+    void OnConnectionBroken(MysqlAsyncConnect* con) override;
   private:
     const int count_ = 4;
     base::MessageLoop* loop_ = NULL;
     std::atomic<int> use_index_;
-    std::vector<RefMysqlConnection> connections_;
+    std::vector<RefMysqlAsyncConnect> connections_;
 };
 
+
+}
 #endif

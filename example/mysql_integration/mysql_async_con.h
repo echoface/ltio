@@ -7,6 +7,8 @@
 #include "query_session.h"
 #include "base/message_loop/message_loop.h"
 
+namespace lt {
+
 struct MysqlOptions {
   std::string host;
   uint32_t port;
@@ -16,7 +18,7 @@ struct MysqlOptions {
   uint32_t query_timeout;
 };
 
-class MysqlConnection {
+class MysqlAsyncConnect {
 public:
   enum State{
     CONNECT_IDLE,
@@ -39,10 +41,10 @@ public:
 
   struct MysqlClient {
     virtual void OnQueryFinish(RefQuerySession query) = 0;
-    virtual void OnConnectionBroken(MysqlConnection* con) = 0;
+    virtual void OnConnectionBroken(MysqlAsyncConnect* con) = 0;
   };
 
-  MysqlConnection(MysqlClient* client, base::MessageLoop* bind_loop);
+  MysqlAsyncConnect(MysqlClient* client, base::MessageLoop* bind_loop);
 
   void StartAQuery(const char* query);
   void StartQuery(RefQuerySession& query);
@@ -89,4 +91,5 @@ private:
   std::list<RefQuerySession> query_list_;
 };
 
+}
 #endif

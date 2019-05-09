@@ -1,5 +1,6 @@
 #include "query_session.h"
 
+namespace lt {
 //static
 RefQuerySession QuerySession::New() {
   RefQuerySession query_session(new QuerySession());
@@ -8,6 +9,7 @@ RefQuerySession QuerySession::New() {
 
 QuerySession::QuerySession() {
 }
+
 QuerySession::~QuerySession() {
 }
 
@@ -38,14 +40,12 @@ void QuerySession::PendingRow(ResultRow&& one_row) {
   results_.push_back(std::move(one_row));
 }
 
-void QuerySession::SetResultDesc(ResultDescPtr desc) {
-  desc_ = std::move(desc);
-}
-
 void QuerySession::OnQueryDone() {
   if (finish_callback_) {
     finish_callback_();
   }
   finish_callback_ = nullptr;
 }
+
+}//end lt
 
