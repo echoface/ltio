@@ -73,10 +73,11 @@ int main(int argc, char** argv) {
 
     if (content != "exit") {
       RefQuerySession qs = QuerySession::New();
-
       auto onback = std::bind(callback, qs);
       qs->UseDB("mysql").Query(content).Then(onback);
       client->PendingQuery(qs);
+    } else {
+      loop.Stop(); 
     }
   }
 #endif
