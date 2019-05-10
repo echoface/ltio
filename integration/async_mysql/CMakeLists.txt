@@ -11,9 +11,10 @@ ADD_EXECUTABLE(asyc_mysql_test
 
 TARGET_LINK_LIBRARIES(asyc_mysql_test
   ltmysql
+  ltbase
+	${GLOG_LIBRARY}
   ${MYSQL_LIBRARIES}
   ${LTBASE_LINKLIBS}
-	${GLOG_LIBRARY}
   pthread
 )
 set_target_properties(asyc_mysql_test PROPERTIES EXCLUDE_FROM_ALL TRUE)

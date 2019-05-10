@@ -1,7 +1,6 @@
 #include <iostream>
-#include "mysql_async_con.h"
-#include "mysql_client_impl.h"
-
+#include "../mysql_async_con.h"
+#include "../mysql_client_impl.h"
 
 using namespace lt;
 
@@ -77,7 +76,7 @@ int main(int argc, char** argv) {
       qs->UseDB("mysql").Query(content).Then(onback);
       client->PendingQuery(qs);
     } else {
-      loop.Stop(); 
+      loop.QuitLoop();
     }
   }
 #endif
