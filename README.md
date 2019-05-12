@@ -25,6 +25,9 @@ it has implemnet follow code/component
 - bloom filter
 - source loader (TP)
 
+integration:
+- add async mysql client support; [pre]
+
 About MessageLoop:
   like mostly messageloop class, all PostTask/PostDelayTask/PostTaskWithReply implemented, it's ispired by chromium messageloop code; it's task also support location info for more convinience debug
 
