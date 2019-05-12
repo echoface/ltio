@@ -73,7 +73,7 @@ TEST_CASE("client.base", "[http client]") {
   net::url::SchemeIpPort server_info;
   LOG_IF(ERROR, !net::url::ParseURI("http://127.0.0.1:80", server_info)) << " server can't be resolve";
 
-  net::ClientRouter http_router(&loop, server_info);
+  net::Client http_router(&loop, server_info);
 
   net::RouterConf router_config;
   router_config.recon_interval = 100;
@@ -107,7 +107,7 @@ TEST_CASE("client.async", "[http client]") {
   net::url::SchemeIpPort server_info;
   LOG_IF(ERROR, !net::url::ParseURI("http://127.0.0.1:80", server_info)) << " server can't be resolve";
 
-  net::ClientRouter http_router(&loop, server_info);
+  net::Client http_router(&loop, server_info);
 
   net::RouterConf router_config;
   router_config.recon_interval = 100;
@@ -160,7 +160,7 @@ TEST_CASE("client.http.request", "[http client send request]") {
   net::url::SchemeIpPort server_info;
   LOG_IF(ERROR, !net::url::ParseURI("http://127.0.0.1:80", server_info)) << " server can't be resolve";
 
-  net::ClientRouter http_router(&loop, server_info);
+  net::Client http_router(&loop, server_info);
 
   net::RouterConf router_config;
   router_config.recon_interval = 100;
@@ -220,7 +220,7 @@ TEST_CASE("client.raw.request", "[raw client send request]") {
   net::url::SchemeIpPort server_info;
   LOG_IF(ERROR, !net::url::ParseURI("raw://127.0.0.1:5005", server_info)) << " server can't be resolve";
 
-  net::ClientRouter raw_router(&loop, server_info);
+  net::Client raw_router(&loop, server_info);
 
   static const int connections = 10;
 
@@ -283,7 +283,7 @@ TEST_CASE("client.timer.request", "[fetch resource every interval]") {
   net::url::SchemeIpPort server_info;
   LOG_IF(ERROR, !net::url::ParseURI("raw://127.0.0.1:5005", server_info)) << " server can't be resolve";
 
-  net::ClientRouter raw_router(&loop, server_info);
+  net::Client raw_router(&loop, server_info);
 
   static const int connections = 10;
 
@@ -366,7 +366,7 @@ TEST_CASE("client.raw.bench", "[raw client send request benchmark]") {
   net::url::SchemeIpPort server_info;
   LOG_IF(ERROR, !net::url::ParseURI("raw://127.0.0.1:5005", server_info)) << " server can't be resolve";
 
-  net::ClientRouter raw_router(&loop, server_info);
+  net::Client raw_router(&loop, server_info);
 
   static const int connections = 10;
 
@@ -446,7 +446,7 @@ TEST_CASE("client.http.bench", "[http client send request benchmark]") {
     << " port:" << server_info.port
     << " protocol:" << server_info.protocol;
 
-  net::ClientRouter http_router(&loop, server_info);
+  net::Client http_router(&loop, server_info);
 
   const int connections = 10;
 

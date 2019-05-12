@@ -10,8 +10,8 @@
 
 std::string arg_host;
 
-typedef std::unique_ptr<net::ClientRouter> ClientRouterPtr;
-ClientRouterPtr raw_router;
+typedef std::unique_ptr<net::Client> ClientPtr;
+ClientPtr raw_router;
 
 void SendRawRequest(net::LtRawMessage::RefRawMessage& message) {
   net::LtRawMessage* response = raw_router->SendRecieve(message);
@@ -43,7 +43,7 @@ int main(int argc, char** argv) {
   mainloop.SetLoopName("main");
   mainloop.Start();
 
-  raw_router.reset(new net::ClientRouter(&mainloop, server_info));
+  raw_router.reset(new net::Client(&mainloop, server_info));
 
   router_config.connections = 5;
   router_config.recon_interval = 100;

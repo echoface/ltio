@@ -5,7 +5,7 @@
 
 namespace net {
 
-ClientRouter::ClientRouter(base::MessageLoop* loop, const url::SchemeIpPort& info)
+Client::Client(base::MessageLoop* loop, const url::SchemeIpPort& info)
   : address_(info.host_ip, info.port),
     server_info_(info),
     work_loop_(loop),
@@ -20,25 +20,25 @@ ClientRouter::ClientRouter(base::MessageLoop* loop, const url::SchemeIpPort& inf
   std::atomic_store(&roundrobin_channes_, list);
 }
 
-ClientRouter::~ClientRouter() {
+Client::~Client() {
 }
 
-void ClientRouter::SetDelegate(RouterDelegate* delegate) {
+void Client::SetDelegate(RouterDelegate* delegate) {
   delegate_ = delegate;
 }
 
-void ClientRouter::SetupRouter(const RouterConf& config) {
+void Client::SetupRouter(const RouterConf& config) {
   config_ = config;
 }
 
-void ClientRouter::StartRouter() {
+void Client::StartRouter() {
   for (uint32_t i = 0; i < config_.connections; i++) {
     auto functor = std::bind(&Connector::Launch, connector_, address_);
     work_loop_->PostTask(NewClosure(functor));
   }
 }
 
-void ClientRouter::StopRouter() {
+void Client::StopRouter() {
   auto channels = std::atomic_load(&roundrobin_channes_);
   if (is_stopping_) {
     return;
@@ -49,7 +49,7 @@ void ClientRouter::StopRouter() {
   }
 }
 
-void ClientRouter::StopRouterSync() {
+void Client::StopRouterSync() {
 
   StopRouter();
 
@@ -60,7 +60,8 @@ void ClientRouter::StopRouterSync() {
   });
 }
 
-void ClientRouter::OnClientConnectFailed() {
+void Client::OnClientConnectFailed() {
+  CHECK(work_loop_->IsInLoopThread());
   if (is_stopping_ || config_.connections <= channels_.size()) {
     return;
   }
@@ -69,7 +70,7 @@ void ClientRouter::OnClientConnectFailed() {
   VLOG(GLOG_VERROR) << __FUNCTION__ << RouterInfo() << " try after " << config_.recon_interval << " ms";
 }
 
-base::MessageLoop* ClientRouter::GetLoopForClient() {
+base::MessageLoop* Client::GetLoopForClient() {
   base::MessageLoop* io_loop = NULL;
   if (delegate_) {
     io_loop = delegate_->NextIOLoopForClient();
@@ -77,7 +78,7 @@ base::MessageLoop* ClientRouter::GetLoopForClient() {
   return io_loop ? io_loop : work_loop_;
 }
 
-void ClientRouter::OnNewClientConnected(int socket_fd, SocketAddress& local, SocketAddress& remote) {
+void Client::OnNewClientConnected(int socket_fd, SocketAddress& local, SocketAddress& remote) {
   CHECK(work_loop_->IsInLoopThread());
 
   base::MessageLoop* io_loop = GetLoopForClient();
@@ -96,15 +97,17 @@ void ClientRouter::OnNewClientConnected(int socket_fd, SocketAddress& local, Soc
   RefClientChannelList list(new ClientChannelList(channels_));
 
   std::atomic_store(&roundrobin_channes_, list);
+  if (delegate_) {
+    delegate_->OnClientChannelReady(client_channel.get());
+  }
 
   VLOG(GLOG_VINFO) << __FUNCTION__ << RouterInfo() << " new protocol service started";
 }
 
 /*on the loop of client IO, need managed by connector loop*/
-void ClientRouter::OnClientChannelClosed(const RefClientChannel& channel) {
-
+void Client::OnClientChannelClosed(const RefClientChannel& channel) {
   if (!work_loop_->IsInLoopThread()) {
-    auto functor = std::bind(&ClientRouter::OnClientChannelClosed, this, channel);
+    auto functor = std::bind(&Client::OnClientChannelClosed, this, channel);
     work_loop_->PostTask(NewClosure(std::move(functor)));
     return;
   }
@@ -132,13 +135,13 @@ void ClientRouter::OnClientChannelClosed(const RefClientChannel& channel) {
   }
 }
 
-void ClientRouter::OnRequestGetResponse(const RefProtocolMessage& request,
+void Client::OnRequestGetResponse(const RefProtocolMessage& request,
                                         const RefProtocolMessage& response) {
   request->SetResponse(response);
   request->GetWorkCtx().resumer_fn();
 }
 
-bool ClientRouter::AsyncSendRequest(RefProtocolMessage& req, AsyncCallBack callback) {
+bool Client::AsyncSendRequest(RefProtocolMessage& req, AsyncCallBack callback) {
   base::MessageLoop* worker = base::MessageLoop::Current();
   if (!worker) {
     LOG(ERROR) << " not in a MessageLoop, can't send request here:";
@@ -172,7 +175,7 @@ bool ClientRouter::AsyncSendRequest(RefProtocolMessage& req, AsyncCallBack callb
   return io->PostTask(NewClosure(std::bind(&ClientChannel::SendRequest, client, req)));
 }
 
-ProtocolMessage* ClientRouter::SendClientRequest(RefProtocolMessage& message) {
+ProtocolMessage* Client::SendClientRequest(RefProtocolMessage& message) {
 
   if (!base::MessageLoop::Current() || !base::CoroRunner::CanYield()) {
     LOG(ERROR) << __FUNCTION__ << " must call on coroutine task";
@@ -203,12 +206,12 @@ ProtocolMessage* ClientRouter::SendClientRequest(RefProtocolMessage& message) {
   return message->RawResponse();
 }
 
-uint64_t ClientRouter::ClientCount() const {
+uint64_t Client::ClientCount() const {
   auto channels = std::atomic_load(&roundrobin_channes_);
   return channels->size();
 }
 
-std::string ClientRouter::RouterInfo() const {
+std::string Client::RouterInfo() const {
   std::ostringstream oss;
   oss << " [remote:" << address_.IpPort()
       << ", clients:" << ClientCount() << "]";

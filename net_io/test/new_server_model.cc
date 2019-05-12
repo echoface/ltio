@@ -49,9 +49,9 @@ void HandleRaw(const LtRawMessage* req, LtRawMessage* res) {
   res->SetContent("Raw Message");
 }
 
-net::ClientRouter*  raw_router; //(base::MessageLoop*, const SocketAddress&);
-net::ClientRouter*  http_router; //(base::MessageLoop*, const SocketAddress&);
-net::ClientRouter*  redis_router;
+net::Client*  raw_router; //(base::MessageLoop*, const SocketAddress&);
+net::Client*  http_router; //(base::MessageLoop*, const SocketAddress&);
+net::Client*  redis_router;
 
 static std::atomic_int io_round_count;
 class RouterManager: public net::RouterDelegate {
@@ -71,7 +71,7 @@ void StartRedisClient() {
   net::url::SchemeIpPort server_info;
   LOG_IF(ERROR, !net::url::ParseURI("redis://127.0.0.1:6379", server_info)) << " server can't be resolve";
 
-  redis_router = new net::ClientRouter(&main_loop, server_info);
+  redis_router = new net::Client(&main_loop, server_info);
   net::RouterConf router_config;
   router_config.connections = 2;
   router_config.recon_interval = 5000;
@@ -86,7 +86,7 @@ void StartRawClient(std::string server_addr) {
   net::url::SchemeIpPort server_info;
   LOG_IF(ERROR, !net::url::ParseURI(server_addr, server_info)) << " server can't be resolve";
 
-  raw_router = new net::ClientRouter(&main_loop, server_info);
+  raw_router = new net::Client(&main_loop, server_info);
   net::RouterConf router_config;
   router_config.connections = 4;
   router_config.recon_interval = 100;
@@ -100,7 +100,7 @@ void StartRawClient(std::string server_addr) {
 void StartHttpClients(std::string url) {
   net::url::SchemeIpPort server_info;
   LOG_IF(ERROR, !net::url::ParseURI(url, server_info)) << " server can't be resolve";
-  http_router = new net::ClientRouter(&main_loop, server_info);
+  http_router = new net::Client(&main_loop, server_info);
   net::RouterConf router_config;
   router_config.connections = 2;
   router_config.recon_interval = 100;

@@ -23,8 +23,8 @@
 base::MessageLoop loop;
 base::MessageLoop wloop;
 
-net::ClientRouter* http_router = NULL;
-net::ClientRouter* raw_router = NULL;
+net::Client* http_router = NULL;
+net::Client* raw_router = NULL;
 
 bool SendRequest(int sequence_id) {
   net::RefHttpRequest request = std::make_shared<net::HttpRequest>();
@@ -86,7 +86,7 @@ int main(int argc, char* argv[]) {
   {
     net::url::SchemeIpPort server_info;
     LOG_IF(ERROR, !net::url::ParseURI("http://127.0.0.1:80", server_info)) << " server can't be resolve";
-    http_router = new net::ClientRouter(&loop, server_info);
+    http_router = new net::Client(&loop, server_info);
 
     net::RouterConf router_config;
     router_config.connections = 1;

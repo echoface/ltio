@@ -38,18 +38,22 @@ typedef struct {
 class RouterDelegate {
 public:
   virtual base::MessageLoop* NextIOLoopForClient() = 0;
+
+  /* do some init things like select db for redis,
+   * or enable keepalive action etc*/
+  virtual void OnClientChannelReady(ClientChannel* channel) {}
 };
 
-class ClientRouter;
-typedef std::shared_ptr<ClientRouter> RefClientRouter;
+class Client;
+typedef std::shared_ptr<Client> RefClient;
 
 typedef std::function<void(ProtocolMessage*)> AsyncCallBack;
 
-class ClientRouter : public ConnectorDelegate,
+class Client : public ConnectorDelegate,
                      public ClientChannel::Delegate {
 public:
-  ClientRouter(base::MessageLoop*, const url::SchemeIpPort&);
-  ~ClientRouter();
+  Client(base::MessageLoop*, const url::SchemeIpPort&);
+  ~Client();
   void SetDelegate(RouterDelegate* delegate);
   void SetupRouter(const RouterConf& config);
 
@@ -84,9 +88,13 @@ private:
   SocketAddress address_;
   const url::SchemeIpPort server_info_;
 
+  /* workloop mean: all client channel born & die, not mean
+   * clientchannel io loop, client channel may work in other loop*/
   base::MessageLoop* work_loop_;
 
   bool is_stopping_;
+
+  //sync start or stop
   std::mutex mtx_;
   std::condition_variable cv_;
 
@@ -96,6 +104,7 @@ private:
   typedef std::vector<RefClientChannel> ClientChannelList;
   typedef std::shared_ptr<ClientChannelList> RefClientChannelList;
 
+  /*only access & modify in worker loop*/
   ClientChannelList channels_;
   std::atomic<uint32_t> router_counter_;
   std::shared_ptr<ClientChannelList> roundrobin_channes_;
