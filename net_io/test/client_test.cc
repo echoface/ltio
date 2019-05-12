@@ -12,7 +12,7 @@
 #include "protocol/http/http_response.h"
 #include "protocol/proto_service_factory.h"
 #include "clients/client_connector.h"
-#include "clients/client_router.h"
+#include "clients/client.h"
 #include "dispatcher/coro_dispatcher.h"
 #include "base/coroutine/coroutine_runner.h"
 #include "base/closure/closure_task.h"

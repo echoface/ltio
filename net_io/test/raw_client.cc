@@ -3,7 +3,7 @@
 #include <functional>
 #include <glog/logging.h>
 #include <gflags/gflags.h>
-#include "clients/client_router.h"
+#include "clients/client.h"
 #include "coroutine/coroutine_runner.h"
 #include "protocol/raw/raw_message.h"
 #include "protocol/raw/raw_proto_service.h"

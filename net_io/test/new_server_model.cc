@@ -8,7 +8,7 @@
 #include "coroutine/coroutine_runner.h"
 
 #include "clients/client_connector.h"
-#include "clients/client_router.h"
+#include "clients/client.h"
 
 using namespace net;
 using namespace base;

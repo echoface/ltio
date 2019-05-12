@@ -37,11 +37,10 @@ set(LTNET_SOURCE
 
   #clients source
   clients/client_channel.cc
-  clients/client_connector.cc
-  #clients/requests_keeper.cc
-  clients/client_router.cc
-  clients/queued_channel.cc
   clients/async_channel.cc
+  clients/queued_channel.cc
+  clients/client_connector.cc
+  clients/client.cc
 )
 
 SET(LTNETEXECUTE_LINKLIBS

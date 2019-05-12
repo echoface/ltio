@@ -1,5 +1,5 @@
-#ifndef LT_NET_CLIENT_ROUTER_H_H
-#define LT_NET_CLIENT_ROUTER_H_H
+#ifndef LT_NET_CLIENT_H_H
+#define LT_NET_CLIENT_H_H
 
 #include <vector>
 
@@ -19,7 +19,6 @@
 #include "protocol/proto_message.h"
 #include "protocol/proto_service_factory.h"
 #include "clients/queued_channel.h"
-#include "clients/client_router.h"
 #include "clients/client_connector.h"
 
 namespace net {
