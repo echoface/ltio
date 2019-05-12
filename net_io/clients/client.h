@@ -31,10 +31,12 @@ typedef struct {
 
   uint32_t recon_interval = 5000;
 
-  uint32_t message_timeout = 5000;
-} RouterConf;
+  uint16_t connect_timeout = 5000;
 
-class RouterDelegate {
+  uint32_t message_timeout = 5000;
+} ClientConfig;
+
+class ClientDelegate {
 public:
   virtual base::MessageLoop* NextIOLoopForClient() = 0;
 
@@ -45,20 +47,19 @@ public:
 
 class Client;
 typedef std::shared_ptr<Client> RefClient;
-
 typedef std::function<void(ProtocolMessage*)> AsyncCallBack;
 
-class Client : public ConnectorDelegate,
-                     public ClientChannel::Delegate {
+class Client: public ConnectorDelegate,
+              public ClientChannel::Delegate {
 public:
   Client(base::MessageLoop*, const url::SchemeIpPort&);
-  ~Client();
-  void SetDelegate(RouterDelegate* delegate);
-  void SetupRouter(const RouterConf& config);
+  virtual ~Client();
 
-  void StartRouter();
-  void StopRouter();
-  void StopRouterSync();
+  void SetDelegate(ClientDelegate* delegate);
+  void Initialize(const ClientConfig& config);
+
+  void Finalize();
+  void FinalizeSync();
 
   template<class T>
   typename T::element_type::ResponseType* SendRecieve(T& m) {
@@ -79,7 +80,7 @@ public:
   void OnRequestGetResponse(const RefProtocolMessage&, const RefProtocolMessage&) override;
 
   uint64_t ClientCount() const;
-  std::string RouterInfo() const;
+  std::string ClientInfo() const;
 private:
   //Get a io work loop for channel, if no loop provide, use default io_loop_;
   base::MessageLoop* GetLoopForClient();
@@ -97,16 +98,17 @@ private:
   std::mutex mtx_;
   std::condition_variable cv_;
 
-  RouterConf config_;
+  ClientConfig config_;
   RefConnector connector_;
-  RouterDelegate* delegate_;
+  ClientDelegate* delegate_;
   typedef std::vector<RefClientChannel> ClientChannelList;
   typedef std::shared_ptr<ClientChannelList> RefClientChannelList;
 
-  /*only access & modify in worker loop*/
+  /*channels_ only access & modify in worker loop*/
   ClientChannelList channels_;
-  std::atomic<uint32_t> router_counter_;
-  std::shared_ptr<ClientChannelList> roundrobin_channes_;
+
+  std::atomic<uint32_t> next_index_;
+  RefClientChannelList roundrobin_channes_;
 };
 
 }//end namespace net

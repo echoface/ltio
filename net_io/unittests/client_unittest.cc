@@ -49,7 +49,7 @@ std::vector<base::MessageLoop*> InitLoop() {
 
 std::vector<base::MessageLoop*> loops;
 
-class RouterManager: public net::RouterDelegate {
+class RouterManager: public net::ClientDelegate{
   public:
     base::MessageLoop* NextIOLoopForClient() {
       if (loops.empty()) {
@@ -75,18 +75,16 @@ TEST_CASE("client.base", "[http client]") {
 
   net::Client http_router(&loop, server_info);
 
-  net::RouterConf router_config;
-  router_config.recon_interval = 100;
-  router_config.message_timeout = 5000;
-  router_config.connections = connections;
+  net::ClientConfig config;
+  config.recon_interval = 100;
+  config.message_timeout = 5000;
+  config.connections = connections;
 
-  http_router.SetupRouter(router_config);
-
-  http_router.StartRouter();
+  http_router.Initialize(config);
 
   loop.PostDelayTask(NewClosure([&](){
 	  REQUIRE(http_router.ClientCount() == connections);
-	  http_router.StopRouterSync();
+	  http_router.FinalizeSync();
     loop.QuitLoop();
   }), 500);
 
@@ -109,21 +107,19 @@ TEST_CASE("client.async", "[http client]") {
 
   net::Client http_router(&loop, server_info);
 
-  net::RouterConf router_config;
-  router_config.recon_interval = 100;
-  router_config.message_timeout = 5000;
-  router_config.connections = connections;
+  net::ClientConfig config;
+  config.recon_interval = 100;
+  config.message_timeout = 5000;
+  config.connections = connections;
 
-  http_router.SetupRouter(router_config);
-
-  http_router.StartRouter();
+  http_router.Initialize(config);
 
   net::AsyncCallBack callback = [&](net::ProtocolMessage* response) {
     LOG(INFO) << __FUNCTION__ << " request back";
     LOG_IF(INFO, response) << "response:" << response->Dump();
 
-    LOG(INFO) << __FUNCTION__ << " call StopRouterSync";
-    http_router.StopRouterSync();
+    LOG(INFO) << __FUNCTION__ << " call FinalizeSync";
+    http_router.FinalizeSync();
 
     LOG(INFO) << __FUNCTION__ << " call quit loop";
     loop.QuitLoop();
@@ -162,14 +158,12 @@ TEST_CASE("client.http.request", "[http client send request]") {
 
   net::Client http_router(&loop, server_info);
 
-  net::RouterConf router_config;
-  router_config.recon_interval = 100;
-  router_config.message_timeout = 5000;
-  router_config.connections = connections;
+  net::ClientConfig config;
+  config.recon_interval = 100;
+  config.message_timeout = 5000;
+  config.connections = connections;
 
-  http_router.SetupRouter(router_config);
-
-  http_router.StartRouter();
+  http_router.Initialize(config);
 
   int total_task = 1;
   int failed_request = 0;
@@ -201,7 +195,7 @@ TEST_CASE("client.http.request", "[http client send request]") {
     REQUIRE(http_router.ClientCount() == connections);
     REQUIRE((failed_request + success_request) == total_task);
 
-    http_router.StopRouterSync();
+    http_router.FinalizeSync();
     loop.QuitLoop();
   }), 5000);
 
@@ -224,14 +218,12 @@ TEST_CASE("client.raw.request", "[raw client send request]") {
 
   static const int connections = 10;
 
-  net::RouterConf router_config;
-  router_config.recon_interval = 1000;
-  router_config.message_timeout = 5000;
-  router_config.connections = connections;
+  net::ClientConfig config;
+  config.recon_interval = 1000;
+  config.message_timeout = 5000;
+  config.connections = connections;
 
-  raw_router.SetupRouter(router_config);
-
-  raw_router.StartRouter();
+  raw_router.Initialize(config);
 
   int total_task = 1;
   int failed_request = 0;
@@ -265,7 +257,7 @@ TEST_CASE("client.raw.request", "[raw client send request]") {
     REQUIRE(raw_router.ClientCount() == connections);
     REQUIRE((failed_request + success_request) == total_task);
 
-    raw_router.StopRouterSync();
+    raw_router.FinalizeSync();
     loop.QuitLoop();
   }), 5000);
 
@@ -288,15 +280,13 @@ TEST_CASE("client.timer.request", "[fetch resource every interval]") {
   static const int connections = 10;
 
   {
-    net::RouterConf router_config;
-    router_config.heart_beat_ms = 5000;
-    router_config.recon_interval = 1000;
-    router_config.message_timeout = 5000;
-    router_config.connections = connections;
+    net::ClientConfig config;
+    config.heart_beat_ms = 5000;
+    config.recon_interval = 1000;
+    config.message_timeout = 5000;
+    config.connections = connections;
 
-    raw_router.SetupRouter(router_config);
-
-    raw_router.StartRouter();
+    raw_router.Initialize(config);
   }
 
   int send_count = 10;
@@ -318,7 +308,7 @@ TEST_CASE("client.timer.request", "[fetch resource every interval]") {
 
     loop.PostTask(NewClosure([&](){
 
-      raw_router.StopRouterSync();
+      raw_router.FinalizeSync();
 
       loop.PostTask(NewClosure([&](){
         loop.QuitLoop();
@@ -351,7 +341,7 @@ TEST_CASE("client.raw.bench", "[raw client send request benchmark]") {
   }
 
   static std::atomic_int io_round_count;
-  class RouterManager: public net::RouterDelegate {
+  class RouterManager: public net::ClientDelegate{
     public:
       base::MessageLoop* NextIOLoopForClient() {
         if (loops.empty()) {
@@ -370,14 +360,13 @@ TEST_CASE("client.raw.bench", "[raw client send request benchmark]") {
 
   static const int connections = 10;
 
-  net::RouterConf router_config;
-  router_config.recon_interval = 10;
-  router_config.message_timeout = 5000;
-  router_config.connections = connections;
+  net::ClientConfig config;
+  config.recon_interval = 10;
+  config.message_timeout = 5000;
+  config.connections = connections;
 
-  raw_router.SetupRouter(router_config);
   raw_router.SetDelegate(&router_delegate);
-  raw_router.StartRouter();
+  raw_router.Initialize(config);
 
   std::atomic_int64_t  total_task;
   total_task = bench_count;
@@ -386,8 +375,6 @@ TEST_CASE("client.raw.bench", "[raw client send request benchmark]") {
   failed_request = 0;
   std::atomic_int64_t success_request;
   success_request = 0;
-
-  sleep(5);
 
   auto raw_request_task = [&]() {
     while(total_task-- > 0) {
@@ -411,12 +398,13 @@ TEST_CASE("client.raw.bench", "[raw client send request benchmark]") {
           << "success:" << success_request
           << " failed: " << failed_request
           << " test_count:" << bench_count;
-        raw_router.StopRouterSync();
+        raw_router.FinalizeSync();
         loop.QuitLoop();
       }
     };
   };
 
+  sleep(5);
   LOG(INFO) << " start bench started.............<<<<<<";
   for (int i = 0; i < bench_concurrent; i++) {
     auto l = loops[i % loops.size()];
@@ -450,14 +438,13 @@ TEST_CASE("client.http.bench", "[http client send request benchmark]") {
 
   const int connections = 10;
 
-  net::RouterConf router_config;
-  router_config.recon_interval = 10;
-  router_config.message_timeout = 5000;
-  router_config.connections = connections;
+  net::ClientConfig config;
+  config.recon_interval = 10;
+  config.message_timeout = 5000;
+  config.connections = connections;
 
-  http_router.SetupRouter(router_config);
   http_router.SetDelegate(&router_delegate);
-  http_router.StartRouter();
+  http_router.Initialize(config);
 
   std::atomic_int64_t  total_task;
   total_task = bench_count;
@@ -466,8 +453,6 @@ TEST_CASE("client.http.bench", "[http client send request benchmark]") {
   failed_request = 0;
   std::atomic_int64_t success_request;
   success_request = 0;
-
-  sleep(5);
 
   auto request_task = [&]() {
 
@@ -480,7 +465,6 @@ TEST_CASE("client.http.bench", "[http client send request benchmark]") {
       request->InsertHeader("User-Agent", "curl/7.58.0");
 
       net::HttpResponse* response = http_router.SendRecieve(request);
-
       if (response && request->FailCode() == net::MessageCode::kSuccess) {
         success_request++;
       } else {
@@ -492,12 +476,13 @@ TEST_CASE("client.http.bench", "[http client send request benchmark]") {
           << "success:" << success_request
           << " failed: " << failed_request
           << " test_count:" << bench_count;
-        http_router.StopRouterSync();
+        http_router.FinalizeSync();
         loop.QuitLoop();
       }
     };
   };
 
+  sleep(5);
   LOG(INFO) << " start bench started.............<<<<<<";
   for (int i = 0; i < bench_concurrent; i++) {
     auto l = loops[i % loops.size()];

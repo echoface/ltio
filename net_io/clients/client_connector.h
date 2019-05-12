@@ -32,6 +32,7 @@ public:
   Connector(base::MessageLoop* loop, ConnectorDelegate* delegate);
   ~Connector() {};
 
+  //TODO: add a connect timeout
   bool Launch(const net::SocketAddress &address);
 
   void OnWrite(WeakPtrFdEvent weak_fdevent);

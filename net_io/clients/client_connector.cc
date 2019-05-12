@@ -24,9 +24,9 @@ bool Connector::Launch(const net::SocketAddress &address) {
   bool success = false;
 
   int state = 0;
-  net::socketutils::SocketConnect(sock_fd, sock_addr, &state);
+  socketutils::SocketConnect(sock_fd, sock_addr, &state);
 
-  switch(state)  {
+  switch(state) {
     case 0:
     case EINTR:
     case EISCONN:

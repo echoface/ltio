@@ -12,7 +12,7 @@ Client::Client(base::MessageLoop* loop, const url::SchemeIpPort& info)
     is_stopping_(false),
     delegate_(NULL) {
 
-  router_counter_ = 0;
+  next_index_ = 0;
   CHECK(work_loop_);
   connector_ = std::make_shared<Connector>(work_loop_, this);
 
@@ -21,37 +21,35 @@ Client::Client(base::MessageLoop* loop, const url::SchemeIpPort& info)
 }
 
 Client::~Client() {
+  FinalizeSync();
 }
 
-void Client::SetDelegate(RouterDelegate* delegate) {
+void Client::SetDelegate(ClientDelegate* delegate) {
   delegate_ = delegate;
 }
 
-void Client::SetupRouter(const RouterConf& config) {
+void Client::Initialize(const ClientConfig& config) {
   config_ = config;
-}
-
-void Client::StartRouter() {
   for (uint32_t i = 0; i < config_.connections; i++) {
     auto functor = std::bind(&Connector::Launch, connector_, address_);
     work_loop_->PostTask(NewClosure(functor));
   }
 }
 
-void Client::StopRouter() {
+void Client::Finalize() {
   auto channels = std::atomic_load(&roundrobin_channes_);
   if (is_stopping_) {
     return;
   }
   is_stopping_ = true;
-  for (auto& client : *channels) {
-    client->CloseClientChannel();
+  for (auto& channel : *channels) {
+    channel->CloseClientChannel();
   }
 }
 
-void Client::StopRouterSync() {
+void Client::FinalizeSync() {
 
-  StopRouter();
+  Finalize();
 
   std::unique_lock<std::mutex> lck(mtx_);
   cv_.wait(lck, [&]{
@@ -67,7 +65,7 @@ void Client::OnClientConnectFailed() {
   }
   auto functor = std::bind(&Connector::Launch, connector_, address_);
   work_loop_->PostDelayTask(NewClosure(functor), config_.recon_interval);
-  VLOG(GLOG_VERROR) << __FUNCTION__ << RouterInfo() << " try after " << config_.recon_interval << " ms";
+  VLOG(GLOG_VERROR) << __FUNCTION__ << ClientInfo() << " try after " << config_.recon_interval << " ms";
 }
 
 base::MessageLoop* Client::GetLoopForClient() {
@@ -101,7 +99,7 @@ void Client::OnNewClientConnected(int socket_fd, SocketAddress& local, SocketAdd
     delegate_->OnClientChannelReady(client_channel.get());
   }
 
-  VLOG(GLOG_VINFO) << __FUNCTION__ << RouterInfo() << " new protocol service started";
+  VLOG(GLOG_VINFO) << __FUNCTION__ << ClientInfo() << " new protocol service started";
 }
 
 /*on the loop of client IO, need managed by connector loop*/
@@ -125,10 +123,10 @@ void Client::OnClientChannelClosed(const RefClientChannel& channel) {
     auto f = std::bind(&Connector::Launch, connector_, address_);
     work_loop_->PostDelayTask(NewClosure(f), config_.recon_interval);
 
-    VLOG(GLOG_VTRACE) << __FUNCTION__ << RouterInfo() << " reconnect after:" << config_.recon_interval;
+    VLOG(GLOG_VTRACE) << __FUNCTION__ << ClientInfo() << " reconnect after:" << config_.recon_interval;
   }
 
-  VLOG(GLOG_VINFO) << __FUNCTION__ << RouterInfo();
+  VLOG(GLOG_VINFO) << __FUNCTION__ << ClientInfo();
 
   if (is_stopping_ && channels_.empty()) {//for sync stopping
     cv_.notify_all();
@@ -167,7 +165,7 @@ bool Client::AsyncSendRequest(RefProtocolMessage& req, AsyncCallBack callback) {
     LOG(ERROR) << " No Connection Established To Server:" << address_.IpPort();
     return false;
   }
-  uint32_t client_index = router_counter_.fetch_add(1) % channels->size();
+  uint32_t client_index = next_index_.fetch_add(1) % channels->size();
 
   RefClientChannel& client = channels->at(client_index);
   base::MessageLoop* io = client->IOLoop();
@@ -191,12 +189,13 @@ ProtocolMessage* Client::SendClientRequest(RefProtocolMessage& message) {
     LOG(ERROR) << " No Connection Established To Server:" << address_.IpPort();
     return NULL;
   }
-  uint32_t client_index = router_counter_.fetch_add(1) % channels->size();
+  uint32_t client_index = next_index_.fetch_add(1) % channels->size();
 
-  RefClientChannel& client = channels->at(client_index);
-  base::MessageLoop* io_loop = client->IOLoop();
+  RefClientChannel& client_channel = channels->at(client_index);
+  base::MessageLoop* io_loop = client_channel->IOLoop();
   CHECK(io_loop);
-  bool success = io_loop->PostTask(NewClosure(std::bind(&ClientChannel::SendRequest, client, message)));
+  bool success = io_loop->PostTask(NewClosure(
+      std::bind(&ClientChannel::SendRequest, client_channel, message)));
   if (!success) {
     return NULL;
   }
@@ -211,7 +210,7 @@ uint64_t Client::ClientCount() const {
   return channels->size();
 }
 
-std::string Client::RouterInfo() const {
+std::string Client::ClientInfo() const {
   std::ostringstream oss;
   oss << " [remote:" << address_.IpPort()
       << ", clients:" << ClientCount() << "]";

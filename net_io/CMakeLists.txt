@@ -41,6 +41,7 @@ set(LTNET_SOURCE
   clients/queued_channel.cc
   clients/client_connector.cc
   clients/client.cc
+  clients/router/client_router.cc
 )
 
 SET(LTNETEXECUTE_LINKLIBS

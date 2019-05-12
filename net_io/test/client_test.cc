@@ -88,13 +88,12 @@ int main(int argc, char* argv[]) {
     LOG_IF(ERROR, !net::url::ParseURI("http://127.0.0.1:80", server_info)) << " server can't be resolve";
     http_router = new net::Client(&loop, server_info);
 
-    net::RouterConf router_config;
-    router_config.connections = 1;
-    router_config.recon_interval = 100;
-    router_config.message_timeout = 5000;
-    http_router->SetupRouter(router_config);
+    net::ClientConfig config;
+    config.connections = 1;
+    config.recon_interval = 100;
+    config.message_timeout = 5000;
 
-    http_router->StartRouter();
+    http_router->Initialize(config);
   }
 
   sleep(2);
