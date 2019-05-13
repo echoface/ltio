@@ -14,17 +14,19 @@ class RedisResponse;
 typedef std::shared_ptr<RedisResponse> RefRedisResponse;
 
 class RedisResponse : public ProtocolMessage {
-public:
-  RedisResponse();
-  ~RedisResponse();
+  public:
+    RedisResponse();
+    ~RedisResponse();
 
-  size_t Count() const {return results_.size();}
-  const resp::unique_value& ResultAtIndex(size_t idx) const {return results_[idx];}
-private:
-  friend class RespService;
-  void AddResult(resp::result& result);
+    size_t Count() const {return results_.size();}
+    const resp::unique_value& ResultAtIndex(size_t idx) const {return results_[idx];}
 
-  std::vector<resp::unique_value> results_;
+    std::string DebugDump() const;
+  private:
+    friend class RespService;
+    void AddResult(resp::result& result);
+
+    std::vector<resp::unique_value> results_;
 };
 
 } //end namesapce

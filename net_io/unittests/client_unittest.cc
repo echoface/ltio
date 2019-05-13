@@ -30,6 +30,12 @@
 #include "protocol/raw/raw_message.h"
 #include "protocol/proto_message.h"
 #include "protocol/raw/raw_proto_service.h"
+#include "protocol/redis/resp_service.h"
+#include "protocol/redis/redis_request.h"
+#include "protocol/redis/redis_response.h"
+
+#include <clients/router/client_router.h>
+#include <clients/router/roundrobin_router.h>
 
 static std::atomic_int io_round_count;
 
@@ -73,18 +79,18 @@ TEST_CASE("client.base", "[http client]") {
   net::url::SchemeIpPort server_info;
   LOG_IF(ERROR, !net::url::ParseURI("http://127.0.0.1:80", server_info)) << " server can't be resolve";
 
-  net::Client http_router(&loop, server_info);
+  net::Client http_client(&loop, server_info);
 
   net::ClientConfig config;
   config.recon_interval = 100;
   config.message_timeout = 5000;
   config.connections = connections;
 
-  http_router.Initialize(config);
+  http_client.Initialize(config);
 
   loop.PostDelayTask(NewClosure([&](){
-	  REQUIRE(http_router.ClientCount() == connections);
-	  http_router.FinalizeSync();
+	  REQUIRE(http_client.ClientCount() == connections);
+	  http_client.FinalizeSync();
     loop.QuitLoop();
   }), 500);
 
@@ -105,28 +111,28 @@ TEST_CASE("client.async", "[http client]") {
   net::url::SchemeIpPort server_info;
   LOG_IF(ERROR, !net::url::ParseURI("http://127.0.0.1:80", server_info)) << " server can't be resolve";
 
-  net::Client http_router(&loop, server_info);
+  net::Client http_client(&loop, server_info);
 
   net::ClientConfig config;
   config.recon_interval = 100;
   config.message_timeout = 5000;
   config.connections = connections;
 
-  http_router.Initialize(config);
+  http_client.Initialize(config);
 
   net::AsyncCallBack callback = [&](net::ProtocolMessage* response) {
     LOG(INFO) << __FUNCTION__ << " request back";
     LOG_IF(INFO, response) << "response:" << response->Dump();
 
     LOG(INFO) << __FUNCTION__ << " call FinalizeSync";
-    http_router.FinalizeSync();
+    http_client.FinalizeSync();
 
     LOG(INFO) << __FUNCTION__ << " call quit loop";
     loop.QuitLoop();
   };
 
   loop.PostDelayTask(NewClosure([&](){
-	  REQUIRE(http_router.ClientCount() == connections);
+	  REQUIRE(http_client.ClientCount() == connections);
 
     net::RefHttpRequest request = std::make_shared<net::HttpRequest>();
     request->SetKeepAlive(true);
@@ -135,7 +141,7 @@ TEST_CASE("client.async", "[http client]") {
     request->InsertHeader("Host", "127.0.0.1");
     request->InsertHeader("User-Agent", "curl/7.58.0");
     auto message = std::static_pointer_cast<net::ProtocolMessage>(request);
-    http_router.AsyncSendRequest(message, callback);
+    http_client.AsyncSendRequest(message, callback);
 
   }), 500);
 
@@ -156,14 +162,14 @@ TEST_CASE("client.http.request", "[http client send request]") {
   net::url::SchemeIpPort server_info;
   LOG_IF(ERROR, !net::url::ParseURI("http://127.0.0.1:80", server_info)) << " server can't be resolve";
 
-  net::Client http_router(&loop, server_info);
+  net::Client http_client(&loop, server_info);
 
   net::ClientConfig config;
   config.recon_interval = 100;
   config.message_timeout = 5000;
   config.connections = connections;
 
-  http_router.Initialize(config);
+  http_client.Initialize(config);
 
   int total_task = 1;
   int failed_request = 0;
@@ -177,7 +183,7 @@ TEST_CASE("client.http.request", "[http client send request]") {
     request->InsertHeader("Host", "127.0.0.1");
     request->InsertHeader("User-Agent", "curl/7.58.0");
 
-    net::HttpResponse* response = http_router.SendRecieve(request);
+    net::HttpResponse* response = http_client.SendRecieve(request);
     if (response && request->FailCode() == net::MessageCode::kSuccess) {
     	success_request++;
     } else {
@@ -192,10 +198,10 @@ TEST_CASE("client.http.request", "[http client send request]") {
   }
 
   loop.PostDelayTask(NewClosure([&](){
-    REQUIRE(http_router.ClientCount() == connections);
+    REQUIRE(http_client.ClientCount() == connections);
     REQUIRE((failed_request + success_request) == total_task);
 
-    http_router.FinalizeSync();
+    http_client.FinalizeSync();
     loop.QuitLoop();
   }), 5000);
 
@@ -434,7 +440,7 @@ TEST_CASE("client.http.bench", "[http client send request benchmark]") {
     << " port:" << server_info.port
     << " protocol:" << server_info.protocol;
 
-  net::Client http_router(&loop, server_info);
+  net::Client http_client(&loop, server_info);
 
   const int connections = 10;
 
@@ -443,8 +449,8 @@ TEST_CASE("client.http.bench", "[http client send request benchmark]") {
   config.message_timeout = 5000;
   config.connections = connections;
 
-  http_router.SetDelegate(&router_delegate);
-  http_router.Initialize(config);
+  http_client.SetDelegate(&router_delegate);
+  http_client.Initialize(config);
 
   std::atomic_int64_t  total_task;
   total_task = bench_count;
@@ -464,7 +470,7 @@ TEST_CASE("client.http.bench", "[http client send request benchmark]") {
       request->InsertHeader("Accept", "*/*");
       request->InsertHeader("User-Agent", "curl/7.58.0");
 
-      net::HttpResponse* response = http_router.SendRecieve(request);
+      net::HttpResponse* response = http_client.SendRecieve(request);
       if (response && request->FailCode() == net::MessageCode::kSuccess) {
         success_request++;
       } else {
@@ -476,7 +482,7 @@ TEST_CASE("client.http.bench", "[http client send request benchmark]") {
           << "success:" << success_request
           << " failed: " << failed_request
           << " test_count:" << bench_count;
-        http_router.FinalizeSync();
+        http_client.FinalizeSync();
         loop.QuitLoop();
       }
     };
@@ -491,4 +497,80 @@ TEST_CASE("client.http.bench", "[http client send request benchmark]") {
     }));
   }
   loop.WaitLoopEnd();
+}
+
+TEST_CASE("client.router", "[http client]") {
+  static const int connections = 2;
+
+  LOG(INFO) << "start test client.router with redis protocal";
+
+  base::MessageLoop loop;
+  loop.SetLoopName("client");
+  loop.Start();
+
+  std::vector<std::string> remote_hosts = {
+    "redis://127.0.0.1:6380",
+    "redis://127.0.0.1:6379"
+  };
+
+  net::ClientConfig config;
+
+  config.recon_interval = 10;
+  config.message_timeout = 5000;
+  config.connections = connections;
+
+  net::RoundRobinRouter router;
+  for (auto& remote : remote_hosts) {
+    net::url::SchemeIpPort server_info;
+    bool success = net::url::ParseURI(remote, server_info);
+    LOG_IF(ERROR, !success) << " server:" << remote << " can't be resolve";
+
+    net::ClientPtr client(new net::Client(&loop, server_info));
+    client->SetDelegate(&router_delegate);
+    client->Initialize(config);
+
+    router.AddClient(std::move(client));
+  }
+
+  auto task = [&]() {
+    for (uint32_t i = 0; i < 3; i++) {
+
+      auto redis_request = std::make_shared<net::RedisRequest>();
+
+      redis_request->SetWithExpire("name", "huan.gong", 2000);
+      redis_request->Exists("name");
+      redis_request->Delete("name");
+
+      redis_request->Incr("counter");
+      redis_request->IncrBy("counter", 10);
+      redis_request->Decr("counter");
+      redis_request->DecrBy("counter", 10);
+
+      redis_request->Select("1");
+      redis_request->Auth("");
+
+      redis_request->TTL("counter");
+      redis_request->Expire("counter", 200);
+      redis_request->Persist("counter");
+      redis_request->TTL("counter");
+
+      net::Client* redis_client = router.GetNextClient(redis_request.get());
+      LOG(INFO) << "use redis client:" << redis_client->ClientInfo();
+
+      net::RedisResponse* redis_response  = redis_client->SendRecieve(redis_request);
+      if (redis_response) {
+        LOG(INFO) << "reponse:\n" << redis_response->DebugDump();
+      } else {
+        LOG(ERROR) << "redis client request failed:" << redis_request->FailCode();
+      }
+    }
+
+    router.StopAllClients();
+  };
+
+  sleep(2);
+
+  co_go &loop << task;
+  loop.WaitLoopEnd();
+  return;
 }

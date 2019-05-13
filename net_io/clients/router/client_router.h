@@ -13,7 +13,7 @@ typedef std::unique_ptr<Client> ClientPtr;
 
 /**
  * ClientRouter manager a group of client(a client has N connection)
- * Decide the client choose strategy 
+ * Decide the client choose strategy
  * */
 class ClientRouter {
 public:
@@ -23,21 +23,9 @@ public:
   virtual void StopAllClients() = 0;
 
   virtual void AddClient(ClientPtr&& client) = 0;
-  virtual Client* GetNextClient(ProtocolMessage* request) = 0;
+  virtual Client* GetNextClient(const std::string& key,
+                                ProtocolMessage* request = NULL) = 0;
 protected:
-};
-
-class RoundRobinRouter : public ClientRouter {
-  public:
-    RoundRobinRouter() {};
-    ~RoundRobinRouter() {};
-
-    void StopAllClients() override;
-    void AddClient(ClientPtr&& client) override;
-    Client* GetNextClient(ProtocolMessage* request) override;
-  private:
-    std::vector<ClientPtr> clients_;  
-    std::atomic_uint32_t round_index_;
 };
 
 }
