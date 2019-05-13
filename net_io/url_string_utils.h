@@ -3,6 +3,7 @@
 
 #include <string>
 #include <inttypes.h>
+#include <unordered_map>
 
 namespace net {
 
@@ -20,6 +21,19 @@ bool ParseURI(const std::string, SchemeIpPort& out);
 /* host resolve */
 bool HostResolve(const std::string& host, std::string& host_ip);
 
+typedef std::unordered_map<std::string, std::string> QueryMap;
+typedef struct {
+  uint16_t port;
+  std::string user;
+  std::string passwd;
+  std::string host;
+  std::string host_ip;
+  std::string protocol;
+  QueryMap querys;
+} RemoteInfo;
+/* uniform uri parse: http://user:password@host:port?arg1=1&arg2=2
+ * protocol://user:password@hots:port?query_string*/
+bool ParseRemote(const std::string& in, RemoteInfo& out);
 
 }}
 #endif

@@ -109,4 +109,13 @@ bool HostResolve(const std::string& host, std::string& host_ip) {
   return !host_ip.empty();
 }
 
-}}
+/* protocol://user:password@hots:port?query_string*/
+bool ParseRemote(const std::string& in, RemoteInfo& out) {
+  auto v = base::StrUtils::Split("://");
+  if (v.size() > 1) {
+    out.protocol = v[0];
+  }
+  auto user_psd = base::StrUtils::Split(v[1])
+}
+
+}} //net::url
