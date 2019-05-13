@@ -61,4 +61,32 @@ TEST_CASE("uri.parse", "[http uri parse]") {
 
 }
 
+TEST_CASE("uri.parse.remote", "[remote uri parse]") {
+  std::vector<std::string> remote_uris = {
+    "http://gh:passwd@localhost:8020?abc=&name=1234",
+    "://gh:passwd@localhost:8020?abc=&name=1234",
+    "gh:passwd@localhost:8020?abc=&name=1234",
+    "gh:@localhost:8020?abc=&name=1234",
+    "gh@localhost:8020?abc=&name=1234",
+    "gh@localhost?abc=&name=1234",
+    "gh@localhost?",
+    "gh@localhost",
+    "localhost:80?abc=",
+  };
+
+  for (auto remote_uri : remote_uris) {
+    net::url::RemoteInfo remote;
+    remote.reset();
+
+    net::url::ParseRemote(remote_uri, remote, true);
+    LOG(INFO) << ">>>>>>:" << remote_uri;
+    LOG(INFO) << "protocol:" << remote.protocol
+      << " user:" << remote.user
+      << " psd:" << remote.passwd
+      << " host:" << remote.host
+      << " ip:" << remote.host_ip
+      << " port:" << remote.port
+      << " query:" << remote.querys.size();
+  }
+}
 

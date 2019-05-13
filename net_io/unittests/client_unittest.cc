@@ -554,7 +554,7 @@ TEST_CASE("client.router", "[http client]") {
       redis_request->Persist("counter");
       redis_request->TTL("counter");
 
-      net::Client* redis_client = router.GetNextClient(redis_request.get());
+      net::Client* redis_client = router.GetNextClient("", redis_request.get());
       LOG(INFO) << "use redis client:" << redis_client->ClientInfo();
 
       net::RedisResponse* redis_response  = redis_client->SendRecieve(redis_request);

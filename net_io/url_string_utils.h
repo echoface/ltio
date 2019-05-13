@@ -30,10 +30,19 @@ typedef struct {
   std::string host_ip;
   std::string protocol;
   QueryMap querys;
+  void reset() {
+    port = 0;
+    user.clear();
+    passwd.clear();
+    host.clear();
+    host_ip.clear();
+    protocol.clear();
+    querys.clear();
+  }
 } RemoteInfo;
 /* uniform uri parse: http://user:password@host:port?arg1=1&arg2=2
  * protocol://user:password@hots:port?query_string*/
-bool ParseRemote(const std::string& in, RemoteInfo& out);
+bool ParseRemote(const std::string& in, RemoteInfo& out, bool resolve = true);
 
 }}
 #endif

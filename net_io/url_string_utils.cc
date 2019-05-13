@@ -109,13 +109,54 @@ bool HostResolve(const std::string& host, std::string& host_ip) {
   return !host_ip.empty();
 }
 
-/* protocol://user:password@hots:port?query_string*/
-bool ParseRemote(const std::string& in, RemoteInfo& out) {
-  auto v = base::StrUtils::Split("://");
-  if (v.size() > 1) {
-    out.protocol = v[0];
+/* protocol://user:password@host:port?query_string*/
+bool ParseRemote(const std::string& in, RemoteInfo& out, bool resolve) {
+  std::string::size_type find_start = 0;
+  std::string::size_type pos = in.find("://", find_start);
+  if (pos != std::string::npos) {
+    out.protocol = in.substr(find_start, pos);
+    find_start = pos + sizeof("://") - 1;
   }
-  auto user_psd = base::StrUtils::Split(v[1])
+
+  pos = in.find("@", find_start);
+  if (pos != std::string::npos) {//got user:psd
+    uint32_t len = pos - find_start;
+    auto user_psd = base::StrUtils::Split(in.substr(find_start, len), ":", false);
+    out.user = user_psd[0];
+    if (user_psd.size() > 1) {
+      out.passwd = user_psd[1];
+    }
+    find_start = pos + sizeof("@") - 1;
+  }
+
+  pos = in.find("?", find_start);
+  {
+    uint32_t len = pos - find_start;
+    auto host_port = base::StrUtils::Split(in.substr(find_start, len), ":", false);
+    out.host = host_port.front();
+    if (host_port.size() > 1) {
+      out.port = base::StrUtils::Parse<uint16_t>(host_port[1]);
+    }
+    if (resolve) {
+      HostResolve(out.host, out.host_ip);
+    }
+    if (pos == std::string::npos) {
+      return true;
+    }
+
+    find_start = pos + sizeof("?") - 1;
+  }
+
+  auto querys = base::StrUtils::Split(in.substr(find_start), '&');
+  for (auto& query : querys) {
+    auto kv = base::StrUtils::Split(query, "=", false);
+    if (kv.size() != 2) {
+      std::cout << "query:" << query << " size:" << kv.size() << std::endl;
+      continue;
+    }
+    out.querys.insert(std::make_pair(kv.front(), kv.back()));
+  }
+  return true;
 }
 
 }} //net::url

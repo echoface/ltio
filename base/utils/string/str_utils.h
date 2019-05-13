@@ -38,10 +38,13 @@ public:
   static std::string& TrimLeft(std::string &s);
   static std::string& TrimRight(std::string &s);
   static std::string& Trim(std::string &s) {return TrimLeft(TrimRight(s));}
-  static std::vector<std::string> Split(const std::string &str, const char delim);
+  static std::vector<std::string> Split(const std::string &str,
+                                        const char delim);
+
   static std::vector<std::string> Split(const std::string &text,
                                         const std::string &delims,
-                                        bool ignore_empty = true);
+                                        bool ignore_empty = false);
+
 
   template <typename T>
   static std::string Join(const std::vector<T> &v, const std::string &token) {

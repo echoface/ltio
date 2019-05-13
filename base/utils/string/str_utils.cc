@@ -34,42 +34,53 @@ bool StrUtils::EndsWith(const std::string &str, const std::string &suffix) {
 }
 
 std::string& StrUtils::TrimLeft(std::string &s) {
-  s.erase(s.begin(),
-          std::find_if(s.begin(), s.end(),
-                       std::not1(std::ptr_fun<int, int>(std::isspace))));
+  auto iter = std::find_if(s.begin(),
+                           s.end(),
+                           std::not1(std::ptr_fun<int, int>(std::isspace)));
+  s.erase(s.begin(), iter);
   return s;
 }
 
 std::string& StrUtils::TrimRight(std::string &s) {
-  s.erase(std::find_if(s.rbegin(), s.rend(),
-                       std::not1(std::ptr_fun<int, int>(std::isspace)))
-          .base(),
-          s.end());
+  auto v = std::find_if(s.rbegin(),
+                        s.rend(),
+                        std::not1(std::ptr_fun<int, int>(std::isspace)));
+  s.erase(v.base(), s.end());
   return s;
 }
-std::vector<std::string> StrUtils::Split(const std::string &str, const char delim) {
 
+std::vector<std::string> StrUtils::Split(const std::string &str,
+                                         const char delim) {
   std::vector<std::string> elems;
-  std::stringstream ss(str);
 
-  std::string item;
-  while (getline(ss, item, delim)) elems.push_back(item);
+  std::string token;
+  std::stringstream ss(str);
+  while (std::getline(ss, token, delim)) {
+    elems.push_back(token);
+  }
   return std::move(elems);
 }
 
 std::vector<std::string> StrUtils::Split(const std::string &text,
                                          const std::string &delims,
                                          bool ignore_empty) {
-
   std::vector<std::string> tokens;
-  size_t prev = 0, pos = 0;
-  do {
-    pos = text.find(delims, prev);
-    if (pos == std::string::npos) pos = text.length();
-    std::string token = text.substr(prev, pos-prev);
-    if (!token.empty() || !ignore_empty) tokens.push_back(token);
-    prev = pos + delims.length();
-  } while (pos < text.length() && prev < text.length());
+  std::size_t current, previous = 0;
+  current = text.find(delims);
+  while (current != std::string::npos) {
+    if (current == previous && !ignore_empty) {
+      tokens.push_back(text.substr(previous, current - previous));
+    } else {
+      tokens.push_back(text.substr(previous, current - previous));
+    }
+    previous = current + 1;
+    current = text.find(delims, previous);
+  }
+  if (current == previous && !ignore_empty) {
+    tokens.push_back(text.substr(previous, current - previous));
+  } else {
+    tokens.push_back(text.substr(previous, current - previous));
+  }
   return std::move(tokens);
 }
 
