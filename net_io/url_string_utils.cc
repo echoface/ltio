@@ -17,6 +17,7 @@
 #include "glog/logging.h"
 #include "url_string_utils.h"
 #include "utils/string/str_utils.h"
+#include <base/string/string_view.hpp>
 
 namespace net {
 namespace url {
@@ -112,11 +113,14 @@ bool HostResolve(const std::string& host, std::string& host_ip) {
 // use c++17 std::string_view avoid memory allocator
 //
 /* protocol://user:password@host:port?query_string*/
-bool ParseRemote(const std::string& in, RemoteInfo& out, bool resolve) {
+bool ParseRemote(const std::string& str, RemoteInfo& out, bool resolve) {
+
+  nonstd::string_view in = nonstd::string_view(str);
+
   std::string::size_type find_start = 0;
   std::string::size_type pos = in.find("://", find_start);
   if (pos != std::string::npos) {
-    out.protocol = in.substr(find_start, pos);
+    out.protocol = in.substr(find_start, pos).to_string();
     find_start = pos + sizeof("://") - 1;
   }
 
