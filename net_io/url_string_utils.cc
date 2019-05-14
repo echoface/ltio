@@ -109,6 +109,8 @@ bool HostResolve(const std::string& host, std::string& host_ip) {
   return !host_ip.empty();
 }
 
+// use c++17 std::string_view avoid memory allocator
+//
 /* protocol://user:password@host:port?query_string*/
 bool ParseRemote(const std::string& in, RemoteInfo& out, bool resolve) {
   std::string::size_type find_start = 0;
