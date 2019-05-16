@@ -2,38 +2,38 @@
 
 namespace base {
 
-bool StrUtils::Replace(std::string &str, const std::string &from, const std::string &to) {
+bool Str::Replace(std::string &str, const std::string &from, const std::string &to) {
   size_t start_pos = str.find(from);
   if (start_pos == std::string::npos) return false;
   str.replace(start_pos, from.length(), to);
   return true;
 }
 
-bool StrUtils::ReplaceLast(std::string &str, const std::string &from, const std::string &to) {
+bool Str::ReplaceLast(std::string &str, const std::string &from, const std::string &to) {
   size_t start_pos = str.rfind(from);
   if (start_pos == std::string::npos) return false;
   str.replace(start_pos, from.length(), to);
   return true;
 }
 
-bool StrUtils::Contains(const std::string& input, const std::string& test) {
+bool Str::Contains(const std::string& input, const std::string& test) {
   return std::search(input.begin(),
                      input.end(),
                      test.begin(),
                      test.end()) != input.end();
 }
 
-bool StrUtils::StartsWith(const std::string &str, const std::string &prefix) {
+bool Str::StartsWith(const std::string &str, const std::string &prefix) {
   return str.size() >= prefix.size() &&
     str.compare(0, prefix.size(), prefix) == 0;
 }
 
-bool StrUtils::EndsWith(const std::string &str, const std::string &suffix) {
+bool Str::EndsWith(const std::string &str, const std::string &suffix) {
   return str.size() >= suffix.size() &&
     str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
 }
 
-std::string& StrUtils::TrimLeft(std::string &s) {
+std::string& Str::TrimLeft(std::string &s) {
   auto iter = std::find_if(s.begin(),
                            s.end(),
                            std::not1(std::ptr_fun<int, int>(std::isspace)));
@@ -41,7 +41,7 @@ std::string& StrUtils::TrimLeft(std::string &s) {
   return s;
 }
 
-std::string& StrUtils::TrimRight(std::string &s) {
+std::string& Str::TrimRight(std::string &s) {
   auto v = std::find_if(s.rbegin(),
                         s.rend(),
                         std::not1(std::ptr_fun<int, int>(std::isspace)));
@@ -49,8 +49,8 @@ std::string& StrUtils::TrimRight(std::string &s) {
   return s;
 }
 
-std::vector<std::string> StrUtils::Split(const std::string &str,
-                                         const char delim) {
+std::vector<std::string> Str::Split(const std::string &str,
+                                    const char delim) {
   std::vector<std::string> elems;
 
   std::string token;
@@ -61,9 +61,9 @@ std::vector<std::string> StrUtils::Split(const std::string &str,
   return std::move(elems);
 }
 
-std::vector<std::string> StrUtils::Split(const std::string &text,
-                                         const std::string &delims,
-                                         bool ignore_empty) {
+std::vector<std::string> Str::Split(const std::string &text,
+                                    const std::string &delims,
+                                    bool ignore_empty) {
   std::vector<std::string> tokens;
   std::size_t current, previous = 0;
   current = text.find(delims);
@@ -83,6 +83,5 @@ std::vector<std::string> StrUtils::Split(const std::string &text,
   }
   return std::move(tokens);
 }
-
 
 } // enabase

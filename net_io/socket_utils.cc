@@ -182,7 +182,7 @@ void FromIpPort(const char* ip, uint16_t port, struct sockaddr_in* addr) {
   addr->sin_family = AF_INET;
   addr->sin_port = endian::HostToNetwork16(port);
   if (::inet_pton(AF_INET, ip, &addr->sin_addr) <= 0) {
-    LOG(ERROR) << " ::inet_pton error:" << base::StrError();
+    LOG(ERROR) << " ::inet_pton error:" << base::StrError() << " ip:" << ip;
   }
 }
 

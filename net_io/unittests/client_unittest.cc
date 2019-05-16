@@ -509,7 +509,7 @@ TEST_CASE("client.router", "[http client]") {
   loop.Start();
 
   std::vector<std::string> remote_hosts = {
-    "redis://127.0.0.1:6380",
+    "redis://localhost:6380",
     "redis://127.0.0.1:6379"
   };
 
@@ -524,6 +524,11 @@ TEST_CASE("client.router", "[http client]") {
     net::url::SchemeIpPort server_info;
     bool success = net::url::ParseURI(remote, server_info);
     LOG_IF(ERROR, !success) << " server:" << remote << " can't be resolve";
+    if (!success) {
+      LOG(INFO) << "host:" << server_info.host << " ip:" << server_info.host_ip
+        << " port:" << server_info.port << " protocol:" << server_info.protocol;
+      return;
+    }
 
     net::ClientPtr client(new net::Client(&loop, server_info));
     client->SetDelegate(&router_delegate);
@@ -537,10 +542,10 @@ TEST_CASE("client.router", "[http client]") {
 
       auto redis_request = std::make_shared<net::RedisRequest>();
 
-      redis_request->SetWithExpire("name", "huan.gong", 2000);
-      redis_request->Exists("name");
-      redis_request->Delete("name");
-
+      //redis_request->SetWithExpire("name", "huan.gong", 2000);
+      //redis_request->Delete("name");
+      redis_request->MGet("name", "abc", "efg");
+/*
       redis_request->Incr("counter");
       redis_request->IncrBy("counter", 10);
       redis_request->Decr("counter");
@@ -553,7 +558,7 @@ TEST_CASE("client.router", "[http client]") {
       redis_request->Expire("counter", 200);
       redis_request->Persist("counter");
       redis_request->TTL("counter");
-
+*/
       net::Client* redis_client = router.GetNextClient("", redis_request.get());
       LOG(INFO) << "use redis client:" << redis_client->ClientInfo();
 
@@ -566,6 +571,7 @@ TEST_CASE("client.router", "[http client]") {
     }
 
     router.StopAllClients();
+    loop.QuitLoop();
   };
 
   sleep(2);

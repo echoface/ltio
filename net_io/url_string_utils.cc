@@ -37,25 +37,26 @@ static std::string scheme_host("://");
 bool ParseURI(const std::string uri, SchemeIpPort& out) {
 
   out.port = 0;
+  out.protocol = "http";
 
-  auto result = base::StrUtils::Split(uri, scheme_host, false);
-  if (result.size() != 2) {
-    return false;
+  nonstd::string_view in(uri);
+
+  std::string::size_type find_start = 0;
+  std::string::size_type pos = in.find("://", find_start);
+  if (pos != std::string::npos) {
+    out.protocol = in.substr(find_start, pos).to_string();
+    find_start = pos + sizeof("://") - 1;
   }
-  out.protocol = result[0].empty() ? "http" : result[0];
 
-  auto host_port = base::StrUtils::Split(result[1], ip_port);
-  switch (host_port.size()) {
-    case 1:
-      out.host = host_port[0];
-      out.port = 80;
-      break;
-    case 2:
-      out.host = host_port[0];
-      out.port = base::StrUtils::Parse<uint16_t>(host_port[1]);
-      break;
-    default:
-      return false;
+  pos = in.find(":", find_start);
+  if (pos != std::string::npos) {
+    uint32_t len = pos - find_start;
+
+    base::Str::ParseTo(in.substr(pos + 1).to_string(), out.port);
+    out.host = in.substr(find_start, len).to_string();
+    find_start = pos + sizeof(":") - 1;
+  } else {
+    out.host = in.substr(find_start).to_string();
   }
 
   if (!out.host.empty()) {
@@ -78,6 +79,7 @@ bool HostResolve(const std::string& host, std::string& host_ip) {
 
   status = getaddrinfo(host.c_str(), NULL, &hints, &serv_info);
   if (status == -1) {
+    LOG(ERROR) << "getaddrinfo failed, host:" << host.c_str();
     return false;
   }
 
@@ -111,7 +113,6 @@ bool HostResolve(const std::string& host, std::string& host_ip) {
 }
 
 // use c++17 std::string_view avoid memory allocator
-//
 /* protocol://user:password@host:port?query_string*/
 bool ParseRemote(const std::string& str, RemoteInfo& out, bool resolve) {
 
@@ -127,7 +128,7 @@ bool ParseRemote(const std::string& str, RemoteInfo& out, bool resolve) {
   pos = in.find("@", find_start);
   if (pos != std::string::npos) {//got user:psd
     uint32_t len = pos - find_start;
-    auto user_psd = base::StrUtils::Split(in.substr(find_start, len), ":", false);
+    auto user_psd = base::Str::Split(in.substr(find_start, len).to_string(), ":", false);
     out.user = user_psd[0];
     if (user_psd.size() > 1) {
       out.passwd = user_psd[1];
@@ -138,10 +139,10 @@ bool ParseRemote(const std::string& str, RemoteInfo& out, bool resolve) {
   pos = in.find("?", find_start);
   {
     uint32_t len = pos - find_start;
-    auto host_port = base::StrUtils::Split(in.substr(find_start, len), ":", false);
+    auto host_port = base::Str::Split(in.substr(find_start, len).to_string(), ":", false);
     out.host = host_port.front();
     if (host_port.size() > 1) {
-      out.port = base::StrUtils::Parse<uint16_t>(host_port[1]);
+      out.port = base::Str::Parse<uint16_t>(host_port[1]);
     }
     if (resolve) {
       HostResolve(out.host, out.host_ip);
@@ -153,9 +154,9 @@ bool ParseRemote(const std::string& str, RemoteInfo& out, bool resolve) {
     find_start = pos + sizeof("?") - 1;
   }
 
-  auto querys = base::StrUtils::Split(in.substr(find_start), '&');
+  auto querys = base::Str::Split(in.substr(find_start).to_string(), '&');
   for (auto& query : querys) {
-    auto kv = base::StrUtils::Split(query, "=", false);
+    auto kv = base::Str::Split(query, "=", false);
     if (kv.size() != 2) {
       std::cout << "query:" << query << " size:" << kv.size() << std::endl;
       continue;

@@ -15,37 +15,55 @@ void RedisResponse::AddResult(resp::result& result) {
 
 std::string RedisResponse::DebugDump() const {
   std::ostringstream oss;
+#define RESPBUF_TO_STRING(v) std::string(v.data(), v.size())
 
   for (size_t i = 0; i < Count(); i++) {
     auto& value = ResultAtIndex(i);
 
     switch(value.type()) {
-      case resp::ty_string: {
-        oss << "index:" << i << " res:" << value.string().data() << "\n";
-      } break;
-      case resp::ty_error: {
-        oss << "index:" << i << " res:" << value.error().data() << "\n";
+      case resp::ty_error:
+        oss << "index:" << i << " type:" << value.type() << " res:" << RESPBUF_TO_STRING(value.error()) << "\n";
+        break;
+      case resp::ty_string:
+        oss << "index:" << i << " type:" << value.type() << " res:" << RESPBUF_TO_STRING(value.string()) << "\n";
+        break;
+      case resp::ty_bulkstr: {
+        oss << "index:" << i << " type:" << value.type() << " res:" << RESPBUF_TO_STRING(value.bulkstr()) << "\n";
       } break;
       case resp::ty_integer: {
-        oss << "index:" << i << " res:" << value.integer() << "\n";
+        oss << "index:" << i << " type:" << value.type() << " res:" << value.integer() << "\n";
       } break;
       case resp::ty_null: {
-        oss << "index:" << i << " res:" << "null" << "\n";
+        oss << "index:" << i << " type:" << value.type() << " res:" << "null" << "\n";
       } break;
       case resp::ty_array: {
+        LOG(INFO) << "got array result";
         resp::unique_array<resp::unique_value> arr = value.array();
 
-        std::ostringstream oss;
+        std::ostringstream os;
         for (size_t i = 0; i < arr.size(); i++) {
-          oss << "'" << std::string(arr[i].bulkstr().data(), arr[i].bulkstr().size()) << "'";
+          switch(arr[i].type()) {
+            case resp::ty_null:
+              os << "null";
+            break;
+            case resp::ty_error:
+              os << "'" << RESPBUF_TO_STRING(arr[i].error()) << "'";
+              break;
+            case resp::ty_string:
+              os << "'" << RESPBUF_TO_STRING(arr[i].string()) << "'";
+            break;
+            case resp::ty_bulkstr:
+              os << "'" << RESPBUF_TO_STRING(arr[i].bulkstr()) << "'";
+            break;
+            default:
+              os << "'unknown type'";
+            break;
+          }
           if (i < arr.size() - 1) {
-            oss << ", ";
+            os << ", ";
           }
         }
-        oss << "index:" << i << " res:" << oss.str() << "\n";
-      } break;
-      case resp::ty_bulkstr: {
-        oss << "index:" << i << " res:" << std::string(value.bulkstr().data(), value.bulkstr().size()) << "\n";
+        oss << "index:" << i << " type:" << value.type() << " res:" << os.str() << "\n";
       } break;
       default: {
         oss << "index:" << i << " res:" << "#bad debug dump message#" << " type:" << value.type() << "\n";
@@ -53,6 +71,7 @@ std::string RedisResponse::DebugDump() const {
     }
   }
   return oss.str();
+#undef RESPBUF_TO_STRING
 }
 
 }//end namespace

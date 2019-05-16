@@ -11,8 +11,7 @@ public:
   SocketAddress(uint16_t port);
   explicit SocketAddress(const struct sockaddr_in&);
   // @c ip should be "1.2.3.4"
-  SocketAddress(const std::string ip, const uint16_t port);
-
+  SocketAddress(const std::string& ip, const uint16_t port);
   static SocketAddress FromSocketFd(int fd);
 
   uint16_t Port() const;

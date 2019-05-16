@@ -14,7 +14,7 @@ SocketAddress::SocketAddress(uint16_t port) {
   addr_in_.sin_port = endian::HostToNetwork16(port);
 }
 
-SocketAddress::SocketAddress(const std::string ip, const uint16_t port) {
+SocketAddress::SocketAddress(const std::string& ip, const uint16_t port) {
   bzero(&addr_in_, sizeof addr_in_);
   socketutils::FromIpPort(ip.c_str(), port, &addr_in_);
 }

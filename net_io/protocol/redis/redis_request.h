@@ -13,9 +13,21 @@ class RespService;
 class RedisRequest;
 typedef std::shared_ptr<RedisRequest> RefRedisRequest;
 
+
 class RedisRequest : public ProtocolMessage {
 public:
   typedef RedisResponse ResponseType;
+  typedef resp::encoder<resp::buffer> RespEncoder;
+
+  struct __detail__ {
+    static void cmd_concat(RespEncoder::command&) { /* do nothing */ }
+    template<typename T, typename ...Args>
+    static void cmd_concat(RespEncoder::command& cmd,
+                            const T& v, Args&&... args) {
+      cmd.arg(v);
+      cmd_concat(cmd, std::forward<Args>(args)...);
+    }
+  };
 
   RedisRequest();
   ~RedisRequest();
@@ -23,8 +35,42 @@ public:
   void Get(const std::string& key);
   void MGet(const std::vector<std::string>& keys);
 
+  template<typename T>
+  void MGet(std::initializer_list<T> list) {
+    std::vector<resp::buffer> buffers;
+    encoder_.begin(buffers);
+    auto cmder = encoder_.cmd("MGET");
+    for (auto& value : list) {
+      cmder.arg(value);
+    }
+    cmder.end();
+    encoder_.end();
+
+    for (auto& buffer :  buffers) {
+      body_.append(buffer.data(), buffer.size());
+    }
+    cmd_counter_++;
+  }
+
+  template<typename ...Args>
+  void MGet(Args&&... args) {
+    std::vector<resp::buffer> buffers;
+    encoder_.begin(buffers);
+    auto cmder = encoder_.cmd("MGET");
+
+    __detail__::cmd_concat(cmder, std::forward<Args>(args)...);
+
+    cmder.end();
+    encoder_.end();
+    for (auto& buffer :  buffers) {
+      body_.append(buffer.data(), buffer.size());
+    }
+    cmd_counter_++;
+  }
+
   void Set(const std::string& key, const std::string& value);
   void MSet(const std::vector<std::pair<std::string, std::string>> kvs);
+
   void SetWithExpire(const std::string& key, const std::string& value, uint32_t second);
 
   void Exists(const std::string& key);
