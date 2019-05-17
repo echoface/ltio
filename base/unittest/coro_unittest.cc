@@ -9,6 +9,7 @@
 #include <coroutine/coroutine.h>
 #include <message_loop/message_loop.h>
 #include <coroutine/coroutine_runner.h>
+#include <coroutine/wait_group.h>
 
 #include <catch/catch.hpp>
 
@@ -102,5 +103,43 @@ TEST_CASE("coro.co_sleep", "[coroutine sleep]") {
   loop.WaitLoopEnd();
 
   REQUIRE(co_sleep_resumed);
+}
+
+TEST_CASE("coro.waitGroup", "[coroutine resumer with loop reply task]") {
+  base::MessageLoop loop; loop.Start();
+
+  co_go &loop << [&]() { //main
+    LOG(INFO) << "main start...";
+
+    base::WaitGroup wg;
+
+    co_go [&]() {
+      wg.Add(1); LOG(INFO) << "task 1 run...";
+
+      co_sleep(100);
+
+      wg.Done(); LOG(INFO) << "task 1 done...";
+    };
+
+    co_go [&]() {
+      wg.Add(1); LOG(INFO) << "task 2 run...";
+
+      co_sleep(200);
+
+      wg.Done(); LOG(INFO) << "task 2 done...";
+    };
+
+    co_go [&]() {
+      wg.Add(1); LOG(INFO) << "task 3 run...";
+
+      co_sleep(150);
+
+      wg.Done(); LOG(INFO) << "task 3 done...";
+    };
+
+    wg.Wait(50);
+    loop.QuitLoop();
+  };
+  loop.WaitLoopEnd();
 }
 

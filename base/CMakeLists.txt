@@ -9,6 +9,7 @@ SET(BASE_SOURCES
   utils/string/str_utils.cc
   #coroutine
   coroutine/coroutine.cc
+  coroutine/wait_group.cc
   coroutine/coroutine_runner.cc
   #new eventloop
   message_loop/event.cc
