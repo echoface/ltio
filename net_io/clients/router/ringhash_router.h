@@ -1,8 +1,8 @@
-#ifndef _LT_NET_CONSISTANTHASH_ROUTER_H_H
-#define _LT_NET_CONSISTANTHASH_ROUTER_H_H
+#ifndef _LT_NET_RINGHASH_ROUTER_H_H
+#define _LT_NET_RINGHASH_ROUTER_H_H
 
 #include "client_router.h"
-#include "consistant_hash_router.h"
+#include "consistant_hash_map.h"
 
 namespace net {
 
@@ -16,24 +16,26 @@ struct ClientNode {
 
 struct crc32_hasher {
   uint32_t operator()(const ClientNode& node) {
-    return ret.checksum();
+    //return ret.checksum();
+    return 0;
   }
   typedef uint32_t result_type;
 };
 
+typedef consistent_hash_map<ClientNode, crc32_hasher> CHashMap;
+
 /*consistant hash based router*/
-class ConHashRouter : public ClientRouter {
+class RingHashRouter : public ClientRouter {
   public:
-    ConHashRouter() {};
-    ~ConHashRouter() {};
+    RingHashRouter() {};
+    ~RingHashRouter() {};
 
     void StopAllClients() override;
     void AddClient(ClientPtr&& client) override;
     Client* GetNextClient(const std::string& key,
                           ProtocolMessage* request = 0) override;
   private:
-    std::vector<ClientPtr> clients_;
-    consistent_hash_map<std::string, 
+    CHashMap clients_;
 };
 
 }
