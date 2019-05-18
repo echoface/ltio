@@ -55,7 +55,7 @@ public:
   static CoroRunner& Runner();
   /* give up cpu; main coro will automatic resume;
    * other coro should resume by manager*/
-  static void YieldCurrent(int32_t wc = 1);
+  static void YieldCurrent();
   static StlClosure CurrentCoroResumeCtx();
 
   void SleepMillsecond(uint64_t ms);

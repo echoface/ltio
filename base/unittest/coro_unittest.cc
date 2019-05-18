@@ -114,30 +114,24 @@ TEST_CASE("coro.waitGroup", "[coroutine resumer with loop reply task]") {
     base::WaitGroup wg;
 
     co_go [&]() {
-      wg.Add(1); LOG(INFO) << "task 1 run...";
-
-      co_sleep(100);
-
-      wg.Done(); LOG(INFO) << "task 1 done...";
+      wg.Add(1);
+      co_sleep(500);
+      wg.Done();
     };
 
     co_go [&]() {
-      wg.Add(1); LOG(INFO) << "task 2 run...";
-
-      co_sleep(200);
-
-      wg.Done(); LOG(INFO) << "task 2 done...";
+      wg.Add(1);
+      co_sleep(501);
+      wg.Done();
     };
 
     co_go [&]() {
-      wg.Add(1); LOG(INFO) << "task 3 run...";
-
-      co_sleep(150);
-
-      wg.Done(); LOG(INFO) << "task 3 done...";
+      wg.Add(1);
+      co_sleep(490);
+      wg.Done();
     };
 
-    wg.Wait(50);
+    wg.Wait(500);
     loop.QuitLoop();
   };
   loop.WaitLoopEnd();

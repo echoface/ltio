@@ -11,7 +11,7 @@ namespace base {
 
 class TimeoutEvent : public Timeout {
 public:
-  static TimeoutEvent* CreateOneShotTimer(uint64_t ms, bool delelte_after_invoke);
+  static TimeoutEvent* CreateOneShot(uint64_t ms, bool delelte_after_invoke);
 
   TimeoutEvent(uint64_t ms, bool repeat);
   ~TimeoutEvent();

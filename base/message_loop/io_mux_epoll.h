@@ -6,10 +6,10 @@
 
 namespace base {
 
-class IoMultiplexerEpoll : public IoMultiplexer {
+class IOMuxEpoll : public IOMux {
 public:
-  IoMultiplexerEpoll();
-  ~IoMultiplexerEpoll();
+  IOMuxEpoll();
+  ~IOMuxEpoll();
 
   void AddFdEvent(FdEvent* fd_ev) override;
   void DelFdEvent(FdEvent* fd_ev) override;
@@ -23,7 +23,7 @@ private:
   uint32_t ToEpollEvent(const LtEvent& lt_ev, bool add_extr = true);
   std::string EpollOptToString(int opt);
 private:
-  int epoll_fd_;
+  int epoll_fd_ = -1;
   std::vector<epoll_event> ep_events_;
 };
 

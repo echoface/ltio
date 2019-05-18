@@ -40,7 +40,7 @@ TEST_CASE("event_pump.timer", "[test event pump timer]") {
   }));
 
   uint64_t start, end;
-  base::TimeoutEvent* quit_toe = base::TimeoutEvent::CreateOneShotTimer(30000, true);
+  base::TimeoutEvent* quit_toe = base::TimeoutEvent::CreateOneShot(30000, true);
   quit_toe->InstallTimerHandler(NewClosure([&]() {
     end = base::time_ms();
     std::cout << "end at ms:" << end << std::endl;

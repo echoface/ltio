@@ -55,7 +55,6 @@ private:
   std::weak_ptr<Coroutine> AsWeakPtr() {return shared_from_this();}
 
 private:
-  int32_t wc_;
   CoroDelegate* delegate_;
 
   CoroState state_;

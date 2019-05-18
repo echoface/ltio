@@ -73,15 +73,11 @@ CoroRunner& CoroRunner::Runner() {
   //return tls_runner.get();
 }
 
-void CoroRunner::YieldCurrent(int32_t wc) {
-  CHECK(tls_runner->current_->wc_ == 0);
-
+void CoroRunner::YieldCurrent() {
   if (tls_runner->InMainCoroutine()) {
     LOG(ERROR) << __FUNCTION__ << Runner().RunnerInfo() << " main coro can't paused";
     return;
   }
-
-  tls_runner->current_->wc_ = wc;
 
   VLOG(GLOG_VINFO) << __FUNCTION__ << Runner().RunnerInfo() << " will paused";
   tls_runner->TransferTo(tls_runner->main_coro_);
@@ -99,7 +95,7 @@ void CoroRunner::SleepMillsecond(uint64_t ms) {
 
 /* 如果本身是在一个子coro里面, 需要在重新将resumecoroutine调度到主coroutine内
  * 不支持嵌套的coroutinetransfer........
- * 如果本身是主coro， 则直接tranfer去执行.
+ * 如果本身是主coro，则直接tranfer去执行.
  * 如果不是在调度的线程里， 则posttask去Resume*/
 void CoroRunner::ResumeCoroutine(std::weak_ptr<Coroutine> weak, uint64_t id) {
   if (!bind_loop_->IsInLoopThread() || CanYield()) {
@@ -121,12 +117,7 @@ void CoroRunner::ResumeCoroutine(std::weak_ptr<Coroutine> weak, uint64_t id) {
     return;
   }
 
-  if (--(coroutine->wc_) > 0) {
-    return;
-  }
-
   VLOG(GLOG_VTRACE) << __FUNCTION__ << RunnerInfo() << " resume coro:" << coroutine;
-  coroutine->wc_ = 0;
   coroutine->identify_++;
   TransferTo(coroutine);
 }
@@ -215,7 +206,6 @@ Coroutine* CoroRunner::RetrieveCoroutine() {
 std::string CoroRunner::RunnerInfo() const {
   std::ostringstream oss;
   oss << "[ current:" << current_
-      << ", wait_c:" << current_->wc_
       << ", wait_id:" << current_->identify_
       << ", status:" << current_->StateToString()
       << ", is_main:" << (current_ == main_coro_ ? "true" : "false") << "] ";

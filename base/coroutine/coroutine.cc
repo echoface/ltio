@@ -1,13 +1,11 @@
+#include <vector>
+#include <atomic>
+#include <mutex>
+#include "glog/logging.h"
+#include <memory/spin_lock.h>
+#include <base/base_constants.h>
 
 #include "coroutine.h"
-#include <vector>
-#include <iostream>
-#include "glog/logging.h"
-#include <atomic>
-#include <iostream>
-#include <mutex>
-#include <base/spin_lock.h>
-#include <base/base_constants.h>
 
 namespace base {
 
@@ -39,7 +37,6 @@ std::shared_ptr<Coroutine> Coroutine::Create(CoroDelegate* d, bool main) {
 }
 
 Coroutine::Coroutine(CoroDelegate* d, bool main) :
-  wc_(0),
   delegate_(d),
   identify_(0) {
 
@@ -89,7 +86,6 @@ void Coroutine::SelfHolder(RefCoroutine& self) {
 }
 
 void Coroutine::Reset() {
-  wc_ = 0;
   coro_task_.reset();
   state_ = CoroState::kInitialized;
 }

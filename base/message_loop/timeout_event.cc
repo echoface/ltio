@@ -1,9 +1,9 @@
 #include "timeout_event.h"
 
 namespace base {
-  
-//static  
-TimeoutEvent* TimeoutEvent::CreateOneShotTimer(uint64_t ms, bool delelte_after_invoke) {
+
+//static
+TimeoutEvent* TimeoutEvent::CreateOneShot(uint64_t ms, bool delelte_after_invoke) {
   TimeoutEvent* toe = new TimeoutEvent(ms, false);
   toe->del_after_invoke_ = delelte_after_invoke;
   return toe;

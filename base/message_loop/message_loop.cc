@@ -63,7 +63,7 @@ public:
 
     VLOG(GLOG_VINFO) <<  "Re-Schedule timer " << new_delay_ms << " ms";
 
-    TimeoutEvent* timeout_ev = TimeoutEvent::CreateOneShotTimer(new_delay_ms, true);
+    TimeoutEvent* timeout_ev = TimeoutEvent::CreateOneShot(new_delay_ms, true);
 
     timeout_ev->InstallTimerHandler(std::move(timeout_fn_));
     event_pump_->AddTimeoutEvent(timeout_ev);
@@ -149,6 +149,7 @@ MessageLoop::~MessageLoop() {
   wakeup_event_.reset();
   IgnoreSigPipeSignalOnCurrentThread2();
   close(wakeup_pipe_in_);
+
   //wakeup_pipe_out managed by fdevent
   //close(wakeup_pipe_out_);
 
@@ -247,7 +248,7 @@ void MessageLoop::PostDelayTask(std::unique_ptr<TaskBase> task, uint32_t ms) {
     PostTask(ClosurePtr(new TimeoutTaskHelper(std::move(task), event_pump_.get(), ms)));
     return;
   }
-  TimeoutEvent* timeout_ev = TimeoutEvent::CreateOneShotTimer(ms, true);
+  TimeoutEvent* timeout_ev = TimeoutEvent::CreateOneShot(ms, true);
   timeout_ev->InstallTimerHandler(std::move(task));
   event_pump_->AddTimeoutEvent(timeout_ev);
 }
@@ -290,7 +291,7 @@ void MessageLoop::RunScheduledTask(ScheduledTaskType type) {
     case ScheduledTaskType::TaskTypeDefault: {
       uint64_t count = 0;
       int ret = read(task_event_fd_, &count, sizeof(count));
-      LOG_IF(INFO, ret < 0) << __FUNCTION__ << " run scheduled task failed:" << StrError(); 
+      LOG_IF(INFO, ret < 0) << __FUNCTION__ << " run scheduled task failed:" << StrError();
 
       TaskBasePtr task;  // instead of pinco *p;
       while (scheduled_tasks_.try_dequeue(task)) {
@@ -397,11 +398,7 @@ int MessageLoop::Notify(int fd, const void* data, size_t count) {
 
 void MessageLoop::SetThreadNativeName() {
   if (loop_name_.empty()) return;
-  LOG(INFO) << __FUNCTION__ << " change message loop name to " << loop_name_;
   pthread_setname_np(pthread_self(), loop_name_.c_str());
-  //pthread_setname_np(pthread_self(), s.c_str());
-  // set the name (pthread_self() returns the pthread_t of the current thread)
-  //pthread_getname_np(pthread_self(), &name[0], sizeof(name));
 }
 
 };

@@ -11,8 +11,8 @@
 #include "glog/logging.h"
 #include "base_constants.h"
 
-#include "spin_lock.h"
 #include "closure/task_queue.h"
+#include "memory/spin_lock.h"
 #include "memory/scoped_ref_ptr.h"
 #include "memory/refcountedobject.h"
 
@@ -82,7 +82,7 @@ class MessageLoop : public PumpDelegate {
     //t: millsecond for giveup cpu for waiting
     void WaitLoopEnd(int32_t t = 1);
     void SetLoopName(std::string name);
-    std::string LoopName() {return loop_name_;}
+    const std::string& LoopName() const {return loop_name_;}
 
     void QuitLoop();
     EventPump* Pump() {return event_pump_.get();}

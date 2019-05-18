@@ -20,6 +20,7 @@ void WaitGroup::Done() {
   CHECK(pre_count > 0);
 
   if (pre_count == 1) {
+    LOG(INFO) << "wait group wake by work";
     wake_up();
   }
 }
@@ -35,9 +36,10 @@ void WaitGroup::Wait(int64_t timeout_ms) {
   }
 
   resumer_ = co_resumer;
-  base::MessageLoop* loop = base::MessageLoop::Current();
+  MessageLoop* loop = MessageLoop::Current();
   if (timeout_ms != -1) {
-    timeout_ = TimeoutEvent::CreateOneShotTimer(timeout_ms, false);
+    timeout_ = TimeoutEvent::CreateOneShot(timeout_ms, false);
+    timeout_->InstallTimerHandler(NewClosure(std::bind(&WaitGroup::wake_up, this)));
     loop->Pump()->AddTimeoutEvent(timeout_);
   }
 
@@ -52,11 +54,12 @@ void WaitGroup::Wait(int64_t timeout_ms) {
 
 void WaitGroup::wake_up() {//timeout or done
   if (wakeup_flag_.test_and_set()) {
+    LOG(INFO) << "has beed wakeup...";
     return;
   }
+  LOG(INFO) << "wake up...";
   CHECK(resumer_);
   resumer_();
-  resumer_ = nullptr;
 }
 
 }

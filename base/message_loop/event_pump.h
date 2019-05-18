@@ -8,13 +8,12 @@
 #include <thread>
 
 #include "fd_event.h"
-#include "timer_task_queue.h"
 #include "timeout_event.h"
 #include <thirdparty/timeout/timeout.h>
 
 namespace base {
 
-class IoMultiplexer;
+class IOMux;
 
 typedef struct timeouts TimeoutWheel;
 typedef std::function<void()> QuitClosure;
@@ -75,7 +74,7 @@ private:
   PumpDelegate* delegate_;
   bool running_;
 
-  std::unique_ptr<IoMultiplexer> multiplexer_;
+  std::unique_ptr<IOMux> multiplexer_;
 
 #if 0
   // replace by new timeout_wheel for more effective perfomance [ O(1) ]
