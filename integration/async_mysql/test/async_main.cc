@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
   loop.SetLoopName("main");
   loop.Start();
 
-  auto client = new MysqlAsyncClientImpl(&loop, 1);
+  auto client = std::shared_ptr<MysqlAsyncClientImpl>(new MysqlAsyncClientImpl(&loop, 1));
   client->InitWithOption(option);
 
   auto callback = [&](RefQuerySession qs)->void {
@@ -76,7 +76,8 @@ int main(int argc, char** argv) {
       qs->UseDB("mysql").Query(content).Then(onback);
       client->PendingQuery(qs);
     } else {
-      loop.QuitLoop();
+      client->Close();
+      //loop.QuitLoop();
     }
   }
 #endif

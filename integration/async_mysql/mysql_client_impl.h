@@ -9,6 +9,7 @@
 namespace lt {
 
 typedef std::shared_ptr<MysqlAsyncConnect> RefMysqlAsyncConnect;
+typedef std::vector<RefMysqlAsyncConnect> ConnectionList;
 
 //root:passwd@192.168.1.1:3306?db=&timeout=&charset=
 
@@ -21,13 +22,18 @@ class MysqlAsyncClientImpl : public MysqlAsyncConnect::MysqlClient {
 
     void PendingQuery(RefQuerySession& query, int timeout = 0);
 
-    void OnQueryFinish(RefQuerySession query) override;
+    void Close();
+
+    void OnConnectReady(MysqlAsyncConnect* con) override;
     void OnConnectionBroken(MysqlAsyncConnect* con) override;
+    void OnConnectionClosed(MysqlAsyncConnect* con) override;
   private:
-    const int count_ = 4;
+    MysqlAsyncConnect* get_client();
+    const int count_ = 1;
     base::MessageLoop* loop_ = NULL;
     std::atomic<int> use_index_;
-    std::vector<RefMysqlAsyncConnect> connections_;
+
+    ConnectionList connections_;
 };
 
 

@@ -6,6 +6,7 @@
 #include <mysql.h>
 #include "query_session.h"
 #include "base/message_loop/message_loop.h"
+#include "base/message_loop/repeating_timer.h"
 
 namespace lt {
 
@@ -18,19 +19,24 @@ struct MysqlOptions {
   uint32_t query_timeout;
 };
 
+typedef std::unique_ptr<base::TimeoutEvent> TimeoutEventPtr;
+
 class MysqlAsyncConnect {
 public:
   enum State{
-    CONNECT_IDLE,
+    CONNECT_INIT,
     CONNECT_START,
     CONNECT_WAIT,
     CONNECT_DONE,
+
     QUERY_START,
     QUERY_WAIT,
     QUERY_RESULT_READY,
+
     FETCH_ROW_START,
     FETCH_ROW_WAIT,
     FETCH_ROW_RESULT_READY,
+
     CLOSE_START,
     CLOSE_WAIT,
     CLOSE_DONE,
@@ -40,8 +46,10 @@ public:
   static std::string MysqlWaitStatusString(int status);
 
   struct MysqlClient {
-    virtual void OnQueryFinish(RefQuerySession query) = 0;
-    virtual void OnConnectionBroken(MysqlAsyncConnect* con) = 0;
+    virtual ~MysqlClient() {}
+    virtual void OnConnectReady(MysqlAsyncConnect* con) {};
+    virtual void OnConnectionClosed(MysqlAsyncConnect* con) {};
+    virtual void OnConnectionBroken(MysqlAsyncConnect* con) {};
   };
 
   MysqlAsyncConnect(MysqlClient* client, base::MessageLoop* bind_loop);
@@ -51,24 +59,34 @@ public:
 
   void InitConnection(const MysqlOptions& option);
 
-  void HandleState(int status = 0);
   base::MessageLoop* BindLoop() {return loop_;}
 
   void FinishCurrentQuery(State next_st);
+
+  void Connect();
+  bool SyncConnect();
+
+  void Close();
+  bool SyncClose();
+  bool IsReady() {return true;}
 private:
+  void HandleState(int in_event = 0);
+  void HandleConnectSt(int in_event = 0);
+
   void OnError();
   void OnClose();
   void OnTimeOut();
   void OnWaitEventInvoked();
 
-  void reset_wait_event();
   void WaitMysqlStatus(int status);
-  bool go_next_state(int status, const State wait_st, const State next_st);
 
+  void clean_up();
+  void reset_wait_event();
+  void do_connection_check();
+  bool go_next_state(int status, const State wait_st, const State next_st);
 
   bool ParseResultDesc(MYSQL_RES* result, QuerySession* query);
 private:
-
 
   int err_no_;
   int current_state_;                   // State machine current state
@@ -84,7 +102,11 @@ private:
   MysqlClient* client_ = NULL;
   base::MessageLoop* loop_ = NULL;
   base::RefFdEvent fd_event_;
-  std::unique_ptr<base::TimeoutEvent> timeout_;
+  TimeoutEventPtr timeout_;
+  base::RepeatingTimer checker_;
+
+  bool ready_ = false;
+  bool schedule_close_ = false;
 
   std::string last_selected_db_;
   RefQuerySession in_process_query_;

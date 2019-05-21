@@ -8,31 +8,60 @@ MysqlAsyncClientImpl::MysqlAsyncClientImpl(base::MessageLoop* loop, int count)
 }
 
 MysqlAsyncClientImpl::~MysqlAsyncClientImpl() {
+  connections_.clear();
 }
 
 void MysqlAsyncClientImpl::InitWithOption(MysqlOptions& opt) {
   for (int i = 0; i < count_; i++) {
     RefMysqlAsyncConnect con(new MysqlAsyncConnect(this, loop_));
     con->InitConnection(opt);
+
+    if (!con->SyncConnect()) {
+      LOG(FATAL) << "mysql connect failed, host:" << opt.host << " port:" << opt.port;
+      return;
+    }
     connections_.push_back(std::move(con));
   }
 }
 
-void MysqlAsyncClientImpl::PendingQuery(RefQuerySession& query, int timeout) {
-  use_index_++;
-  RefMysqlAsyncConnect con = connections_[use_index_ % connections_.size()];
-  con->BindLoop()->PostTask(NewClosure(std::bind(&MysqlAsyncConnect::StartQuery, con, query)));
+void MysqlAsyncClientImpl::Close() {
+  for (auto& con : connections_) {
+    loop_->PostTask(NewClosure(std::bind(&MysqlAsyncConnect::SyncClose, con)));
+  }
 }
 
-void MysqlAsyncClientImpl::OnQueryFinish(RefQuerySession query) {
-  query->OnQueryDone();
+void MysqlAsyncClientImpl::PendingQuery(RefQuerySession& query, int timeout) {
+  auto connection = get_client();
+  if (!connection) {
+    return;
+  }
+  connection->BindLoop()->PostTask(
+    NewClosure(std::bind(&MysqlAsyncConnect::StartQuery, connection, query)));
+}
+
+MysqlAsyncConnect* MysqlAsyncClientImpl::get_client() {
+  RefMysqlAsyncConnect con;
+  uint32_t round_count = 0;
+  do {
+    use_index_++;
+    round_count++;
+    con = connections_[use_index_ % connections_.size()];
+    if (con->IsReady()) {
+      return con.get();
+    }
+  } while(!con && round_count < connections_.size());
+  return NULL;
+}
+
+void MysqlAsyncClientImpl::OnConnectReady(MysqlAsyncConnect* con) {
 }
 
 void MysqlAsyncClientImpl::OnConnectionBroken(MysqlAsyncConnect* con) {
-  //auto iter = std::find(connections_.begin(), connections_.end(), con);
-  //if (iter != connections_.end()) {
-    //connections_.erase(iter);
-  //}
+
+}
+
+void MysqlAsyncClientImpl::OnConnectionClosed(MysqlAsyncConnect* con) {;
+
 }
 
 }//end lt
