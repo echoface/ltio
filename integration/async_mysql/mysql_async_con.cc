@@ -11,6 +11,31 @@ MysqlAsyncConnect::MysqlAsyncConnect(MysqlClient* client, base::MessageLoop* bin
     checker_(bind_loop) {
 }
 
+MysqlAsyncConnect::~MysqlAsyncConnect() {
+  if (in_process_query_) {
+    in_process_query_->SetCode(-1, "closed");
+    in_process_query_->OnQueryDone();
+    in_process_query_.reset();
+  }
+
+  for (auto& query : query_list_) {
+    query->SetCode(-1, "closed");
+    query->OnQueryDone();
+  }
+  query_list_.clear();
+
+  if (timeout_ || fd_event_) {
+    RefTimeoutEvent to = timeout_;
+    base::RefFdEvent ev = fd_event_;
+    auto clean_fn = [ev, to]() {
+      auto pump = base::MessageLoop::Current()->Pump();
+      if (ev) pump->RemoveFdEvent(ev.get());
+      if (to) pump->RemoveTimeoutEvent(to.get());
+    };
+    loop_->PostTask(NewClosure(clean_fn));
+  }
+}
+
 //static
 std::string MysqlAsyncConnect::MysqlWaitStatusString(int status) {
   std::ostringstream oss;
@@ -457,9 +482,6 @@ bool MysqlAsyncConnect::SyncClose() {
 
   mysql_close(&mysql_);
   current_state_ = CLOSE_DONE;
-  if (client_) {
-    client_->OnConnectionClosed(this);
-  }
   return true;
 }
 

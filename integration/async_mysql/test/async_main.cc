@@ -77,7 +77,9 @@ int main(int argc, char** argv) {
       client->PendingQuery(qs);
     } else {
       client->Close();
-      //loop.QuitLoop();
+      client.reset();
+
+      loop.QuitLoop();
     }
   }
 #endif

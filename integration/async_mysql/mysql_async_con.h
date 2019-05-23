@@ -19,7 +19,7 @@ struct MysqlOptions {
   uint32_t query_timeout;
 };
 
-typedef std::unique_ptr<base::TimeoutEvent> TimeoutEventPtr;
+typedef std::shared_ptr<base::TimeoutEvent> RefTimeoutEvent;
 
 class MysqlAsyncConnect {
 public:
@@ -53,15 +53,14 @@ public:
   };
 
   MysqlAsyncConnect(MysqlClient* client, base::MessageLoop* bind_loop);
+  ~MysqlAsyncConnect();
 
-  void StartAQuery(const char* query);
   void StartQuery(RefQuerySession& query);
 
+  void ResetClient() {client_ = NULL;};
   void InitConnection(const MysqlOptions& option);
-
   base::MessageLoop* BindLoop() {return loop_;}
 
-  void FinishCurrentQuery(State next_st);
 
   void Connect();
   bool SyncConnect();
@@ -70,6 +69,8 @@ public:
   bool SyncClose();
   bool IsReady() {return true;}
 private:
+  void FinishCurrentQuery(State next_st);
+
   void HandleState(int in_event = 0);
   void HandleConnectSt(int in_event = 0);
 
@@ -77,7 +78,6 @@ private:
   void OnClose();
   void OnTimeOut();
   void OnWaitEventInvoked();
-
   void WaitMysqlStatus(int status);
 
   void clean_up();
@@ -102,7 +102,7 @@ private:
   MysqlClient* client_ = NULL;
   base::MessageLoop* loop_ = NULL;
   base::RefFdEvent fd_event_;
-  TimeoutEventPtr timeout_;
+  RefTimeoutEvent timeout_;
   base::RepeatingTimer checker_;
 
   bool ready_ = false;
