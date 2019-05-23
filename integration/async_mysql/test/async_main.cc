@@ -5,7 +5,8 @@
 using namespace lt;
 
 MysqlOptions option = {
-  .host = "localhost",
+  .host = "10.9.158.21",
+  //.host = "127.0.0.1",
   .port = 3306,
   .user = "root",
   .passwd = "",
@@ -48,24 +49,6 @@ int main(int argc, char** argv) {
 
 
   std::string content;
-#if 0
-  std::cout << "press any charactor key start" << std::endl;
-  std::cin >> content;
-  std::vector<std::string> querys = {
-    "show tables",
-    "desc db",
-    "bacd",
-    "desc db",
-    "show tables",
-  };
-  for (auto& query : querys) {
-      RefQuerySession qs = QuerySession::New();
-      auto onback = std::bind(callback, qs);
-      qs->UseDB("mysql").Query(query).Then(onback);
-      client->PendingQuery(qs);
-      sleep(1);
-  }
-#else
   while(content != "exit") {
     std::getline(std::cin, content);
     LOG(INFO) << "got query content:" << content;
@@ -82,7 +65,6 @@ int main(int argc, char** argv) {
       loop.QuitLoop();
     }
   }
-#endif
 
   loop.WaitLoopEnd();
 

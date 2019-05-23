@@ -17,6 +17,7 @@ struct MysqlOptions {
   std::string passwd;
   std::string dbname;
   uint32_t query_timeout;
+  bool auto_re_connect = false;
 };
 
 typedef std::shared_ptr<base::TimeoutEvent> RefTimeoutEvent;
@@ -28,6 +29,10 @@ public:
     CONNECT_START,
     CONNECT_WAIT,
     CONNECT_DONE,
+
+    SELECT_DB_START,
+    SELECT_DB_WAIT,
+    SELECT_DB_DONE,
 
     QUERY_START,
     QUERY_WAIT,
@@ -67,12 +72,14 @@ public:
 
   void Close();
   bool SyncClose();
-  bool IsReady() {return true;}
+
+  bool IsReady() {return ready_;}
 private:
   void FinishCurrentQuery(State next_st);
 
   void HandleState(int in_event = 0);
-  void HandleConnectSt(int in_event = 0);
+  void HandleStateConnect(int in_event = 0);
+  void HandleStateSelectDB(int in_event = 0);
 
   void OnError();
   void OnClose();
@@ -109,7 +116,7 @@ private:
   bool schedule_close_ = false;
 
   std::string last_selected_db_;
-  RefQuerySession in_process_query_;
+  RefQuerySession in_process_;
   std::list<RefQuerySession> query_list_;
 };
 

@@ -12,6 +12,9 @@ RepeatingTimer::RepeatingTimer(MessageLoop* loop)
 }
 
 RepeatingTimer::~RepeatingTimer() {
+  if (running_) {
+    Stop();
+  }
 }
 
 bool RepeatingTimer::Running() const {
