@@ -13,6 +13,7 @@ void RingHashRouter::AddClient(ClientPtr&& client) {
 Client* RingHashRouter::GetNextClient(const std::string& key,
                                       ProtocolMessage* request) {
 
+  return NULL;
 }
 
 }//end net

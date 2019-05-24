@@ -1,5 +1,6 @@
 
 #include "location.h"
+#include "../base_constants.h"
 
 namespace base {
 
@@ -14,8 +15,7 @@ std::string Location::ToString() const {
   if (has_source_info()) {
     return std::string(function_name_) + "@" + file_name_ + ":" + std::to_string(line_number_);
   }
-  return "";
-  //return StringPrintf("pc:%p", program_counter_);
+  return kNullString;
 }
 
 #if defined(__clang__)
