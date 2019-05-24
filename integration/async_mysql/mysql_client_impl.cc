@@ -34,7 +34,7 @@ void MysqlAsyncClientImpl::PendingQuery(RefQuerySession& query, int timeout) {
   auto connection = get_client();
   if (!connection) {
     query->SetCode(-1, "connection not ready");
-    base::MessageLoop::Current()->PostTask(NewClosure(QuerySession::OnQueryDone, query));
+    base::MessageLoop::Current()->PostTask(NewClosure(std::bind(&QuerySession::OnQueryDone, query)));
     return;
   }
   connection->BindLoop()->PostTask(

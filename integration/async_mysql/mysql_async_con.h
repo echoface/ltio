@@ -4,6 +4,7 @@
 #include <list>
 #include <string>
 #include <mysql.h>
+#include <errmsg.h>
 #include "query_session.h"
 #include "base/message_loop/message_loop.h"
 #include "base/message_loop/repeating_timer.h"
@@ -17,18 +18,21 @@ struct MysqlOptions {
   std::string passwd;
   std::string dbname;
   uint32_t query_timeout;
-  bool auto_re_connect = false;
 };
+
 
 typedef std::shared_ptr<base::TimeoutEvent> RefTimeoutEvent;
 
 class MysqlAsyncConnect {
 public:
   enum State{
+    STATE_NONE = 0,
     CONNECT_INIT,
     CONNECT_START,
     CONNECT_WAIT,
     CONNECT_DONE,
+
+    CONNECTION_IDLE,
 
     SELECT_DB_START,
     SELECT_DB_WAIT,
@@ -75,11 +79,15 @@ public:
 
   bool IsReady() {return ready_;}
 private:
-  void FinishCurrentQuery(State next_st);
+  void DoneCurrentQuery(int code, const char*);
 
   void HandleState(int in_event = 0);
-  void HandleStateConnect(int in_event = 0);
-  void HandleStateSelectDB(int in_event = 0);
+
+  //return true if st machine continue
+  bool IsFatalError(int code);
+  bool HandleStateIDLE(int in_event = 0);
+  bool HandleStateConnect(int in_event = 0);
+  bool HandleStateSelectDB(int in_event = 0);
 
   void OnError();
   void OnClose();

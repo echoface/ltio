@@ -4,9 +4,10 @@
 
 namespace lt {
 
+#define ERR_STR ::mysql_error(&mysql_)
+
 MysqlAsyncConnect::MysqlAsyncConnect(MysqlClient* client, base::MessageLoop* bind_loop)
-  : err_no_(0),
-    client_(client),
+  : client_(client),
     loop_(bind_loop),
     checker_(bind_loop) {
 }
@@ -86,99 +87,150 @@ bool MysqlAsyncConnect::go_next_state(int opt_status,
   return false;
 }
 
-void MysqlAsyncConnect::HandleStateSelectDB(int in_event) {
-  bool st_continue = true;
+// select db as part of query
+bool MysqlAsyncConnect::HandleStateSelectDB(int in_event) {
+  LOG(ERROR) << in_event << " cur st:" << current_state_;
+  CHECK(in_process_);
 
-  while(st_continue) {
-    switch(current_state_) {
-      case SELECT_DB_START: {
-        const char* db = in_process_ ?
-          in_process_.DB().c_str() : option_.dbname.c_str();
-        int status = ::mysql_select_db_start(&err_no_, &mysql_, db);
-        st_continue = go_next_state(status, SELECT_DB_WAIT, SELECT_DB_DONE);
-      } break;
-      case SELECT_DB_WAIT: {
-        int status = ::mysql_select_db_cont(&err_no_, &mysql_, in_event);
-        st_continue = go_next_state(status, SELECT_DB_WAIT, SELECT_DB_DONE);
-      } break;
-      case SELECT_DB_DONE:
-        break;
-      default:
-        CHECK(false);
-        break;
-    }
+  switch(current_state_) {
+    case SELECT_DB_START: {
+      const char* db = in_process_->DB().c_str();
+
+      int error_no = 0;
+      int status = ::mysql_select_db_start(&error_no, &mysql_, db);
+      if (error_no != 0) {
+        DoneCurrentQuery(error_no, ERR_STR);
+        current_state_ = IsFatalError(error_no) ? CLOSE_START : CONNECTION_IDLE;
+        return true;
+      }
+      return go_next_state(status, SELECT_DB_WAIT, SELECT_DB_DONE);
+    } break;
+    case SELECT_DB_WAIT: {
+      int error_no = 0;
+      int status = ::mysql_select_db_cont(&error_no, &mysql_, in_event);
+      if (error_no != 0) {
+        DoneCurrentQuery(error_no, ERR_STR);
+        current_state_ = IsFatalError(error_no) ? CLOSE_START : CONNECTION_IDLE;
+        return true;
+      }
+      return go_next_state(status, SELECT_DB_WAIT, SELECT_DB_DONE);
+    } break;
+    case SELECT_DB_DONE: {
+      last_selected_db_ = in_process_->DB();
+      if (in_process_->QueryContent().empty()) {
+        DoneCurrentQuery(0, "db change success");
+        current_state_ = CONNECTION_IDLE;
+      } else {
+        current_state_ = QUERY_START;
+      }
+      return true;
+    } break;
+    default:
+      CHECK(false);
+      break;
   }
+  return false;
 }
 
-void MysqlAsyncConnect::HandleStateConnect(int in_event) {
-  bool st_continue = true;
+bool MysqlAsyncConnect::HandleStateConnect(int in_event) {
 
-  while(st_continue) {
-    switch(current_state_) {
-      case CONNECT_START: {
-        int status = mysql_real_connect_start(&mysql_ret_, &mysql_,
-                                              option_.host.c_str(),
-                                              option_.user.c_str(),
-                                              option_.passwd.c_str(),
-                                              option_.dbname.c_str(),
-                                              option_.port, NULL, 0);
+  switch(current_state_) {
+    case CONNECT_START: {
+      int status = mysql_real_connect_start(&mysql_ret_, &mysql_,
+                                            option_.host.c_str(),
+                                            option_.user.c_str(),
+                                            option_.passwd.c_str(),
+                                            option_.dbname.c_str(),
+                                            option_.port, NULL, 0);
 
-        st_continue = go_next_state(status, CONNECT_WAIT, CONNECT_DONE);
-      }break;
-      case CONNECT_WAIT: {
-        int status = mysql_real_connect_cont(&mysql_ret_, &mysql_, in_event);
-        st_continue = go_next_state(status, CONNECT_WAIT, CONNECT_DONE);
-      }break;
-      case CONNECT_DONE: {
-        if (!mysql_ret_)  {
-          LOG(ERROR) << " connect failed, host:" << option_.host;
-
-          ready_ = false;
-          st_continue = true;
-          current_state_ = CLOSE_START;
-          break;
-        }
-
-        ready_ = true;
-        st_continue = true;
-        current_state_ = QUERY_START;
-
-        last_selected_db_ = option_.dbname;
-
-        if (client_) {
-          client_->OnConnectReady(this);
-        }
-        LOG(INFO) << "connect to " << option_.host << "success";
-      }break;
-      case CLOSE_START: {
-
-        int status = mysql_close_start(&mysql_);
-        st_continue = go_next_state(status, CLOSE_WAIT, CLOSE_DONE);
-
-      }break;
-      case CLOSE_WAIT: {
-
-        int status = ::mysql_close_cont(&mysql_, in_event);
-        st_continue = go_next_state(status, CLOSE_WAIT, CLOSE_DONE);
-
-      } break;
-      case CLOSE_DONE: {
+      return go_next_state(status, CONNECT_WAIT, CONNECT_DONE);
+    }break;
+    case CONNECT_WAIT: {
+      int status = mysql_real_connect_cont(&mysql_ret_, &mysql_, in_event);
+      return go_next_state(status, CONNECT_WAIT, CONNECT_DONE);
+    }break;
+    case CONNECT_DONE: {
+      if (!mysql_ret_) {
         ready_ = false;
-        st_continue = false;
-        current_state_ = CONNECT_DONE;
+        current_state_ = CLOSE_START;
+        LOG(ERROR) << " connect failed, host:" << option_.host;
+        return true;
+      }
 
-        clean_up();
+      ready_ = true;
+      current_state_ = CONNECTION_IDLE;
+      last_selected_db_ = option_.dbname;
 
-        if (client_) {
-          client_->OnConnectionClosed(this);
-        }
-      } break;
-      default:
-        CHECK(false);
-        break;
-    }//end switch
+      if (client_) {
+        client_->OnConnectReady(this);
+      }
+      LOG(INFO) << "connect to " << option_.host << "success";
+      return true;
+    }break;
+    case CLOSE_START: {
+      int status = mysql_close_start(&mysql_);
+      return go_next_state(status, CLOSE_WAIT, CLOSE_DONE);
+    }break;
+    case CLOSE_WAIT: {
+      int status = ::mysql_close_cont(&mysql_, in_event);
+      return go_next_state(status, CLOSE_WAIT, CLOSE_DONE);
+    } break;
+    case CLOSE_DONE: {
+      ready_ = false;
 
-  } //end loop
+      clean_up();
+      if (client_) {
+        client_->OnConnectionClosed(this);
+      }
+      current_state_ = CONNECT_DONE;
+      return false;
+    } break;
+    default:
+      CHECK(false);
+      break;
+  }//end switch
+  return false;
+}
+
+//decide next should connection do
+bool MysqlAsyncConnect::HandleStateIDLE(int in_event) {
+  if (query_list_.empty()) {
+    if (schedule_close_) {
+      current_state_ = CLOSE_START;
+    }
+    return schedule_close_;
+  }
+
+  CHECK(!in_process_);
+
+  in_process_ = query_list_.front();
+  query_list_.pop_front();
+
+  CHECK(in_process_);
+
+  if (!in_process_->DB().empty() &&
+      in_process_->DB() != last_selected_db_) {
+    current_state_ = SELECT_DB_START;
+    return true;
+  }
+
+  current_state_ = QUERY_START;
+  return true;
+}
+
+//decide can go on or broken
+bool MysqlAsyncConnect::IsFatalError(int code) {
+  switch(code) {
+    case CR_SERVER_LOST:
+    case CR_UNKNOWN_ERROR:
+    case CR_OUT_OF_MEMORY:
+    case CR_SERVER_GONE_ERROR:
+      return true;
+    default:
+      break;
+  }
+  LOG(ERROR) << "code:" << code << "message:" << ERR_STR;
+  return false;
 }
 
 void MysqlAsyncConnect::HandleState(int in_event) {
@@ -196,36 +248,30 @@ void MysqlAsyncConnect::HandleState(int in_event) {
       case CLOSE_START:
       case CLOSE_WAIT:
       case CLOSE_DONE: {
-        HandleConnectSt(in_event);
-        st_continue = false;
+        st_continue = HandleStateConnect(in_event);
       }break;
+      case CONNECTION_IDLE: {
+        st_continue = HandleStateIDLE(in_event);
+      } break;
+      case SELECT_DB_START:
+      case SELECT_DB_WAIT:
+      case SELECT_DB_DONE: {
+        CHECK(in_process_);
+        st_continue = HandleStateSelectDB(in_event);
+      } break;
       case QUERY_START: {
-        if (query_list_.empty()) {
-          if (schedule_close_) {
-            current_state_ = CLOSE_START;
-          }
-          st_continue = schedule_close_;
-          break;
-        }
-
-        CHECK(!in_process_);
-        in_process_ = query_list_.front();
-        query_list_.pop_front();
-
-        if (!in_process_->DB().empty() &&
-            last_selected_db_ != in_process_->DB()) {
-          ::mysql_select_db(&mysql_, in_process_->DB().c_str());
-        }
+        CHECK(in_process_);
 
         const std::string& content = in_process_->QueryContent();
 
-        int status = ::mysql_real_query_start(&err_no_,
+        int err_no = 0;
+        int status = ::mysql_real_query_start(&err_no,
                                               &mysql_,
                                               content.c_str(),
                                               content.size());
-        if (err_no_ != 0) {
-          in_process_->SetCode(err_no_, ::mysql_error(&mysql_));
-          FinishCurrentQuery(QUERY_START);
+        if (err_no != 0) {
+          DoneCurrentQuery(err_no, ERR_STR);
+          current_state_ = IsFatalError(err_no) ? CLOSE_START : CONNECTION_IDLE;
           st_continue = true;
           break;
         }
@@ -233,11 +279,13 @@ void MysqlAsyncConnect::HandleState(int in_event) {
         st_continue = go_next_state(status, QUERY_WAIT, QUERY_RESULT_READY);
       } break;
       case QUERY_WAIT: {
-        int status = ::mysql_real_query_cont(&err_no_, &mysql_, in_event);
+        CHECK(in_process_);
+
+        int err_no = 0;
+        int status = ::mysql_real_query_cont(&err_no, &mysql_, in_event);
         if (err_no_ != 0) {
-          LOG(INFO) << "query continue failed:" << in_event << " err:" <<  ::mysql_error(&mysql_);
-          in_process_->SetCode(err_no_, ::mysql_error(&mysql_));
-          FinishCurrentQuery(QUERY_START);
+          DoneCurrentQuery(err_no, ERR_STR);
+          current_state_ = IsFatalError(err_no) ? CLOSE_START : CONNECTION_IDLE;
           st_continue = true;
           break;
         }
@@ -248,10 +296,9 @@ void MysqlAsyncConnect::HandleState(int in_event) {
 
         result_ = ::mysql_use_result(&mysql_);
         if (result_ == NULL) {
-          std::string error_message(mysql_error(&mysql_));
-          in_process_->SetCode(err_no_, error_message);
-
-          FinishCurrentQuery(QUERY_START);
+          int code = ::mysql_errno(&mysql_);
+          DoneCurrentQuery(code, ERR_STR);
+          current_state_ = IsFatalError(code) ? CLOSE_START : CONNECTION_IDLE;
           st_continue = true;
           break;
         }
@@ -267,19 +314,21 @@ void MysqlAsyncConnect::HandleState(int in_event) {
         st_continue = go_next_state(status, FETCH_ROW_WAIT, FETCH_ROW_RESULT_READY);
       }break;
       case FETCH_ROW_RESULT_READY: {
-        CHECK(in_process_);
+        CHECK(in_process_ && result_);
 
         if (!result_row_) {
-          if (::mysql_errno(&mysql_)) {
-            std::string error_message(mysql_error(&mysql_));
-            in_process_->SetCode(err_no_, error_message);
-          }
-          //else mean /* EOF.no more rows */
+
+          int code = ::mysql_errno(&mysql_);
+          const char* message = code != 0 ? ERR_STR : NULL;
+
+          //code == 0 mean /* EOF.no more rows */
           in_process_->SetResultRows(::mysql_num_rows(result_));
           ::mysql_free_result(result_);
 
-          FinishCurrentQuery(QUERY_START);
+          DoneCurrentQuery(code, message);
+
           st_continue = true;
+          current_state_ = CONNECTION_IDLE;
           break;
         }
 
@@ -322,16 +371,16 @@ bool MysqlAsyncConnect::ParseResultDesc(MYSQL_RES* result, QuerySession* query) 
   return true;
 }
 
-void MysqlAsyncConnect::FinishCurrentQuery(State next_st) {
-  CHECK(in_process_);
+void MysqlAsyncConnect::DoneCurrentQuery(int code, const char* message) {
+  if (!in_process_) return;
+
+  if (code != 0) {
+    in_process_->SetCode(code, message != NULL ? message : "");
+  }
 
   in_process_->SetAffectedRows(::mysql_affected_rows(&mysql_));
-
   in_process_->OnQueryDone();
   in_process_.reset();
-
-  err_no_ = 0;
-  current_state_ = next_st;
 }
 
 void MysqlAsyncConnect::OnTimeOut() {
@@ -408,7 +457,7 @@ void MysqlAsyncConnect::StartQuery(RefQuerySession& query) {
   CHECK(loop_->IsInLoopThread());
 
   query_list_.push_back(query);
-  if (current_state_ == QUERY_START && !in_process_) {
+  if (current_state_ == CONNECTION_IDLE && !in_process_) {
     HandleState(0);
   }
 }
@@ -484,7 +533,7 @@ bool MysqlAsyncConnect::SyncConnect() {
     return false;
   }
   ready_ = true;
-  current_state_ = QUERY_START;
+  current_state_ = CONNECTION_IDLE;
   checker_.Start(60 * 1000, std::bind(&MysqlAsyncConnect::do_connection_check, this));
   return true;
 }

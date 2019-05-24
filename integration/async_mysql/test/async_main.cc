@@ -5,8 +5,8 @@
 using namespace lt;
 
 MysqlOptions option = {
-  .host = "10.9.158.21",
-  //.host = "127.0.0.1",
+  //.host = "10.9.158.21",
+  .host = "127.0.0.1",
   .port = 3306,
   .user = "root",
   .passwd = "",
