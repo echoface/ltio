@@ -35,6 +35,7 @@
 #include "protocol/redis/redis_response.h"
 
 #include <clients/router/client_router.h>
+#include <clients/router/ringhash_router.h>
 #include <clients/router/roundrobin_router.h>
 
 static std::atomic_int io_round_count;
@@ -499,7 +500,7 @@ TEST_CASE("client.http.bench", "[http client send request benchmark]") {
   loop.WaitLoopEnd();
 }
 
-TEST_CASE("client.router", "[http client]") {
+TEST_CASE("client.router", "[redis client]") {
   static const int connections = 2;
 
   LOG(INFO) << "start test client.router with redis protocal";
@@ -567,6 +568,83 @@ TEST_CASE("client.router", "[http client]") {
         LOG(INFO) << "reponse:\n" << redis_response->DebugDump();
       } else {
         LOG(ERROR) << "redis client request failed:" << redis_request->FailCode();
+      }
+    }
+
+    router.StopAllClients();
+    loop.QuitLoop();
+  };
+
+  sleep(2);
+
+  co_go &loop << task;
+  loop.WaitLoopEnd();
+  return;
+}
+
+TEST_CASE("client.ringhash_router", "[redis ringhash router client]") {
+
+  static const int connections = 2;
+
+  LOG(INFO) << "start test client.ringhash_router with redis protocol";
+
+  base::MessageLoop loop;
+  loop.SetLoopName("client");
+  loop.Start();
+
+  std::vector<std::string> remote_hosts = {
+    "redis://127.0.0.1:6400",
+    "redis://127.0.0.1:6401",
+    "redis://127.0.0.1:6402",
+    "redis://127.0.0.1:6403",
+    "redis://127.0.0.1:6404",
+  };
+
+  net::ClientConfig config;
+
+  config.recon_interval = 10;
+  config.message_timeout = 5000;
+  config.connections = connections;
+
+  net::RingHashRouter router;
+
+  for (auto& remote : remote_hosts) {
+    net::url::SchemeIpPort server_info;
+
+    bool success = net::url::ParseURI(remote, server_info);
+    LOG_IF(ERROR, !success) << " server:" << remote << " can't be resolve";
+    if (!success) {
+      LOG(INFO) << "host:" << server_info.host << " ip:" << server_info.host_ip
+        << " port:" << server_info.port << " protocol:" << server_info.protocol;
+      return;
+    }
+
+    net::ClientPtr client(new net::Client(&loop, server_info));
+    client->SetDelegate(&router_delegate);
+    client->Initialize(config);
+
+    router.AddClient(std::move(client));
+  }
+
+  auto task = [&]() {
+
+    for (uint32_t i = 0; i < 1000000; i++) {
+
+      auto redis_request = std::make_shared<net::RedisRequest>();
+
+      std::string key = std::to_string(10000 + i);
+
+      redis_request->Incr("counter");
+
+      net::Client* redis_client = router.GetNextClient(key, redis_request.get());
+
+      CHECK(redis_client);
+
+      net::RedisResponse* redis_response  = redis_client->SendRecieve(redis_request);
+      if (redis_response) {
+        //LOG(INFO) << "reponse:\n" << redis_response->DebugDump();
+      } else {
+        //LOG(ERROR) << "redis client request failed:" << redis_request->FailCode();
       }
     }
 

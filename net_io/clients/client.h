@@ -81,6 +81,7 @@ public:
 
   uint64_t ClientCount() const;
   std::string ClientInfo() const;
+  std::string RemoteIpPort() const;
 private:
   //Get a io work loop for channel, if no loop provide, use default io_loop_;
   base::MessageLoop* GetLoopForClient();

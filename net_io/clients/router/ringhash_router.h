@@ -1,23 +1,36 @@
 #ifndef _LT_NET_RINGHASH_ROUTER_H_H
 #define _LT_NET_RINGHASH_ROUTER_H_H
 
+#include <zlib.h> //crc32
+
 #include "client_router.h"
 #include "consistant_hash_map.h"
+#include "thirdparty/murmurhash/MurmurHash3.h"
 
 namespace net {
 
 struct ClientNode {
-  std::string HashKey() const {
-    return "";
+  ClientNode(Client* client, uint32_t id)
+    : client(client),
+      vnode_id(id),
+      hash(client->RemoteIpPort() + std::to_string(id)) {
+    LOG(INFO) << "hash_key:" << hash << " crc32:" << ::crc32(0x80000000, (const unsigned char*)hash.data(), hash.size());
   }
-  ClientPtr client_;
-  uint32_t vnode_id_;
+  ~ClientNode() {};
+  Client* client;
+  const uint32_t vnode_id;
+  const std::string hash;
 };
 
 struct crc32_hasher {
   uint32_t operator()(const ClientNode& node) {
-    //return ret.checksum();
-    return 0;
+    uint32_t out = 0;
+    MurmurHash3_x86_32(node.hash.data(),
+                       node.hash.size(),
+                       0x80000000,
+                       &out);
+    return out;
+    //return ::crc32(0x80000000, (const unsigned char*)node.hash.data(), node.hash.size());
   }
   typedef uint32_t result_type;
 };
@@ -28,14 +41,17 @@ typedef consistent_hash_map<ClientNode, crc32_hasher> CHashMap;
 class RingHashRouter : public ClientRouter {
   public:
     RingHashRouter() {};
+    RingHashRouter(uint32_t vnode_count);
     ~RingHashRouter() {};
 
     void StopAllClients() override;
     void AddClient(ClientPtr&& client) override;
     Client* GetNextClient(const std::string& key,
-                          ProtocolMessage* request = 0) override;
+                          ProtocolMessage* request = NULL) override;
   private:
     CHashMap clients_;
+    std::list<ClientPtr> all_clients_;
+    const uint32_t vnode_count_ = 50;
 };
 
 }
