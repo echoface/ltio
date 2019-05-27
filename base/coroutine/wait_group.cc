@@ -6,21 +6,17 @@
 namespace base {
 
 WaitGroup::WaitGroup()
-  : timeout_(NULL),
-    wait_count_(ATOMIC_VAR_INIT(0)) {
+  : timeout_(NULL) {
   flag_.clear();
   wakeup_flag_.clear();
+  wait_count_.store(0);
 }
 
 WaitGroup::~WaitGroup() {
 }
 
 void WaitGroup::Done() {
-  int64_t pre_count = wait_count_.fetch_sub(1);
-  CHECK(pre_count > 0);
-
-  if (pre_count == 1) {
-    LOG(INFO) << "wait group wake by work";
+  if (wait_count_.fetch_sub(1) == 1) {
     wake_up();
   }
 }
@@ -54,10 +50,9 @@ void WaitGroup::Wait(int64_t timeout_ms) {
 
 void WaitGroup::wake_up() {//timeout or done
   if (wakeup_flag_.test_and_set()) {
-    LOG(INFO) << "has beed wakeup...";
     return;
   }
-  LOG(INFO) << "wake up...";
+
   CHECK(resumer_);
   resumer_();
 }

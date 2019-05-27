@@ -1,6 +1,7 @@
 #include "client.h"
 
 #include "base/base_constants.h"
+#include "base/utils/string/str_utils.h"
 #include "base/coroutine/coroutine_runner.h"
 
 namespace net {
@@ -215,6 +216,10 @@ std::string Client::ClientInfo() const {
   oss << " [remote:" << address_.IpPort()
       << ", clients:" << ClientCount() << "]";
   return oss.str();
+}
+
+std::string Client::RemoteIpPort() const {
+  return base::Str::Concat(server_info_.host_ip, ":", server_info_.port);
 }
 
 }//end namespace net

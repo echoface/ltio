@@ -11,7 +11,6 @@
 #include <closure/closure_task.h>
 
 namespace base {
-typedef std::function<void()> CoroClosure;
 
 enum CoroState {
   kInitialized = 0,
