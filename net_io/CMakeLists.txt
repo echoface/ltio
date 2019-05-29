@@ -42,6 +42,8 @@ set(LTNET_SOURCE
   clients/client_connector.cc
   clients/client.cc
   clients/router/client_router.cc
+  clients/router/maglev.cc
+  clients/router/maglev_router.cc
   clients/router/ringhash_router.cc
   clients/router/roundrobin_router.cc
 )

@@ -1,5 +1,6 @@
 ADD_EXECUTABLE(net_unittest
   catch_main.cc
+  maglev_unittest.cc
 	client_unittest.cc
 	net_base_unittest.cc
 )
