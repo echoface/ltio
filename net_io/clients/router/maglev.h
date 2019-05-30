@@ -26,7 +26,7 @@
 #include <vector>
 
 namespace net {
-  
+
 typedef std::vector<int> LookupTable;
 constexpr uint32_t kDefaultChRingSize = 65537;
 
