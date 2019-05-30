@@ -40,6 +40,9 @@ void EventPump::Run() {
     active_events.clear();
 
     uint64_t perfect_timeout_us = NextTimerTimeout(default_epoll_timeout_us);
+    if (delegate_ && delegate_->WaitTaskCount() > 0) {
+      perfect_timeout_us = 0;
+    }
 
     multiplexer_->WaitingIO(active_events, perfect_timeout_us / 1000.0);
 

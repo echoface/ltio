@@ -27,6 +27,7 @@ public:
 
   virtual void RunNestedTask() {};
   virtual void RunTimerClosure(const TimerEventList&) {};
+  virtual uint64_t WaitTaskCount() const = 0;
 };
 
 /* pump fd event and timeout event and pass them to handler by delegate interface*/

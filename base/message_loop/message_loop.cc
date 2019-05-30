@@ -286,6 +286,10 @@ void MessageLoop::RunTimerClosure(const TimerEventList& timer_evs) {
   }
 }
 
+uint64_t MessageLoop::WaitTaskCount() const {
+  return 0;
+}
+
 void MessageLoop::RunScheduledTask(ScheduledTaskType type) {
   switch(type) {
     case ScheduledTaskType::TaskTypeDefault: {

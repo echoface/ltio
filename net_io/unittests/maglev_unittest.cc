@@ -20,7 +20,7 @@ TEST_CASE("client.maglev", "[meglev]") {
   LOG(INFO) << " start test client.maglev";
 
   std::vector<Endpoint> eps;
-  for (int i = 0; i < 10; i++) {
+  for (uint32_t i = 0; i < 10; i++) {
     Endpoint s = {i, (i+1)*1000, 10000*(i+1) + (100 * i)};
     LOG(INFO) << s.num << ", " << s.weight << ", " << s.hash;
     eps.push_back(s);

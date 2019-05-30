@@ -100,6 +100,7 @@ class MessageLoop : public PumpDelegate {
     // nested task: post another task in current loop
     // override from pump for nested task;
     void RunNestedTask() override;
+    uint64_t WaitTaskCount() const override;
     void RunTimerClosure(const TimerEventList&) override;
 
     void ScheduleFutureReply(std::shared_ptr<ReplyHolder>& reply);
