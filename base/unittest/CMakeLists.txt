@@ -6,7 +6,6 @@ ADD_EXECUTABLE(base_unittest
   repeat_timer_unittest.cc
 )
 TARGET_LINK_LIBRARIES(base_unittest
-	ltnet
   ltbase
   ${LTBASE_LINKLIBS}
 )

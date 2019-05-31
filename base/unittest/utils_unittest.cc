@@ -17,15 +17,9 @@ TEST_CASE("string_utils", "[]") {
 
   std::string ok = "ok";
   bool ok_bool = base::Str::Parse<bool>(ok);
-  CHECK(ok_bool);
+  CHECK(!ok_bool);
 
   std::string none_true_str = "abc";
   ok_bool = base::Str::Parse<bool>(none_true_str);
   CHECK(!ok_bool);
-}
-
-TEST_CASE("url.host_resolve", "[host resolve test]") {
-  std::string host_ip;
-  net::url::HostResolve("g.test.amnetapi.com", host_ip);
-  std::cout << "result:" << host_ip << std::endl;
 }

@@ -57,7 +57,7 @@ class ClosureTaskWithCleanup : public ClosureTask<Closure> {
 public:
   ClosureTaskWithCleanup(const Location& location, const Closure& closure, const Cleanup& cleanup)
       : ClosureTask<Closure>(location, closure),
-        cleanup_task(cleanup) {
+        cleanup_task(std::move(cleanup)) {
   }
   ~ClosureTaskWithCleanup() {
     try {

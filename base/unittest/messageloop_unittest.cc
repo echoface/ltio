@@ -75,6 +75,7 @@ TEST_CASE("messageloop.delaytask", "[run delay task]") {
   uint64_t start = base::time_ms();
   loop.PostDelayTask(NewClosure([&]() {
     uint64_t end = base::time_ms();
+    LOG(INFO) << "delay task run:" << end - start << "(ms), expect 500";
     REQUIRE(((end - start >= 500) && (end - start <= 501)));
   }), 500);
 
@@ -101,13 +102,23 @@ TEST_CASE("messageloop.replytask", "[task with reply function]") {
   }), NewClosure([&]() {
     inloop_reply_run = true;
     REQUIRE(base::MessageLoop::Current() == &loop);
+    inloop_reply_run = false;
   }));
+
+  loop.PostTaskAndReply([&]() {
+    LOG(INFO) << " task bind stlclosure reply in loop run";
+  }, [&]() {
+    inloop_reply_run = true;
+    REQUIRE(base::MessageLoop::Current() == &loop);
+    inloop_reply_run = false;
+  });
 
   loop.PostTaskAndReply(NewClosure([&]() {
     LOG(INFO) << " task bind reply use another loop run";
   }), NewClosure([&]() {
     outloop_reply_run = true;
     REQUIRE(base::MessageLoop::Current() == &replyloop);
+    outloop_reply_run = false;
   }), &replyloop);
 
 
@@ -115,8 +126,6 @@ TEST_CASE("messageloop.replytask", "[task with reply function]") {
     loop.QuitLoop();
   }), 2000);
   loop.WaitLoopEnd();
-  REQUIRE(inloop_reply_run);
-  REQUIRE(outloop_reply_run);
 }
 
 

@@ -29,6 +29,7 @@
 namespace base {
 
 static const char kQuit = 1;
+static const int64_t kTaskFdCounter = 1;
 
 //static thread safe
 static thread_local MessageLoop* threadlocal_current_ = NULL;
@@ -54,9 +55,7 @@ public:
     }
 
     VLOG(GLOG_VINFO) <<  "Re-Schedule timer " << new_delay_ms << " ms";
-
     TimeoutEvent* timeout_ev = TimeoutEvent::CreateOneShot(new_delay_ms, true);
-
     timeout_ev->InstallTimerHandler(std::move(timeout_fn_));
     event_pump_->AddTimeoutEvent(timeout_ev);
   }
@@ -77,13 +76,12 @@ public:
     loop->ScheduleFutureReply(holder_);
   }
   void Run() override {
-    static uint64_t msg = 1;
     if (task_) {
       task_->Run();
     }
     holder_->CommitReply();
-    int ret = ::write(notify_fd_, &msg, sizeof(msg));
-    LOG_IF(ERROR, ret != sizeof(msg)) << "run reply failed for task:" << ClosureInfo();
+    int ret = ::write(notify_fd_, &kTaskFdCounter, sizeof(kTaskFdCounter));
+    LOG_IF(ERROR, ret != sizeof(kTaskFdCounter)) << "run reply failed for task:" << ClosureInfo();
   }
 private:
   int notify_fd_;
@@ -97,6 +95,7 @@ MessageLoop::MessageLoop()
     wakeup_pipe_out_(0),
     event_pump_(this) {
 
+  notify_flag_.clear();
   status_.store(ST_INITING);
   has_join_.store(0);
 
@@ -109,6 +108,10 @@ MessageLoop::MessageLoop()
 
   wakeup_event_ = FdEvent::Create(wakeup_pipe_out_, LtEv::LT_EVENT_READ);
   wakeup_event_->SetReadCallback(std::bind(&MessageLoop::RunCommandTask, this, ScheduledTaskType::TaskTypeCtrl));
+
+  task_fd_ = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
+  task_event_ = FdEvent::Create(task_fd_, LtEv::LT_EVENT_READ);
+  task_event_->SetReadCallback(std::bind(&MessageLoop::RunCommandTask, this, ScheduledTaskType::TaskTypeDefault));
 
   reply_event_fd_ = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
   reply_event_ = FdEvent::Create(reply_event_fd_, LtEv::LT_EVENT_READ);
@@ -136,8 +139,8 @@ MessageLoop::~MessageLoop() {
   //wakeup_pipe_out managed by fdevent
   //close(wakeup_pipe_out_);
 
+  task_event_.reset();
   reply_event_.reset();
-  task_event_fd_ = -1;
   reply_event_fd_ = -1;
   wakeup_pipe_in_ = -1;
   wakeup_pipe_out_ = -1;
@@ -193,6 +196,7 @@ void MessageLoop::ThreadMain() {
   SetThreadNativeName();
   event_pump_.SetLoopThreadId(std::this_thread::get_id());
 
+  event_pump_.InstallFdEvent(task_event_.get());
   event_pump_.InstallFdEvent(wakeup_event_.get());
   event_pump_.InstallFdEvent(reply_event_.get());
 
@@ -209,6 +213,7 @@ void MessageLoop::ThreadMain() {
   //delegate_->AfterLoopRun();
   event_pump_.RemoveFdEvent(reply_event_.get());
   event_pump_.RemoveFdEvent(wakeup_event_.get());
+  event_pump_.RemoveFdEvent(task_event_.get());
 
   threadlocal_current_ = NULL;
   LOG(INFO) << "MessageLoop: [" << loop_name_ << "] Stop Running";
@@ -226,28 +231,27 @@ void MessageLoop::PostDelayTask(std::unique_ptr<TaskBase> task, uint32_t ms) {
     PostTask(ClosurePtr(new TimeoutTaskHelper(std::move(task), &event_pump_, ms)));
     return;
   }
+
   TimeoutEvent* timeout_ev = TimeoutEvent::CreateOneShot(ms, true);
   timeout_ev->InstallTimerHandler(std::move(task));
   event_pump_.AddTimeoutEvent(timeout_ev);
 }
 
 bool MessageLoop::PostTask(std::unique_ptr<TaskBase> task) {
-  const static uint64_t count = 1;
   CHECK(status_ == ST_STARTED);
 
   if (IsInLoopThread()) {
     in_loop_tasks_.push_back(std::move(task));
-    LOG_IF(ERROR, Notify(task_event_fd_, &count, sizeof(count)) < 0) << "notify failed:" << StrError();
+    if (!notify_flag_.test_and_set()) {
+      Notify(task_fd_, &kTaskFdCounter, sizeof(kTaskFdCounter));
+    }
     return true;
   }
-
-  const Location& loc = task->TaskLocation();
-  if (scheduled_tasks_.enqueue(std::move(task))) {
-    int ret = Notify(task_event_fd_, &count, sizeof(count));
-    LOG_IF(ERROR, ret < 0) << __FUNCTION__ << " task schedule failed:" << StrError() << " task:" << loc.ToString();
-    return true;
+  bool ret = scheduled_tasks_.enqueue(std::move(task));
+  if (!notify_flag_.test_and_set()) {
+    Notify(task_fd_, &kTaskFdCounter, sizeof(kTaskFdCounter));
   }
-  return false;
+  return ret;
 }
 
 void MessageLoop::RunTimerClosure(const TimerEventList& timer_evs) {
@@ -256,23 +260,8 @@ void MessageLoop::RunTimerClosure(const TimerEventList& timer_evs) {
   }
 }
 
-bool MessageLoop::LoopImmediate() const {
-  DCHECK(IsInLoopThread());
-  return scheduled_tasks_.size_approx() > 0 || in_loop_tasks_.size() > 0;
-}
-
-void MessageLoop::RunScheduledTask() {
-  TaskBasePtr task;  // instead of pinco *p;
-  while (scheduled_tasks_.try_dequeue(task)) {
-    DCHECK(task);
-    task->Run();
-  }
-  RunNestedTask();
-}
-
 void MessageLoop::RunNestedTask() {
-  CHECK(IsInLoopThread());
-
+  DCHECK(IsInLoopThread());
   for (auto& task : in_loop_tasks_) {
     task->Run();
   }
@@ -281,6 +270,15 @@ void MessageLoop::RunNestedTask() {
 
 void MessageLoop::RunCommandTask(ScheduledTaskType type) {
   switch(type) {
+    case ScheduledTaskType::TaskTypeDefault: {
+      notify_flag_.clear();
+      TaskBasePtr task;  // instead of pinco *p;
+      while (scheduled_tasks_.try_dequeue(task)) {
+        DCHECK(task);
+        task->Run();
+      }
+    } break;
+    //Re-impliment reply task
     case ScheduledTaskType::TaskTypeReply: {
       base::SpinLockGuard guard(future_reply_lock_);
       for (auto iter = future_replys_.begin(); iter != future_replys_.end();) {
@@ -313,19 +311,20 @@ void MessageLoop::RunCommandTask(ScheduledTaskType type) {
   }
 }
 
-void MessageLoop::PostTaskAndReply(std::unique_ptr<TaskBase> task,
-                                   std::unique_ptr<TaskBase> reply,
+bool MessageLoop::PostTaskAndReply(TaskBasePtr task,
+                                   TaskBasePtr reply,
                                    MessageLoop* reply_loop) {
   CHECK(reply_loop);
-  PostTask(ClosurePtr(new ReplyTaskHelper(task, reply, reply_loop, reply_loop->reply_event_fd_)));
+  return PostTask(ClosurePtr(new ReplyTaskHelper(task, reply, reply_loop, reply_loop->reply_event_fd_)));
 }
 
-bool MessageLoop::PostTaskAndReply(std::unique_ptr<TaskBase> task,
-                                   std::unique_ptr<TaskBase> reply) {
+bool MessageLoop::PostTaskAndReply(StlClosure task, StlClosure reply) {
+  auto t = CreateClosureWithCallback(FROM_HERE, task, reply);
+  return PostTask(std::move(t));
+}
 
-  MessageLoop* reply_loop = Current() ? Current() : this;
-  PostTaskAndReply(std::move(task), std::move(reply), reply_loop);
-  return true;
+bool MessageLoop::PostTaskAndReply(TaskBasePtr task, TaskBasePtr reply) {
+  return PostTaskAndReply(std::move(task), std::move(reply), this);
 }
 
 void MessageLoop::ScheduleFutureReply(std::shared_ptr<ReplyHolder>& reply_holder) {
@@ -335,19 +334,6 @@ void MessageLoop::ScheduleFutureReply(std::shared_ptr<ReplyHolder>& reply_holder
     future_replys_.push_back(reply_holder);
     future_reply_lock_.unlock();
   }
-}
-
-bool MessageLoop::InstallSigHandler(int sig, const SigHandler handler) {
-  if (status_ != ST_STARTED) return false;
-
-  if (!IsInLoopThread()) {
-    PostTask(NewClosure(std::bind([&](int s, const SigHandler h){
-      sig_handlers_.insert(std::make_pair(s, h));
-    }, sig, handler)));
-  } else {
-    sig_handlers_.insert(std::make_pair(sig, handler));
-  }
-  return true;
 }
 
 void MessageLoop::QuitLoop() {

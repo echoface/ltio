@@ -27,7 +27,7 @@ public:
 private:
   bool repeat_ = false;
   bool use_coro_ = false;
-  uint64_t interval_ = 0;
+  uint64_t interval_ = 0; //ms
   bool del_after_invoke_ = false;
   ClosurePtr timer_handler_;
 };

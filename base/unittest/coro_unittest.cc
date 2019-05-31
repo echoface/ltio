@@ -98,11 +98,11 @@ TEST_CASE("coro.co_sleep", "[coroutine sleep]") {
 
   loop.PostDelayTask(NewClosure([&]() {
     loop.QuitLoop();
-  }), 1000); // exit ater 5s
+  }), 5000); // exit ater 5s
 
   loop.WaitLoopEnd();
 
-  REQUIRE(co_sleep_resumed);
+  REQUIRE(co_sleep_resumed == true);
 }
 
 TEST_CASE("coro.waitGroup", "[coroutine resumer with loop reply task]") {

@@ -67,14 +67,11 @@ class MessageLoop : public PumpDelegate {
     /* Task will run in target loop thread,
      * reply will run in Current() loop if it exist,
      * otherwise the reply task will run in target messageloop thread too*/
-    bool PostTaskAndReply(std::unique_ptr<TaskBase> task,
-                          std::unique_ptr<TaskBase> reply);
-
-    void PostTaskAndReply(std::unique_ptr<TaskBase> task,
-                          std::unique_ptr<TaskBase> reply,
+    bool PostTaskAndReply(StlClosure task, StlClosure reply);
+    bool PostTaskAndReply(TaskBasePtr task, TaskBasePtr reply);
+    bool PostTaskAndReply(TaskBasePtr task,
+                          TaskBasePtr reply,
                           MessageLoop* reply_queue);
-
-    bool InstallSigHandler(int, const SigHandler);
 
     void Start();
     bool IsInLoopThread() const;
@@ -94,13 +91,11 @@ class MessageLoop : public PumpDelegate {
     void SetThreadNativeName();
     class ReplyTaskHelper;
 
-    void RunNestedTask();
     void RunCommandTask(ScheduledTaskType t);
 
     // nested task: post another task in current loop
     // override from pump for nested task;
-    void RunScheduledTask() override;
-    bool LoopImmediate() const override;
+    void RunNestedTask() override;
     void RunTimerClosure(const TimerEventList&) override;
 
     void ScheduleFutureReply(std::shared_ptr<ReplyHolder>& reply);
@@ -118,10 +113,11 @@ class MessageLoop : public PumpDelegate {
     std::string loop_name_;
     std::unique_ptr<std::thread> thread_ptr_;
 
-    int task_event_fd_ = -1;
+    int task_fd_ = -1;
     RefFdEvent task_event_;
+    std::atomic_flag notify_flag_;
     ConcurrentTaskQueue scheduled_tasks_;
-    std::list<std::unique_ptr<TaskBase>> in_loop_tasks_;
+    std::list<TaskBasePtr> in_loop_tasks_;
 
     int reply_event_fd_ = -1;
     RefFdEvent reply_event_;
@@ -132,9 +128,8 @@ class MessageLoop : public PumpDelegate {
     int wakeup_pipe_in_ = -1;
     int wakeup_pipe_out_ = -1;
     RefFdEvent wakeup_event_;
-    EventPump event_pump_;
 
-    std::map<int, SigHandler> sig_handlers_;
+    EventPump event_pump_;
 };
 
 } //end namespace
