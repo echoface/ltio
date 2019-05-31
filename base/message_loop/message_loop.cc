@@ -36,14 +36,6 @@ MessageLoop* MessageLoop::Current() {
   return threadlocal_current_;
 }
 
-//   signal(SIGPIPE, SIG_IGN);
-void IgnoreSigPipeSignalOnCurrentThread2() {
-  sigset_t sigpipe_mask;
-  sigemptyset(&sigpipe_mask);
-  sigaddset(&sigpipe_mask, SIGPIPE);
-  pthread_sigmask(SIG_BLOCK, &sigpipe_mask, nullptr);
-}
-
 class TimeoutTaskHelper : public TaskBase {
 public:
   TimeoutTaskHelper(ClosurePtr task, EventPump* pump, uint64_t ms)
@@ -102,12 +94,11 @@ private:
 MessageLoop::MessageLoop()
   : running_(ATOMIC_FLAG_INIT),
     wakeup_pipe_in_(0),
-    wakeup_pipe_out_(0) {
+    wakeup_pipe_out_(0),
+    event_pump_(this) {
 
   status_.store(ST_INITING);
   has_join_.store(0);
-
-  event_pump_.reset(new EventPump(this));
 
   int fds[2];
   bool ret = CreateLocalNoneBlockingPipe(fds);
@@ -117,18 +108,11 @@ MessageLoop::MessageLoop()
   wakeup_pipe_in_ = fds[1];
 
   wakeup_event_ = FdEvent::Create(wakeup_pipe_out_, LtEv::LT_EVENT_READ);
-  CHECK(wakeup_event_);
-  wakeup_event_->SetReadCallback(std::bind(&MessageLoop::OnHandleCommand, this));
-
-  task_event_fd_ = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
-  task_event_ = FdEvent::Create(task_event_fd_, LtEv::LT_EVENT_READ);
-  CHECK(task_event_);
-  task_event_->SetReadCallback(std::bind(&MessageLoop::RunScheduledTask, this, ScheduledTaskType::TaskTypeDefault));
+  wakeup_event_->SetReadCallback(std::bind(&MessageLoop::RunCommandTask, this, ScheduledTaskType::TaskTypeCtrl));
 
   reply_event_fd_ = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
   reply_event_ = FdEvent::Create(reply_event_fd_, LtEv::LT_EVENT_READ);
-  CHECK(reply_event_);
-  reply_event_->SetReadCallback(std::bind(&MessageLoop::RunScheduledTask, this, ScheduledTaskType::TaskTypeReply));
+  reply_event_->SetReadCallback(std::bind(&MessageLoop::RunCommandTask, this, ScheduledTaskType::TaskTypeReply));
 
   running_.clear();
 }
@@ -147,20 +131,16 @@ MessageLoop::~MessageLoop() {
   }
 
   wakeup_event_.reset();
-  IgnoreSigPipeSignalOnCurrentThread2();
   close(wakeup_pipe_in_);
 
   //wakeup_pipe_out managed by fdevent
   //close(wakeup_pipe_out_);
 
-  task_event_.reset();
   reply_event_.reset();
   task_event_fd_ = -1;
   reply_event_fd_ = -1;
   wakeup_pipe_in_ = -1;
   wakeup_pipe_out_ = -1;
-
-  event_pump_.reset();
 }
 
 void MessageLoop::SetLoopName(std::string name) {
@@ -168,7 +148,7 @@ void MessageLoop::SetLoopName(std::string name) {
 }
 
 bool MessageLoop::IsInLoopThread() const {
-  return event_pump_->IsInLoopThread();
+  return event_pump_.IsInLoopThread();
 }
 
 void MessageLoop::Start() {
@@ -211,11 +191,10 @@ void MessageLoop::AfterPumpRun() {
 void MessageLoop::ThreadMain() {
   threadlocal_current_ = this;
   SetThreadNativeName();
-  event_pump_->SetLoopThreadId(std::this_thread::get_id());
+  event_pump_.SetLoopThreadId(std::this_thread::get_id());
 
-  event_pump_->InstallFdEvent(wakeup_event_.get());
-  event_pump_->InstallFdEvent(task_event_.get());
-  event_pump_->InstallFdEvent(reply_event_.get());
+  event_pump_.InstallFdEvent(wakeup_event_.get());
+  event_pump_.InstallFdEvent(reply_event_.get());
 
   //delegate_->BeforeLoopRun();
   LOG(INFO) << "MessageLoop: [" << loop_name_ << "] Start Running";
@@ -225,12 +204,11 @@ void MessageLoop::ThreadMain() {
     cv_.notify_all();
   }
 
-  event_pump_->Run();
+  event_pump_.Run();
 
   //delegate_->AfterLoopRun();
-  event_pump_->RemoveFdEvent(task_event_.get());
-  event_pump_->RemoveFdEvent(reply_event_.get());
-  event_pump_->RemoveFdEvent(wakeup_event_.get());
+  event_pump_.RemoveFdEvent(reply_event_.get());
+  event_pump_.RemoveFdEvent(wakeup_event_.get());
 
   threadlocal_current_ = NULL;
   LOG(INFO) << "MessageLoop: [" << loop_name_ << "] Stop Running";
@@ -245,12 +223,12 @@ void MessageLoop::PostDelayTask(std::unique_ptr<TaskBase> task, uint32_t ms) {
   CHECK(status_ == ST_STARTED);
 
   if (!IsInLoopThread()) {
-    PostTask(ClosurePtr(new TimeoutTaskHelper(std::move(task), event_pump_.get(), ms)));
+    PostTask(ClosurePtr(new TimeoutTaskHelper(std::move(task), &event_pump_, ms)));
     return;
   }
   TimeoutEvent* timeout_ev = TimeoutEvent::CreateOneShot(ms, true);
   timeout_ev->InstallTimerHandler(std::move(task));
-  event_pump_->AddTimeoutEvent(timeout_ev);
+  event_pump_.AddTimeoutEvent(timeout_ev);
 }
 
 bool MessageLoop::PostTask(std::unique_ptr<TaskBase> task) {
@@ -272,39 +250,38 @@ bool MessageLoop::PostTask(std::unique_ptr<TaskBase> task) {
   return false;
 }
 
-void MessageLoop::RunNestedTask() {
-  CHECK(IsInLoopThread());
-  for (auto& task : in_loop_tasks_) {
-    task->Run();
-  }
-  in_loop_tasks_.clear();
-}
-
 void MessageLoop::RunTimerClosure(const TimerEventList& timer_evs) {
   for (auto& te : timer_evs) {
     te->Invoke();
   }
 }
 
-uint64_t MessageLoop::WaitTaskCount() const {
-  return 0;
+bool MessageLoop::LoopImmediate() const {
+  DCHECK(IsInLoopThread());
+  return scheduled_tasks_.size_approx() > 0 || in_loop_tasks_.size() > 0;
 }
 
-void MessageLoop::RunScheduledTask(ScheduledTaskType type) {
+void MessageLoop::RunScheduledTask() {
+  TaskBasePtr task;  // instead of pinco *p;
+  while (scheduled_tasks_.try_dequeue(task)) {
+    DCHECK(task);
+    task->Run();
+  }
+  RunNestedTask();
+}
+
+void MessageLoop::RunNestedTask() {
+  CHECK(IsInLoopThread());
+
+  for (auto& task : in_loop_tasks_) {
+    task->Run();
+  }
+  in_loop_tasks_.clear();
+}
+
+void MessageLoop::RunCommandTask(ScheduledTaskType type) {
   switch(type) {
-    case ScheduledTaskType::TaskTypeDefault: {
-      uint64_t count = 0;
-      int ret = read(task_event_fd_, &count, sizeof(count));
-      LOG_IF(INFO, ret < 0) << __FUNCTION__ << " run scheduled task failed:" << StrError();
-
-      TaskBasePtr task;  // instead of pinco *p;
-      while (scheduled_tasks_.try_dequeue(task)) {
-        DCHECK(task);
-        task->Run();
-      }
-    } break;
     case ScheduledTaskType::TaskTypeReply: {
-
       base::SpinLockGuard guard(future_reply_lock_);
       for (auto iter = future_replys_.begin(); iter != future_replys_.end();) {
         if ((*iter)->IsCommited()) {
@@ -315,27 +292,24 @@ void MessageLoop::RunScheduledTask(ScheduledTaskType type) {
         iter++;
       }
     } break;
+    case ScheduledTaskType::TaskTypeCtrl: {
+      DCHECK(wakeup_event_->fd() == wakeup_pipe_out_);
+      char buf;
+      CHECK(sizeof(buf) == ::read(wakeup_pipe_out_, &buf, sizeof(buf)));
+      switch (buf) {
+        case kQuit: {
+          QuitLoop();
+        } break;
+        default: {
+          DCHECK(false);
+          LOG(ERROR) << " Should Not Reached Here!!!";
+        } break;
+      }
+    } break;
     default:
       DCHECK(false);
       LOG(ERROR) << " Should Not Reached Here!!!";
     break;
-  }
-}
-
-//static
-void MessageLoop::OnHandleCommand() {
-  DCHECK(wakeup_event_->fd() == wakeup_pipe_out_);
-
-  char buf;
-  CHECK(sizeof(buf) == ::read(wakeup_pipe_out_, &buf, sizeof(buf)));
-  switch (buf) {
-    case kQuit: {
-      QuitLoop();
-    } break;
-    default: {
-      DCHECK(false);
-      LOG(ERROR) << "Shout Not Reached HERE!";
-    } break;
   }
 }
 
@@ -377,7 +351,7 @@ bool MessageLoop::InstallSigHandler(int sig, const SigHandler handler) {
 }
 
 void MessageLoop::QuitLoop() {
-  event_pump_->Quit();
+  event_pump_.Quit();
 }
 
 int MessageLoop::Notify(int fd, const void* data, size_t count) {
@@ -396,7 +370,6 @@ int MessageLoop::Notify(int fd, const void* data, size_t count) {
         return ret;
     }
   } while(retry++ < max_retry_times);
-
   return ret;
 }
 
