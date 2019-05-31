@@ -27,7 +27,6 @@ void EventPump::Run() {
   static const uint64_t default_timeout_ms = 2000;
 
   IgnoreSigPipeSignalOnCurrentThread();
-  //Signal::signal(SIGPIPE, []() { LOG(ERROR) << "sigpipe."; });
 
   if (delegate_) {
     delegate_->BeforePumpRun();
@@ -42,6 +41,7 @@ void EventPump::Run() {
     active_events.clear();
 
     perfect_timeout_ms = NextTimerTimeout(default_timeout_ms);
+
     multiplexer_->WaitingIO(active_events, perfect_timeout_ms);
     ProcessTimerEvent();
 

@@ -93,7 +93,6 @@ void FdEvent::SetCloseCallback(const EventCallback &cb) {
 }
 
 void FdEvent::HandleEvent() {
-
   VLOG(GLOG_VTRACE) << __FUNCTION__ << EventInfo() << " rcv event:" << RcvEventAsString();
   do {
     if (revents_ & LtEv::LT_EVENT_ERROR) {

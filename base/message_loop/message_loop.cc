@@ -272,6 +272,9 @@ void MessageLoop::RunCommandTask(ScheduledTaskType type) {
   switch(type) {
     case ScheduledTaskType::TaskTypeDefault: {
       notify_flag_.clear();
+      uint64_t count = 0;
+      CHECK(sizeof(count) == ::read(task_fd_, &count, sizeof(count)));
+
       TaskBasePtr task;  // instead of pinco *p;
       while (scheduled_tasks_.try_dequeue(task)) {
         DCHECK(task);
