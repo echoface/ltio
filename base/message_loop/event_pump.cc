@@ -24,8 +24,10 @@ EventPump::~EventPump() {
 }
 
 void EventPump::Run() {
-  // sigpipe
-  Signal::signal(SIGPIPE, []() { LOG(ERROR) << "sigpipe."; });
+  static const uint64_t default_epoll_timeout_us = 2000000;
+
+  IgnoreSigPipeSignalOnCurrentThread();
+  //Signal::signal(SIGPIPE, []() { LOG(ERROR) << "sigpipe."; });
 
   if (delegate_) {
     delegate_->BeforePumpRun();
@@ -34,12 +36,17 @@ void EventPump::Run() {
   running_ = true;
 
   std::vector<FdEvent *> active_events;
-  static uint64_t default_epoll_timeout_us = 2000000;
+
+  uint64_t perfect_timeout_us = NextTimerTimeout(default_epoll_timeout_us);
 
   while (running_) {
     active_events.clear();
 
-    uint64_t perfect_timeout_us = NextTimerTimeout(default_epoll_timeout_us);
+    if (delegate_ && delegate_->LoopImmediate()) {
+      perfect_timeout_us = 0;
+    } else {
+      perfect_timeout_us = NextTimerTimeout(default_epoll_timeout_us);
+    }
 
     multiplexer_->WaitingIO(active_events, perfect_timeout_us / 1000.0);
 
@@ -50,7 +57,7 @@ void EventPump::Run() {
     }
 
     if (delegate_) {
-      delegate_->RunNestedTask();
+      delegate_->RunScheduledTask();
     }
   }
   running_ = false;

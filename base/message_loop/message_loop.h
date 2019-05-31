@@ -53,7 +53,7 @@ class MessageLoop : public PumpDelegate {
     typedef enum {
       TaskTypeDefault = 0,
       TaskTypeReply   = 1,
-      TaskTypeCommand = 2
+      TaskTypeCtrl    = 2
     } ScheduledTaskType;
 
 
@@ -85,7 +85,7 @@ class MessageLoop : public PumpDelegate {
     const std::string& LoopName() const {return loop_name_;}
 
     void QuitLoop();
-    EventPump* Pump() {return event_pump_.get();}
+    EventPump* Pump() {return &event_pump_;}
 
     void BeforePumpRun() override;
     void AfterPumpRun() override;
@@ -94,12 +94,13 @@ class MessageLoop : public PumpDelegate {
     void SetThreadNativeName();
     class ReplyTaskHelper;
 
-    void OnHandleCommand();  // NOLINT
-    void RunScheduledTask(ScheduledTaskType t);
+    void RunNestedTask();
+    void RunCommandTask(ScheduledTaskType t);
 
     // nested task: post another task in current loop
     // override from pump for nested task;
-    void RunNestedTask() override;
+    void RunScheduledTask() override;
+    bool LoopImmediate() const override;
     void RunTimerClosure(const TimerEventList&) override;
 
     void ScheduleFutureReply(std::shared_ptr<ReplyHolder>& reply);
@@ -131,7 +132,7 @@ class MessageLoop : public PumpDelegate {
     int wakeup_pipe_in_ = -1;
     int wakeup_pipe_out_ = -1;
     RefFdEvent wakeup_event_;
-    std::unique_ptr<EventPump> event_pump_;
+    EventPump event_pump_;
 
     std::map<int, SigHandler> sig_handlers_;
 };

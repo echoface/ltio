@@ -25,8 +25,9 @@ public:
   virtual void BeforePumpRun() {};
   virtual void AfterPumpRun() {};
 
-  virtual void RunNestedTask() {};
+  virtual void RunScheduledTask() {};
   virtual void RunTimerClosure(const TimerEventList&) {};
+  virtual bool LoopImmediate() const {return false;};
 };
 
 /* pump fd event and timeout event and pass them to handler by delegate interface*/
