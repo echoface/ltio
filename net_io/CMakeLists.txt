@@ -8,7 +8,7 @@ set(LTNET_SOURCE
   io_service.cc
   tcp_channel.cc
   socket_utils.cc
-  service_acceptor.cc
+  socket_acceptor.cc
   url_utils.cc
   #protocol
   protocol/proto_message.cc
