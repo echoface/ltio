@@ -1,7 +1,6 @@
 #include <vector>
 #include <iostream>
 
-#include <url_string_utils.h>
 #include <utils/string/str_utils.h>
 
 #include <catch/catch.hpp>
