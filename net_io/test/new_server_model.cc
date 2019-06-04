@@ -10,7 +10,8 @@
 #include "clients/client_connector.h"
 #include "clients/client.h"
 
-using namespace net;
+using namespace lt::net;
+using namespace lt;
 using namespace base;
 
 #define ENBALE_RAW_CLIENT

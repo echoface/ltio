@@ -12,6 +12,7 @@
 #include "../protocol/http/http_response.h"
 #include "../protocol/proto_service_factory.h"
 
+namespace lt {
 namespace net {
 
 class Connector;
@@ -50,5 +51,5 @@ private:
   std::set<base::RefFdEvent> connecting_sockets_;
 };
 
-}
+}}
 #endif

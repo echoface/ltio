@@ -3,6 +3,7 @@
 
 #include <string>
 
+namespace lt {
 namespace net {
 
 struct HttpConstant {
@@ -25,5 +26,5 @@ struct HttpConstant {
   static const char* StatusCodeCStr(int32_t code);
 };
 
-} //end net::HttpConstant
+}} //end net::HttpConstant
 #endif

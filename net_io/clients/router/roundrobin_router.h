@@ -3,6 +3,7 @@
 
 #include "client_router.h"
 
+namespace lt {
 namespace net {
 
 class RoundRobinRouter : public ClientRouter {
@@ -19,5 +20,5 @@ class RoundRobinRouter : public ClientRouter {
     std::atomic_uint32_t round_index_;
 };
 
-}
+}}
 #endif

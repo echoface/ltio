@@ -8,6 +8,7 @@
 #include "protocol/proto_message.h"
 #include "http_parser/http_parser.h"
 
+namespace lt {
 namespace net {
 
 class HttpRequest;
@@ -73,5 +74,5 @@ private:
 };
 
 
-}
+}}
 #endif

@@ -7,10 +7,11 @@
 #include <clients/client.h>
 #include <protocol/proto_message.h>
 
+
+namespace lt {
 namespace net {
 
 typedef std::unique_ptr<Client> ClientPtr;
-
 /**
  * ClientRouter manager a group of client(a client has N connection)
  * Decide the client choose strategy
@@ -25,8 +26,7 @@ public:
   virtual void AddClient(ClientPtr&& client) = 0;
   virtual Client* GetNextClient(const std::string& key,
                                 ProtocolMessage* request = NULL) = 0;
-protected:
 };
 
-}
+}}//lt::net
 #endif

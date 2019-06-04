@@ -10,6 +10,8 @@
 
 std::string arg_host;
 
+using namespace lt;
+
 typedef std::unique_ptr<net::Client> ClientPtr;
 ClientPtr raw_router;
 

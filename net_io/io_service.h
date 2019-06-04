@@ -11,6 +11,7 @@
 #include "dispatcher/workload_dispatcher.h"
 #include "base/message_loop/message_loop.h"
 
+namespace lt {
 namespace net {
 
 class IOService;
@@ -88,5 +89,5 @@ private:
   std::unordered_set<RefProtoService> protocol_services;
 };
 
-}
+}}
 #endif

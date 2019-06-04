@@ -4,6 +4,7 @@
 #include "base/utils/string/str_utils.h"
 #include "base/coroutine/coroutine_runner.h"
 
+namespace lt {
 namespace net {
 
 Client::Client(base::MessageLoop* loop, const url::SchemeIpPort& info)
@@ -222,4 +223,4 @@ std::string Client::RemoteIpPort() const {
   return base::Str::Concat(server_info_.host_ip, ":", server_info_.port);
 }
 
-}//end namespace net
+}}//end namespace lt::net

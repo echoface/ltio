@@ -10,6 +10,7 @@
 #include "http_response.h"
 #include "http_parser/http_parser.h"
 
+namespace lt {
 namespace net {
 
 //response for build HttpResponse
@@ -68,5 +69,5 @@ private:
   std::list<RefHttpRequest> messages_;
 };
 
-}
+}}
 #endif

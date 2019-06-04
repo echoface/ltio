@@ -6,6 +6,7 @@
 
 #include "base/utils/string/str_utils.h"
 
+namespace lt {
 namespace net {
 
 HttpRequest::HttpRequest()
@@ -127,4 +128,4 @@ void HttpRequest::SetKeepAlive(bool alive) {
   keepalive_ = alive;
 }
 
-};//end namespace net
+}};//end namespace net

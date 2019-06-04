@@ -11,6 +11,7 @@
 #include <protocol/http/http_response.h>
 #include <protocol/http/http_proto_service.h>
 
+using namespace lt;
 
 int main(int argc, char** argv) {
 

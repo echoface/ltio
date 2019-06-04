@@ -10,6 +10,7 @@
 #include "protocol/proto_message.h"
 #include "protocol/proto_service.h"
 
+namespace lt {
 namespace net {
 
 class AsyncChannel;
@@ -35,5 +36,5 @@ private:
   std::unordered_map<uint64_t, RefProtocolMessage> in_progress_;
 };
 
-}//end namespace
+}}//end namespace
 #endif

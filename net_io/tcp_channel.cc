@@ -7,6 +7,7 @@
 #include "base/closure/closure_task.h"
 #include <base/utils/sys_error.h>
 
+namespace lt {
 namespace net {
 
 
@@ -276,4 +277,4 @@ bool TcpChannel::IsConnected() const {
   return status_ == Status::CONNECTED;
 }
 
-}
+}} //end lt::net

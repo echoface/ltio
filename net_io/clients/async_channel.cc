@@ -2,6 +2,7 @@
 #include "base/base_constants.h"
 #include "protocol/proto_service.h"
 
+namespace lt {
 namespace net {
 
 RefAsyncChannel AsyncChannel::Create(Delegate* d, RefProtoService& s) {
@@ -92,5 +93,5 @@ void AsyncChannel::OnProtocolServiceGone(const RefProtoService& service) {
 }
 
 
-}//net
+}}//lt::net
 

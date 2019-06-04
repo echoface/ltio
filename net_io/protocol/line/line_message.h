@@ -4,7 +4,9 @@
 #include "protocol/proto_service.h"
 #include "protocol/proto_message.h"
 
+namespace lt {
 namespace net {
+
 class LineMessage : public ProtocolMessage {
 public:
   typedef LineMessage ResponseType;
@@ -16,5 +18,5 @@ private:
   std::string body_;
 };
 
-}
+}}
 #endif

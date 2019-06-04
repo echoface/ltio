@@ -43,6 +43,8 @@ static std::atomic_int io_round_count;
 const int bench_count = 1000000;
 const int bench_concurrent = 50;
 
+using namespace lt;
+
 std::vector<base::MessageLoop*> InitLoop() {
   std::vector<base::MessageLoop*> lops;
   for (uint32_t i = 0; i < std::thread::hardware_concurrency(); i++) {

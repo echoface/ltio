@@ -8,6 +8,7 @@
 #include "protocol/proto_message.h"
 #include "protocol/proto_service.h"
 
+namespace lt {
 namespace net {
 
 class QueuedChannel;
@@ -35,5 +36,5 @@ private:
   std::list<RefProtocolMessage> waiting_list_;
 };
 
-}//end namespace
+}}//end namespace
 #endif

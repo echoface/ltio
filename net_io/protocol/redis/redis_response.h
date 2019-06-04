@@ -7,6 +7,7 @@
 #include "protocol/proto_message.h"
 #include "thirdparty/resp/resp/all.hpp"
 
+namespace lt {
 namespace net {
 
 class RespService;
@@ -29,5 +30,5 @@ class RedisResponse : public ProtocolMessage {
     std::vector<resp::unique_value> results_;
 };
 
-} //end namesapce
+}} //end namesapce
 #endif

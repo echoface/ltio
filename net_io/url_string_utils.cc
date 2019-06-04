@@ -19,6 +19,7 @@
 #include "utils/string/str_utils.h"
 #include <base/string/string_view.hpp>
 
+namespace lt {
 namespace net {
 namespace url {
 
@@ -166,4 +167,4 @@ bool ParseRemote(const std::string& str, RemoteInfo& out, bool resolve) {
   return true;
 }
 
-}} //net::url
+}}} //net::url

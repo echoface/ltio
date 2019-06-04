@@ -3,6 +3,7 @@
 
 #include "client.h"
 
+namespace lt {
 namespace net {
 
 
@@ -16,5 +17,5 @@ private:
 
 };
 
-} //end net
+}} //end net
 #endif

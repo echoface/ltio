@@ -1,6 +1,6 @@
 #include "maglev_router.h"
 
-
+namespace lt {
 namespace net {
 
 MaglevRouter::MaglevRouter() {}
@@ -17,5 +17,4 @@ Client* MaglevRouter::GetNextClient(const std::string& key, ProtocolMessage* req
   return clients_.back().get();
 };
 
-
-} // namespace katran
+}} // namespace lt::net

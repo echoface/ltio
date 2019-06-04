@@ -5,6 +5,7 @@
 #include <string>
 
 /* about this code, a beeter refrence is muduo code, most of this from chenshuo's impliment*/
+namespace lt {
 namespace net {
 namespace socketutils {
 
@@ -56,6 +57,7 @@ bool ReUseSocketPort(SocketFd, bool reuse);
 bool ReUseSocketAddress(SocketFd socket_fd, bool reuse);
 
 void KeepAlive(SocketFd, bool alive);
-}}
+
+}}}
 #endif
 

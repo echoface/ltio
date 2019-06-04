@@ -2,6 +2,7 @@
 #include "message_loop/event.h"
 #include <base/utils/sys_error.h>
 
+namespace lt {
 namespace net {
 
 Connector::Connector(base::MessageLoop* loop, ConnectorDelegate* delegate)
@@ -118,4 +119,4 @@ void Connector::CleanUpBadChannel(base::RefFdEvent& event) {
   LOG(INFO) << "Now Has " << connecting_sockets_.size() << " In Connecting Progress";
 }
 
-}//end namespace
+}}//end namespace

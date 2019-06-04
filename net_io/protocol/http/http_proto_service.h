@@ -8,7 +8,9 @@
 #include "protocol/proto_service.h"
 #include "http_parser/http_parser.h"
 
+namespace lt {
 namespace net {
+
 class HttpProtoService;
 typedef std::shared_ptr<HttpProtoService> RefHttpProtoService;
 
@@ -42,5 +44,5 @@ private:
   static http_parser_settings res_parser_settings_;
 };
 
-}
+}}
 #endif

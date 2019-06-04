@@ -1,6 +1,7 @@
 
 #include "roundrobin_router.h"
 
+namespace lt {
 namespace net {
 
 void RoundRobinRouter::StopAllClients() {
@@ -19,4 +20,4 @@ Client* RoundRobinRouter::GetNextClient(const std::string& key,
   return clients_[idx].get();
 }
 
-}//end net
+}}//end lt::net

@@ -3,6 +3,7 @@
 #include <strings.h>
 #include "glog/logging.h"
 
+namespace lt {
 namespace net {
 
 SocketAddress::SocketAddress(uint16_t port) {
@@ -57,4 +58,4 @@ uint16_t SocketAddress::NetworkEndianPort() const {
   return addr_in_.sin_port;
 }
 
-}
+}}

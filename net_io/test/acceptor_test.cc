@@ -6,6 +6,8 @@
 #include "../socket_utils.h"
 #include "../service_acceptor.h"
 
+using namespace lt;
+
 base::MessageLoop loop;
 std::set<net::RefTcpChannel> connections;
 

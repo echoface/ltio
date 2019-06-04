@@ -16,6 +16,7 @@
 #include "protocol/http/http_response.h"
 #include "base/message_loop/message_loop.h"
 
+namespace lt {
 namespace net {
 
 typedef std::function<void(HttpContext* context)> HttpMessageHandler;
@@ -66,5 +67,5 @@ private:
   DISALLOW_COPY_AND_ASSIGN(HttpServer);
 };
 
-}
+}}
 #endif

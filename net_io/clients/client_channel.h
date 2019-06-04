@@ -6,6 +6,7 @@
 #include "protocol/proto_message.h"
 #include "protocol/proto_service.h"
 
+namespace lt {
 namespace net {
 
 class ClientChannel;
@@ -39,5 +40,5 @@ protected:
 RefClientChannel CreateClientChannel(ClientChannel::Delegate*, RefProtoService&);
 
 
-}//end namespace
+}}//end namespace
 #endif

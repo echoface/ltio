@@ -8,6 +8,7 @@
 #include "message_loop/linux_signal.h"
 #include "protocol/proto_service_factory.h"
 
+namespace lt {
 namespace net {
 
 RawServer::RawServer():
@@ -211,4 +212,4 @@ void RawServer::StopServer() {
   }
 }
 
-} //end net
+}} //end net

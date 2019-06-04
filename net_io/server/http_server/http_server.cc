@@ -9,6 +9,7 @@
 #include "protocol/proto_service_factory.h"
 #include "base/coroutine/coroutine_runner.h"
 
+namespace lt {
 namespace net {
 
 HttpServer::HttpServer() {
@@ -188,4 +189,4 @@ void HttpServer::StopServer() {
   }
 }
 
-} //end net
+}} //end net

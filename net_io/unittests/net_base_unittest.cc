@@ -35,6 +35,8 @@
 #include "protocol/raw/raw_message.h"
 #include "protocol/raw/raw_proto_service.h"
 
+using namespace lt;
+
 TEST_CASE("url.host_resolve", "[host resolve test]") {
   std::string host_ip;
   net::url::HostResolve("g.test.amnetapi.com", host_ip);

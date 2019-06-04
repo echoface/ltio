@@ -5,8 +5,8 @@
 #include <inttypes.h>
 #include <unordered_map>
 
+namespace lt {
 namespace net {
-
 namespace url {
 
 typedef struct {
@@ -44,5 +44,5 @@ typedef struct {
  * protocol://user:password@hots:port?query_string*/
 bool ParseRemote(const std::string& in, RemoteInfo& out, bool resolve = true);
 
-}}
+}}}
 #endif

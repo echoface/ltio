@@ -14,6 +14,8 @@
 #include "../clients/router/maglev_router.h"
 #include "thirdparty/murmurhash/MurmurHash3.h"
 
+using namespace lt;
+
 using Endpoint = net::MaglevHelper::Endpoint;
 
 TEST_CASE("client.maglev", "[meglev]") {

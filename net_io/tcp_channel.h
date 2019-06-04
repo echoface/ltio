@@ -14,6 +14,7 @@
 /* *
  * all of this thing happend in io-loop its attached, include callbacks
  * */
+namespace lt {
 namespace net {
 
 class TcpChannel : public std::enable_shared_from_this<TcpChannel> {
@@ -84,5 +85,5 @@ private:
   DISALLOW_COPY_AND_ASSIGN(TcpChannel);
 };
 
-}
+}}
 #endif

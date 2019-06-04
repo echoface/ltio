@@ -4,6 +4,7 @@
 #include "protocol/proto_message.h"
 #include "base/utils/gzip/gzip_utils.h"
 
+namespace lt {
 namespace net {
 
 ResParseContext::ResParseContext()
@@ -283,4 +284,4 @@ int ResParseContext::OnChunkFinished(http_parser* parser) {
   return 0;
 }
 
-}
+}}

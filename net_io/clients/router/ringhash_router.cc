@@ -1,5 +1,6 @@
 #include "ringhash_router.h"
 
+namespace lt {
 namespace net {
 
 RingHashRouter::RingHashRouter(uint32_t vnode_count)
@@ -35,4 +36,4 @@ Client* RingHashRouter::GetNextClient(const std::string& key, ProtocolMessage* r
   return iter->second.client;
 }
 
-}//end net
+}}//end net

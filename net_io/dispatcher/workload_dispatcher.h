@@ -7,6 +7,7 @@
 #include "protocol/proto_message.h"
 #include "base/message_loop/message_loop.h"
 
+namespace lt {
 namespace net {
 
 typedef std::vector<base::MessageLoop*> LoopList;
@@ -33,5 +34,5 @@ private:
   std::atomic<uint64_t> round_robin_counter_;
 };
 
-}//end namespace net
+}}//end namespace net
 #endif

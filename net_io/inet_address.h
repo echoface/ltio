@@ -4,6 +4,7 @@
 #include <inttypes.h>
 #include "socket_utils.h"
 
+namespace lt {
 namespace net {
 
 class SocketAddress {
@@ -28,6 +29,5 @@ private:
   struct sockaddr_in addr_in_;
 };
 
-};
-
+}};
 #endif

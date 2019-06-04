@@ -2,6 +2,7 @@
 #include "proto_message.h"
 #include "proto_service.h"
 
+namespace lt {
 namespace net {
 
 const RefProtocolMessage ProtocolMessage::kNullMessage = RefProtocolMessage();
@@ -54,4 +55,4 @@ const char* ProtocolMessage::TypeAsStr() const {
   return "MessageNone";
 }
 
-}//end namespace
+}}//end namespace

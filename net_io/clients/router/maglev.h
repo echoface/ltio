@@ -25,6 +25,7 @@
 #include <cstdint>
 #include <vector>
 
+namespace lt {
 namespace net {
 
 typedef std::vector<int> LookupTable;
@@ -72,6 +73,5 @@ class MaglevHelper {
                                   const uint32_t ring_size);
 };
 
-} //end net
-
+}} //end lt::net
 #endif

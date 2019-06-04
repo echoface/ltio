@@ -23,6 +23,8 @@
 base::MessageLoop loop;
 base::MessageLoop wloop;
 
+using namespace lt;
+
 net::Client* http_router = NULL;
 net::Client* raw_router = NULL;
 

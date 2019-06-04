@@ -5,6 +5,7 @@
 #include <memory>
 #include <functional>
 
+namespace lt {
 namespace net {
 
 class IOBuffer;
@@ -43,5 +44,5 @@ typedef std::unique_ptr<IOService> IOServicePtr;
 //std::map<std::string/*protocol*/,
 typedef std::unique_ptr<ProtocolMessage> OwnedProtocolMessage;
 
-}
+}}
 #endif

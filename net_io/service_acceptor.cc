@@ -5,6 +5,7 @@
 #include "base/base_constants.h"
 #include "base/utils/sys_error.h"
 
+namespace lt {
 namespace net {
 
 SocketAcceptor::SocketAcceptor(base::EventPump* pump, const SocketAddress& address)
@@ -118,4 +119,4 @@ void SocketAcceptor::OnAcceptorError() {
   }
 }
 
-}//end namespace net
+}}//end namespace net

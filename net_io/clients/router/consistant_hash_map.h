@@ -6,6 +6,7 @@
 #ifndef _LT_CONSISTENT_HASH_H__
 #define _LT_CONSISTENT_HASH_H__
 
+namespace lt {
 namespace net {
 
 template <typename T,
@@ -69,5 +70,5 @@ class consistent_hash_map {
 		map_type nodes_;
 };
 
-}
+}} //lt net
 #endif

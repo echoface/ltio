@@ -1,7 +1,9 @@
 #include "maglev.h"
 #include "thirdparty/murmurhash/MurmurHash3.h"
 
+namespace lt {
 namespace net {
+
 static const uint32_t kHashSeed3 = 2718281828;
 
 void MaglevHelper::genMaglevPermuation(IdList& permutation,
@@ -67,4 +69,4 @@ LookupTable MaglevHelper::GenerateMaglevHash(NodeList endpoints, const uint32_t 
   return result;
 }
 
-} //end lt::net
+}} //end lt::net

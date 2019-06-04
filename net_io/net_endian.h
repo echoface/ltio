@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <endian.h>
 
+namespace lt {
 namespace net {
 namespace endian {
 // the inline assembler code makes type blur,
@@ -49,5 +50,5 @@ inline uint16_t NetworkToHost16(uint16_t net16) {
 #pragma GCC diagnostic warning "-Wold-style-cast"
 #endif
 
-}}
+}}}
 #endif  // LIGHTING_NET_ENDIAN_H

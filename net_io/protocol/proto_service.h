@@ -7,6 +7,7 @@
 
 #include "proto_message.h"
 
+namespace lt {
 namespace net {
 
 class ProtoServiceDelegate {
@@ -60,5 +61,5 @@ protected:
   ProtoServiceDelegate* delegate_ = NULL;
 };
 
-}
+}}
 #endif

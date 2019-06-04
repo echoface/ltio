@@ -3,6 +3,7 @@
 #include "base/base_constants.h"
 #include "protocol/proto_service.h"
 
+namespace lt {
 namespace net {
 
 RefQueuedChannel QueuedChannel::Create(Delegate* d, RefProtoService& s) {
@@ -115,4 +116,4 @@ void QueuedChannel::OnProtocolServiceGone(const RefProtoService& service) {
   delegate_->OnClientChannelClosed(guard);
 }
 
-}//net
+}}//net

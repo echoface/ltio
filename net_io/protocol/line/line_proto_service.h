@@ -3,6 +3,7 @@
 
 #include "protocol/proto_service.h"
 
+namespace lt {
 namespace net {
 
 class LineProtoService : public ProtoService {
@@ -19,5 +20,5 @@ public:
   bool SendResponseMessage(const RefProtocolMessage& req, const RefProtocolMessage& res) override;
 };
 
-}
+}}
 #endif

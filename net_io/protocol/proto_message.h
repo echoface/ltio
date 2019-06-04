@@ -6,6 +6,7 @@
 #include <base/coroutine/coroutine.h>
 #include <base/message_loop/message_loop.h>
 
+namespace lt {
 namespace net {
 
 enum class MessageType {
@@ -89,5 +90,5 @@ private:
   uint64_t async_id_ = SequenceIdentify::KNullId;
 };
 
-}
+}}
 #endif

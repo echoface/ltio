@@ -10,6 +10,7 @@
 #include <atomic>
 #include <base/base_constants.h>
 
+namespace lt {
 namespace net {
 
 IOService::IOService(const SocketAddress addr,
@@ -135,4 +136,4 @@ void IOService::RemoveProtocolService(const RefProtoService service) {
   }
 }
 
-}// endnamespace net
+}}// endnamespace net

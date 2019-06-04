@@ -7,6 +7,7 @@
 #include "consistant_hash_map.h"
 #include "thirdparty/murmurhash/MurmurHash3.h"
 
+namespace lt {
 namespace net {
 
 struct ClientNode {
@@ -54,5 +55,5 @@ class RingHashRouter : public ClientRouter {
     const uint32_t vnode_count_ = 50;
 };
 
-}
+}} //lt::net
 #endif

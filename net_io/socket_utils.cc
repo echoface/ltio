@@ -18,7 +18,9 @@
 
 #include "net_endian.h"
 
+namespace lt {
 namespace net {
+
 namespace socketutils {
 
 #define SocketFd int
@@ -298,4 +300,4 @@ void KeepAlive(SocketFd fd, bool alive) {
                static_cast<socklen_t>(sizeof optval));
 }
 
-}} //end net::socketutils
+}}} //end lt::net::socketutils

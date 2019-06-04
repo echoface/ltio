@@ -1,6 +1,7 @@
 
 #include "http_constants.h"
 
+namespace lt {
 namespace net {
 
 //static
@@ -89,4 +90,4 @@ const char* HttpConstant::StatusCodeCStr(int32_t code) {
 }
 
 
-} //end net::HttpConstant
+}} //end net::HttpConstant

@@ -6,6 +6,7 @@
 #include "maglev.h"
 #include "client_router.h"
 
+namespace lt {
 namespace net {
 
 class MaglevRouter : ClientRouter {
@@ -22,6 +23,5 @@ class MaglevRouter : ClientRouter {
     std::vector<ClientPtr> clients_;
 };
 
-} // namespace lt::net
-
+}} // namespace lt::net
 #endif

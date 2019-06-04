@@ -21,6 +21,7 @@
 #include "clients/queued_channel.h"
 #include "clients/client_connector.h"
 
+namespace lt {
 namespace net {
 
 typedef struct {
@@ -112,5 +113,5 @@ private:
   RefClientChannelList roundrobin_channes_;
 };
 
-}//end namespace net
+}}//end namespace lt::net
 #endif

@@ -1,5 +1,6 @@
 #include "redis_response.h"
 
+namespace lt {
 namespace net {
 
 RedisResponse::RedisResponse() :
@@ -74,4 +75,4 @@ std::string RedisResponse::DebugDump() const {
 #undef RESPBUF_TO_STRING
 }
 
-}//end namespace
+}}//end namespace

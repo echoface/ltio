@@ -1,6 +1,7 @@
 #include "net_endian.h"
 #include "raw_message.h"
 
+namespace lt {
 namespace net {
 
 const uint64_t LtRawHeader::kHeartBeatId = 0;
@@ -27,4 +28,4 @@ const std::string LtRawHeader::Dump() const {
   return std::move(oss.str());
 }
 
-}//end net
+}}//end net

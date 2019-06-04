@@ -9,6 +9,7 @@
 #include "base/message_loop/fd_event.h"
 #include "base/message_loop/message_loop.h"
 
+namespace lt {
 namespace net {
 
 class SocketAcceptor {
@@ -36,6 +37,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(SocketAcceptor);
 };
 
-} //end net
+}} //end net
 #endif
 //end of file
