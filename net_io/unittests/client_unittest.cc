@@ -14,7 +14,7 @@
 
 #include <glog/logging.h>
 #include "tcp_channel.h"
-#include "inet_address.h"
+#include "address.h"
 #include "socket_utils.h"
 #include "service_acceptor.h"
 #include "protocol/proto_service.h"

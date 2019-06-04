@@ -6,7 +6,7 @@
 
 #include "net_callback.h"
 #include "io_buffer.h"
-#include "inet_address.h"
+#include "address.h"
 #include "base/base_micro.h"
 #include "protocol/proto_message.h"
 #include "base/message_loop/message_loop.h"

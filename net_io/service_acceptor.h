@@ -1,7 +1,7 @@
 #ifndef _NET_SERVICE_ACCEPTOR_H_H_
 #define _NET_SERVICE_ACCEPTOR_H_H_
 
-#include "inet_address.h"
+#include "address.h"
 #include "socket_utils.h"
 
 #include "net_callback.h"

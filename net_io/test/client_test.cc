@@ -1,7 +1,7 @@
 #include <glog/logging.h>
 
 #include <vector>
-#include "inet_address.h"
+#include "address.h"
 #include "tcp_channel.h"
 #include "socket_utils.h"
 #include "service_acceptor.h"
