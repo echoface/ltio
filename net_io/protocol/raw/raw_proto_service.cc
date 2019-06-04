@@ -4,7 +4,6 @@
 #include "io_buffer.h"
 #include "tcp_channel.h"
 #include "raw_message.h"
-#include "net_endian.h"
 #include "raw_proto_service.h"
 
 namespace lt {

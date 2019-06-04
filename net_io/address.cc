@@ -1,6 +1,7 @@
-#include "inet_address.h"
-#include "net_endian.h"
+#include "address.h"
+
 #include <strings.h>
+#include <endian.h>
 #include "glog/logging.h"
 
 namespace lt {
@@ -10,9 +11,11 @@ SocketAddress::SocketAddress(uint16_t port) {
   bzero(&addr_in_, sizeof addr_in_);
 
   addr_in_.sin_family = AF_INET;
+
   in_addr_t ip = INADDR_ANY;//0.0.0.0
-  addr_in_.sin_addr.s_addr = endian::HostToNetwork32(ip);
-  addr_in_.sin_port = endian::HostToNetwork16(port);
+
+  addr_in_.sin_port = ::htobe16(port);
+  addr_in_.sin_addr.s_addr = ::htobe32(ip);
 }
 
 SocketAddress::SocketAddress(const std::string& ip, const uint16_t port) {
@@ -35,7 +38,7 @@ const struct sockaddr* SocketAddress::AsSocketAddr() const {
 }
 
 inline uint16_t SocketAddress::Port() const {
-  return endian::NetworkToHost16(addr_in_.sin_port);
+  return ::be16toh(addr_in_.sin_port);
 }
 
 sa_family_t SocketAddress::Family() const {

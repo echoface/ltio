@@ -1,9 +1,5 @@
 #include <string>
 #include <inttypes.h>
-#include <sys/socket.h>
-
-#include <iostream>
-
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
@@ -13,9 +9,9 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-
 #include "glog/logging.h"
-#include "url_string_utils.h"
+
+#include "url_utils.h"
 #include "utils/string/str_utils.h"
 #include <base/string/string_view.hpp>
 
@@ -159,7 +155,6 @@ bool ParseRemote(const std::string& str, RemoteInfo& out, bool resolve) {
   for (auto& query : querys) {
     auto kv = base::Str::Split(query, "=", false);
     if (kv.size() != 2) {
-      std::cout << "query:" << query << " size:" << kv.size() << std::endl;
       continue;
     }
     out.querys.insert(std::make_pair(kv.front(), kv.back()));

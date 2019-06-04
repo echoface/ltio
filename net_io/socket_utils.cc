@@ -16,8 +16,6 @@
 #include <base/base_constants.h>
 #include "base/utils/sys_error.h"
 
-#include "net_endian.h"
-
 namespace lt {
 namespace net {
 
@@ -173,7 +171,7 @@ std::string SocketAddr2IpPort(const struct sockaddr* addr) {
 
   const struct sockaddr_in* addr4 = sockaddr_in_cast(addr);
 
-  uint16_t port = endian::NetworkToHost16(addr4->sin_port);
+  uint16_t port = ::be16toh(addr4->sin_port);
 
   ip_port += (":" + std::to_string(port));
   return ip_port;
@@ -182,7 +180,7 @@ std::string SocketAddr2IpPort(const struct sockaddr* addr) {
 void FromIpPort(const char* ip, uint16_t port, struct sockaddr_in* addr) {
 
   addr->sin_family = AF_INET;
-  addr->sin_port = endian::HostToNetwork16(port);
+  addr->sin_port = ::htobe16(port);
   if (::inet_pton(AF_INET, ip, &addr->sin_addr) <= 0) {
     LOG(ERROR) << " ::inet_pton error:" << base::StrError() << " ip:" << ip;
   }
@@ -190,7 +188,7 @@ void FromIpPort(const char* ip, uint16_t port, struct sockaddr_in* addr) {
 
 void FromIpPort(const char* ip, uint16_t port, struct sockaddr_in6* addr) {
   addr->sin6_family = AF_INET6;
-  addr->sin6_port = endian::HostToNetwork16(port);
+  addr->sin6_port = ::htobe16(port);
   if (::inet_pton(AF_INET6, ip, &addr->sin6_addr) <= 0) {
     LOG(ERROR) << " ::inet_pton error:" << base::StrError();
   }

@@ -1,5 +1,7 @@
-#include "net_endian.h"
+
 #include "raw_message.h"
+
+#include <endian.h>
 
 namespace lt {
 namespace net {
@@ -8,13 +10,14 @@ const uint64_t LtRawHeader::kHeartBeatId = 0;
 const uint64_t LtRawHeader::kHeaderSize = sizeof(LtRawHeader);
 
 LtRawHeader* LtRawHeader::ToNetOrder() {
-  sequence_id_ = endian::HostToNetwork64(sequence_id_);
-  content_size_ = endian::HostToNetwork64(content_size_);
+  sequence_id_ = ::htobe64(sequence_id_);
+  content_size_ = ::htobe64(content_size_);
   return this;
 }
+
 LtRawHeader* LtRawHeader::FromNetOrder() {
-  sequence_id_ = endian::NetworkToHost64(sequence_id_);
-  content_size_ = endian::NetworkToHost64(content_size_);
+  sequence_id_ = ::be64toh(sequence_id_);
+  content_size_ = ::be64toh(content_size_);
   return this;
 }
 

@@ -3,13 +3,13 @@ SET(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set(LTNET_SOURCE
   #server.cc
+  address.cc
   io_buffer.cc
   io_service.cc
   tcp_channel.cc
-  inet_address.cc
   socket_utils.cc
   service_acceptor.cc
-  url_string_utils.cc
+  url_utils.cc
   #protocol
   protocol/proto_message.cc
   protocol/proto_service.cc
