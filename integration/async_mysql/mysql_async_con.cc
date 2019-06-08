@@ -263,6 +263,12 @@ void MysqlAsyncConnect::HandleState(int in_event) {
         CHECK(in_process_);
 
         const std::string& content = in_process_->QueryContent();
+        if (content.empty()) {
+          DoneCurrentQuery(-9999, "empty query");
+          current_state_ = CONNECTION_IDLE;
+          st_continue = true;
+          break;
+        }
 
         int err_no = 0;
         int status = ::mysql_real_query_start(&err_no,

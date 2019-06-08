@@ -22,7 +22,6 @@ public:
   };
 
   ClientChannel(Delegate* d, RefProtoService& service);
-
   virtual ~ClientChannel() {}
 
   virtual void StartClient();
