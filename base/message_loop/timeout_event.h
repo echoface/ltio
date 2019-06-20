@@ -18,7 +18,7 @@ public:
 
   void Invoke();
   void UpdateInterval(int64_t ms);
-  void InstallTimerHandler(ClosurePtr&& h);
+  void InstallTimerHandler(TaskBasePtr&& h);
   bool IsRepeated() const {return repeat_;}
   inline bool DelAfterInvoke() const {return del_after_invoke_;}
   inline bool IsAttached() const {return pending != NULL;}
@@ -29,7 +29,7 @@ private:
   bool use_coro_ = false;
   uint64_t interval_ = 0; //ms
   bool del_after_invoke_ = false;
-  ClosurePtr timer_handler_;
+  TaskBasePtr timer_handler_;
 };
 
 }

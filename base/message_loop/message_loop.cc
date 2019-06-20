@@ -39,7 +39,7 @@ MessageLoop* MessageLoop::Current() {
 
 class TimeoutTaskHelper : public TaskBase {
 public:
-  TimeoutTaskHelper(ClosurePtr task, EventPump* pump, uint64_t ms)
+  TimeoutTaskHelper(TaskBasePtr task, EventPump* pump, uint64_t ms)
     : TaskBase(task->TaskLocation()),
       timeout_fn_(std::move(task)),
       event_pump_(pump),
@@ -51,7 +51,7 @@ public:
     uint64_t has_passed_time = time_ms() - schedule_time_;
     int64_t new_delay_ms = delay_ms_ - has_passed_time;
     if (new_delay_ms <= 0) {
-      return timeout_fn_->Run();
+      return (*timeout_fn_)();
     }
 
     VLOG(GLOG_VINFO) <<  "Re-Schedule timer " << new_delay_ms << " ms";
@@ -60,7 +60,7 @@ public:
     event_pump_->AddTimeoutEvent(timeout_ev);
   }
 private:
-  ClosurePtr timeout_fn_;
+  TaskBasePtr timeout_fn_;
   EventPump* event_pump_;
   const uint64_t delay_ms_;
   const uint64_t schedule_time_;
@@ -68,7 +68,7 @@ private:
 
 class MessageLoop::ReplyTaskHelper : public TaskBase {
 public:
-  ReplyTaskHelper(ClosurePtr& task, ClosurePtr& reply, MessageLoop* loop, int notify_fd)
+  ReplyTaskHelper(TaskBasePtr& task, TaskBasePtr& reply, MessageLoop* loop, int notify_fd)
     : notify_fd_(notify_fd),
       task_(std::move(task)) {
     CHECK(loop);
@@ -77,7 +77,7 @@ public:
   }
   void Run() override {
     if (task_) {
-      task_->Run();
+      (*task_)();
     }
     holder_->CommitReply();
     int ret = ::write(notify_fd_, &kTaskFdCounter, sizeof(kTaskFdCounter));
@@ -85,7 +85,7 @@ public:
   }
 private:
   int notify_fd_;
-  ClosurePtr task_;
+  TaskBasePtr task_;
   std::shared_ptr<ReplyHolder> holder_;
 };
 
@@ -200,7 +200,6 @@ void MessageLoop::ThreadMain() {
   event_pump_.InstallFdEvent(wakeup_event_.get());
   event_pump_.InstallFdEvent(reply_event_.get());
 
-  //delegate_->BeforeLoopRun();
   LOG(INFO) << "MessageLoop: [" << loop_name_ << "] Start Running";
 
   {
@@ -208,9 +207,10 @@ void MessageLoop::ThreadMain() {
     cv_.notify_all();
   }
 
+  //delegate_->BeforeLoopRun();
   event_pump_.Run();
-
   //delegate_->AfterLoopRun();
+
   event_pump_.RemoveFdEvent(reply_event_.get());
   event_pump_.RemoveFdEvent(wakeup_event_.get());
   event_pump_.RemoveFdEvent(task_event_.get());
@@ -224,11 +224,11 @@ void MessageLoop::ThreadMain() {
   }
 }
 
-void MessageLoop::PostDelayTask(std::unique_ptr<TaskBase> task, uint32_t ms) {
+void MessageLoop::PostDelayTask(TaskBasePtr task, uint32_t ms) {
   CHECK(status_ == ST_STARTED);
 
   if (!IsInLoopThread()) {
-    PostTask(ClosurePtr(new TimeoutTaskHelper(std::move(task), &event_pump_, ms)));
+    PostTask(TaskBasePtr(new TimeoutTaskHelper(std::move(task), &event_pump_, ms)));
     return;
   }
 
@@ -263,7 +263,7 @@ void MessageLoop::RunTimerClosure(const TimerEventList& timer_evs) {
 void MessageLoop::RunNestedTask() {
   DCHECK(IsInLoopThread());
   for (auto& task : in_loop_tasks_) {
-    task->Run();
+    (*task)();
   }
   in_loop_tasks_.clear();
 }
@@ -318,16 +318,16 @@ bool MessageLoop::PostTaskAndReply(TaskBasePtr task,
                                    TaskBasePtr reply,
                                    MessageLoop* reply_loop) {
   CHECK(reply_loop);
-  return PostTask(ClosurePtr(new ReplyTaskHelper(task, reply, reply_loop, reply_loop->reply_event_fd_)));
+  return PostTask(TaskBasePtr(new ReplyTaskHelper(task, reply, reply_loop, reply_loop->reply_event_fd_)));
 }
 
 bool MessageLoop::PostTaskAndReply(StlClosure task, StlClosure reply) {
-  auto t = CreateClosureWithCallback(FROM_HERE, task, reply);
+  auto t = CreateTaskWithCallback(FROM_HERE, task, reply);
   return PostTask(std::move(t));
 }
 
 bool MessageLoop::PostTaskAndReply(TaskBasePtr task, TaskBasePtr reply) {
-  return PostTaskAndReply(std::move(task), std::move(reply), this);
+  return PostTask(CreateTaskWithCallback(task->TaskLocation(), task, reply));
 }
 
 void MessageLoop::ScheduleFutureReply(std::shared_ptr<ReplyHolder>& reply_holder) {

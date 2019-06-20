@@ -21,17 +21,24 @@
 
 namespace base {
 
+typedef std::function<void()> StlClosure;
+
 class TaskBase {
 public:
   TaskBase() {}
   explicit TaskBase(const Location& location) : location_(location) {}
   virtual ~TaskBase() {}
   virtual void Run() = 0;
+  void operator()() {
+    return Run();
+  }
   const Location& TaskLocation() const {return location_;}
   std::string ClosureInfo() const {return location_.ToString();}
 private:
   Location location_;
 };
+
+typedef std::unique_ptr<TaskBase> TaskBasePtr;
 
 template <typename Functor>
 class ClosureTask : public TaskBase {
@@ -44,7 +51,7 @@ public:
     try {
       closure_task();
     } catch (...) {
-      LOG(WARNING) << "Task Error Exception, From:" << ClosureInfo();
+      LOG(ERROR) << "Task Crash, From:" << ClosureInfo();
       abort();
     }
   }
@@ -53,40 +60,66 @@ private:
 };
 
 template <class Closure, class Cleanup>
-class ClosureTaskWithCleanup : public ClosureTask<Closure> {
+class TaskWithCleanup : public TaskBase {
 public:
-  ClosureTaskWithCleanup(const Location& location, const Closure& closure, const Cleanup& cleanup)
-      : ClosureTask<Closure>(location, closure),
-        cleanup_task(std::move(cleanup)) {
+  TaskWithCleanup(const Location& location,
+                  Closure& closure,
+                  Cleanup& cleanup)
+    : TaskBase(location),
+      closure_task(std::move(closure)),
+      cleanup_task(std::move(cleanup)) {
   }
-  ~ClosureTaskWithCleanup() {
+  void Run() override {
+    try {
+      closure_task();
+    } catch (...) {
+      LOG(ERROR) << "Task Crash, From:" << ClosureInfo();
+      abort();
+    }
     try {
       cleanup_task();
     } catch (...) {
-      LOG(WARNING) << "Cleanup Closure Exception, Task From:" << TaskBase::ClosureInfo();
+      LOG(ERROR) << "Cleanup Crash, From:" << ClosureInfo();
       abort();
     }
   }
 private:
+  Closure closure_task;
   Cleanup cleanup_task;
 };
 
+template <>
+class TaskWithCleanup<TaskBasePtr, TaskBasePtr> : public TaskBase {
+public:
+  TaskWithCleanup(const Location& location,
+                  TaskBasePtr& closure,
+                  TaskBasePtr& cleanup)
+    : TaskBase(location),
+      closure_task(std::move(closure)),
+      cleanup_task(std::move(cleanup)) {
+  }
+  void Run() override {
+    closure_task->Run();
+    cleanup_task->Run();
+  }
+private:
+  TaskBasePtr closure_task;
+  TaskBasePtr cleanup_task;
+};
+
+
 template <class Closure>
-static std::unique_ptr<TaskBase> CreateClosure(const Location& location, const Closure& closure) {
-  return std::unique_ptr<TaskBase>(new ClosureTask<Closure>(location, closure));
+static TaskBasePtr CreateClosure(const Location& location,
+                                 const Closure& closure) {
+  return TaskBasePtr(new ClosureTask<Closure>(location, closure));
 }
 
 template <class Closure, class Cleanup>
-static std::unique_ptr<TaskBase> CreateClosureWithCallback(const Location& location,
-                                                           const Closure& closure,
-                                                           const Cleanup& cleanup) {
-  return std::unique_ptr<TaskBase>(new ClosureTaskWithCleanup<Closure, Cleanup>(location, closure, cleanup));
+static TaskBasePtr CreateTaskWithCallback(const Location& location,
+                                          Closure& closure,
+                                          Cleanup& cleanup) {
+  return TaskBasePtr(new TaskWithCleanup<Closure,Cleanup>(location, closure, cleanup));
 }
-
-typedef std::function<void()> SigHandler;
-typedef std::function<void()> StlClosure;
-typedef std::unique_ptr<TaskBase> ClosurePtr;
-typedef std::unique_ptr<TaskBase> TaskBasePtr;
 
 }// end namespace
 #endif

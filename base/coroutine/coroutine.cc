@@ -76,7 +76,7 @@ Coroutine::~Coroutine() {
   VLOG(GLOG_VTRACE) << "coroutine gone! count:" << coroutine_counter.load() << "st:" << StateToString();
 }
 
-void Coroutine::SetTask(ClosurePtr&& task) {
+void Coroutine::SetTask(TaskBasePtr&& task) {
   coro_task_ = std::move(task);
 };
 

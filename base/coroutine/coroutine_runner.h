@@ -93,7 +93,7 @@ private:
 
   bool invoke_coro_shceduled_;
 
-  std::list<ClosurePtr> coro_tasks_;
+  std::list<TaskBasePtr> coro_tasks_;
   std::vector<Coroutine*> expired_coros_;
 
   /*every thread max resuable coroutines*/

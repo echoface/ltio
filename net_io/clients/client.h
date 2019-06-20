@@ -43,6 +43,7 @@ public:
   /* do some init things like select db for redis,
    * or enable keepalive action etc*/
   virtual void OnClientChannelReady(ClientChannel* channel) {}
+  virtual void OnClientChannelGone(ClientChannel* channel) {}
 };
 
 class Client;

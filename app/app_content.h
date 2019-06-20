@@ -10,14 +10,13 @@ public:
   App();
   virtual ~App();
 
-  void RunApplication();
+  void Run(int argc, const char** argv);
   base::MessageLoop* MainLoop();
 protected:
-  virtual void ContentMain();
+  virtual void ContentMain() = 0;
 
-  virtual void BeforeApplicationRun() = 0;
-  virtual void AfterApplicationRun() = 0;
-
+  virtual void OnStart() {}
+  virtual void OnFinish() {}
 private:
   base::MessageLoop content_loop_;
 };

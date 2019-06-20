@@ -1,0 +1,23 @@
+
+# server application config
+
+[loops]
+"io_count": 4
+"shared_io": false # all message handle in io
+"worker_count": 4  # optional if use shared_io
+
+[[listens"]]
+name = "raw_server"
+listen = "raw://0.0.0.0:5005"
+
+[[listens"]]
+name = "http_server"
+listen = "http://0.0.0.0:5006"
+
+[[clients]]
+name="client1"
+address="http://127.0.0.1:80"
+[[clients]]
+name="client1"
+address="http://127.0.0.1:80"
+

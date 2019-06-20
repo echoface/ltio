@@ -28,10 +28,10 @@ enum LoopState {
 
 class ReplyHolder {
 public:
-  static std::shared_ptr<ReplyHolder> Create(ClosurePtr& task) {
+  static std::shared_ptr<ReplyHolder> Create(TaskBasePtr& task) {
     return std::make_shared<ReplyHolder>(std::move(task));
   }
-  ReplyHolder(ClosurePtr task) : commited_(false), reply_(std::move(task)) {}
+  ReplyHolder(TaskBasePtr task) : commited_(false), reply_(std::move(task)) {}
   bool InvokeReply() {
     if (!reply_ || !commited_) {
       return false;
@@ -43,7 +43,7 @@ public:
   inline bool IsCommited() {return commited_;};
 private:
   bool commited_;
-  ClosurePtr reply_;
+  TaskBasePtr reply_;
 };
 
 class MessageLoop : public PumpDelegate {
@@ -60,9 +60,8 @@ class MessageLoop : public PumpDelegate {
     MessageLoop();
     virtual ~MessageLoop();
 
-    bool PostTask(std::unique_ptr<TaskBase> task);
-
-    void PostDelayTask(std::unique_ptr<TaskBase> t, uint32_t milliseconds);
+    bool PostTask(TaskBasePtr task);
+    void PostDelayTask(TaskBasePtr t, uint32_t milliseconds);
 
     /* Task will run in target loop thread,
      * reply will run in Current() loop if it exist,

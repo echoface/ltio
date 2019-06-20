@@ -29,7 +29,7 @@ void TimeoutEvent::Invoke() {
   }
 }
 
-void TimeoutEvent::InstallTimerHandler(ClosurePtr&& h) {
+void TimeoutEvent::InstallTimerHandler(TaskBasePtr&& h) {
   timer_handler_ = std::move(h);
 }
 
