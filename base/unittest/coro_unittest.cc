@@ -64,7 +64,7 @@ TEST_CASE("coro.co_resumer", "[coroutine resumer with loop reply task]") {
   // big stack function;
   co_go &loop << [&]() {
     LOG(INFO) << " coroutine enter ..";
-    loop.PostTaskAndReply(NewClosure(stack_sensitive_fn), NewClosure(co_resumer));
+    loop.PostTaskAndReply(stack_sensitive_fn, co_resumer);
     LOG(INFO) << " coroutine pasued..";
     co_yield;
     LOG(INFO) << " coroutine resumed..";

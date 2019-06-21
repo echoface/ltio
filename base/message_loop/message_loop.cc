@@ -51,7 +51,7 @@ public:
     uint64_t has_passed_time = time_ms() - schedule_time_;
     int64_t new_delay_ms = delay_ms_ - has_passed_time;
     if (new_delay_ms <= 0) {
-      return (*timeout_fn_)();
+      return timeout_fn_->Run();
     }
 
     VLOG(GLOG_VINFO) <<  "Re-Schedule timer " << new_delay_ms << " ms";
@@ -77,7 +77,7 @@ public:
   }
   void Run() override {
     if (task_) {
-      (*task_)();
+      task_->Run();
     }
     holder_->CommitReply();
     int ret = ::write(notify_fd_, &kTaskFdCounter, sizeof(kTaskFdCounter));
@@ -237,7 +237,7 @@ void MessageLoop::PostDelayTask(TaskBasePtr task, uint32_t ms) {
   event_pump_.AddTimeoutEvent(timeout_ev);
 }
 
-bool MessageLoop::PostTask(std::unique_ptr<TaskBase> task) {
+bool MessageLoop::PostTask(TaskBasePtr task) {
   CHECK(status_ == ST_STARTED);
 
   if (IsInLoopThread()) {
@@ -263,7 +263,7 @@ void MessageLoop::RunTimerClosure(const TimerEventList& timer_evs) {
 void MessageLoop::RunNestedTask() {
   DCHECK(IsInLoopThread());
   for (auto& task : in_loop_tasks_) {
-    (*task)();
+    task->Run();
   }
   in_loop_tasks_.clear();
 }
@@ -312,22 +312,6 @@ void MessageLoop::RunCommandTask(ScheduledTaskType type) {
       LOG(ERROR) << " Should Not Reached Here!!!";
     break;
   }
-}
-
-bool MessageLoop::PostTaskAndReply(TaskBasePtr task,
-                                   TaskBasePtr reply,
-                                   MessageLoop* reply_loop) {
-  CHECK(reply_loop);
-  return PostTask(TaskBasePtr(new ReplyTaskHelper(task, reply, reply_loop, reply_loop->reply_event_fd_)));
-}
-
-bool MessageLoop::PostTaskAndReply(StlClosure task, StlClosure reply) {
-  auto t = CreateTaskWithCallback(FROM_HERE, task, reply);
-  return PostTask(std::move(t));
-}
-
-bool MessageLoop::PostTaskAndReply(TaskBasePtr task, TaskBasePtr reply) {
-  return PostTask(CreateTaskWithCallback(task->TaskLocation(), task, reply));
 }
 
 void MessageLoop::ScheduleFutureReply(std::shared_ptr<ReplyHolder>& reply_holder) {

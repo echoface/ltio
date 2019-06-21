@@ -66,11 +66,19 @@ class MessageLoop : public PumpDelegate {
     /* Task will run in target loop thread,
      * reply will run in Current() loop if it exist,
      * otherwise the reply task will run in target messageloop thread too*/
-    bool PostTaskAndReply(StlClosure task, StlClosure reply);
-    bool PostTaskAndReply(TaskBasePtr task, TaskBasePtr reply);
-    bool PostTaskAndReply(TaskBasePtr task,
-                          TaskBasePtr reply,
-                          MessageLoop* reply_queue);
+    template<class T, class R>
+    bool PostTaskAndReply(const T& task,
+                          const R& reply,
+                          MessageLoop* reply_loop = nullptr,
+                          const Location& location = FROM_HERE) {
+      if (reply_loop == nullptr) {
+        return PostTask(CreateTaskWithCallback(location, task, reply));
+      }
+      auto wrap_reply = [=]() ->void {
+        reply_loop->PostTask(NewClosureAlias(location, reply));
+      };
+      return PostTask(CreateTaskWithCallback(location, task, wrap_reply));
+    }
 
     void Start();
     bool IsInLoopThread() const;

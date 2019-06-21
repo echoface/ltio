@@ -29,9 +29,6 @@ public:
   explicit TaskBase(const Location& location) : location_(location) {}
   virtual ~TaskBase() {}
   virtual void Run() = 0;
-  void operator()() {
-    return Run();
-  }
   const Location& TaskLocation() const {return location_;}
   std::string ClosureInfo() const {return location_.ToString();}
 private:
@@ -43,7 +40,7 @@ typedef std::unique_ptr<TaskBase> TaskBasePtr;
 template <typename Functor>
 class ClosureTask : public TaskBase {
 public:
-  explicit ClosureTask(const Location& location, const Functor closure)
+  explicit ClosureTask(const Location& location, const Functor& closure)
    : TaskBase(location),
      closure_task(closure) {
   }
@@ -63,11 +60,11 @@ template <class Closure, class Cleanup>
 class TaskWithCleanup : public TaskBase {
 public:
   TaskWithCleanup(const Location& location,
-                  Closure& closure,
-                  Cleanup& cleanup)
+                  const Closure& closure,
+                  const Cleanup& cleanup)
     : TaskBase(location),
-      closure_task(std::move(closure)),
-      cleanup_task(std::move(cleanup)) {
+      closure_task(closure),
+      cleanup_task(cleanup) {
   }
   void Run() override {
     try {
@@ -88,25 +85,6 @@ private:
   Cleanup cleanup_task;
 };
 
-template <>
-class TaskWithCleanup<TaskBasePtr, TaskBasePtr> : public TaskBase {
-public:
-  TaskWithCleanup(const Location& location,
-                  TaskBasePtr& closure,
-                  TaskBasePtr& cleanup)
-    : TaskBase(location),
-      closure_task(std::move(closure)),
-      cleanup_task(std::move(cleanup)) {
-  }
-  void Run() override {
-    closure_task->Run();
-    cleanup_task->Run();
-  }
-private:
-  TaskBasePtr closure_task;
-  TaskBasePtr cleanup_task;
-};
-
 
 template <class Closure>
 static TaskBasePtr CreateClosure(const Location& location,
@@ -116,8 +94,8 @@ static TaskBasePtr CreateClosure(const Location& location,
 
 template <class Closure, class Cleanup>
 static TaskBasePtr CreateTaskWithCallback(const Location& location,
-                                          Closure& closure,
-                                          Cleanup& cleanup) {
+                                          const Closure& closure,
+                                          const Cleanup& cleanup) {
   return TaskBasePtr(new TaskWithCleanup<Closure,Cleanup>(location, closure, cleanup));
 }
 
