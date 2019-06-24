@@ -26,26 +26,6 @@ enum LoopState {
   ST_STOPED  = 3
 };
 
-class ReplyHolder {
-public:
-  static std::shared_ptr<ReplyHolder> Create(TaskBasePtr& task) {
-    return std::make_shared<ReplyHolder>(std::move(task));
-  }
-  ReplyHolder(TaskBasePtr task) : commited_(false), reply_(std::move(task)) {}
-  bool InvokeReply() {
-    if (!reply_ || !commited_) {
-      return false;
-    }
-    reply_->Run();
-    return true;
-  }
-  inline void CommitReply() {commited_ = true;}
-  inline bool IsCommited() {return commited_;};
-private:
-  bool commited_;
-  TaskBasePtr reply_;
-};
-
 class MessageLoop : public PumpDelegate {
   public:
     static MessageLoop* Current();
@@ -60,17 +40,18 @@ class MessageLoop : public PumpDelegate {
     MessageLoop();
     virtual ~MessageLoop();
 
-    bool PostTask(TaskBasePtr task);
-    void PostDelayTask(TaskBasePtr t, uint32_t milliseconds);
+    bool PostTask(TaskBasePtr);
 
+    bool PostDelayTask(TaskBasePtr, uint32_t milliseconds);
     /* Task will run in target loop thread,
      * reply will run in Current() loop if it exist,
      * otherwise the reply task will run in target messageloop thread too*/
-    template<class T, class R>
+    template<class T, class Reply>
     bool PostTaskAndReply(const T& task,
-                          const R& reply,
+                          const Reply& reply,
                           MessageLoop* reply_loop = nullptr,
                           const Location& location = FROM_HERE) {
+      LOG(INFO) << __FUNCTION__ << " location:" << location.ToString();
       if (reply_loop == nullptr) {
         return PostTask(CreateTaskWithCallback(location, task, reply));
       }
@@ -105,8 +86,6 @@ class MessageLoop : public PumpDelegate {
     void RunNestedTask() override;
     void RunTimerClosure(const TimerEventList&) override;
 
-    void ScheduleFutureReply(std::shared_ptr<ReplyHolder>& reply);
-
     int Notify(int fd, const void* data, size_t count);
   private:
 
@@ -125,11 +104,6 @@ class MessageLoop : public PumpDelegate {
     std::atomic_flag notify_flag_;
     ConcurrentTaskQueue scheduled_tasks_;
     std::list<TaskBasePtr> in_loop_tasks_;
-
-    int reply_event_fd_ = -1;
-    RefFdEvent reply_event_;
-    base::SpinLock future_reply_lock_;
-    std::list<std::shared_ptr<ReplyHolder>> future_replys_;
 
     // pipe just use for loop control
     int wakeup_pipe_in_ = -1;

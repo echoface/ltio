@@ -66,29 +66,6 @@ private:
   const uint64_t schedule_time_;
 };
 
-class MessageLoop::ReplyTaskHelper : public TaskBase {
-public:
-  ReplyTaskHelper(TaskBasePtr& task, TaskBasePtr& reply, MessageLoop* loop, int notify_fd)
-    : notify_fd_(notify_fd),
-      task_(std::move(task)) {
-    CHECK(loop);
-    holder_ = ReplyHolder::Create(reply);
-    loop->ScheduleFutureReply(holder_);
-  }
-  void Run() override {
-    if (task_) {
-      task_->Run();
-    }
-    holder_->CommitReply();
-    int ret = ::write(notify_fd_, &kTaskFdCounter, sizeof(kTaskFdCounter));
-    LOG_IF(ERROR, ret != sizeof(kTaskFdCounter)) << "run reply failed for task:" << ClosureInfo();
-  }
-private:
-  int notify_fd_;
-  TaskBasePtr task_;
-  std::shared_ptr<ReplyHolder> holder_;
-};
-
 MessageLoop::MessageLoop()
   : running_(ATOMIC_FLAG_INIT),
     wakeup_pipe_in_(0),
@@ -113,10 +90,6 @@ MessageLoop::MessageLoop()
   task_event_ = FdEvent::Create(task_fd_, LtEv::LT_EVENT_READ);
   task_event_->SetReadCallback(std::bind(&MessageLoop::RunCommandTask, this, ScheduledTaskType::TaskTypeDefault));
 
-  reply_event_fd_ = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
-  reply_event_ = FdEvent::Create(reply_event_fd_, LtEv::LT_EVENT_READ);
-  reply_event_->SetReadCallback(std::bind(&MessageLoop::RunCommandTask, this, ScheduledTaskType::TaskTypeReply));
-
   running_.clear();
 }
 
@@ -136,12 +109,7 @@ MessageLoop::~MessageLoop() {
   wakeup_event_.reset();
   close(wakeup_pipe_in_);
 
-  //wakeup_pipe_out managed by fdevent
-  //close(wakeup_pipe_out_);
-
   task_event_.reset();
-  reply_event_.reset();
-  reply_event_fd_ = -1;
   wakeup_pipe_in_ = -1;
   wakeup_pipe_out_ = -1;
 }
@@ -198,7 +166,6 @@ void MessageLoop::ThreadMain() {
 
   event_pump_.InstallFdEvent(task_event_.get());
   event_pump_.InstallFdEvent(wakeup_event_.get());
-  event_pump_.InstallFdEvent(reply_event_.get());
 
   LOG(INFO) << "MessageLoop: [" << loop_name_ << "] Start Running";
 
@@ -211,7 +178,6 @@ void MessageLoop::ThreadMain() {
   event_pump_.Run();
   //delegate_->AfterLoopRun();
 
-  event_pump_.RemoveFdEvent(reply_event_.get());
   event_pump_.RemoveFdEvent(wakeup_event_.get());
   event_pump_.RemoveFdEvent(task_event_.get());
 
@@ -224,17 +190,17 @@ void MessageLoop::ThreadMain() {
   }
 }
 
-void MessageLoop::PostDelayTask(TaskBasePtr task, uint32_t ms) {
+bool MessageLoop::PostDelayTask(TaskBasePtr task, uint32_t ms) {
   CHECK(status_ == ST_STARTED);
 
   if (!IsInLoopThread()) {
-    PostTask(TaskBasePtr(new TimeoutTaskHelper(std::move(task), &event_pump_, ms)));
-    return;
+    return PostTask(TaskBasePtr(new TimeoutTaskHelper(std::move(task), &event_pump_, ms)));
   }
 
   TimeoutEvent* timeout_ev = TimeoutEvent::CreateOneShot(ms, true);
   timeout_ev->InstallTimerHandler(std::move(task));
   event_pump_.AddTimeoutEvent(timeout_ev);
+  return true;
 }
 
 bool MessageLoop::PostTask(TaskBasePtr task) {
@@ -281,18 +247,6 @@ void MessageLoop::RunCommandTask(ScheduledTaskType type) {
         task->Run();
       }
     } break;
-    //Re-impliment reply task
-    case ScheduledTaskType::TaskTypeReply: {
-      base::SpinLockGuard guard(future_reply_lock_);
-      for (auto iter = future_replys_.begin(); iter != future_replys_.end();) {
-        if ((*iter)->IsCommited()) {
-          (*iter)->InvokeReply();
-          iter = future_replys_.erase(iter);
-          continue;
-        }
-        iter++;
-      }
-    } break;
     case ScheduledTaskType::TaskTypeCtrl: {
       DCHECK(wakeup_event_->fd() == wakeup_pipe_out_);
       char buf;
@@ -311,15 +265,6 @@ void MessageLoop::RunCommandTask(ScheduledTaskType type) {
       DCHECK(false);
       LOG(ERROR) << " Should Not Reached Here!!!";
     break;
-  }
-}
-
-void MessageLoop::ScheduleFutureReply(std::shared_ptr<ReplyHolder>& reply_holder) {
-  CHECK(reply_holder);
-  {
-    future_reply_lock_.lock();
-    future_replys_.push_back(reply_holder);
-    future_reply_lock_.unlock();
   }
 }
 
