@@ -14,6 +14,26 @@ namespace __detail {
 static thread_local __detail::_T tls_runner_impl;
 static thread_local CoroRunner* tls_runner = NULL;
 
+//static
+//IMPORTANT: NO HEAP MEMORY HERE!!!
+void CoroRunner::CoroutineMain(void *coro) {
+  Coroutine* coroutine = static_cast<Coroutine*>(coro);
+  CHECK(coroutine);
+
+  CoroRunner& runner = CoroRunner::Runner();
+  do {
+    DCHECK(coroutine->IsRunning());
+
+    if (runner.coro_tasks_.size()) {
+      TaskBasePtr task(std::move(runner.coro_tasks_.front()));
+      runner.coro_tasks_.pop_front();
+      task->Run();
+    }
+
+    runner.StashIfNeeded();
+  } while(coroutine);
+}
+
 bool CoroRunner::CanYield() {
   return !tls_runner->InMainCoroutine();
 }
@@ -35,7 +55,6 @@ void CoroRunner::GcCoroutine() {
       gc_task_scheduled_ = true;
     }
   }
-
   TransferTo(main_coro_);
 }
 
@@ -45,7 +64,7 @@ CoroRunner::CoroRunner()
     max_reuse_coroutines_(kMaxReuseCoroutineNumbersPerThread) {
   tls_runner = &tls_runner_impl;
 
-  RefCoroutine coro_ptr = Coroutine::Create(this, true);
+  RefCoroutine coro_ptr = Coroutine::Create(nullptr, true);
   coro_ptr->SelfHolder(coro_ptr);
   current_ = main_coro_ = coro_ptr.get();
 
@@ -150,16 +169,11 @@ void CoroRunner::ReleaseExpiredCoroutine() {
   gc_task_scheduled_ = false;
 }
 
-void CoroRunner::RecallCoroutineIfNeeded() {
+void CoroRunner::StashIfNeeded() {
   DCHECK(current_ != main_coro_);
-
-  if (coro_tasks_.size() > 0) {
-    current_->SetTask(std::move(coro_tasks_.front()));
-    coro_tasks_.pop_front();
-    current_->SetCoroState(CoroState::kRunning);
-    return;
+  if (coro_tasks_.size() == 0) {
+    GcCoroutine();
   }
-  GcCoroutine();
 }
 
 void CoroRunner::InvokeCoroutineTasks() {
@@ -169,11 +183,7 @@ void CoroRunner::InvokeCoroutineTasks() {
     Coroutine* coro = RetrieveCoroutine();
     CHECK(coro);
 
-    coro->SetTask(std::move(coro_tasks_.front()));
-    coro_tasks_.pop_front();
-
     TransferTo(coro);
-
     // 只有当这个corotine 在task运行的过程中换出(paused)，那么才会重新回到这里,否则是在task运行完成之后
     // 会调用RecallCoroutine，在依旧有task需要运行的时候，可以设置task， 让这个coro继续
     // 执行task，而不需要切换task，如果没有task， 则将coro回收或者标记成gc状态，等待gc回收
@@ -182,7 +192,7 @@ void CoroRunner::InvokeCoroutineTasks() {
     // coro运行task，结束循环回到messageloop循环，等待后后续的Task
     //
     // 当yield的之后的task重新被标记成可运行，那么做coro的切换就无法避免了，直接使用resumecoroutine
-    // 切换调度, 此时调度结束后调用RecallCoroutineIfNeeded，task队列中应该会是空的
+    // 切换调度, 此时调度结束后调用StashIfNeeded，task队列中应该会是空的
   }
   invoke_coro_shceduled_ = false;
 }
@@ -196,7 +206,7 @@ Coroutine* CoroRunner::RetrieveCoroutine() {
   }
 
   if (nullptr == coro) { //create new coroutine
-    auto coro_ptr = Coroutine::Create(this);
+    auto coro_ptr = Coroutine::Create(&CoroRunner::CoroutineMain);
     coro_ptr->SelfHolder(coro_ptr);
     coro = coro_ptr.get();
   }

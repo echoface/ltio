@@ -64,16 +64,15 @@ TEST_CASE("coro.co_resumer", "[coroutine resumer with loop reply task]") {
   // big stack function;
   co_go &loop << [&]() {
     LOG(INFO) << " coroutine enter ..";
-    loop.PostTaskAndReply(stack_sensitive_fn, co_resumer);
+    loop.PostTaskAndReply(stack_sensitive_fn, co_resumer, NULL, FROM_HERE);
     LOG(INFO) << " coroutine pasued..";
     co_yield;
     LOG(INFO) << " coroutine resumed..";
     stack_sensitive_fn_resumed = true;
+
+    loop.QuitLoop();
   };
 
-  loop.PostDelayTask(NewClosure([&]() {
-    loop.QuitLoop();
-  }), 5000); // exit ater 5s
 
   loop.WaitLoopEnd();
 

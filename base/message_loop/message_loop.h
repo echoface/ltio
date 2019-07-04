@@ -49,9 +49,15 @@ class MessageLoop : public PumpDelegate {
     template<class T, class Reply>
     bool PostTaskAndReply(const T& task,
                           const Reply& reply,
-                          MessageLoop* reply_loop = nullptr,
-                          const Location& location = FROM_HERE) {
-      LOG(INFO) << __FUNCTION__ << " location:" << location.ToString();
+                          const Location& location) {
+      return PostTaskAndReply(task, reply, this, location);
+    }
+
+    template<class T, class Reply>
+    bool PostTaskAndReply(const T& task,
+                          const Reply& reply,
+                          MessageLoop* reply_loop,
+                          const Location& location) {
       if (reply_loop == nullptr) {
         return PostTask(CreateTaskWithCallback(location, task, reply));
       }

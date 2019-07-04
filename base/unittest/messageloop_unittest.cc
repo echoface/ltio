@@ -103,7 +103,7 @@ TEST_CASE("messageloop.replytask", "[task with reply function]") {
     inloop_reply_run = true;
     REQUIRE(base::MessageLoop::Current() == &loop);
     inloop_reply_run = false;
-  });
+  }, FROM_HERE);
 
   loop.PostTaskAndReply([&]() {
     LOG(INFO) << " task bind stlclosure reply in loop run";
@@ -111,7 +111,7 @@ TEST_CASE("messageloop.replytask", "[task with reply function]") {
     inloop_reply_run = true;
     REQUIRE(base::MessageLoop::Current() == &loop);
     inloop_reply_run = false;
-  });
+  }, FROM_HERE);
 
   loop.PostTaskAndReply([&]() {
     LOG(INFO) << " task bind reply use another loop run";
@@ -119,7 +119,7 @@ TEST_CASE("messageloop.replytask", "[task with reply function]") {
     outloop_reply_run = true;
     REQUIRE(base::MessageLoop::Current() == &replyloop);
     outloop_reply_run = false;
-  }, &replyloop);
+  }, &replyloop, FROM_HERE);
 
 
   loop.PostDelayTask(NewClosure([&](){

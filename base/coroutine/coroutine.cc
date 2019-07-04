@@ -12,32 +12,17 @@ namespace base {
 static base::SpinLock g_coro_lock;
 static std::atomic_int64_t coroutine_counter;
 
-//IMPORTANT: NO HEAP MEMORY HERE!!!
-void coro_main(void* arg) {
-  auto * coroutine = static_cast<Coroutine*>(arg);
-  CHECK(coroutine);
-
-  do {
-    DCHECK(coroutine->coro_task_ && CoroState::kRunning == coroutine->state_);
-
-    coroutine->coro_task_->Run();
-    coroutine->coro_task_.reset();
-
-    coroutine->delegate_->RecallCoroutineIfNeeded();
-  } while(coroutine);
-}
-
 //static
 int64_t SystemCoroutineCount() {
   return coroutine_counter.load();
 }
+
 //static
-std::shared_ptr<Coroutine> Coroutine::Create(CoroDelegate* d, bool main) {
-  return std::shared_ptr<Coroutine>(new Coroutine(d, main));
+RefCoroutine Coroutine::Create(CoroEntry entry, bool main) {
+  return RefCoroutine(new Coroutine(entry, main));
 }
 
-Coroutine::Coroutine(CoroDelegate* d, bool main) :
-  delegate_(d),
+Coroutine::Coroutine(CoroEntry entry, bool main) :
   identify_(0) {
 
   stack_.ssze = 0;
@@ -60,7 +45,7 @@ Coroutine::Coroutine(CoroDelegate* d, bool main) :
   memset((coro_context*)this, 0, sizeof(coro_context));
   {
     base::SpinLockGuard guard(g_coro_lock);
-    coro_create(this, coro_main, this, stack_.sptr, stack_.ssze);
+    coro_create(this, entry, this, stack_.sptr, stack_.ssze);
   }
   coroutine_counter.fetch_add(1);
   VLOG(GLOG_VTRACE) << "coroutine born! count:" << coroutine_counter.load() << "st:" << StateToString();
@@ -76,17 +61,12 @@ Coroutine::~Coroutine() {
   VLOG(GLOG_VTRACE) << "coroutine gone! count:" << coroutine_counter.load() << "st:" << StateToString();
 }
 
-void Coroutine::SetTask(TaskBasePtr&& task) {
-  coro_task_ = std::move(task);
-};
-
 void Coroutine::SelfHolder(RefCoroutine& self) {
   CHECK(self.get() == this);
   self_holder_ = self;
 }
 
 void Coroutine::Reset() {
-  coro_task_.reset();
   state_ = CoroState::kInitialized;
 }
 
