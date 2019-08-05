@@ -14,6 +14,7 @@
 #include "protocol/raw/raw_message.h"
 #include "base/message_loop/message_loop.h"
 
+namespace lt {
 namespace net {
 
 typedef std::function<void(const LtRawMessage*, LtRawMessage*)> RawMessageHandler;
@@ -58,5 +59,5 @@ private:
   DISALLOW_COPY_AND_ASSIGN(RawServer);
 };
 
-}
+}}
 #endif

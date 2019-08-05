@@ -6,6 +6,7 @@
 #include "protocol/proto_service_factory.h"
 #include "base/message_loop/linux_signal.h"
 
+namespace lt {
 namespace net {
 
 class TcpProtoService : public ProtoService {
@@ -118,7 +119,9 @@ private:
   ProtoServicePtr tcp_protoservice_;
 };
 
-}
+}}
+
+using namespace lt;
 
 int main() {
   net::Srv s;

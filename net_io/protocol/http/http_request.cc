@@ -6,6 +6,7 @@
 
 #include "base/utils/string/str_utils.h"
 
+namespace lt {
 namespace net {
 
 HttpRequest::HttpRequest()
@@ -116,7 +117,7 @@ const std::string HttpRequest::Dump() const {
 
 void HttpRequest::SetMethod(const std::string method) {
   method_ = method;
-  base::StrUtils::ToUpper(method_);
+  base::Str::ToUpper(method_);
 }
 
 bool HttpRequest::IsKeepAlive() const {
@@ -127,4 +128,4 @@ void HttpRequest::SetKeepAlive(bool alive) {
   keepalive_ = alive;
 }
 
-};//end namespace net
+}};//end namespace net

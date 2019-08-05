@@ -11,10 +11,10 @@ namespace base {
 
 typedef std::vector<FdEvent*> FdEventList;
 
-class IoMultiplexer {
+class IOMux {
 public:
-  IoMultiplexer();
-  virtual ~IoMultiplexer();
+  IOMux();
+  virtual ~IOMux();
 
   virtual void AddFdEvent(FdEvent* fd_ev) = 0;
   virtual void DelFdEvent(FdEvent* fd_ev) = 0;
@@ -26,7 +26,7 @@ protected:
   DoubleLinkedList<FdEvent> listen_events_;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(IoMultiplexer);
+  DISALLOW_COPY_AND_ASSIGN(IOMux);
 };
 
 }

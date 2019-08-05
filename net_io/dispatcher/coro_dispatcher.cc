@@ -6,10 +6,10 @@
 #include "protocol/proto_message.h"
 
 #include "base/base_constants.h"
-#include "base/coroutine/coroutine_task.h"
 #include "base/coroutine/coroutine.h"
 #include "base/coroutine/coroutine_runner.h"
 
+namespace lt {
 namespace net {
 
 CoroDispatcher::CoroDispatcher(bool handle_in_io)
@@ -41,4 +41,4 @@ bool CoroDispatcher::Dispatch(base::StlClosure& closure) {
   return true;
 }
 
-}//end namespace
+}}//end namespace

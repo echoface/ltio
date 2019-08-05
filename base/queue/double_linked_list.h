@@ -9,7 +9,7 @@
 
 namespace base {
 
-namespace __detail {
+namespace __detail__ {
 
 struct Holder {
 };
@@ -31,11 +31,11 @@ template<class T>
 struct EnableDoubleLinked {
   EnableDoubleLinked<T>* pre_ = NULL;
   EnableDoubleLinked<T>* next_ = NULL;
-  __detail::Holder* holder_ = NULL;
+  __detail__::Holder* holder_ = NULL;
 };
 
 template<class T>
-class DoubleLinkedList : public __detail::Holder {
+class DoubleLinkedList : public __detail__::Holder {
 public:
   DoubleLinkedList() : size_(0) {
     tail_ = new EnableDoubleLinked<T>();
@@ -61,7 +61,7 @@ public:
   inline uint64_t Size() const {return size_;}
 
   inline bool Attatched(T* node) {
-    return node->holder_ == (__detail::Holder*)this;
+    return node->holder_ == (__detail__::Holder*)this;
   }
 
   bool PushBack(T* node) {

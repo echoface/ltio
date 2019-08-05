@@ -1,6 +1,7 @@
 
 #include "line_message.h"
 
+namespace lt {
 namespace net {
 
 LineMessage::LineMessage(MessageType t)
@@ -17,4 +18,4 @@ const std::string& LineMessage::Body() const {
   return body_;
 }
 
-};//end namespace net
+}};//end namespace net

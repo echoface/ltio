@@ -1,10 +1,10 @@
 #include <glog/logging.h>
 
 #include <vector>
-#include "inet_address.h"
+#include "address.h"
 #include "tcp_channel.h"
 #include "socket_utils.h"
-#include "service_acceptor.h"
+#include "socket_acceptor.h"
 
 #include "protocol/proto_service.h"
 #include "protocol/line/line_message.h"
@@ -12,7 +12,7 @@
 #include "protocol/http/http_response.h"
 #include "protocol/proto_service_factory.h"
 #include "clients/client_connector.h"
-#include "clients/client_router.h"
+#include "clients/client.h"
 #include "dispatcher/coro_dispatcher.h"
 #include "base/coroutine/coroutine_runner.h"
 #include "base/closure/closure_task.h"
@@ -23,8 +23,10 @@
 base::MessageLoop loop;
 base::MessageLoop wloop;
 
-net::ClientRouter* http_router = NULL;
-net::ClientRouter* raw_router = NULL;
+using namespace lt;
+
+net::Client* http_router = NULL;
+net::Client* raw_router = NULL;
 
 bool SendRequest(int sequence_id) {
   net::RefHttpRequest request = std::make_shared<net::HttpRequest>();
@@ -86,15 +88,14 @@ int main(int argc, char* argv[]) {
   {
     net::url::SchemeIpPort server_info;
     LOG_IF(ERROR, !net::url::ParseURI("http://127.0.0.1:80", server_info)) << " server can't be resolve";
-    http_router = new net::ClientRouter(&loop, server_info);
+    http_router = new net::Client(&loop, server_info);
 
-    net::RouterConf router_config;
-    router_config.connections = 1;
-    router_config.recon_interval = 100;
-    router_config.message_timeout = 5000;
-    http_router->SetupRouter(router_config);
+    net::ClientConfig config;
+    config.connections = 1;
+    config.recon_interval = 100;
+    config.message_timeout = 5000;
 
-    http_router->StartRouter();
+    http_router->Initialize(config);
   }
 
   sleep(2);

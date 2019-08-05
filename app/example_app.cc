@@ -79,12 +79,11 @@ void GeneralServerApp::ContentMain() {
       net::RefClientRouter router(new net::ClientRouter(MainLoop(), server_address));
 
       router->SetDelegate(server_.get());
-      router->SetupRouter(config);
       net::CoroDispatcher* coro_transfer_ =
         static_cast<net::CoroDispatcher*>(dispatcher_.get());
       router->SetWorkLoadTransfer(coro_transfer_);
 
-      router->StartRouter();
+      router->Initialize(config);
       clients_[name] = router;
     }
   }

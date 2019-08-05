@@ -7,6 +7,7 @@
 #include "proto_service.h"
 #include "net_callback.h"
 
+namespace lt {
 namespace net {
 
 typedef std::function<RefProtoService()> ProtoserviceCreator;
@@ -26,5 +27,5 @@ private:
   std::unordered_map<std::string, ProtoserviceCreator> creators_;
 };
 
-}
+}}
 #endif

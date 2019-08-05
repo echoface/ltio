@@ -4,6 +4,7 @@
 #include "workload_dispatcher.h"
 #include "base/closure/closure_task.h"
 
+namespace lt {
 namespace net {
 
 class CoroDispatcher : public Dispatcher {
@@ -17,5 +18,5 @@ public:
   bool SetWorkContext(ProtocolMessage* message) override;
 };
 
-}
+}}
 #endif

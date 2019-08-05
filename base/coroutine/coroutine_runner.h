@@ -13,7 +13,7 @@ namespace base {
 
 typedef std::function<void()> CoroResumer;
 
-class CoroRunner : public CoroDelegate {
+class CoroRunner {
 public:
   typedef struct __go {
     __go(const char* func, const char* file, int line)
@@ -55,7 +55,7 @@ public:
   static CoroRunner& Runner();
   /* give up cpu; main coro will automatic resume;
    * other coro should resume by manager*/
-  static void YieldCurrent(int32_t wc = 1);
+  static void YieldCurrent();
   static StlClosure CurrentCoroResumeCtx();
 
   void SleepMillsecond(uint64_t ms);
@@ -63,7 +63,6 @@ public:
 protected:
   CoroRunner();
   ~CoroRunner();
-
   /* swich call stack from different coroutine*/
   void TransferTo(Coroutine *next);
   /* reuse: insert to freelist or gc: delete for free memory; then switch to thread coroutine*/
@@ -72,7 +71,7 @@ protected:
   void ReleaseExpiredCoroutine();
   /* case 1: scheduled_task exsist, set task and run again
    * case 2: scheduled_task empty, recall to freelist or gc it */
-  void RecallCoroutineIfNeeded() override;
+  void StashIfNeeded();
   /* a callback function using for resume a kPaused coroutine */
   void ResumeCoroutine(std::weak_ptr<Coroutine> coro, uint64_t id);
   /* judge wheather running in a main coroutine with thread*/
@@ -83,7 +82,9 @@ protected:
   Coroutine* RetrieveCoroutine();
 
   std::string RunnerInfo() const;
+  static void CoroutineMain(void *coro);
 private:
+  TaskBasePtr retrieve_task();
   Coroutine* current_;
   Coroutine* main_coro_;
 
@@ -93,7 +94,8 @@ private:
 
   bool invoke_coro_shceduled_;
 
-  std::list<ClosurePtr> coro_tasks_;
+  TaskBasePtr cur_task_;
+  std::list<TaskBasePtr> coro_tasks_;
   std::vector<Coroutine*> expired_coros_;
 
   /*every thread max resuable coroutines*/

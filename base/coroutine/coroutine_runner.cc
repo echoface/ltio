@@ -14,6 +14,26 @@ namespace __detail {
 static thread_local __detail::_T tls_runner_impl;
 static thread_local CoroRunner* tls_runner = NULL;
 
+//static
+//IMPORTANT: NO HEAP MEMORY HERE!!!
+void CoroRunner::CoroutineMain(void *coro) {
+  Coroutine* coroutine = static_cast<Coroutine*>(coro);
+  CHECK(coroutine);
+
+  CoroRunner& runner = CoroRunner::Runner();
+  do {
+    DCHECK(coroutine->IsRunning());
+
+    if (runner.coro_tasks_.size()) {
+      TaskBasePtr task(std::move(runner.coro_tasks_.front()));
+      runner.coro_tasks_.pop_front();
+      task->Run();
+    }
+
+    runner.StashIfNeeded();
+  } while(coroutine);
+}
+
 bool CoroRunner::CanYield() {
   return !tls_runner->InMainCoroutine();
 }
@@ -35,7 +55,6 @@ void CoroRunner::GcCoroutine() {
       gc_task_scheduled_ = true;
     }
   }
-
   TransferTo(main_coro_);
 }
 
@@ -45,7 +64,7 @@ CoroRunner::CoroRunner()
     max_reuse_coroutines_(kMaxReuseCoroutineNumbersPerThread) {
   tls_runner = &tls_runner_impl;
 
-  RefCoroutine coro_ptr = Coroutine::Create(this, true);
+  RefCoroutine coro_ptr = Coroutine::Create(nullptr, true);
   coro_ptr->SelfHolder(coro_ptr);
   current_ = main_coro_ = coro_ptr.get();
 
@@ -73,15 +92,11 @@ CoroRunner& CoroRunner::Runner() {
   //return tls_runner.get();
 }
 
-void CoroRunner::YieldCurrent(int32_t wc) {
-  CHECK(tls_runner->current_->wc_ == 0);
-
+void CoroRunner::YieldCurrent() {
   if (tls_runner->InMainCoroutine()) {
     LOG(ERROR) << __FUNCTION__ << Runner().RunnerInfo() << " main coro can't paused";
     return;
   }
-
-  tls_runner->current_->wc_ = wc;
 
   VLOG(GLOG_VINFO) << __FUNCTION__ << Runner().RunnerInfo() << " will paused";
   tls_runner->TransferTo(tls_runner->main_coro_);
@@ -99,7 +114,7 @@ void CoroRunner::SleepMillsecond(uint64_t ms) {
 
 /* 如果本身是在一个子coro里面, 需要在重新将resumecoroutine调度到主coroutine内
  * 不支持嵌套的coroutinetransfer........
- * 如果本身是主coro， 则直接tranfer去执行.
+ * 如果本身是主coro，则直接tranfer去执行.
  * 如果不是在调度的线程里， 则posttask去Resume*/
 void CoroRunner::ResumeCoroutine(std::weak_ptr<Coroutine> weak, uint64_t id) {
   if (!bind_loop_->IsInLoopThread() || CanYield()) {
@@ -121,12 +136,7 @@ void CoroRunner::ResumeCoroutine(std::weak_ptr<Coroutine> weak, uint64_t id) {
     return;
   }
 
-  if (--(coroutine->wc_) > 0) {
-    return;
-  }
-
   VLOG(GLOG_VTRACE) << __FUNCTION__ << RunnerInfo() << " resume coro:" << coroutine;
-  coroutine->wc_ = 0;
   coroutine->identify_++;
   TransferTo(coroutine);
 }
@@ -159,16 +169,11 @@ void CoroRunner::ReleaseExpiredCoroutine() {
   gc_task_scheduled_ = false;
 }
 
-void CoroRunner::RecallCoroutineIfNeeded() {
+void CoroRunner::StashIfNeeded() {
   DCHECK(current_ != main_coro_);
-
-  if (coro_tasks_.size() > 0) {
-    current_->SetTask(std::move(coro_tasks_.front()));
-    coro_tasks_.pop_front();
-    current_->SetCoroState(CoroState::kRunning);
-    return;
+  if (coro_tasks_.size() == 0) {
+    GcCoroutine();
   }
-  GcCoroutine();
 }
 
 void CoroRunner::InvokeCoroutineTasks() {
@@ -178,11 +183,7 @@ void CoroRunner::InvokeCoroutineTasks() {
     Coroutine* coro = RetrieveCoroutine();
     CHECK(coro);
 
-    coro->SetTask(std::move(coro_tasks_.front()));
-    coro_tasks_.pop_front();
-
     TransferTo(coro);
-
     // 只有当这个corotine 在task运行的过程中换出(paused)，那么才会重新回到这里,否则是在task运行完成之后
     // 会调用RecallCoroutine，在依旧有task需要运行的时候，可以设置task， 让这个coro继续
     // 执行task，而不需要切换task，如果没有task， 则将coro回收或者标记成gc状态，等待gc回收
@@ -191,7 +192,7 @@ void CoroRunner::InvokeCoroutineTasks() {
     // coro运行task，结束循环回到messageloop循环，等待后后续的Task
     //
     // 当yield的之后的task重新被标记成可运行，那么做coro的切换就无法避免了，直接使用resumecoroutine
-    // 切换调度, 此时调度结束后调用RecallCoroutineIfNeeded，task队列中应该会是空的
+    // 切换调度, 此时调度结束后调用StashIfNeeded，task队列中应该会是空的
   }
   invoke_coro_shceduled_ = false;
 }
@@ -205,7 +206,7 @@ Coroutine* CoroRunner::RetrieveCoroutine() {
   }
 
   if (nullptr == coro) { //create new coroutine
-    auto coro_ptr = Coroutine::Create(this);
+    auto coro_ptr = Coroutine::Create(&CoroRunner::CoroutineMain);
     coro_ptr->SelfHolder(coro_ptr);
     coro = coro_ptr.get();
   }
@@ -215,7 +216,6 @@ Coroutine* CoroRunner::RetrieveCoroutine() {
 std::string CoroRunner::RunnerInfo() const {
   std::ostringstream oss;
   oss << "[ current:" << current_
-      << ", wait_c:" << current_->wc_
       << ", wait_id:" << current_->identify_
       << ", status:" << current_->StateToString()
       << ", is_main:" << (current_ == main_coro_ ? "true" : "false") << "] ";

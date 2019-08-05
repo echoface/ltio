@@ -6,7 +6,7 @@
 
 #include "net_callback.h"
 #include "io_buffer.h"
-#include "inet_address.h"
+#include "address.h"
 #include "base/base_micro.h"
 #include "protocol/proto_message.h"
 #include "base/message_loop/message_loop.h"
@@ -14,6 +14,7 @@
 /* *
  * all of this thing happend in io-loop its attached, include callbacks
  * */
+namespace lt {
 namespace net {
 
 class TcpChannel : public std::enable_shared_from_this<TcpChannel> {
@@ -84,5 +85,5 @@ private:
   DISALLOW_COPY_AND_ASSIGN(TcpChannel);
 };
 
-}
+}}
 #endif

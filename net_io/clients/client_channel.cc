@@ -6,6 +6,7 @@
 #include "async_channel.h"
 #include "queued_channel.h"
 
+namespace lt {
 namespace net {
 
 RefClientChannel CreateClientChannel(ClientChannel::Delegate* delegate, RefProtoService& service) {
@@ -42,4 +43,4 @@ void ClientChannel::CloseClientChannel() {
 	io->PostTask(NewClosure(std::bind(&ProtoService::CloseService, protocol_service_)));
 }
 
-}
+}}

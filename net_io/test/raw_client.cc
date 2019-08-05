@@ -3,15 +3,17 @@
 #include <functional>
 #include <glog/logging.h>
 #include <gflags/gflags.h>
-#include "clients/client_router.h"
+#include "clients/client.h"
 #include "coroutine/coroutine_runner.h"
 #include "protocol/raw/raw_message.h"
 #include "protocol/raw/raw_proto_service.h"
 
 std::string arg_host;
 
-typedef std::unique_ptr<net::ClientRouter> ClientRouterPtr;
-ClientRouterPtr raw_router;
+using namespace lt;
+
+typedef std::unique_ptr<net::Client> ClientPtr;
+ClientPtr raw_router;
 
 void SendRawRequest(net::LtRawMessage::RefRawMessage& message) {
   net::LtRawMessage* response = raw_router->SendRecieve(message);
@@ -27,7 +29,7 @@ int main(int argc, char** argv) {
   //google::ParseCommandLineFlags(&argc, &argv, true);
   base::MessageLoop mainloop;
 
-  net::RouterConf router_config;
+  net::ClientConfig config;
   net::url::SchemeIpPort server_info;
 
   if (argc < 2) {
@@ -43,14 +45,13 @@ int main(int argc, char** argv) {
   mainloop.SetLoopName("main");
   mainloop.Start();
 
-  raw_router.reset(new net::ClientRouter(&mainloop, server_info));
+  raw_router.reset(new net::Client(&mainloop, server_info));
 
-  router_config.connections = 5;
-  router_config.recon_interval = 100;
-  router_config.message_timeout = 500;
+  config.connections = 5;
+  config.recon_interval = 100;
+  config.message_timeout = 500;
 
-  raw_router->SetupRouter(router_config);
-  raw_router->StartRouter();
+  raw_router->Initialize(config);
 
   while (1) {
     uint32_t method = 0;

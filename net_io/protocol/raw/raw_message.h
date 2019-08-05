@@ -2,9 +2,9 @@
 #define _NET_RAW_PROTOMESSAGE_H_H
 
 #include <cinttypes>
-#include "net_callback.h"
 #include "protocol/proto_message.h"
 
+namespace lt {
 namespace net {
 
 struct LtRawHeader {
@@ -70,5 +70,6 @@ private:
 };
 
 typedef RawMessage<LtRawHeader> LtRawMessage;
-}//end namespace net
+
+}}//end namespace net
 #endif

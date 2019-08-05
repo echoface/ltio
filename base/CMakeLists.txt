@@ -9,6 +9,7 @@ SET(BASE_SOURCES
   utils/string/str_utils.cc
   #coroutine
   coroutine/coroutine.cc
+  coroutine/wait_group.cc
   coroutine/coroutine_runner.cc
   #new eventloop
   message_loop/event.cc
@@ -17,14 +18,14 @@ SET(BASE_SOURCES
   message_loop/linux_signal.cpp
   message_loop/file_util_linux.cc
   message_loop/io_multiplexer.cc
-  message_loop/io_multiplexer_epoll.cc
+  message_loop/io_mux_epoll.cc
   message_loop/timer_task_queue.cc
   message_loop/message_loop.cc
   message_loop/timeout_event.cc
   message_loop/repeating_timer.cc
   #spin lock
-  spin_lock.cc
   #memory
+  memory/spin_lock.cc
   memory/lazy_instance.cc
   # gzip compression utils
   utils/gzip/gzip_utils.cc

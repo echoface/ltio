@@ -9,9 +9,10 @@ set(CMAKE_CONFIG_DIR ${CMAKE_SOURCE_DIR}/cmake)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CONFIG_DIR}/Modules)
 MESSAGE(STATUS "CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
 
+include(${CMAKE_CONFIG_DIR}/mysql.cmake)
 include(${CMAKE_CONFIG_DIR}/common.cmake)
-include(${CMAKE_CONFIG_DIR}/global_config.cmake)
-include(${CMAKE_CONFIG_DIR}/include_path.cmake)
+include(${CMAKE_CONFIG_DIR}/global.cmake)
+include(${CMAKE_CONFIG_DIR}/include.cmake)
 #include(${CMAKE_CONFIG_DIR}/googletest.cmake)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -23,12 +24,10 @@ LINK_DIRECTORIES(${CMAKE_BINARY_DIR}/lib)
 
 ADD_SUBDIRECTORY(base)
 ADD_SUBDIRECTORY(net_io)
-ADD_SUBDIRECTORY(example)
 ADD_SUBDIRECTORY(components)
+ADD_SUBDIRECTORY(integration)
 ADD_SUBDIRECTORY(thirdparty)
-
-#ADD_SUBDIRECTORY(app)
-
+ADD_SUBDIRECTORY(playground)
 
 MESSAGE(STATUS "SOURCE dir " ${LightingIO_SOURCE_DIR})
 MESSAGE(STATUS "BINARY dir " ${LightingIO_BINARY_DIR})

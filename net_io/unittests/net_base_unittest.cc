@@ -19,21 +19,29 @@
 #include <glog/logging.h>
 #include "tcp_channel.h"
 #include "socket_utils.h"
-#include "inet_address.h"
-#include "service_acceptor.h"
-#include "url_string_utils.h"
+#include "address.h"
+#include "url_utils.h"
+#include "socket_acceptor.h"
 #include "protocol/proto_service.h"
 #include "protocol/line/line_message.h"
 #include "protocol/http/http_request.h"
 #include "protocol/http/http_response.h"
 #include "protocol/proto_service_factory.h"
 #include "clients/client_connector.h"
-#include "clients/client_router.h"
+#include "clients/client.h"
 #include "dispatcher/coro_dispatcher.h"
 #include "base/closure/closure_task.h"
 #include "dispatcher/coro_dispatcher.h"
 #include "protocol/raw/raw_message.h"
 #include "protocol/raw/raw_proto_service.h"
+
+using namespace lt;
+
+TEST_CASE("url.host_resolve", "[host resolve test]") {
+  std::string host_ip;
+  net::url::HostResolve("g.test.amnetapi.com", host_ip);
+  std::cout << "result:" << host_ip << std::endl;
+}
 
 TEST_CASE("uri.parse", "[http uri parse]") {
   {
@@ -61,4 +69,32 @@ TEST_CASE("uri.parse", "[http uri parse]") {
 
 }
 
+TEST_CASE("uri.parse.remote", "[remote uri parse]") {
+  std::vector<std::string> remote_uris = {
+    "http://gh:passwd@localhost:8020?abc=&name=1234",
+    "://gh:passwd@localhost:8020?abc=&name=1234",
+    "gh:passwd@localhost:8020?abc=&name=1234",
+    "gh:@localhost:8020?abc=&name=1234",
+    "gh@localhost:8020?abc=&name=1234",
+    "gh@localhost?abc=&name=1234",
+    "gh@localhost?",
+    "gh@localhost",
+    "localhost:80?abc=",
+  };
+
+  for (auto remote_uri : remote_uris) {
+    net::url::RemoteInfo remote;
+    remote.reset();
+
+    net::url::ParseRemote(remote_uri, remote, true);
+    LOG(INFO) << ">>>>>>:" << remote_uri;
+    LOG(INFO) << "protocol:" << remote.protocol
+      << " user:" << remote.user
+      << " psd:" << remote.passwd
+      << " host:" << remote.host
+      << " ip:" << remote.host_ip
+      << " port:" << remote.port
+      << " query:" << remote.querys.size();
+  }
+}
 

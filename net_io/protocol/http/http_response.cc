@@ -6,6 +6,7 @@
 #include "base/base_constants.h"
 #include "base/utils/string/str_utils.h"
 
+namespace lt {
 namespace net {
 
 //static
@@ -97,4 +98,4 @@ std::string HttpResponse::StatusCodeInfo() const {
   return desc;
 }
 
-};//end namespace net
+}};//end namespace net

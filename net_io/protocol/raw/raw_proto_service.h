@@ -4,6 +4,7 @@
 #include "raw_message.h"
 #include "protocol/proto_service.h"
 
+namespace lt {
 namespace net {
 
 // just work on same endian machine; if not, consider add net-endian convert code
@@ -38,5 +39,5 @@ private:
   static std::atomic<uint64_t> sequence_id_;
 };
 
-}
+}} //end lt::net
 #endif

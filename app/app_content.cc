@@ -7,7 +7,7 @@
 namespace content {
 
 App::App() {
-  content_loop_.SetLoopName("MainLoop");
+  content_loop_.SetLoopName("app_main");
   content_loop_.Start();
 }
 
@@ -18,12 +18,11 @@ base::MessageLoop* App::MainLoop() {
   return &content_loop_;
 }
 
-void App::RunApplication() {
+void App::Run() {
   LOG(INFO) << " Application Start";
 
-  //auto functor = std::bind(&App::ContentMain, this);
-  //content_loop_.PostTask(NewClosure(functor));
-  this->ContentMain();
+  auto functor = std::bind(&App::ContentMain, this);
+  content_loop_.PostTask(NewClosure(functor));
 
   content_loop_.WaitLoopEnd();
   LOG(INFO) << " Application End";

@@ -3,6 +3,7 @@
 
 #include "protocol/http/http_proto_service.h"
 
+namespace lt {
 namespace net {
 
 class HttpContext {
@@ -27,5 +28,5 @@ class HttpContext {
     base::MessageLoop* io_loop_ = NULL;
 };
 
-}
+}}
 #endif

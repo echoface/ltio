@@ -7,7 +7,9 @@
 
 namespace base {
 
-// see https://github.com/yedf/handy/blob/master/handy/daemon.cc
+//   signal(SIGPIPE, SIG_IGN);
+void IgnoreSigPipeSignalOnCurrentThread();
+
 struct Signal {
     static void signal(int sig, const std::function<void()>& handler);
 };

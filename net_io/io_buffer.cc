@@ -15,6 +15,7 @@
 static const char kCRLF[] = "\r\n";
 static const int32_t kWarningBufferSize = 64 * 1024 * 1024;
 
+namespace lt {
 namespace net {
 
 IOBuffer::IOBuffer(uint64_t init_size) :
@@ -109,5 +110,4 @@ const uint8_t* IOBuffer::FindCRLF() {
   return res == GetWrite() ? NULL : res;
 }
 
-
-}
+}}

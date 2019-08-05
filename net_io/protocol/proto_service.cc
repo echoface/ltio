@@ -5,6 +5,7 @@
 
 #include "tcp_channel.h"
 
+namespace lt {
 namespace net {
 
 ProtoService::ProtoService(){}
@@ -51,4 +52,4 @@ void ProtoService::OnChannelClosed(const RefTcpChannel& channel) {
 	}
 }
 
-}// end namespace
+}}// end namespace

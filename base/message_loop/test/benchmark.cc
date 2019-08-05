@@ -13,6 +13,7 @@ base::MessageLoop g_loop;
 
 const static  int max_task_per_producer = 10000000;
 static int64_t finished_task_counter = 0;
+int system_concurrency = std::thread::hardware_concurrency();
 
 void TaskProducer(int i) {
 
@@ -25,7 +26,7 @@ void TaskProducer(int i) {
 
     bool ok = g_loop.PostTask(NewClosure([&]() {
       finished_task_counter++;
-      if (max_task_per_producer * std::thread::hardware_concurrency() == finished_task_counter) {
+      if (max_task_per_producer * system_concurrency == finished_task_counter) {
         int64_t end = base::time_ms();
         LOG(INFO) << " all task finished @" << end << " total spend:" << end - start_at << "(ms)";
         g_loop.QuitLoop();
@@ -45,17 +46,17 @@ int main() {
   g_flag.store(0);
   thread_end.store(0);
   g_post_counter.store(0);
+  system_concurrency = std::min(system_concurrency, 4);
 
   g_loop.SetLoopName("target");
   g_loop.Start();
   sleep(1);
 
-  int system_concurrency = std::thread::hardware_concurrency();
   std::thread* threads[system_concurrency];
   for (int i = 0; i < system_concurrency; i++) {
     threads[i] = new std::thread(std::bind(&TaskProducer, i));
   }
-  
+
   start_at = base::time_ms();
   LOG(INFO) << " all task start @" << start_at;
   g_flag.store(1);
@@ -68,6 +69,6 @@ int main() {
   for (auto t : threads) {
     delete t;
   }
-  LOG(INFO) << "post " << g_post_counter << " success"; 
+  LOG(INFO) << "post " << g_post_counter << " success";
   return  0;
 }

@@ -1,18 +1,18 @@
 #include "event_pump.h"
 
 #include "glog/logging.h"
-#include "io_multiplexer_epoll.h"
+#include "io_mux_epoll.h"
 #include "linux_signal.h"
 
 namespace base {
 
 EventPump::EventPump() : delegate_(NULL), running_(false) {
-  multiplexer_.reset(new base::IoMultiplexerEpoll());
+  multiplexer_.reset(new base::IOMuxEpoll());
   InitializeTimeWheel();
 }
 
 EventPump::EventPump(PumpDelegate *d) : delegate_(d), running_(false) {
-  multiplexer_.reset(new base::IoMultiplexerEpoll());
+  multiplexer_.reset(new base::IOMuxEpoll());
   InitializeTimeWheel();
 }
 
@@ -24,8 +24,9 @@ EventPump::~EventPump() {
 }
 
 void EventPump::Run() {
-  // sigpipe
-  Signal::signal(SIGPIPE, []() { LOG(ERROR) << "sigpipe."; });
+  static const uint64_t default_timeout_ms = 2000;
+
+  IgnoreSigPipeSignalOnCurrentThread();
 
   if (delegate_) {
     delegate_->BeforePumpRun();
@@ -34,15 +35,14 @@ void EventPump::Run() {
   running_ = true;
 
   std::vector<FdEvent *> active_events;
-  static uint64_t default_epoll_timeout_us = 2000000;
 
+  uint64_t perfect_timeout_ms = 0;
   while (running_) {
     active_events.clear();
 
-    uint64_t perfect_timeout_us = NextTimerTimeout(default_epoll_timeout_us);
+    perfect_timeout_ms = NextTimerTimeout(default_timeout_ms);
 
-    multiplexer_->WaitingIO(active_events, perfect_timeout_us / 1000.0);
-
+    multiplexer_->WaitingIO(active_events, perfect_timeout_ms);
     ProcessTimerEvent();
 
     for (auto &fd_event : active_events) {
@@ -74,7 +74,7 @@ QuitClosure EventPump::Quit_Clourse() {
 bool EventPump::InstallFdEvent(FdEvent *fd_event) {
   CHECK(IsInLoopThread());
   if (fd_event->EventWatcher()) {
-    LOG(ERROR) << __FUNCTION__ << " event has has monitored";
+    LOG(ERROR) << __FUNCTION__ << " event has registered," << fd_event->EventInfo();
     return false;
   }
 
@@ -86,7 +86,7 @@ bool EventPump::InstallFdEvent(FdEvent *fd_event) {
 bool EventPump::RemoveFdEvent(FdEvent *fd_event) {
   CHECK(IsInLoopThread());
   if (!fd_event->EventWatcher()) {
-    LOG(ERROR) << __FUNCTION__ << " event don't attach to any Pump";
+    LOG(ERROR) << __FUNCTION__ << " event not been registered, " << fd_event->EventInfo();
     return false;
   }
   fd_event->SetFdWatcher(nullptr);
@@ -102,7 +102,7 @@ void EventPump::OnEventChanged(FdEvent *fd_event) {
 
 void EventPump::AddTimeoutEvent(TimeoutEvent *timeout_ev) {
   CHECK(IsInLoopThread());
-  add_timer_internal(time_us(), timeout_ev);
+  add_timer_internal(time_ms(), timeout_ev);
 }
 
 void EventPump::RemoveTimeoutEvent(TimeoutEvent *timeout_ev) {
@@ -110,12 +110,12 @@ void EventPump::RemoveTimeoutEvent(TimeoutEvent *timeout_ev) {
   ::timeouts_del(timeout_wheel_, timeout_ev);
 }
 
-void EventPump::add_timer_internal(uint64_t now_us, TimeoutEvent *event) {
-  ::timeouts_add(timeout_wheel_, event, now_us + event->IntervalMicroSecond());
+void EventPump::add_timer_internal(uint64_t now, TimeoutEvent *event) {
+  ::timeouts_add(timeout_wheel_, event, now + event->Interval());
 }
 
 void EventPump::ProcessTimerEvent() {
-  uint64_t now = time_us();
+  uint64_t now = time_ms();
   ::timeouts_update(timeout_wheel_, now);
 
   std::vector<TimeoutEvent *> to_be_deleted;
@@ -133,11 +133,9 @@ void EventPump::ProcessTimerEvent() {
       to_be_deleted.push_back(timeout_ev);
     }
     // Must at end; avoid case: ABA
-    // timer A invoke ->
-    // {do something but remove this time event and create a new timer magic use
-    // the same memory} -> use A(but actually is B timer) again
+    // timer A invoke -> delete A -> new A'(in same memory) -> free A'
     timeout_ev->Invoke();
-  } // end while
+  }
 
   for (auto toe : to_be_deleted) {
     delete toe;
@@ -145,8 +143,7 @@ void EventPump::ProcessTimerEvent() {
 }
 
 timeout_t EventPump::NextTimerTimeout(timeout_t default_timeout) {
-
-  ::timeouts_update(timeout_wheel_, time_us());
+  ::timeouts_update(timeout_wheel_, time_ms());
 
   if (::timeouts_expired(timeout_wheel_)) {
     return 0;
@@ -159,8 +156,8 @@ timeout_t EventPump::NextTimerTimeout(timeout_t default_timeout) {
 
 void EventPump::InitializeTimeWheel() {
   int err = 0;
-  timeout_wheel_ = ::timeouts_open(TIMEOUT_uHZ, &err);
-  ::timeouts_update(timeout_wheel_, time_us());
+  timeout_wheel_ = ::timeouts_open(TIMEOUT_mHZ, &err);
+  ::timeouts_update(timeout_wheel_, time_ms());
 }
 
 void EventPump::FinalizeTimeWheel() {

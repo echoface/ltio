@@ -17,12 +17,13 @@ TEST_CASE("repeat_timer.normal", "[repeating time test]") {
   });
 
   loop.PostDelayTask(NewClosure([&]() {
+    timer.Stop();
     loop.QuitLoop();
   }), total_time_ms);
 
   loop.WaitLoopEnd();
   LOG(INFO) << "should finish:" << total_time_ms/interval_ms << " finished:" << invoke_count;
-  REQUIRE((invoke_count == total_time_ms/interval_ms));
+  REQUIRE(std::abs(invoke_count - (total_time_ms/interval_ms)) < 50);
 }
 
 TEST_CASE("repeat_timer.stop", "[repeating time stop test]") {

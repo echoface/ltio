@@ -5,7 +5,7 @@ SET(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 aux_source_directory(. LOGMETRICS_SOURCES)
 
-ADD_LIBRARY(logmetrics STATIC ${LOGMETRICS_SOURCES})
+ADD_LIBRARY(ltmetrics STATIC ${LOGMETRICS_SOURCES})
 
 ADD_EXECUTABLE(log_metrics_test
   ./test/log_metrics_test.cc

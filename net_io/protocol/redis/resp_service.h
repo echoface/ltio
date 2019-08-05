@@ -4,6 +4,7 @@
 #include "redis_response.h"
 #include "protocol/proto_service.h"
 
+namespace lt {
 namespace net {
 
 class RespService : public ProtoService {
@@ -24,5 +25,5 @@ private:
   resp::decoder decoder_;
 };
 
-}// end namespace
+}}// end namespace
 #endif

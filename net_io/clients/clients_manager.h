@@ -1,8 +1,9 @@
 #ifndef _NET_CLIENTS_MANAGER_H_H
 #define _NET_CLIENTS_MANAGER_H_H
 
-#include "client_router.h"
+#include "client.h"
 
+namespace lt {
 namespace net {
 
 
@@ -16,5 +17,5 @@ private:
 
 };
 
-} //end net
+}} //end net
 #endif

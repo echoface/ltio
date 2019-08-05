@@ -40,7 +40,7 @@ TEST_CASE("event_pump.timer", "[test event pump timer]") {
   }));
 
   uint64_t start, end;
-  base::TimeoutEvent* quit_toe = base::TimeoutEvent::CreateOneShotTimer(30000, true);
+  base::TimeoutEvent* quit_toe = base::TimeoutEvent::CreateOneShot(30000, true);
   quit_toe->InstallTimerHandler(NewClosure([&]() {
     end = base::time_ms();
     std::cout << "end at ms:" << end << std::endl;
@@ -75,6 +75,7 @@ TEST_CASE("messageloop.delaytask", "[run delay task]") {
   uint64_t start = base::time_ms();
   loop.PostDelayTask(NewClosure([&]() {
     uint64_t end = base::time_ms();
+    LOG(INFO) << "delay task run:" << end - start << "(ms), expect 500";
     REQUIRE(((end - start >= 500) && (end - start <= 501)));
   }), 500);
 
@@ -96,27 +97,35 @@ TEST_CASE("messageloop.replytask", "[task with reply function]") {
   bool inloop_reply_run = false;
   bool outloop_reply_run = false;
 
-  loop.PostTaskAndReply(NewClosure([&]() {
+  loop.PostTaskAndReply([&]() {
     LOG(INFO) << " task bind reply in loop run";
-  }), NewClosure([&]() {
+  }, [&]() {
     inloop_reply_run = true;
     REQUIRE(base::MessageLoop::Current() == &loop);
-  }));
+    inloop_reply_run = false;
+  }, FROM_HERE);
 
-  loop.PostTaskAndReply(NewClosure([&]() {
+  loop.PostTaskAndReply([&]() {
+    LOG(INFO) << " task bind stlclosure reply in loop run";
+  }, [&]() {
+    inloop_reply_run = true;
+    REQUIRE(base::MessageLoop::Current() == &loop);
+    inloop_reply_run = false;
+  }, FROM_HERE);
+
+  loop.PostTaskAndReply([&]() {
     LOG(INFO) << " task bind reply use another loop run";
-  }), NewClosure([&]() {
+  }, [&]() {
     outloop_reply_run = true;
     REQUIRE(base::MessageLoop::Current() == &replyloop);
-  }), &replyloop);
+    outloop_reply_run = false;
+  }, &replyloop, FROM_HERE);
 
 
   loop.PostDelayTask(NewClosure([&](){
     loop.QuitLoop();
   }), 2000);
   loop.WaitLoopEnd();
-  REQUIRE(inloop_reply_run);
-  REQUIRE(outloop_reply_run);
 }
 
 

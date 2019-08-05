@@ -7,6 +7,7 @@
 #include "base/closure/closure_task.h"
 #include <base/utils/sys_error.h>
 
+namespace lt {
 namespace net {
 
 
@@ -228,8 +229,12 @@ int32_t TcpChannel::Send(const uint8_t* data, const int32_t len) {
       } else {
         // to avoid A -> B -> callback  delete A problem, we use a writecallback handle this
       	fatal_err = errno;
-        LOG(ERROR) << __FUNCTION__ << ChannelInfo() << " send err:" << base::StrError() << " schedule close channel";
         schedule_shutdown_ = true;
+        SetChannelStatus(Status::CLOSING);
+        if (!fd_event_->IsWriteEnable()) {
+          fd_event_->EnableWriting();
+        }
+        LOG(ERROR) << ChannelInfo() << " send err:" << base::StrError() << " schedule close";
       }
       break;
     }
@@ -239,7 +244,7 @@ int32_t TcpChannel::Send(const uint8_t* data, const int32_t len) {
     DCHECK((n_write + n_remain) == size_t(len));
   } while(n_remain != 0);
 
-  if (!fd_event_->IsWriteEnable() && (out_buffer_.CanReadSize() || schedule_shutdown_)) {
+  if (!fd_event_->IsWriteEnable() && out_buffer_.CanReadSize() > 0) {
     fd_event_->EnableWriting();
   }
   return fatal_err != 0 ? -1 : n_write;
@@ -272,4 +277,4 @@ bool TcpChannel::IsConnected() const {
   return status_ == Status::CONNECTED;
 }
 
-}
+}} //end lt::net

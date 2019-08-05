@@ -2,6 +2,7 @@
 #include "http_context.h"
 #include "protocol/proto_service.h"
 
+namespace lt {
 namespace net {
 
 HttpContext::HttpContext(const RefHttpRequest& request)
@@ -75,4 +76,4 @@ void HttpContext::DoReplyResponse(RefHttpResponse& response) {
   }
 }
 
-}
+}}

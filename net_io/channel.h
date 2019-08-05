@@ -8,6 +8,7 @@
 #include "net_callback.h"
 
 // socket chennel interface and base class
+namespace lt {
 namespace net {
 
 class ChannelConsumer {
@@ -18,6 +19,5 @@ public:
 	virtual void OnDataReceived(const RefTcpChannel &, IOBuffer *) = 0;
 };
 
-}
-
+}}
 #endif //LIGHTINGIO_NET_CHANNEL_H

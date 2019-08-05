@@ -4,6 +4,7 @@
 #include "line_message.h"
 #include "line_proto_service.h"
 
+namespace lt {
 namespace net {
 
 LineProtoService::LineProtoService()
@@ -59,4 +60,4 @@ bool LineProtoService::SendResponseMessage(const RefProtocolMessage& req, const 
   return SendRequestMessage(res);
 };
 
-}//end of file
+}}//end of file

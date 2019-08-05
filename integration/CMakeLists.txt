@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 2.8)
+
+ADD_DEFINITIONS(-std=c++11)
+SET(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+ADD_SUBDIRECTORY(async_mysql)

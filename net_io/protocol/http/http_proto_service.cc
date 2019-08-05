@@ -8,6 +8,7 @@
 #include "protocol/proto_message.h"
 #include "base/utils/gzip/gzip_utils.h"
 
+namespace lt {
 namespace net {
 
 static const int32_t kMeanHeaderSize = 32;
@@ -324,4 +325,4 @@ bool HttpProtoService::BeforeSendResponseMessage(HttpRequest* request, HttpRespo
   return true;
 }
 
-}//end namespace
+}}//end namespace

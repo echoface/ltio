@@ -5,13 +5,14 @@
 
 #include "../tcp_channel.h"
 #include "../socket_utils.h"
-#include "../service_acceptor.h"
+#include "../socket_acceptor.h"
 #include "../protocol/proto_service.h"
 #include "../protocol/line/line_message.h"
 #include "../protocol/http/http_request.h"
 #include "../protocol/http/http_response.h"
 #include "../protocol/proto_service_factory.h"
 
+namespace lt {
 namespace net {
 
 class Connector;
@@ -32,6 +33,7 @@ public:
   Connector(base::MessageLoop* loop, ConnectorDelegate* delegate);
   ~Connector() {};
 
+  //TODO: add a connect timeout
   bool Launch(const net::SocketAddress &address);
 
   void OnWrite(WeakPtrFdEvent weak_fdevent);
@@ -49,5 +51,5 @@ private:
   std::set<base::RefFdEvent> connecting_sockets_;
 };
 
-}
+}}
 #endif

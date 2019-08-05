@@ -67,6 +67,7 @@ public:
   inline void GiveupOwnerFd() {owner_fd_life_ = false;}
 
   std::string EventInfo() const;
+  LtEvent ActivedEvent() const {return revents_;};
   std::string RcvEventAsString() const;
   std::string MonitorEventAsString() const;
 private:

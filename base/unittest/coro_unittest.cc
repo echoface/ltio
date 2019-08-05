@@ -9,6 +9,7 @@
 #include <coroutine/coroutine.h>
 #include <message_loop/message_loop.h>
 #include <coroutine/coroutine_runner.h>
+#include <coroutine/wait_group.h>
 
 #include <catch/catch.hpp>
 
@@ -63,16 +64,15 @@ TEST_CASE("coro.co_resumer", "[coroutine resumer with loop reply task]") {
   // big stack function;
   co_go &loop << [&]() {
     LOG(INFO) << " coroutine enter ..";
-    loop.PostTaskAndReply(NewClosure(stack_sensitive_fn), NewClosure(co_resumer));
+    loop.PostTaskAndReply(stack_sensitive_fn, co_resumer, NULL, FROM_HERE);
     LOG(INFO) << " coroutine pasued..";
     co_yield;
     LOG(INFO) << " coroutine resumed..";
     stack_sensitive_fn_resumed = true;
+
+    loop.QuitLoop();
   };
 
-  loop.PostDelayTask(NewClosure([&]() {
-    loop.QuitLoop();
-  }), 5000); // exit ater 5s
 
   loop.WaitLoopEnd();
 
@@ -97,10 +97,42 @@ TEST_CASE("coro.co_sleep", "[coroutine sleep]") {
 
   loop.PostDelayTask(NewClosure([&]() {
     loop.QuitLoop();
-  }), 1000); // exit ater 5s
+  }), 5000); // exit ater 5s
 
   loop.WaitLoopEnd();
 
-  REQUIRE(co_sleep_resumed);
+  REQUIRE(co_sleep_resumed == true);
+}
+
+TEST_CASE("coro.waitGroup", "[coroutine resumer with loop reply task]") {
+  base::MessageLoop loop; loop.Start();
+
+  co_go &loop << [&]() { //main
+    LOG(INFO) << "main start...";
+
+    base::WaitGroup wg;
+
+    co_go [&]() {
+      wg.Add(1);
+      co_sleep(500);
+      wg.Done();
+    };
+
+    co_go [&]() {
+      wg.Add(1);
+      co_sleep(501);
+      wg.Done();
+    };
+
+    co_go [&]() {
+      wg.Add(1);
+      co_sleep(490);
+      wg.Done();
+    };
+
+    wg.Wait(500);
+    loop.QuitLoop();
+  };
+  loop.WaitLoopEnd();
 }
 

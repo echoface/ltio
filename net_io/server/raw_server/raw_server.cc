@@ -1,13 +1,14 @@
 #include "raw_server.h"
 #include "io_service.h"
 #include "glog/logging.h"
-#include "inet_address.h"
+#include "address.h"
 #include "tcp_channel.h"
-#include "url_string_utils.h"
+#include "url_utils.h"
 #include "protocol/proto_service.h"
 #include "message_loop/linux_signal.h"
 #include "protocol/proto_service_factory.h"
 
+namespace lt {
 namespace net {
 
 RawServer::RawServer():
@@ -211,4 +212,4 @@ void RawServer::StopServer() {
   }
 }
 
-} //end net
+}} //end net

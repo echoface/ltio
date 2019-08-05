@@ -3,12 +3,12 @@
 
 namespace base {
 
-IoMultiplexer::IoMultiplexer() {
+IOMux::IOMux() {
 }
-IoMultiplexer::~IoMultiplexer() {
+IOMux::~IOMux() {
 }
 
-uint32_t IoMultiplexer::WatchingFdCounts() const {
+uint32_t IOMux::WatchingFdCounts() const {
   return listen_events_.Size();
 }
 

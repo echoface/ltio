@@ -37,7 +37,7 @@ std::vector<BitMapPostingList*> RangeField::GetIncludeBitmap(
   std::vector<BitMapPostingList*> result;
 
   int32_t assign = 0;
-  if (!base::StrUtils::ParseTo(value, assign)) {
+  if (!base::Str::ParseTo(value, assign)) {
     return result;
   }
 
@@ -53,7 +53,7 @@ std::vector<BitMapPostingList*> RangeField::GetExcludeBitmap(
   std::vector<BitMapPostingList*> result;
 
   int32_t assign = 0;
-  if (!base::StrUtils::ParseTo(value, assign)) {
+  if (!base::Str::ParseTo(value, assign)) {
     return result;
   }
 
@@ -66,20 +66,20 @@ std::vector<BitMapPostingList*> RangeField::GetExcludeBitmap(
 
 bool RangeField::ParseRange(const std::string& assign, int32_t& start,
                             int32_t& end) {
-  auto range = base::StrUtils::Split(assign, delim_);
+  auto range = base::Str::Split(assign, delim_);
   switch (range.size()) {
     case 0:
       return false;
     case 1: {
-      bool ok = base::StrUtils::ParseTo(range[0], start);
+      bool ok = base::Str::ParseTo(range[0], start);
       if (ok) {
         end = start;
       }
       return ok;
     } break;
     case 2: {
-      return base::StrUtils::ParseTo(range[1], end) &&
-        base::StrUtils::ParseTo(range[0], start);
+      return base::Str::ParseTo(range[1], end) &&
+        base::Str::ParseTo(range[0], start);
     } break;
     default:
       break;

@@ -5,6 +5,7 @@
 #include <memory>
 #include <functional>
 
+namespace lt {
 namespace net {
 
 class IOBuffer;
@@ -39,9 +40,6 @@ typedef std::weak_ptr<ProtoService> WeakProtoService;
 /* ============== io service ====== */
 typedef std::shared_ptr<IOService> RefIOService;
 typedef std::unique_ptr<IOService> IOServicePtr;
-//typedef std::function<void
-//std::map<std::string/*protocol*/,
-typedef std::unique_ptr<ProtocolMessage> OwnedProtocolMessage;
 
-}
+}}
 #endif

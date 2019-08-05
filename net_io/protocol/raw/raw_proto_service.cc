@@ -4,9 +4,9 @@
 #include "io_buffer.h"
 #include "tcp_channel.h"
 #include "raw_message.h"
-#include "net_endian.h"
 #include "raw_proto_service.h"
 
+namespace lt {
 namespace net {
 
 std::atomic<uint64_t> RawProtoService::sequence_id_ = ATOMIC_VAR_INIT(1);
@@ -162,4 +162,4 @@ void RawProtoService::OnHeartBeat() {
   heart_beat_alive_ = false;
 }
 
-};
+}};

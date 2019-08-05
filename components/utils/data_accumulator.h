@@ -6,9 +6,27 @@
 #include <inttypes.h>
 #include <functional>
 #include <unordered_map>
-#include <base/spin_lock.h>
+#include <memory/spin_lock.h>
 
 namespace component {
+
+/**
+ * usage: define your struct Data
+ *
+ * impliment operator+ for your Data struct
+ *
+ * component::AccumulatorCollector<Data> DataCollector;
+ * regist a commit handler with:
+ * DataCollector.SetHandler(callback);
+ * DataCollector.Start();
+ *
+ * collect(sumup) data in you code:
+ * DataCollector.Collect(key, value);
+ *
+ * when callback invoke, handle your data
+ *
+ * StopCollector manually or stop with desctructor
+ * **/
 
 template<class T>
 class Accumulator {

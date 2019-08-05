@@ -8,9 +8,10 @@
 #include "coroutine/coroutine_runner.h"
 
 #include "clients/client_connector.h"
-#include "clients/client_router.h"
+#include "clients/client.h"
 
-using namespace net;
+using namespace lt::net;
+using namespace lt;
 using namespace base;
 
 #define ENBALE_RAW_CLIENT
@@ -49,12 +50,12 @@ void HandleRaw(const LtRawMessage* req, LtRawMessage* res) {
   res->SetContent("Raw Message");
 }
 
-net::ClientRouter*  raw_router; //(base::MessageLoop*, const SocketAddress&);
-net::ClientRouter*  http_router; //(base::MessageLoop*, const SocketAddress&);
-net::ClientRouter*  redis_router;
+net::Client*  raw_client; //(base::MessageLoop*, const SocketAddress&);
+net::Client*  http_client; //(base::MessageLoop*, const SocketAddress&);
+net::Client*  redis_client;
 
 static std::atomic_int io_round_count;
-class RouterManager: public net::RouterDelegate {
+class RouterManager: public net::ClientDelegate {
 public:
   base::MessageLoop* NextIOLoopForClient() {
     if (loops.empty()) {
@@ -71,44 +72,41 @@ void StartRedisClient() {
   net::url::SchemeIpPort server_info;
   LOG_IF(ERROR, !net::url::ParseURI("redis://127.0.0.1:6379", server_info)) << " server can't be resolve";
 
-  redis_router = new net::ClientRouter(&main_loop, server_info);
-  net::RouterConf router_config;
-  router_config.connections = 2;
-  router_config.recon_interval = 5000;
-  router_config.message_timeout = 1000;
-  redis_router->SetupRouter(router_config);
-  redis_router->SetDelegate(&router_manager);
+  redis_client = new net::Client(&main_loop, server_info);
+  net::ClientConfig config;
+  config.connections = 2;
+  config.recon_interval = 5000;
+  config.message_timeout = 1000;
+  redis_client->SetDelegate(&router_manager);
 
-  redis_router->StartRouter();
+  redis_client->Initialize(config);
 }
 
 void StartRawClient(std::string server_addr) {
   net::url::SchemeIpPort server_info;
   LOG_IF(ERROR, !net::url::ParseURI(server_addr, server_info)) << " server can't be resolve";
 
-  raw_router = new net::ClientRouter(&main_loop, server_info);
-  net::RouterConf router_config;
-  router_config.connections = 4;
-  router_config.recon_interval = 100;
-  router_config.message_timeout = 1000;
-  raw_router->SetupRouter(router_config);
-  raw_router->SetDelegate(&router_manager);
+  raw_client = new net::Client(&main_loop, server_info);
+  net::ClientConfig config;
+  config.connections = 4;
+  config.recon_interval = 100;
+  config.message_timeout = 1000;
+  raw_client->SetDelegate(&router_manager);
 
-  raw_router->StartRouter();
+  raw_client->Initialize(config);
 }
 
 void StartHttpClients(std::string url) {
   net::url::SchemeIpPort server_info;
   LOG_IF(ERROR, !net::url::ParseURI(url, server_info)) << " server can't be resolve";
-  http_router = new net::ClientRouter(&main_loop, server_info);
-  net::RouterConf router_config;
-  router_config.connections = 2;
-  router_config.recon_interval = 100;
-  router_config.message_timeout = 1000;
-  http_router->SetupRouter(router_config);
-  http_router->SetDelegate(&router_manager);
+  http_client = new net::Client(&main_loop, server_info);
+  net::ClientConfig config;
+  config.connections = 2;
+  config.recon_interval = 100;
+  config.message_timeout = 1000;
 
-  http_router->StartRouter();
+  http_client->SetDelegate(&router_manager);
+  http_client->Initialize(config);
 }
 
 void SendHttpRequest() {
@@ -117,7 +115,7 @@ void SendHttpRequest() {
   http_request->SetRequestURL("/abc/list");
   http_request->SetKeepAlive(true);
 
-  HttpResponse* http_response = http_router->SendRecieve(http_request);
+  HttpResponse* http_response = http_client->SendRecieve(http_request);
   if (http_response) {
     LOG(INFO) << "http client got response:" << http_response->Body();
   } else {
@@ -130,7 +128,7 @@ void SendRawRequest() {
   raw_request->MutableHeader()->method = 12;
   raw_request->SetContent("ABC");
 
-  LtRawMessage* raw_response = raw_router->SendRecieve(raw_request);
+  LtRawMessage* raw_response = raw_client->SendRecieve(raw_request);
   if (!raw_response) {
     LOG(ERROR) << "raw client request failed:" << raw_request->FailCode();
   }
@@ -199,7 +197,7 @@ void SendRedisMessage() {
   redis_request->Persist("counter");
   redis_request->TTL("counter");
 
-  auto redis_response  = redis_router->SendRecieve(redis_request);
+  auto redis_response  = redis_client->SendRecieve(redis_request);
   if (redis_response) {
     DumpRedisResponse(redis_response);
   } else {

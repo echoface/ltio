@@ -1,5 +1,6 @@
 #include "redis_request.h"
 
+namespace lt {
 namespace net {
 
 RedisRequest::RedisRequest() :
@@ -166,4 +167,4 @@ void RedisRequest::Expire(const std::string& key, uint64_t second) {
   cmd_counter_++;
 }
 
-} //end namespace
+}} //end namespace

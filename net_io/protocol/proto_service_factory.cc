@@ -7,6 +7,7 @@
 #include "line/line_proto_service.h"
 #include "http/http_proto_service.h"
 
+namespace lt {
 namespace net {
 
 //static
@@ -62,4 +63,4 @@ void ProtoServiceFactory::InitInnerDefault() {
   }));
 }
 
-}//end namespace net
+}}//end namespace net

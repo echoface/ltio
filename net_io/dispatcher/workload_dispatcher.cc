@@ -4,6 +4,7 @@
 
 #include "protocol/proto_message.h"
 
+namespace lt {
 namespace net {
 
 Dispatcher::Dispatcher(bool handle_in_io)
@@ -37,4 +38,4 @@ bool Dispatcher::Dispatch(base::StlClosure& clourse) {
   return loop->PostTask(NewClosure(clourse));
 }
 
-}//end namespace net
+}}//end namespace net

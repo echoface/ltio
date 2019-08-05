@@ -2,6 +2,7 @@
 #include "message_loop/event.h"
 #include <base/utils/sys_error.h>
 
+namespace lt {
 namespace net {
 
 Connector::Connector(base::MessageLoop* loop, ConnectorDelegate* delegate)
@@ -24,9 +25,9 @@ bool Connector::Launch(const net::SocketAddress &address) {
   bool success = false;
 
   int state = 0;
-  net::socketutils::SocketConnect(sock_fd, sock_addr, &state);
+  socketutils::SocketConnect(sock_fd, sock_addr, &state);
 
-  switch(state)  {
+  switch(state) {
     case 0:
     case EINTR:
     case EISCONN:
@@ -118,4 +119,4 @@ void Connector::CleanUpBadChannel(base::RefFdEvent& event) {
   LOG(INFO) << "Now Has " << connecting_sockets_.size() << " In Connecting Progress";
 }
 
-}//end namespace
+}}//end namespace

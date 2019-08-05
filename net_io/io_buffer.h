@@ -8,7 +8,9 @@
 #include <string>
 #include <string.h>
 
+namespace lt {
 namespace net {
+
 #define kDefaultInitialSize 4096
 
 class IOBuffer {
@@ -54,5 +56,5 @@ private:
   std::vector<uint8_t> data_;
 };
 
-}
+}}
 #endif

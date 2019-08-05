@@ -11,14 +11,14 @@ namespace base {
 
 class TimeoutEvent : public Timeout {
 public:
-  static TimeoutEvent* CreateOneShotTimer(uint64_t ms, bool delelte_after_invoke);
+  static TimeoutEvent* CreateOneShot(uint64_t ms, bool delelte_after_invoke);
 
   TimeoutEvent(uint64_t ms, bool repeat);
   ~TimeoutEvent();
 
   void Invoke();
   void UpdateInterval(int64_t ms);
-  void InstallTimerHandler(ClosurePtr&& h);
+  void InstallTimerHandler(TaskBasePtr&& h);
   bool IsRepeated() const {return repeat_;}
   inline bool DelAfterInvoke() const {return del_after_invoke_;}
   inline bool IsAttached() const {return pending != NULL;}
@@ -27,9 +27,9 @@ public:
 private:
   bool repeat_ = false;
   bool use_coro_ = false;
-  uint64_t interval_ = 0;
+  uint64_t interval_ = 0; //ms
   bool del_after_invoke_ = false;
-  ClosurePtr timer_handler_;
+  TaskBasePtr timer_handler_;
 };
 
 }

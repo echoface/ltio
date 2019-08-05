@@ -6,6 +6,7 @@
 #include "redis_request.h"
 #include "protocol/proto_service.h"
 
+namespace lt {
 namespace net {
 
 RespService::RespService()
@@ -69,4 +70,4 @@ bool RespService::SendResponseMessage(const RefProtocolMessage& req, const RefPr
   return false;
 };
 
-} //end namespace
+}} //end namespace

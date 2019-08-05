@@ -5,12 +5,13 @@
 #include <unordered_set>
 #include <unordered_map>
 #include "net_callback.h"
-#include "service_acceptor.h"
+#include "socket_acceptor.h"
 #include "protocol/proto_message.h"
 #include "protocol/proto_service.h"
 #include "dispatcher/workload_dispatcher.h"
 #include "base/message_loop/message_loop.h"
 
+namespace lt {
 namespace net {
 
 class IOService;
@@ -88,5 +89,5 @@ private:
   std::unordered_set<RefProtoService> protocol_services;
 };
 
-}
+}}
 #endif
