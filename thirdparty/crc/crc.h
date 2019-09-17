@@ -2,8 +2,7 @@
 #define __CRC_H_2011__
 
 /**
- * @file crc.h
- * This file is ported from FFmpeg.
+ * ported from FFmpeg.
  */
 
 #include <stdint.h>
@@ -28,5 +27,3 @@ uint64_t crc64(uint64_t crc, const unsigned char *s, uint64_t l);
 #endif
 
 #endif /* __CRC_H_2011__ */
-
-

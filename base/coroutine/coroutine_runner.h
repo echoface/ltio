@@ -33,7 +33,7 @@ public:
       target_loop_ = loop;
       return *this;
     }
-    // here must make sure all things wraper(copy) into closue, 
+    // here must make sure all things wraper(copy) into closue,
     // becuase __go object will destruction before task closure run
     template <typename Functor>
     inline void operator<<(Functor closure_fn) {

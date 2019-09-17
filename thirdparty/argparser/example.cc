@@ -41,8 +41,7 @@ int main(int argc, char* argv[]) {
 
   if (parser.is_help()) return 0;
   std::cout << "a: " << parser.get<int>("a") << std::endl;
-  std::cout << "flag: " << std::boolalpha << parser.get<bool>("flag")
-            << std::endl;
+  std::cout << "flag: " << std::boolalpha << parser.get<bool>("flag") << std::endl;
   std::cout << "d: " << std::boolalpha << parser.get<bool>("d") << std::endl;
   std::cout << "long flag: " << std::boolalpha << parser.get<bool>("l")
             << std::endl;
@@ -60,8 +59,7 @@ int main(int argc, char* argv[]) {
   std::cout << parser.get<std::string>("files") << std::endl;
   f = parser.getv<std::string>("");
   std::cout << "free args: ";
-  std::copy(f.begin(), f.end(),
-            std::ostream_iterator<std::string>(std::cout, " "));
+  std::copy(f.begin(), f.end(), std::ostream_iterator<std::string>(std::cout, " "));
   std::cout << std::endl;
   return 0;
 }
