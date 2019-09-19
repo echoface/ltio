@@ -30,14 +30,14 @@ int main(int argc, char** argv) {
   base::MessageLoop mainloop;
 
   net::ClientConfig config;
-  net::url::SchemeIpPort server_info;
+  net::url::RemoteInfo server_info;
 
   if (argc < 2) {
     std::cout << "format error, eg:./raw_client ip:port" << std::endl;
     return -1;
   }
   arg_host = argv[1];
-  if (!net::url::ParseURI("raw://" + arg_host, server_info)) {
+  if (!net::url::ParseRemote("raw://" + arg_host, server_info)) {
     LOG(ERROR) << " address" << arg_host << " not correct";
     return -1;
   }

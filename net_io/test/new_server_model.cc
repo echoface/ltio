@@ -69,8 +69,8 @@ public:
 RouterManager router_manager;
 
 void StartRedisClient() {
-  net::url::SchemeIpPort server_info;
-  LOG_IF(ERROR, !net::url::ParseURI("redis://127.0.0.1:6379", server_info)) << " server can't be resolve";
+  net::url::RemoteInfo server_info;
+  LOG_IF(ERROR, !net::url::ParseRemote("redis://127.0.0.1:6379", server_info)) << " server can't be resolve";
 
   redis_client = new net::Client(&main_loop, server_info);
   net::ClientConfig config;
@@ -83,8 +83,8 @@ void StartRedisClient() {
 }
 
 void StartRawClient(std::string server_addr) {
-  net::url::SchemeIpPort server_info;
-  LOG_IF(ERROR, !net::url::ParseURI(server_addr, server_info)) << " server can't be resolve";
+  net::url::RemoteInfo server_info;
+  LOG_IF(ERROR, !net::url::ParseRemote(server_addr, server_info)) << " server can't be resolve";
 
   raw_client = new net::Client(&main_loop, server_info);
   net::ClientConfig config;
@@ -97,8 +97,8 @@ void StartRawClient(std::string server_addr) {
 }
 
 void StartHttpClients(std::string url) {
-  net::url::SchemeIpPort server_info;
-  LOG_IF(ERROR, !net::url::ParseURI(url, server_info)) << " server can't be resolve";
+  net::url::RemoteInfo server_info;
+  LOG_IF(ERROR, !net::url::ParseRemote(url, server_info)) << " server can't be resolve";
   http_client = new net::Client(&main_loop, server_info);
   net::ClientConfig config;
   config.connections = 2;

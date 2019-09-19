@@ -79,8 +79,8 @@ TEST_CASE("client.base", "[http client]") {
   loop.Start();
   static const int connections = 10;
 
-  net::url::SchemeIpPort server_info;
-  LOG_IF(ERROR, !net::url::ParseURI("http://127.0.0.1:80", server_info)) << " server can't be resolve";
+  net::url::RemoteInfo server_info;
+  LOG_IF(ERROR, !net::url::ParseRemote("http://127.0.0.1:80", server_info)) << " server can't be resolve";
 
   net::Client http_client(&loop, server_info);
 
@@ -111,8 +111,8 @@ TEST_CASE("client.async", "[http client]") {
   loop.Start();
   static const int connections = 3;
 
-  net::url::SchemeIpPort server_info;
-  LOG_IF(ERROR, !net::url::ParseURI("http://127.0.0.1:80", server_info)) << " server can't be resolve";
+  net::url::RemoteInfo server_info;
+  LOG_IF(ERROR, !net::url::ParseRemote("http://127.0.0.1:80", server_info)) << " server can't be resolve";
 
   net::Client http_client(&loop, server_info);
 
@@ -162,8 +162,8 @@ TEST_CASE("client.http.request", "[http client send request]") {
 
   static const int connections = 10;
 
-  net::url::SchemeIpPort server_info;
-  LOG_IF(ERROR, !net::url::ParseURI("http://127.0.0.1:80", server_info)) << " server can't be resolve";
+  net::url::RemoteInfo server_info;
+  LOG_IF(ERROR, !net::url::ParseRemote("http://127.0.0.1:80", server_info)) << " server can't be resolve";
 
   net::Client http_client(&loop, server_info);
 
@@ -220,8 +220,8 @@ TEST_CASE("client.raw.request", "[raw client send request]") {
   loop.SetLoopName("client");
   loop.Start();
 
-  net::url::SchemeIpPort server_info;
-  LOG_IF(ERROR, !net::url::ParseURI("raw://127.0.0.1:5005", server_info)) << " server can't be resolve";
+  net::url::RemoteInfo server_info;
+  LOG_IF(ERROR, !net::url::ParseRemote("raw://127.0.0.1:5005", server_info)) << " server can't be resolve";
 
   net::Client raw_router(&loop, server_info);
 
@@ -281,8 +281,8 @@ TEST_CASE("client.timer.request", "[fetch resource every interval]") {
   loop.SetLoopName("client");
   loop.Start();
 
-  net::url::SchemeIpPort server_info;
-  LOG_IF(ERROR, !net::url::ParseURI("raw://127.0.0.1:5005", server_info)) << " server can't be resolve";
+  net::url::RemoteInfo server_info;
+  LOG_IF(ERROR, !net::url::ParseRemote("raw://127.0.0.1:5005", server_info)) << " server can't be resolve";
 
   net::Client raw_router(&loop, server_info);
 
@@ -362,8 +362,8 @@ TEST_CASE("client.raw.bench", "[raw client send request benchmark]") {
   };
   RouterManager router_delegate;
 
-  net::url::SchemeIpPort server_info;
-  LOG_IF(ERROR, !net::url::ParseURI("raw://127.0.0.1:5005", server_info)) << " server can't be resolve";
+  net::url::RemoteInfo server_info;
+  LOG_IF(ERROR, !net::url::ParseRemote("raw://127.0.0.1:5005", server_info)) << " server can't be resolve";
 
   net::Client raw_router(&loop, server_info);
 
@@ -434,9 +434,9 @@ TEST_CASE("client.http.bench", "[http client send request benchmark]") {
     loops = InitLoop();
   }
 
-  net::url::SchemeIpPort server_info;
+  net::url::RemoteInfo server_info;
   //LOG_IF(ERROR, !net::url::ParseURI("http://www.ltio.com:5006", server_info)) << " server can't be resolve";
-  LOG_IF(ERROR, !net::url::ParseURI("http://127.0.0.1:5006", server_info)) << " server can't be resolve";
+  LOG_IF(ERROR, !net::url::ParseRemote("http://127.0.0.1:5006", server_info)) << " server can't be resolve";
 
   LOG(INFO) << "parse result, host:" << server_info.host
     << " ip:" << server_info.host_ip
@@ -524,8 +524,8 @@ TEST_CASE("client.router", "[redis client]") {
 
   net::RoundRobinRouter router;
   for (auto& remote : remote_hosts) {
-    net::url::SchemeIpPort server_info;
-    bool success = net::url::ParseURI(remote, server_info);
+    net::url::RemoteInfo server_info;
+    bool success = net::url::ParseRemote(remote, server_info);
     LOG_IF(ERROR, !success) << " server:" << remote << " can't be resolve";
     if (!success) {
       LOG(INFO) << "host:" << server_info.host << " ip:" << server_info.host_ip
@@ -611,9 +611,9 @@ TEST_CASE("client.ringhash_router", "[redis ringhash router client]") {
   net::RingHashRouter router;
 
   for (auto& remote : remote_hosts) {
-    net::url::SchemeIpPort server_info;
+    net::url::RemoteInfo server_info;
 
-    bool success = net::url::ParseURI(remote, server_info);
+    bool success = net::url::ParseRemote(remote, server_info);
     LOG_IF(ERROR, !success) << " server:" << remote << " can't be resolve";
     if (!success) {
       LOG(INFO) << "host:" << server_info.host << " ip:" << server_info.host_ip

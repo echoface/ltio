@@ -53,7 +53,7 @@ typedef std::function<void(ProtocolMessage*)> AsyncCallBack;
 class Client: public ConnectorDelegate,
               public ClientChannel::Delegate {
 public:
-  Client(base::MessageLoop*, const url::SchemeIpPort&);
+  Client(base::MessageLoop*, const url::RemoteInfo&);
   virtual ~Client();
 
   void SetDelegate(ClientDelegate* delegate);
@@ -83,12 +83,13 @@ public:
   uint64_t ClientCount() const;
   std::string ClientInfo() const;
   std::string RemoteIpPort() const;
+  const url::RemoteInfo& GetRemoteInfo() const {return remote_info_;}
 private:
   //Get a io work loop for channel, if no loop provide, use default io_loop_;
   base::MessageLoop* GetLoopForClient();
 
   SocketAddress address_;
-  const url::SchemeIpPort server_info_;
+  const url::RemoteInfo remote_info_;
 
   /* workloop mean: all client channel born & die, not mean
    * clientchannel io loop, client channel may work in other loop*/
@@ -106,9 +107,10 @@ private:
   typedef std::vector<RefClientChannel> ClientChannelList;
   typedef std::shared_ptr<ClientChannelList> RefClientChannelList;
 
-  /*channels_ only access & modify in worker loop*/
+  /*channels_ only access & modify in this client worker loop*/
   ClientChannelList channels_;
 
+  //a channels copy for client caller
   std::atomic<uint32_t> next_index_;
   RefClientChannelList roundrobin_channes_;
 };

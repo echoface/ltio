@@ -100,8 +100,7 @@ void IOService::OnNewConnection(int fd, const SocketAddress& peer_addr) {
   SocketAddress local_addr(socketutils::GetLocalAddrIn(fd));
 
   proto_service->SetDelegate(this);
-
-  proto_service->BindChannel(fd, local_addr, peer_addr, io_loop);
+  proto_service->BindToSocket(fd, local_addr, peer_addr, io_loop);
 
   StoreProtocolService(proto_service);
 

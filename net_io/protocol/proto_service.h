@@ -26,10 +26,10 @@ public:
 
   void SetDelegate(ProtoServiceDelegate* d);
   /* this can be override if some protocol need difference channel, eg SSLChannel, UdpChannel */
-  virtual bool BindChannel(int fd,
-                           const SocketAddress& local,
-                           const SocketAddress& peer,
-                           base::MessageLoop* loop);
+  virtual bool BindToSocket(int fd,
+                            const SocketAddress& local,
+                            const SocketAddress& peer,
+                            base::MessageLoop* loop);
 
   TcpChannel* Channel() {return channel_.get();};
   base::MessageLoop* IOLoop() {return channel_ ? channel_->IOLoop() : NULL;}
@@ -43,6 +43,7 @@ public:
 
   //async clients request
   virtual bool KeepSequence() {return true;};
+ 
 
   virtual bool SendRequestMessage(const RefProtocolMessage& message) = 0;
   virtual bool SendResponseMessage(const RefProtocolMessage& req, const RefProtocolMessage& res) = 0;
@@ -50,9 +51,13 @@ public:
   virtual const RefProtocolMessage NewResponseFromRequest(const RefProtocolMessage &) {return NULL;}
 
   bool IsServerSide() const {return is_server_side_;}
-  void SetIsServerSide(bool server_side) { is_server_side_ = server_side;}
-  inline MessageType InComingType() const {return is_server_side_ ? MessageType::kRequest : MessageType::kResponse;};
-
+  void SetIsServerSide(bool server_side) {
+    is_server_side_ = server_side;
+  }
+  inline MessageType InComingType() const {
+    return is_server_side_ ? MessageType::kRequest :
+      MessageType::kResponse;
+  }
 protected:
   void OnChannelClosed(const RefTcpChannel&) override;
 

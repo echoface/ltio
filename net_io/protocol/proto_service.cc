@@ -19,16 +19,16 @@ bool ProtoService::IsConnected() const {
 	return channel_ ? channel_->IsConnected() : false;
 }
 
-bool ProtoService::BindChannel(int fd,
-                               const SocketAddress& local,
-                               const SocketAddress& peer,
-                               base::MessageLoop* loop) {
+bool ProtoService::BindToSocket(int fd,
+                                const SocketAddress& local,
+                                const SocketAddress& peer,
+                                base::MessageLoop* loop) {
 
   channel_ = TcpChannel::Create(fd, local, peer, loop);
-
 	channel_->SetChannelConsumer(this);
 
   channel_->Start();
+
   return true;
 }
 

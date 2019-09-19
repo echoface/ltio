@@ -7,9 +7,9 @@
 namespace lt {
 namespace net {
 
-Client::Client(base::MessageLoop* loop, const url::SchemeIpPort& info)
+Client::Client(base::MessageLoop* loop, const url::RemoteInfo& info)
   : address_(info.host_ip, info.port),
-    server_info_(info),
+    remote_info_(info),
     work_loop_(loop),
     is_stopping_(false),
     delegate_(NULL) {
@@ -83,9 +83,8 @@ void Client::OnNewClientConnected(int socket_fd, SocketAddress& local, SocketAdd
 
   base::MessageLoop* io_loop = GetLoopForClient();
 
-  auto proto_service = ProtoServiceFactory::Create(server_info_.protocol, false);
-
-  proto_service->BindChannel(socket_fd, local, remote, io_loop);
+  auto proto_service = ProtoServiceFactory::Create(remote_info_.protocol, false);
+  proto_service->BindToSocket(socket_fd, local, remote, io_loop);
 
   auto client_channel = CreateClientChannel(this, proto_service);
 
@@ -100,7 +99,6 @@ void Client::OnNewClientConnected(int socket_fd, SocketAddress& local, SocketAdd
   if (delegate_) {
     delegate_->OnClientChannelReady(client_channel.get());
   }
-
   VLOG(GLOG_VINFO) << __FUNCTION__ << ClientInfo() << " new protocol service started";
 }
 
@@ -160,7 +158,7 @@ bool Client::AsyncSendRequest(RefProtocolMessage& req, AsyncCallBack callback) {
 
   req->SetWorkerCtx(worker, std::move(resumer));
 
-  req->SetRemoteHost(server_info_.host);
+  req->SetRemoteHost(remote_info_.host);
 
   auto channels = std::atomic_load(&roundrobin_channes_);
   if (channels->empty()) { //avoid x/0 Error
@@ -182,7 +180,7 @@ ProtocolMessage* Client::SendClientRequest(RefProtocolMessage& message) {
     return NULL;
   }
 
-  message->SetRemoteHost(server_info_.host);
+  message->SetRemoteHost(remote_info_.host);
   message->SetWorkerCtx(base::MessageLoop::Current(), co_resumer);
 
   auto channels = std::atomic_load(&roundrobin_channes_);
@@ -220,7 +218,7 @@ std::string Client::ClientInfo() const {
 }
 
 std::string Client::RemoteIpPort() const {
-  return base::Str::Concat(server_info_.host_ip, ":", server_info_.port);
+  return base::Str::Concat(remote_info_.host_ip, ":", remote_info_.port);
 }
 
 }}//end namespace lt::net

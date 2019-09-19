@@ -56,8 +56,8 @@ TEST_CASE("client.hashrouter", "[http client]") {
 
   lt::net::HashRouter<Hasher> router;
   for (auto& remote : remote_hosts) {
-    lt::net::url::SchemeIpPort server_info;
-    bool success = lt::net::url::ParseURI(remote, server_info);
+    lt::net::url::RemoteInfo server_info;
+    bool success = lt::net::url::ParseRemote(remote, server_info);
     LOG_IF(ERROR, !success) << " server:" << remote << " can't be resolve";
     if (!success) {
       LOG(INFO) << "host:" << server_info.host

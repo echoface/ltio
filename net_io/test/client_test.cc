@@ -86,8 +86,8 @@ int main(int argc, char* argv[]) {
   loop.Start();
   wloop.Start();
   {
-    net::url::SchemeIpPort server_info;
-    LOG_IF(ERROR, !net::url::ParseURI("http://127.0.0.1:80", server_info)) << " server can't be resolve";
+    net::url::ParseRemote server_info;
+    LOG_IF(ERROR, !net::url::ParseRemote("http://127.0.0.1:80", server_info)) << " server can't be resolve";
     http_router = new net::Client(&loop, server_info);
 
     net::ClientConfig config;
