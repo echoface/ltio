@@ -24,10 +24,10 @@ else ()
 endif ()
 
 if (Tcmalloc_FOUND)
-  message(STATUS "Found Tcmalloc (library:${Tcmalloc_LIBRARY})")
+  message(STATUS "Found tcmalloc (library:${Tcmalloc_LIBRARY})")
 else ()
   if (Tcmalloc_FIND_REQUIRED)
-    message(FATAL_ERROR "NOT Found Tcmalloc(${Tcmalloc_NAMES}) library")
+    message(FATAL_ERROR "NOT Found tcmalloc(${Tcmalloc_NAMES}) library")
   endif ()
 endif ()
 
