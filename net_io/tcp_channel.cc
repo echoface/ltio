@@ -65,7 +65,7 @@ std::string TcpChannel::ChannelInfo() const {
 
 void TcpChannel::OnChannelReady() {
   CHECK(InIOLoop());
-  CHECK(channel_consumer_);
+  CHECK(reciever_);
 
   if (status_ != Status::CONNECTING) {
     LOG(ERROR) << __FUNCTION__ << ChannelInfo();
@@ -73,7 +73,7 @@ void TcpChannel::OnChannelReady() {
 
     fd_event_->ResetCallback();
     SetChannelStatus(Status::CLOSED);
-    channel_consumer_->OnChannelClosed(guard);
+    reciever_->OnChannelClosed(guard);
     return;
   }
 
@@ -83,8 +83,8 @@ void TcpChannel::OnChannelReady() {
   SetChannelStatus(Status::CONNECTED);
 }
 
-void TcpChannel::SetChannelConsumer(ChannelConsumer *consumer) {
-  channel_consumer_ = consumer;
+void TcpChannel::SetReciever(SocketChannel::Reciever* consumer) {
+  reciever_ = consumer;
 }
 
 void TcpChannel::HandleRead() {
@@ -98,7 +98,7 @@ void TcpChannel::HandleRead() {
     if (bytes_read > 0) {
 
       in_buffer_.Produce(bytes_read);
-      channel_consumer_->OnDataReceived(shared_from_this(), &in_buffer_);
+      reciever_->OnDataReceived(shared_from_this(), &in_buffer_);
 
     } else if (0 == bytes_read) {
 
@@ -141,7 +141,7 @@ void TcpChannel::HandleWrite() {
   if (out_buffer_.CanReadSize() == 0) {
 
     fd_event_->DisableWriting();
-    channel_consumer_->OnDataFinishSend(shared_from_this());
+    reciever_->OnDataFinishSend(shared_from_this());
 
     if (schedule_shutdown_) {
       HandleClose();
@@ -170,13 +170,13 @@ void TcpChannel::HandleClose() {
 	fd_event_->ResetCallback();
   SetChannelStatus(Status::CLOSED);
 
-  channel_consumer_->OnChannelClosed(guard);
+  reciever_->OnChannelClosed(guard);
 }
 
 void TcpChannel::SetChannelStatus(Status st) {
   status_ = st;
   RefTcpChannel guard(shared_from_this());
-  channel_consumer_->OnStatusChanged(guard);
+  reciever_->OnStatusChanged(guard);
 }
 
 void TcpChannel::ShutdownChannel() {

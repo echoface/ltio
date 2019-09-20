@@ -25,7 +25,7 @@ bool ProtoService::BindToSocket(int fd,
                                 base::MessageLoop* loop) {
 
   channel_ = TcpChannel::Create(fd, local, peer, loop);
-	channel_->SetChannelConsumer(this);
+	channel_->SetReciever(this);
 
   channel_->Start();
 

@@ -11,7 +11,9 @@
 namespace lt {
 namespace net {
 
-class ChannelConsumer {
+typedef struct SocketChannel { 
+
+class Reciever {
 public:
 	virtual void OnStatusChanged(const RefTcpChannel&) {};
 	virtual void OnDataFinishSend(const RefTcpChannel&) {};
@@ -19,5 +21,8 @@ public:
 	virtual void OnDataReceived(const RefTcpChannel &, IOBuffer *) = 0;
 };
 
-}}
+
+}SocketChannel;
+
+}} //lt::net
 #endif //LIGHTINGIO_NET_CHANNEL_H
