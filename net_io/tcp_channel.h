@@ -17,7 +17,8 @@
 namespace lt {
 namespace net {
 
-class TcpChannel : public std::enable_shared_from_this<TcpChannel> {
+class TcpChannel : public SocketChannel,
+                   public std::enable_shared_from_this<TcpChannel> {
 public:
   enum class Status {
     CONNECTING,
@@ -41,8 +42,7 @@ public:
   void Start();
 
   const std::string& ChannelName() const {return name_;}
-
-  void SetChannelConsumer(ChannelConsumer* consumer);
+  void SetReciever(SocketChannel::Reciever* consumer);
   /* return -1 when error,
    * return 0 when all data pending to buffer,
    * other case return the byte writen to socket fd successfully */
@@ -81,7 +81,7 @@ private:
   IOBuffer in_buffer_;
   IOBuffer out_buffer_;
 
-  ChannelConsumer* channel_consumer_ = NULL;
+  SocketChannel::Reciever* reciever_ = NULL;
   DISALLOW_COPY_AND_ASSIGN(TcpChannel);
 };
 

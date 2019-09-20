@@ -11,7 +11,7 @@ using namespace lt;
 base::MessageLoop loop;
 std::set<net::RefTcpChannel> connections;
 
-class EchoConsumer : public net::ChannelConsumer {
+class EchoConsumer : public net::SocketChannel::Reciever {
 public:
   void OnChannelClosed(const net::RefTcpChannel& ch) override {
     connections.erase(ch);
@@ -33,7 +33,7 @@ int main(int argc, char** argv) {
   auto on_new_connection = [&](int fd, const net::SocketAddress& peer) {
     net::SocketAddress local(net::socketutils::GetLocalAddrIn(fd));
     auto ch = net::TcpChannel::Create(fd, local, peer, &loop);
-    ch->SetChannelConsumer(&global_consumer);
+    ch->SetReciever(&global_consumer);
     ch->Start();
 
     connections.insert(ch);

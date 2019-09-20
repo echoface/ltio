@@ -18,7 +18,7 @@ public:
 
 /* a stateless encoder/decoder and
  * transfer the ProtoMessage to real Handler */
-class ProtoService : public ChannelConsumer,
+class ProtoService : public SocketChannel::Reciever,
                      public std::enable_shared_from_this<ProtoService> {
 public:
   ProtoService();
@@ -43,7 +43,7 @@ public:
 
   //async clients request
   virtual bool KeepSequence() {return true;};
- 
+
 
   virtual bool SendRequestMessage(const RefProtocolMessage& message) = 0;
   virtual bool SendResponseMessage(const RefProtocolMessage& req, const RefProtocolMessage& res) = 0;
