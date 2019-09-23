@@ -35,10 +35,19 @@ public:
   void Start();
   void SetReciever(SocketChannel::Reciever* consumer);
 
+  /* return -1 when error,
+   * return 0 when all data pending to buffer,
+   * other case return the byte of writen*/
+  virtual int32_t Send(const uint8_t* data, const int32_t len) = 0;
+
+  /* a initiative call from application level to clase this channel
+   * 1. shutdown writer if writing is enable
+   * 2. directly unregiste fdevent from pump and close socket*/
+  virtual void ShutdownChannel() = 0;
+
   base::MessageLoop* IOLoop() const {return io_loop_;}
   bool InIOLoop() const {return io_loop_->IsInLoopThread();};
   bool IsConnected() const {return status_ == Status::CONNECTED;};
-
 
   std::string ChannelInfo() const;
   const std::string StatusAsString() const;
@@ -50,7 +59,9 @@ protected:
                 base::MessageLoop* loop);
   virtual ~SocketChannel() {}
 
-  void OnChannelReady();
+  void setup_channel();
+  void close_channel();
+
   void SetChannelStatus(Status st);
 
   /* channel relative things should happened on io_loop*/

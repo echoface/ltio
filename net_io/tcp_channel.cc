@@ -10,14 +10,14 @@
 namespace lt {
 namespace net {
 
-
 //static
 RefTcpChannel TcpChannel::Create(int socket_fd,
                                  const SocketAddr& local,
                                  const SocketAddr& peer,
                                  base::MessageLoop* loop) {
 
-  return std::make_shared<TcpChannel>(socket_fd, local, peer, loop);
+  //std::make_shared<TcpChannel>(socket_fd, local, peer, loop);
+  return RefTcpChannel(new TcpChannel(socket_fd, local, peer, loop));
 }
 
 TcpChannel::TcpChannel(int socket_fd,
@@ -25,7 +25,6 @@ TcpChannel::TcpChannel(int socket_fd,
                        const SocketAddr& peer,
                        base::MessageLoop* loop)
   : SocketChannel(socket_fd, loc, peer, loop) {
-
   CHECK(io_loop_);
 
   fd_event_->SetReadCallback(std::bind(&TcpChannel::HandleRead, this));
@@ -110,23 +109,17 @@ void TcpChannel::HandleError() {
 
 void TcpChannel::HandleClose() {
   DCHECK(io_loop_->IsInLoopThread());
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
 
   RefTcpChannel guard(shared_from_this());
   if (Status() == Status::CLOSED) {
     return;
   }
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
-
-	io_loop_->Pump()->RemoveFdEvent(fd_event_.get());
-	fd_event_->ResetCallback();
-  SetChannelStatus(Status::CLOSED);
-
-  reciever_->OnChannelClosed(this);
+  close_channel();
 }
 
 void TcpChannel::ShutdownChannel() {
   CHECK(InIOLoop());
-
   VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
 
   if (status_ == Status::CLOSED) {
@@ -135,7 +128,6 @@ void TcpChannel::ShutdownChannel() {
 
   schedule_shutdown_ = true;
   SetChannelStatus(Status::CLOSING);
-
   if (!fd_event_->IsWriteEnable()) {
     HandleClose();
     schedule_shutdown_ = false;

@@ -68,7 +68,7 @@ private:
 
   // override from ProtoServiceDelegate to manager[remove] from managed list
   void OnProtocolMessage(const RefProtocolMessage& message) override;
-  void OnProtocalServiceReady(const RefProtoService& service) override;
+  void OnProtocolServiceReady(const RefProtoService& service) override;
   void OnProtocolServiceGone(const RefProtoService& service) override;
 
   void StoreProtocolService(const RefProtoService);

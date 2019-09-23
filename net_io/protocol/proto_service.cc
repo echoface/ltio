@@ -56,7 +56,7 @@ void ProtoService::OnChannelClosed(const SocketChannel* channel) {
 void ProtoService::OnChannelReady(const SocketChannel*) {
   RefProtoService guard = shared_from_this();
   if (delegate_) {
-    delegate_->OnProtocalServiceReady(guard);
+    delegate_->OnProtocolServiceReady(guard);
   }
 }
 

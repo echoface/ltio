@@ -32,7 +32,7 @@ public:
   base::MessageLoop* IOLoop() {return protocol_service_->IOLoop();};
 
   //override
-  void OnProtocalServiceReady(const RefProtoService& service) override;
+  void OnProtocolServiceReady(const RefProtoService& service) override;
 protected:
   Delegate* delegate_;
   RefProtoService protocol_service_;

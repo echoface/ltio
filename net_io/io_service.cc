@@ -49,7 +49,7 @@ void IOService::StartIOService() {
   delegate_->IOServiceStarted(this);
 }
 
-void IOService::OnProtocalServiceReady(const RefProtoService& service) {
+void IOService::OnProtocolServiceReady(const RefProtoService& service) {
   ;
 }
 

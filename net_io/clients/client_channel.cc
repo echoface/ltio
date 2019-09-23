@@ -43,7 +43,7 @@ void ClientChannel::CloseClientChannel() {
 	io->PostTask(NewClosure(std::bind(&ProtoService::CloseService, protocol_service_)));
 }
 
-void ClientChannel::OnProtocalServiceReady(const RefProtoService& service) {
+void ClientChannel::OnProtocolServiceReady(const RefProtoService& service) {
 }
 
 }}

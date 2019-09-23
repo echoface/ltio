@@ -26,24 +26,22 @@ void SocketChannel::SetReciever(SocketChannel::Reciever* rec) {
 }
 
 void SocketChannel::Start() {
-  CHECK(fd_event_);
-  CHECK(reciever_);
-
+  CHECK(fd_event_ && reciever_);
   status_ = Status::CONNECTING;
 
-  auto t = std::bind(&SocketChannel::OnChannelReady, this);
+  auto t = std::bind(&SocketChannel::setup_channel, this);
   io_loop_->PostTask(NewClosure(std::move(t)));
 }
 
-void SocketChannel::OnChannelReady() {
+void SocketChannel::setup_channel() {
   CHECK(InIOLoop());
 
   if (status_ != Status::CONNECTING) {
-    LOG(ERROR) << __FUNCTION__ << ChannelInfo();
     fd_event_->ResetCallback();
-
     SetChannelStatus(Status::CLOSED);
     reciever_->OnChannelClosed(this);
+
+    LOG(ERROR) << __FUNCTION__ << " status changed in prepare channel, " << ChannelInfo();
     return;
   }
 
@@ -52,6 +50,18 @@ void SocketChannel::OnChannelReady() {
   event_pump->InstallFdEvent(fd_event_.get());
   SetChannelStatus(Status::CONNECTED);
   reciever_->OnChannelReady(this);
+}
+
+void SocketChannel::close_channel() {
+  DCHECK(InIOLoop());
+
+  base::EventPump* event_pump = io_loop_->Pump();
+
+	event_pump->RemoveFdEvent(fd_event_.get());
+	fd_event_->ResetCallback();
+
+  SetChannelStatus(Status::CLOSED);
+  reciever_->OnChannelClosed(this);
 }
 
 std::string SocketChannel::ChannelInfo() const {

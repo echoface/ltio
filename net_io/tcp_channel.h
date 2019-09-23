@@ -20,20 +20,16 @@ public:
                               const SocketAddr& local,
                               const SocketAddr& peer,
                               base::MessageLoop* loop);
+  ~TcpChannel();
 
+  int32_t Send(const uint8_t* data, const int32_t len) override;
+  void ShutdownChannel() override;
+protected:
   TcpChannel(int socket_fd,
              const SocketAddr& loc,
              const SocketAddr& peer,
              base::MessageLoop* loop);
-  ~TcpChannel();
 
-  /* return -1 when error,
-   * return 0 when all data pending to buffer,
-   * other case return the byte of writen*/
-  int32_t Send(const uint8_t* data, const int32_t len);
-
-  void ShutdownChannel();
-protected:
   void HandleRead();
   void HandleWrite();
   void HandleError();

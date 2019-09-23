@@ -12,9 +12,9 @@ namespace net {
 
 class ProtoServiceDelegate {
 public:
-  virtual void OnProtocalServiceReady(const RefProtoService& service) = 0;
-  virtual void OnProtocolMessage(const RefProtocolMessage& message) = 0;
+  virtual void OnProtocolServiceReady(const RefProtoService& service) = 0;
   virtual void OnProtocolServiceGone(const RefProtoService& service) = 0;
+  virtual void OnProtocolMessage(const RefProtocolMessage& message) = 0;
 };
 
 /* a stateless encoder/decoder and
