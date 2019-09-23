@@ -12,9 +12,9 @@ public:
   ~LineProtoService();
 
   // override from ProtoService
-  void OnStatusChanged(const RefTcpChannel&) override;
-  void OnDataFinishSend(const RefTcpChannel&) override;
-  void OnDataReceived(const RefTcpChannel &, IOBuffer *) override;
+  void OnStatusChanged(const SocketChannel*) override;
+  void OnDataFinishSend(const SocketChannel*) override;
+  void OnDataReceived(const SocketChannel*, IOBuffer *) override;
 
   bool SendRequestMessage(const RefProtocolMessage &message) override;
   bool SendResponseMessage(const RefProtocolMessage& req, const RefProtocolMessage& res) override;

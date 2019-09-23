@@ -14,14 +14,14 @@ LineProtoService::LineProtoService()
 LineProtoService::~LineProtoService() {
 }
 
-void LineProtoService::OnStatusChanged(const RefTcpChannel& channel) {
+void LineProtoService::OnStatusChanged(const SocketChannel* channel) {
   ;
 }
-void LineProtoService::OnDataFinishSend(const RefTcpChannel& channel) {
+void LineProtoService::OnDataFinishSend(const SocketChannel* channel) {
   ;
 }
 
-void LineProtoService::OnDataReceived(const RefTcpChannel&, IOBuffer *buf) {
+void LineProtoService::OnDataReceived(const SocketChannel*, IOBuffer *buf) {
   const uint8_t* line_crlf =  buf->FindCRLF();
   if (!line_crlf) {
     return;

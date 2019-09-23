@@ -24,16 +24,16 @@ RawProtoService::~RawProtoService() {
 }
 
 // override from ProtoService
-void RawProtoService::OnStatusChanged(const RefTcpChannel& ch) {
+void RawProtoService::OnStatusChanged(const SocketChannel* ch) {
 	if (channel_->IsConnected() && timeout_ev_) {
 	  IOLoop()->Pump()->AddTimeoutEvent(timeout_ev_);
 	}
 }
 
-void RawProtoService::OnDataFinishSend(const RefTcpChannel&) {
+void RawProtoService::OnDataFinishSend(const SocketChannel*) {
 }
 
-void RawProtoService::OnDataReceived(const RefTcpChannel &channel, IOBuffer *buffer) {
+void RawProtoService::OnDataReceived(const SocketChannel* channel, IOBuffer *buffer) {
   do {
     // pre calculate frame size
     {

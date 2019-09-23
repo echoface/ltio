@@ -59,7 +59,7 @@ public:
       MessageType::kResponse;
   }
 protected:
-  void OnChannelClosed(const RefTcpChannel&) override;
+  void OnChannelClosed(const SocketChannel*) override;
 
   RefTcpChannel channel_;
   bool is_server_side_;

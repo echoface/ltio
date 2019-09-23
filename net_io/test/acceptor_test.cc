@@ -13,13 +13,25 @@ std::set<net::RefTcpChannel> connections;
 
 class EchoConsumer : public net::SocketChannel::Reciever {
 public:
-  void OnChannelClosed(const net::RefTcpChannel& ch) override {
-    connections.erase(ch);
+  void OnChannelClosed(const net::SocketChannel* ch) override {
+    auto iter = connections.begin();
+    for (; iter != connections.end(); iter++) {
+      if (iter->get() == ch) {
+        iter = connections.erase(iter);
+        break;
+      }
+    }
     LOG(INFO) << "channel:[" << ch->ChannelName() << "] closed, connections count:" << connections.size();
   };
 
-  void OnDataReceived(const net::RefTcpChannel &ch, net::IOBuffer *buf) override {
-    ch->Send(buf->GetRead(), buf->CanReadSize());
+  void OnDataReceived(const net::SocketChannel* ch, net::IOBuffer *buf) override {
+    auto iter = std::find_if(connections.begin(),
+                             connections.end(),
+                             [&](RefTcpChannel& channel) {
+                               ch == channel.get(); 
+                             });
+    net::TcpChannel* channel = iter->get();
+    channel->Send(buf->GetRead(), buf->CanReadSize());
     buf->Consume(buf->CanReadSize());
   };
 };
