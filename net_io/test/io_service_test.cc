@@ -32,8 +32,8 @@ public:
 
   void OnDataReceived(const SocketChannel* channel, IOBuffer *buffer) override {
     LOG(INFO) << " RefTcpChannel  recieve data";
-
-    int32_t size = channel->Send(buffer->GetRead(), buffer->CanReadSize());
+    CHECK(channel == Channel());
+    int32_t size = Channel()->Send(buffer->GetRead(), buffer->CanReadSize());
     if (size > 0) {
       buffer->Consume(size);
     }
@@ -47,11 +47,8 @@ public:
     tcp_protoservice_.reset(new TcpProtoService);
     InitWorkLoop();
 
-    net::SocketAddress addr(5005);
-    ioservice_.reset(new IOService(addr,
-                                   "tcp",
-                                   &acceptor_loop_,
-                                   this));
+    net::SocketAddress addr("127.0.0.1", 5005);
+    ioservice_.reset(new IOService(addr, "tcp", &acceptor_loop_, this));
   }
   ~Srv() {
   }
@@ -123,7 +120,7 @@ private:
 
 using namespace lt;
 
-int main() {
+int main(int argc, char** argv) {
   net::Srv s;
   s.Start();
   //LOG(INFO) << " main is going to end";

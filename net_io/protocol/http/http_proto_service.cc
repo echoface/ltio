@@ -63,7 +63,8 @@ void HttpProtoService::OnDataFinishSend(const SocketChannel* channel) {
 }
 
 void HttpProtoService::OnDataReceived(const SocketChannel* channel, IOBuffer *buf) {;
-  bool success = IsServerSide() ? ParseHttpRequest(channel, buf) : ParseHttpResponse(channel, buf);
+  DCHECK(channel == channel_.get());
+  bool success = IsServerSide() ? ParseHttpRequest(channel_, buf) : ParseHttpResponse(channel_, buf);
   if (!success) {
   	CloseService();
   }

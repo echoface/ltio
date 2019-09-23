@@ -27,8 +27,8 @@ public:
   void OnDataReceived(const net::SocketChannel* ch, net::IOBuffer *buf) override {
     auto iter = std::find_if(connections.begin(),
                              connections.end(),
-                             [&](RefTcpChannel& channel) {
-                               ch == channel.get(); 
+                             [&](const net::RefTcpChannel& channel) -> bool {
+                               return ch == channel.get();
                              });
     net::TcpChannel* channel = iter->get();
     channel->Send(buf->GetRead(), buf->CanReadSize());
