@@ -16,13 +16,13 @@ RespService::RespService()
 RespService::~RespService() {
 }
 
-void RespService::OnStatusChanged(const RefTcpChannel& channel) {
+void RespService::OnStatusChanged(const SocketChannel* channel) {
 }
 
-void RespService::OnDataFinishSend(const RefTcpChannel&) {
+void RespService::OnDataFinishSend(const SocketChannel*) {
 }
 
-void RespService::OnDataReceived(const RefTcpChannel &channel, IOBuffer *buffer) {
+void RespService::OnDataReceived(const SocketChannel* channel, IOBuffer *buffer) {
   CHECK(!IsServerSide());
 
   if (!current_response) {

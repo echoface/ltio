@@ -24,67 +24,19 @@ TcpChannel::TcpChannel(int socket_fd,
                        const SocketAddress& loc,
                        const SocketAddress& peer,
                        base::MessageLoop* loop)
-  : io_loop_(loop),
-    local_addr_(loc),
-    peer_addr_(peer) {
+  : SocketChannel(socket_fd, loc, peer, loop) {
 
   CHECK(io_loop_);
 
-  name_ = local_addr_.IpPort();
-  fd_event_ = base::FdEvent::Create(socket_fd, base::LtEv::LT_EVENT_NONE);
   fd_event_->SetReadCallback(std::bind(&TcpChannel::HandleRead, this));
   fd_event_->SetWriteCallback(std::bind(&TcpChannel::HandleWrite, this));
   fd_event_->SetCloseCallback(std::bind(&TcpChannel::HandleClose, this));
   fd_event_->SetErrorCallback(std::bind(&TcpChannel::HandleError, this));
-  socketutils::KeepAlive(fd_event_->fd(), true);
-}
-
-void TcpChannel::Start() {
-  CHECK(fd_event_);
-  status_ = Status::CONNECTING;
-
-  auto t = std::bind(&TcpChannel::OnChannelReady, shared_from_this());
-
-  io_loop_->PostTask(NewClosure(std::move(t)));
 }
 
 TcpChannel::~TcpChannel() {
   VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
   CHECK(status_ == Status::CLOSED);
-}
-
-std::string TcpChannel::ChannelInfo() const {
-  std::ostringstream oss;
-  oss << " [name:" << name_
-      << ", fd:" << fd_event_->fd()
-      << ", loc:" << local_addr_.IpPort()
-      << ", peer:" << peer_addr_.IpPort()
-      << ", status:" << StatusAsString() << "]";
-  return oss.str();
-}
-
-void TcpChannel::OnChannelReady() {
-  CHECK(InIOLoop());
-  CHECK(reciever_);
-
-  if (status_ != Status::CONNECTING) {
-    LOG(ERROR) << __FUNCTION__ << ChannelInfo();
-    RefTcpChannel guard(shared_from_this());
-
-    fd_event_->ResetCallback();
-    SetChannelStatus(Status::CLOSED);
-    reciever_->OnChannelClosed(guard);
-    return;
-  }
-
-  fd_event_->EnableReading();
-  base::EventPump* event_pump = io_loop_->Pump();
-  event_pump->InstallFdEvent(fd_event_.get());
-  SetChannelStatus(Status::CONNECTED);
-}
-
-void TcpChannel::SetReciever(SocketChannel::Reciever* consumer) {
-  reciever_ = consumer;
 }
 
 void TcpChannel::HandleRead() {
@@ -98,7 +50,7 @@ void TcpChannel::HandleRead() {
     if (bytes_read > 0) {
 
       in_buffer_.Produce(bytes_read);
-      reciever_->OnDataReceived(shared_from_this(), &in_buffer_);
+      reciever_->OnDataReceived(this, &in_buffer_);
 
     } else if (0 == bytes_read) {
 
@@ -141,8 +93,7 @@ void TcpChannel::HandleWrite() {
   if (out_buffer_.CanReadSize() == 0) {
 
     fd_event_->DisableWriting();
-    reciever_->OnDataFinishSend(shared_from_this());
-
+    reciever_->OnDataFinishSend(this);
     if (schedule_shutdown_) {
       HandleClose();
     }
@@ -170,13 +121,7 @@ void TcpChannel::HandleClose() {
 	fd_event_->ResetCallback();
   SetChannelStatus(Status::CLOSED);
 
-  reciever_->OnChannelClosed(guard);
-}
-
-void TcpChannel::SetChannelStatus(Status st) {
-  status_ = st;
-  RefTcpChannel guard(shared_from_this());
-  reciever_->OnStatusChanged(guard);
+  reciever_->OnChannelClosed(this);
 }
 
 void TcpChannel::ShutdownChannel() {
@@ -250,31 +195,5 @@ int32_t TcpChannel::Send(const uint8_t* data, const int32_t len) {
   return fatal_err != 0 ? -1 : n_write;
 }
 
-const std::string TcpChannel::StatusAsString() const {
-  switch(status_) {
-    case Status::CONNECTING:
-      return "CONNECTING";
-    case Status::CONNECTED:
-      return "ESTABLISHED";
-    case Status::CLOSING:
-      return "CLOSING";
-    case Status::CLOSED:
-      return "CLOSED";
-    default:
-    	break;
-  }
-  return "UNKNOWN";
-}
-
-base::MessageLoop* TcpChannel::IOLoop() const {
-  return io_loop_;
-}
-bool TcpChannel::InIOLoop() const {
-  return io_loop_->IsInLoopThread();
-}
-
-bool TcpChannel::IsConnected() const {
-  return status_ == Status::CONNECTED;
-}
 
 }} //end lt::net

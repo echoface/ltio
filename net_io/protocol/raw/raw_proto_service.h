@@ -14,9 +14,9 @@ public:
   ~RawProtoService();
 
   // override from ProtoService
-  void OnStatusChanged(const RefTcpChannel&) override;
-  void OnDataFinishSend(const RefTcpChannel&) override;
-  void OnDataReceived(const RefTcpChannel &, IOBuffer *) override;
+  void OnStatusChanged(const SocketChannel*) override;
+  void OnDataFinishSend(const SocketChannel*) override;
+  void OnDataReceived(const SocketChannel*, IOBuffer *) override;
 
   const RefProtocolMessage NewResponseFromRequest(const RefProtocolMessage &req) override;
 

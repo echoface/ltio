@@ -56,13 +56,13 @@ HttpProtoService::~HttpProtoService() {
   delete response_context_;
 }
 
-void HttpProtoService::OnStatusChanged(const RefTcpChannel& channel) {
+void HttpProtoService::OnStatusChanged(const SocketChannel* channel) {
 }
 
-void HttpProtoService::OnDataFinishSend(const RefTcpChannel& channel) {
+void HttpProtoService::OnDataFinishSend(const SocketChannel* channel) {
 }
 
-void HttpProtoService::OnDataReceived(const RefTcpChannel &channel, IOBuffer *buf) {;
+void HttpProtoService::OnDataReceived(const SocketChannel* channel, IOBuffer *buf) {;
   bool success = IsServerSide() ? ParseHttpRequest(channel, buf) : ParseHttpResponse(channel, buf);
   if (!success) {
   	CloseService();

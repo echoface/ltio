@@ -23,14 +23,14 @@ public:
     return true;
   };
 
-  void OnStatusChanged(const RefTcpChannel& channel) override {
+  void OnStatusChanged(const SocketChannel* channel) override {
     LOG(INFO) << "RefTcpChannel status changed:" << channel->StatusAsString();
   }
-  void OnDataFinishSend(const RefTcpChannel& channel) override {
+  void OnDataFinishSend(const SocketChannel* channel) override {
     LOG(INFO) << " RefTcpChannel  data write finished";
   }
 
-  void OnDataReceived(const RefTcpChannel &channel, IOBuffer *buffer) override {
+  void OnDataReceived(const SocketChannel* channel, IOBuffer *buffer) override {
     LOG(INFO) << " RefTcpChannel  recieve data";
 
     int32_t size = channel->Send(buffer->GetRead(), buffer->CanReadSize());

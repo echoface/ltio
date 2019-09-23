@@ -20,9 +20,9 @@ public:
   ~HttpProtoService();
 
   // override from ProtoService
-  void OnStatusChanged(const RefTcpChannel&) override;
-  void OnDataFinishSend(const RefTcpChannel&) override;
-  void OnDataReceived(const RefTcpChannel &, IOBuffer *) override;
+  void OnStatusChanged(const SocketChannel*) override;
+  void OnDataFinishSend(const SocketChannel*) override;
+  void OnDataReceived(const SocketChannel*, IOBuffer *) override;
 
   static bool RequestToBuffer(const HttpRequest*, IOBuffer*);
   static bool ResponseToBuffer(const HttpResponse*, IOBuffer*);

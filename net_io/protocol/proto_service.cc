@@ -39,13 +39,12 @@ void ProtoService::CloseService() {
 	channel_->ShutdownChannel();
 }
 
-void ProtoService::OnChannelClosed(const RefTcpChannel& channel) {
-	CHECK(channel.get() == channel_.get());
-
-	RefProtoService guard = shared_from_this();
+void ProtoService::OnChannelClosed(const SocketChannel* channel) {
+	CHECK(channel == channel_.get());
 
 	VLOG(GLOG_VTRACE) << __FUNCTION__ << channel_->ChannelInfo() << " closed";
 
+	RefProtoService guard = shared_from_this();
 	AfterChannelClosed();
 	if (delegate_) {
 		delegate_->OnProtocolServiceGone(guard);

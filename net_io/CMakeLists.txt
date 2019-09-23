@@ -6,6 +6,7 @@ set(LTNET_SOURCE
   address.cc
   io_buffer.cc
   io_service.cc
+  channel.cc
   tcp_channel.cc
   socket_utils.cc
   socket_acceptor.cc
