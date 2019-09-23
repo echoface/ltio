@@ -73,7 +73,7 @@ public:
 
   //override from ConnectorDelegate
   void OnClientConnectFailed() override;
-  void OnNewClientConnected(int fd, SocketAddress& loc, SocketAddress& remote) override;
+  void OnNewClientConnected(int fd, SocketAddr& loc, SocketAddr& remote) override;
 
   //override from ClientChannel::Delegate
   uint32_t HeartBeatInterval() const override {return config_.heart_beat_ms;};
@@ -88,7 +88,7 @@ private:
   //Get a io work loop for channel, if no loop provide, use default io_loop_;
   base::MessageLoop* GetLoopForClient();
 
-  SocketAddress address_;
+  SocketAddr address_;
   const url::RemoteInfo remote_info_;
 
   /* workloop mean: all client channel born & die, not mean

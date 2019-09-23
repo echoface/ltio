@@ -30,6 +30,9 @@ public:
   void CloseClientChannel();
   void SetRequestTimeout(uint32_t ms) {request_timeout_ = ms;};
   base::MessageLoop* IOLoop() {return protocol_service_->IOLoop();};
+
+  //override
+  void OnProtocalServiceReady(const RefProtoService& service) override;
 protected:
   Delegate* delegate_;
   RefProtoService protocol_service_;

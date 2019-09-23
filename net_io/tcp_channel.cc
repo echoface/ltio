@@ -13,16 +13,16 @@ namespace net {
 
 //static
 RefTcpChannel TcpChannel::Create(int socket_fd,
-                                 const SocketAddress& local,
-                                 const SocketAddress& peer,
+                                 const SocketAddr& local,
+                                 const SocketAddr& peer,
                                  base::MessageLoop* loop) {
 
   return std::make_shared<TcpChannel>(socket_fd, local, peer, loop);
 }
 
 TcpChannel::TcpChannel(int socket_fd,
-                       const SocketAddress& loc,
-                       const SocketAddress& peer,
+                       const SocketAddr& loc,
+                       const SocketAddr& peer,
                        base::MessageLoop* loop)
   : SocketChannel(socket_fd, loc, peer, loop) {
 

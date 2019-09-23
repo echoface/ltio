@@ -12,6 +12,7 @@ namespace net {
 
 class ProtoServiceDelegate {
 public:
+  virtual void OnProtocalServiceReady(const RefProtoService& service) = 0;
   virtual void OnProtocolMessage(const RefProtocolMessage& message) = 0;
   virtual void OnProtocolServiceGone(const RefProtoService& service) = 0;
 };
@@ -27,8 +28,8 @@ public:
   void SetDelegate(ProtoServiceDelegate* d);
   /* this can be override if some protocol need difference channel, eg SSLChannel, UdpChannel */
   virtual bool BindToSocket(int fd,
-                            const SocketAddress& local,
-                            const SocketAddress& peer,
+                            const SocketAddr& local,
+                            const SocketAddr& peer,
                             base::MessageLoop* loop);
 
   TcpChannel* Channel() {return channel_.get();};
@@ -50,19 +51,17 @@ public:
 
   virtual const RefProtocolMessage NewResponseFromRequest(const RefProtocolMessage &) {return NULL;}
 
-  bool IsServerSide() const {return is_server_side_;}
-  void SetIsServerSide(bool server_side) {
-    is_server_side_ = server_side;
-  }
+  void SetIsServerSide(bool server_side);
+  bool IsServerSide() const {return server_side_;}
   inline MessageType InComingType() const {
-    return is_server_side_ ? MessageType::kRequest :
-      MessageType::kResponse;
+    return server_side_ ? MessageType::kRequest : MessageType::kResponse;
   }
 protected:
+  void OnChannelReady(const SocketChannel*) override;
   void OnChannelClosed(const SocketChannel*) override;
 
   RefTcpChannel channel_;
-  bool is_server_side_;
+  bool server_side_;
   ProtoServiceDelegate* delegate_ = NULL;
 };
 

@@ -47,7 +47,7 @@ public:
    *
    * A IOService Accept listen a local address and accept incoming connection; every connections
    * will bind to protocol service*/
-  IOService(const SocketAddress local,
+  IOService(const SocketAddr local,
             const std::string protocol,
             base::MessageLoop* workloop,
             IOServiceDelegate* delegate);
@@ -64,10 +64,11 @@ public:
 private:
   //void HandleProtoMessage(RefProtocolMessage message);
   /* create a new connection channel */
-  void OnNewConnection(int, const SocketAddress&);
+  void OnNewConnection(int, const SocketAddr&);
 
   // override from ProtoServiceDelegate to manager[remove] from managed list
   void OnProtocolMessage(const RefProtocolMessage& message) override;
+  void OnProtocalServiceReady(const RefProtoService& service) override;
   void OnProtocolServiceGone(const RefProtoService& service) override;
 
   void StoreProtocolService(const RefProtoService);

@@ -11,7 +11,7 @@ Connector::Connector(base::MessageLoop* loop, ConnectorDelegate* delegate)
   CHECK(delegate_);
 }
 
-bool Connector::Launch(const net::SocketAddress &address) {
+bool Connector::Launch(const net::SocketAddr &address) {
   CHECK(loop_->IsInLoopThread());
 
   int sock_fd = net::socketutils::CreateNonBlockingSocket(address.Family());
@@ -78,8 +78,8 @@ void Connector::OnWrite(WeakPtrFdEvent weak_fdevent) {
   fd_event->GiveupOwnerFd();
   connecting_sockets_.erase(fd_event);
 
-  net::SocketAddress remote_addr(net::socketutils::GetPeerAddrIn(socket_fd));
-  net::SocketAddress local_addr(net::socketutils::GetLocalAddrIn(socket_fd));
+  net::SocketAddr remote_addr(net::socketutils::GetPeerAddrIn(socket_fd));
+  net::SocketAddr local_addr(net::socketutils::GetLocalAddrIn(socket_fd));
 
   delegate_->OnNewClientConnected(socket_fd, local_addr, remote_addr);
 }

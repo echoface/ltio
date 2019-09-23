@@ -42,8 +42,8 @@ int main(int argc, char** argv) {
 
   loop.Start();
 
-  auto on_new_connection = [&](int fd, const net::SocketAddress& peer) {
-    net::SocketAddress local(net::socketutils::GetLocalAddrIn(fd));
+  auto on_new_connection = [&](int fd, const net::SocketAddr& peer) {
+    net::SocketAddr local(net::socketutils::GetLocalAddrIn(fd));
     auto ch = net::TcpChannel::Create(fd, local, peer, &loop);
     ch->SetReciever(&global_consumer);
     ch->Start();
@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
   net::SocketAcceptor* acceptor;
   loop.PostTask(NewClosure([&]() {
 
-    net::SocketAddress addr(5005);
+    net::SocketAddr addr(5005);
     acceptor = new net::SocketAcceptor(loop.Pump(), addr);
 
     acceptor->SetNewConnectionCallback(std::bind(on_new_connection, std::placeholders::_1, std::placeholders::_2));

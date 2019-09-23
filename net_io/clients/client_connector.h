@@ -25,7 +25,7 @@ class ConnectorDelegate {
 public:
   virtual ~ConnectorDelegate() {};
   virtual void OnClientConnectFailed() = 0;
-  virtual void OnNewClientConnected(int socket_fd, SocketAddress& local, SocketAddress& remote) = 0;
+  virtual void OnNewClientConnected(int socket_fd, SocketAddr& local, SocketAddr& remote) = 0;
 };
 
 class Connector {
@@ -34,7 +34,7 @@ public:
   ~Connector() {};
 
   //TODO: add a connect timeout
-  bool Launch(const net::SocketAddress &address);
+  bool Launch(const net::SocketAddr &address);
 
   void OnWrite(WeakPtrFdEvent weak_fdevent);
   void OnError(WeakPtrFdEvent weak_fdevent);

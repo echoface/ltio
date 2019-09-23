@@ -78,7 +78,7 @@ base::MessageLoop* Client::GetLoopForClient() {
   return io_loop ? io_loop : work_loop_;
 }
 
-void Client::OnNewClientConnected(int socket_fd, SocketAddress& local, SocketAddress& remote) {
+void Client::OnNewClientConnected(int socket_fd, SocketAddr& local, SocketAddr& remote) {
   CHECK(work_loop_->IsInLoopThread());
 
   base::MessageLoop* io_loop = GetLoopForClient();

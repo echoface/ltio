@@ -47,7 +47,7 @@ public:
     tcp_protoservice_.reset(new TcpProtoService);
     InitWorkLoop();
 
-    net::SocketAddress addr("127.0.0.1", 5005);
+    net::SocketAddr addr("127.0.0.1", 5005);
     ioservice_.reset(new IOService(addr, "tcp", &acceptor_loop_, this));
   }
   ~Srv() {

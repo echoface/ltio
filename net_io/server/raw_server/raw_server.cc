@@ -61,7 +61,7 @@ void RawServer::ServeAddress(const std::string address, RawMessageHandler handle
 
   message_handler_ = handler;
 
-  net::SocketAddress addr(sch_ip_port.host_ip, sch_ip_port.port);
+  net::SocketAddr addr(sch_ip_port.host_ip, sch_ip_port.port);
 
   {
 #if defined SO_REUSEPORT && defined NET_ENABLE_REUSER_PORT

@@ -13,7 +13,7 @@
 namespace lt {
 namespace net {
 
-IOService::IOService(const SocketAddress addr,
+IOService::IOService(const SocketAddr addr,
                      const std::string protocol,
                      base::MessageLoop* ioloop,
                      IOServiceDelegate* delegate)
@@ -49,6 +49,10 @@ void IOService::StartIOService() {
   delegate_->IOServiceStarted(this);
 }
 
+void IOService::OnProtocalServiceReady(const RefProtoService& service) {
+  ;
+}
+
 /* step1: close the acceptor */
 void IOService::StopIOService() {
   if (!accept_loop_->IsInLoopThread()) {
@@ -74,7 +78,7 @@ void IOService::StopIOService() {
   }
 }
 
-void IOService::OnNewConnection(int fd, const SocketAddress& peer_addr) {
+void IOService::OnNewConnection(int fd, const SocketAddr& peer_addr) {
 
   CHECK(accept_loop_->IsInLoopThread());
 
@@ -97,7 +101,7 @@ void IOService::OnNewConnection(int fd, const SocketAddress& peer_addr) {
     socketutils::CloseSocket(fd);
     return;
   }
-  SocketAddress local_addr(socketutils::GetLocalAddrIn(fd));
+  SocketAddr local_addr(socketutils::GetLocalAddrIn(fd));
 
   proto_service->SetDelegate(this);
   proto_service->BindToSocket(fd, local_addr, peer_addr, io_loop);

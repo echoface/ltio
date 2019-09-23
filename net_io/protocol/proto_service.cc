@@ -1,4 +1,3 @@
-
 #include "proto_service.h"
 #include "proto_message.h"
 #include "glog/logging.h"
@@ -20,15 +19,14 @@ bool ProtoService::IsConnected() const {
 }
 
 bool ProtoService::BindToSocket(int fd,
-                                const SocketAddress& local,
-                                const SocketAddress& peer,
+                                const SocketAddr& local,
+                                const SocketAddr& peer,
                                 base::MessageLoop* loop) {
 
   channel_ = TcpChannel::Create(fd, local, peer, loop);
 	channel_->SetReciever(this);
 
   channel_->Start();
-
   return true;
 }
 
@@ -37,6 +35,10 @@ void ProtoService::CloseService() {
 
 	BeforeCloseService();
 	channel_->ShutdownChannel();
+}
+
+void ProtoService::SetIsServerSide(bool server_side) {
+  server_side_ = server_side;
 }
 
 void ProtoService::OnChannelClosed(const SocketChannel* channel) {
@@ -49,6 +51,13 @@ void ProtoService::OnChannelClosed(const SocketChannel* channel) {
 	if (delegate_) {
 		delegate_->OnProtocolServiceGone(guard);
 	}
+}
+
+void ProtoService::OnChannelReady(const SocketChannel*) {
+  RefProtoService guard = shared_from_this();
+  if (delegate_) {
+    delegate_->OnProtocalServiceReady(guard);
+  }
 }
 
 }}// end namespace

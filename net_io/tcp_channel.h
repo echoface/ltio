@@ -17,13 +17,13 @@ class TcpChannel : public SocketChannel,
                    public std::enable_shared_from_this<TcpChannel> {
 public:
   static RefTcpChannel Create(int socket_fd,
-                              const SocketAddress& local,
-                              const SocketAddress& peer,
+                              const SocketAddr& local,
+                              const SocketAddr& peer,
                               base::MessageLoop* loop);
 
   TcpChannel(int socket_fd,
-             const SocketAddress& loc,
-             const SocketAddress& peer,
+             const SocketAddr& loc,
+             const SocketAddr& peer,
              base::MessageLoop* loop);
   ~TcpChannel();
 

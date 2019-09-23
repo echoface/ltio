@@ -8,7 +8,7 @@
 namespace lt {
 namespace net {
 
-SocketAcceptor::SocketAcceptor(base::EventPump* pump, const SocketAddress& address)
+SocketAcceptor::SocketAcceptor(base::EventPump* pump, const SocketAddr& address)
   : listening_(false),
     address_(address),
     event_pump_(pump) {
@@ -97,7 +97,7 @@ void SocketAcceptor::HandleCommingConnection() {
     return ;
   }
 
-  SocketAddress client_addr(client_socket_in);
+  SocketAddr client_addr(client_socket_in);
 
   VLOG(GLOG_VTRACE) << __FUNCTION__ << " accept a connection:" << client_addr.IpPort();
   if (new_conn_callback_) {

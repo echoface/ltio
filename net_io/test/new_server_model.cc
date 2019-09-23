@@ -50,8 +50,8 @@ void HandleRaw(const LtRawMessage* req, LtRawMessage* res) {
   res->SetContent("Raw Message");
 }
 
-net::Client*  raw_client; //(base::MessageLoop*, const SocketAddress&);
-net::Client*  http_client; //(base::MessageLoop*, const SocketAddress&);
+net::Client*  raw_client; //(base::MessageLoop*, const SocketAddr&);
+net::Client*  http_client; //(base::MessageLoop*, const SocketAddr&);
 net::Client*  redis_client;
 
 static std::atomic_int io_round_count;

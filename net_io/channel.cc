@@ -8,8 +8,8 @@ namespace lt {
 namespace net {
 
 SocketChannel::SocketChannel(int socket_fd,
-                             const SocketAddress& loc,
-                             const SocketAddress& peer,
+                             const SocketAddr& loc,
+                             const SocketAddr& peer,
                              base::MessageLoop* loop)
   : io_loop_(loop),
     local_addr_(loc),

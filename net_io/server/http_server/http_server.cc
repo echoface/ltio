@@ -62,7 +62,7 @@ void HttpServer::ServeAddress(const std::string address, HttpMessageHandler hand
   message_handler_ = handler;
   CHECK(!io_loops_.empty());
 
-  net::SocketAddress addr(sch_ip_port.host_ip, sch_ip_port.port);
+  net::SocketAddr addr(sch_ip_port.host_ip, sch_ip_port.port);
 
   {
 #if defined SO_REUSEPORT && defined NET_ENABLE_REUSER_PORT

@@ -14,7 +14,7 @@ namespace net {
 
 class SocketAcceptor {
 public:
-  SocketAcceptor(base::EventPump*, const SocketAddress&);
+  SocketAcceptor(base::EventPump*, const SocketAddr&);
   ~SocketAcceptor();
 
   bool StartListen();
@@ -22,14 +22,14 @@ public:
   bool IsListening() { return listening_; }
 
   void SetNewConnectionCallback(const NewConnectionCallback& cb);
-  const SocketAddress& ListeningAddress() const { return address_; };
+  const SocketAddr& ListeningAddress() const { return address_; };
 private:
   bool InitListener();
   void OnAcceptorError();
   void HandleCommingConnection();
 
   bool listening_;
-  SocketAddress address_;
+  SocketAddr address_;
 
   base::EventPump* event_pump_;
   base::RefFdEvent socket_event_;

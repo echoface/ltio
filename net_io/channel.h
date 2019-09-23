@@ -45,8 +45,8 @@ public:
   const std::string& ChannelName() const {return name_;}
 protected:
   SocketChannel(int socket_fd,
-                const SocketAddress& loc,
-                const SocketAddress& peer,
+                const SocketAddr& loc,
+                const SocketAddr& peer,
                 base::MessageLoop* loop);
   virtual ~SocketChannel() {}
 
@@ -61,8 +61,8 @@ protected:
 
   base::RefFdEvent fd_event_;
 
-  SocketAddress local_addr_;
-  SocketAddress peer_addr_;
+  SocketAddr local_addr_;
+  SocketAddr peer_addr_;
 
   std::string name_;
 

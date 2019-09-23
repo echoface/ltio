@@ -7,14 +7,14 @@
 namespace lt {
 namespace net {
 
-class SocketAddress {
+class SocketAddr {
 public:
-  static SocketAddress FromSocketFd(int fd);
+  static SocketAddr FromSocketFd(int fd);
 public:
-  SocketAddress(uint16_t port);
-  explicit SocketAddress(const struct sockaddr_in&);
+  SocketAddr(uint16_t port);
+  explicit SocketAddr(const struct sockaddr_in&);
   // @c ip should be "1.2.3.4"
-  SocketAddress(const std::string& ip, const uint16_t port);
+  SocketAddr(const std::string& ip, const uint16_t port);
 
   uint16_t Port() const;
   std::string Ip() const;

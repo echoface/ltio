@@ -7,7 +7,7 @@
 namespace lt {
 namespace net {
 
-SocketAddress::SocketAddress(uint16_t port) {
+SocketAddr::SocketAddr(uint16_t port) {
   bzero(&addr_in_, sizeof addr_in_);
 
   addr_in_.sin_family = AF_INET;
@@ -18,46 +18,46 @@ SocketAddress::SocketAddress(uint16_t port) {
   addr_in_.sin_addr.s_addr = htobe32(ip);
 }
 
-SocketAddress::SocketAddress(const std::string& ip, const uint16_t port) {
+SocketAddr::SocketAddr(const std::string& ip, const uint16_t port) {
   bzero(&addr_in_, sizeof addr_in_);
   socketutils::FromIpPort(ip.c_str(), port, &addr_in_);
 }
 
-SocketAddress::SocketAddress(const struct sockaddr_in& addr)
+SocketAddr::SocketAddr(const struct sockaddr_in& addr)
   : addr_in_(addr) {
 }
 
 //static
-SocketAddress SocketAddress::FromSocketFd(int fd) {
+SocketAddr SocketAddr::FromSocketFd(int fd) {
   struct sockaddr_in addr = socketutils::GetLocalAddrIn(fd);
-  return SocketAddress(addr);
+  return SocketAddr(addr);
 }
 
-const struct sockaddr* SocketAddress::AsSocketAddr() const {
+const struct sockaddr* SocketAddr::AsSocketAddr() const {
   return socketutils::sockaddr_cast(&addr_in_);
 }
 
-inline uint16_t SocketAddress::Port() const {
+inline uint16_t SocketAddr::Port() const {
   return be16toh(addr_in_.sin_port);
 }
 
-sa_family_t SocketAddress::Family() const {
+sa_family_t SocketAddr::Family() const {
   return addr_in_.sin_family;
 }
 
-std::string SocketAddress::Ip() const {
+std::string SocketAddr::Ip() const {
   return socketutils::SocketAddr2Ip(socketutils::sockaddr_cast(&addr_in_));
 }
 
-std::string SocketAddress::IpPort() const {
+std::string SocketAddr::IpPort() const {
   return socketutils::SocketAddr2IpPort(socketutils::sockaddr_cast(&addr_in_));
 }
 
-uint32_t SocketAddress::NetworkEndianIp() const {
+uint32_t SocketAddr::NetworkEndianIp() const {
   return addr_in_.sin_addr.s_addr;
 }
 
-uint16_t SocketAddress::NetworkEndianPort() const {
+uint16_t SocketAddr::NetworkEndianPort() const {
   return addr_in_.sin_port;
 }
 
