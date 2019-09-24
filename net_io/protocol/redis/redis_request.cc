@@ -128,8 +128,7 @@ void RedisRequest::DecrBy(const std::string& key, uint64_t by) {
 }
 
 void RedisRequest::Select(const std::string& db) {
-  std::vector<resp::buffer> buffers = encoder_.encode("SELECT", db);
-  for (auto& buffer : buffers) {
+  for (auto& buffer : encoder_.encode("SELECT", db)) {
     body_.append(buffer.data(), buffer.size());
   }
   cmd_counter_++;

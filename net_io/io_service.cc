@@ -49,10 +49,6 @@ void IOService::StartIOService() {
   delegate_->IOServiceStarted(this);
 }
 
-void IOService::OnProtocolServiceReady(const RefProtoService& service) {
-  ;
-}
-
 /* step1: close the acceptor */
 void IOService::StopIOService() {
   if (!accept_loop_->IsInLoopThread()) {

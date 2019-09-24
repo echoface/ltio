@@ -17,29 +17,18 @@
 #include "protocol/proto_service.h"
 #include "protocol/proto_message.h"
 #include "protocol/proto_service_factory.h"
+
+#include "client_base.h"
 #include "clients/queued_channel.h"
 #include "clients/client_connector.h"
+#include "initializer/initializer.h"
 
 namespace lt {
 namespace net {
 
-typedef struct {
-  uint32_t connections = 1;
-  // heart beat_ms only work for protocol service supported
-  // 0 mean not need heart beat keep
-  uint32_t heart_beat_ms = 0;
-
-  uint32_t recon_interval = 5000;
-
-  uint16_t connect_timeout = 5000;
-
-  uint32_t message_timeout = 5000;
-} ClientConfig;
-
 class ClientDelegate {
 public:
   virtual base::MessageLoop* NextIOLoopForClient() = 0;
-
   /* do some init things like select db for redis,
    * or enable keepalive action etc*/
   virtual void OnClientChannelReady(ClientChannel* channel) {}
@@ -74,16 +63,19 @@ public:
   //override from ConnectorDelegate
   void OnClientConnectFailed() override;
   void OnNewClientConnected(int fd, SocketAddr& loc, SocketAddr& remote) override;
+  // initializer callback
+  void OnSuccessInit(RefProtoService& serivce);
 
   //override from ClientChannel::Delegate
-  uint32_t HeartBeatInterval() const override {return config_.heart_beat_ms;};
+  uint32_t HeartBeatInterval() const override {return config_.heart_beat_ms;}
+  const ClientConfig& GetClientConfig() const override {return config_;}
+  const url::RemoteInfo& GetRemoteInfo() const override {return remote_info_;}
   void OnClientChannelClosed(const RefClientChannel& channel) override;
   void OnRequestGetResponse(const RefProtocolMessage&, const RefProtocolMessage&) override;
 
   uint64_t ClientCount() const;
   std::string ClientInfo() const;
   std::string RemoteIpPort() const;
-  const url::RemoteInfo& GetRemoteInfo() const {return remote_info_;}
 private:
   //Get a io work loop for channel, if no loop provide, use default io_loop_;
   base::MessageLoop* GetLoopForClient();
@@ -104,6 +96,7 @@ private:
   ClientConfig config_;
   RefConnector connector_;
   ClientDelegate* delegate_;
+  Initializer* initializer_ = NULL;
   typedef std::vector<RefClientChannel> ClientChannelList;
   typedef std::shared_ptr<ClientChannelList> RefClientChannelList;
 

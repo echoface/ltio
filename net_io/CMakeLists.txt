@@ -48,14 +48,15 @@ set(LTNET_SOURCE
   clients/router/maglev_router.cc
   clients/router/ringhash_router.cc
   clients/router/roundrobin_router.cc
+  clients/initializer/initializer.cc
 )
 
 SET(LTNETEXECUTE_LINKLIBS
   ${Tcmalloc_LIBRARIES}
   ltnet
   ltbase
-  ${GLOG_LIBRARY}
   ${GFLAG_LIBRARY}
+  ${GLOG_LIBRARY}
   ${ZLIB_LIBRARIES}
   3rd
   coro

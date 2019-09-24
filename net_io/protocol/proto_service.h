@@ -12,7 +12,7 @@ namespace net {
 
 class ProtoServiceDelegate {
 public:
-  virtual void OnProtocolServiceReady(const RefProtoService& service) = 0;
+  virtual void OnProtocolServiceReady(const RefProtoService& service) {};
   virtual void OnProtocolServiceGone(const RefProtoService& service) = 0;
   virtual void OnProtocolMessage(const RefProtocolMessage& message) = 0;
 };

@@ -17,13 +17,15 @@ Client::Client(base::MessageLoop* loop, const url::RemoteInfo& info)
   next_index_ = 0;
   CHECK(work_loop_);
   connector_ = std::make_shared<Connector>(work_loop_, this);
-
   std::shared_ptr<ClientChannelList> list(new ClientChannelList(channels_));
   std::atomic_store(&roundrobin_channes_, list);
 }
 
 Client::~Client() {
   FinalizeSync();
+  if (initializer_) {
+    delete initializer_;
+  }
 }
 
 void Client::SetDelegate(ClientDelegate* delegate) {
@@ -32,6 +34,9 @@ void Client::SetDelegate(ClientDelegate* delegate) {
 
 void Client::Initialize(const ClientConfig& config) {
   config_ = config;
+  initializer_ = new Initializer(remote_info_, config_);
+  initializer_->SetSuccessCallback(std::bind(&Client::OnSuccessInit, this, std::placeholders::_1));
+
   for (uint32_t i = 0; i < config_.connections; i++) {
     auto functor = std::bind(&Connector::Launch, connector_, address_);
     work_loop_->PostTask(NewClosure(functor));
@@ -85,11 +90,14 @@ void Client::OnNewClientConnected(int socket_fd, SocketAddr& local, SocketAddr& 
 
   auto proto_service = ProtoServiceFactory::Create(remote_info_.protocol, false);
   proto_service->BindToSocket(socket_fd, local, remote, io_loop);
+  VLOG(GLOG_VINFO) << __FUNCTION__ << ClientInfo() << " new protocol service started";
 
-  auto client_channel = CreateClientChannel(this, proto_service);
+  initializer_->Init(proto_service);
+}
 
+void Client::OnSuccessInit(RefProtoService& service) {
+  auto client_channel = CreateClientChannel(this, service);
   client_channel->SetRequestTimeout(config_.message_timeout);
-
   client_channel->StartClient();
 
   channels_.push_back(client_channel);

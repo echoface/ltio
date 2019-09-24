@@ -224,7 +224,9 @@ void PrepareLoops(uint32_t io_count, uint32_t worker_count) {
 }
 
 int main(int argc, char* argv[]) {
-  //google::ParseCommandLineFlags(&argc, &argv, true);  // 初始化 gflags
+  //gflags::ParseCommandLineFlags(&argc, &argv, true);
+  //google::InitGoogleLogging(argv[0]);
+  //google::SetVLOGLevel(NULL, 26);
 
   main_loop.SetLoopName("main");
   main_loop.Start();

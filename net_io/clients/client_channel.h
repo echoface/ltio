@@ -1,8 +1,9 @@
 #ifndef _LT_NET_CLIENT_CHANNEL_H
 #define _LT_NET_CLIENT_CHANNEL_H
 
-#include "tcp_channel.h"
+#include "url_utils.h"
 #include "net_callback.h"
+#include "client_base.h"
 #include "protocol/proto_message.h"
 #include "protocol/proto_service.h"
 
@@ -16,7 +17,10 @@ class ClientChannel : public ProtoServiceDelegate {
 public:
   class Delegate {
   public:
+    virtual const url::RemoteInfo& GetRemoteInfo() const = 0;
+    virtual const ClientConfig& GetClientConfig() const = 0;
     virtual uint32_t HeartBeatInterval() const {return 0;};
+    //virtual void OnClientChannelReady() = 0;
     virtual void OnClientChannelClosed(const RefClientChannel& channel) = 0;
     virtual void OnRequestGetResponse(const RefProtocolMessage&, const RefProtocolMessage&) = 0;
   };
@@ -31,8 +35,6 @@ public:
   void SetRequestTimeout(uint32_t ms) {request_timeout_ = ms;};
   base::MessageLoop* IOLoop() {return protocol_service_->IOLoop();};
 
-  //override
-  void OnProtocolServiceReady(const RefProtoService& service) override;
 protected:
   Delegate* delegate_;
   RefProtoService protocol_service_;
