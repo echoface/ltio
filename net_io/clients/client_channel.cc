@@ -9,7 +9,8 @@
 namespace lt {
 namespace net {
 
-RefClientChannel CreateClientChannel(ClientChannel::Delegate* delegate, RefProtoService& service) {
+RefClientChannel CreateClientChannel(ClientChannel::Delegate* delegate,
+                                     const RefProtoService& service) {
 	if (service->KeepSequence()) {
 		auto client_channel = QueuedChannel::Create(delegate, service);
 		return std::static_pointer_cast<ClientChannel>(client_channel);
@@ -19,7 +20,7 @@ RefClientChannel CreateClientChannel(ClientChannel::Delegate* delegate, RefProto
 }
 
 
-ClientChannel::ClientChannel(Delegate* d, RefProtoService& service)
+ClientChannel::ClientChannel(Delegate* d, const RefProtoService& service)
 		: delegate_(d),
 		  protocol_service_(service) {
 }

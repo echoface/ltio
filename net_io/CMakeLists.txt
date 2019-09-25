@@ -49,15 +49,17 @@ set(LTNET_SOURCE
   clients/router/ringhash_router.cc
   clients/router/roundrobin_router.cc
   clients/initializer/initializer.cc
+  clients/initializer/init_factory.cc
+  clients/initializer/redis_initializer.cc
 )
 
 SET(LTNETEXECUTE_LINKLIBS
   ${Tcmalloc_LIBRARIES}
-  ltnet
-  ltbase
   ${GFLAG_LIBRARY}
   ${GLOG_LIBRARY}
   ${ZLIB_LIBRARIES}
+  ltnet
+  ltbase
   3rd
   coro
   pthread
@@ -96,6 +98,10 @@ ADD_EXECUTABLE(client_test
 )
 ADD_EXECUTABLE(new_server_model
   test/new_server_model.cc
+)
+target_link_libraries(new_server_model
+  gflags
+  ${LTNETEXECUTE_LINKLIBS}
 )
 ADD_EXECUTABLE(raw_client
   test/raw_client.cc

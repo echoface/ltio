@@ -45,11 +45,15 @@ public:
   //async clients request
   virtual bool KeepSequence() {return true;};
 
-
   virtual bool SendRequestMessage(const RefProtocolMessage& message) = 0;
   virtual bool SendResponseMessage(const RefProtocolMessage& req, const RefProtocolMessage& res) = 0;
 
   virtual const RefProtocolMessage NewResponseFromRequest(const RefProtocolMessage &) {return NULL;}
+
+  virtual const std::string& protocol() const {
+    const static std::string kEmpty;
+    return kEmpty;
+  };
 
   void SetIsServerSide(bool server_side);
   bool IsServerSide() const {return server_side_;}

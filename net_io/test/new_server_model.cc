@@ -10,6 +10,8 @@
 #include "clients/client_connector.h"
 #include "clients/client.h"
 
+#include <csignal>
+
 using namespace lt::net;
 using namespace lt;
 using namespace base;
@@ -223,8 +225,22 @@ void PrepareLoops(uint32_t io_count, uint32_t worker_count) {
   }
 }
 
+net::RawServer* rserver = NULL;
+net::HttpServer* hserver = NULL;
+
+void signalHandler( int signum ){
+  LOG(INFO) << "sighandler sig:" << signum;
+  http_client->FinalizeSync();
+#ifdef ENBALE_RAW_CLIENT
+  raw_client->FinalizeSync();
+#endif
+  rserver->StopServerSync();
+  hserver->StopServerSync();
+  main_loop.QuitLoop();
+}
+
 int main(int argc, char* argv[]) {
-  //gflags::ParseCommandLineFlags(&argc, &argv, true);
+  gflags::ParseCommandLineFlags(&argc, &argv, true);
   //google::InitGoogleLogging(argv[0]);
   //google::SetVLOGLevel(NULL, 26);
 
@@ -242,11 +258,13 @@ int main(int argc, char* argv[]) {
   raw_server.SetIOLoops(loops);
   raw_server.SetDispatcher(dispatcher_);
   raw_server.ServeAddressSync("raw://0.0.0.0:5005", std::bind(HandleRaw, std::placeholders::_1, std::placeholders::_2));
+  rserver = &raw_server;
 
   net::HttpServer http_server;
   http_server.SetIOLoops(loops);
   http_server.SetDispatcher(dispatcher_);
   http_server.ServeAddressSync("http://0.0.0.0:5006", std::bind(HandleHttp, std::placeholders::_1));
+  hserver = &http_server;
 
 #ifdef ENBALE_RAW_CLIENT
   StartRawClient("raw://127.0.0.1:5005");
@@ -256,7 +274,8 @@ int main(int argc, char* argv[]) {
   StartRedisClient();
   std::this_thread::sleep_for(std::chrono::seconds(5));
 #endif
-
+  signal(SIGINT, signalHandler);
+  signal(SIGTERM, signalHandler);
   main_loop.WaitLoopEnd();
 }
 

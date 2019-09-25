@@ -6,11 +6,11 @@
 namespace lt {
 namespace net {
 
-RefQueuedChannel QueuedChannel::Create(Delegate* d, RefProtoService& s) {
+RefQueuedChannel QueuedChannel::Create(Delegate* d, const RefProtoService& s) {
   return RefQueuedChannel(new QueuedChannel(d, s));
 }
 
-QueuedChannel::QueuedChannel(Delegate* d, RefProtoService& service)
+QueuedChannel::QueuedChannel(Delegate* d, const RefProtoService& service)
   : ClientChannel(d, service) {
 }
 

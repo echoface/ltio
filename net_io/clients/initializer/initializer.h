@@ -13,11 +13,14 @@ namespace net {
 
 class Initializer : public ProtoServiceDelegate {
   public:
-    typedef std::function<void(RefProtoService&)> InitCallback;
+    typedef struct Provider {
+      virtual const url::RemoteInfo& GetRemoteInfo() const = 0;
+      virtual const ClientConfig& GetClientConfig() const = 0;
+      virtual void OnClientServiceReady(const RefProtoService&) = 0;
+    }Provider;
 
     virtual ~Initializer();
-    Initializer(const url::RemoteInfo& remote, const ClientConfig& conf);
-    void SetSuccessCallback(InitCallback fn) {success_fn_ = fn;}
+    Initializer(Provider* p) :provider_(p) {};
 
     virtual void Init(RefProtoService& service);
 
@@ -26,9 +29,7 @@ class Initializer : public ProtoServiceDelegate {
     void OnProtocolServiceGone(const RefProtoService& service) override;
     void OnProtocolMessage(const RefProtocolMessage& message) override;
   protected:
-    InitCallback success_fn_;
-    const url::RemoteInfo& remote_;
-    const ClientConfig& config_;
+    Provider* provider_;
     std::set<RefProtoService> client_serivces_;
 };
 

@@ -40,6 +40,7 @@ typedef std::shared_ptr<Client> RefClient;
 typedef std::function<void(ProtocolMessage*)> AsyncCallBack;
 
 class Client: public ConnectorDelegate,
+              public Initializer::Provider,
               public ClientChannel::Delegate {
 public:
   Client(base::MessageLoop*, const url::RemoteInfo&);
@@ -63,13 +64,14 @@ public:
   //override from ConnectorDelegate
   void OnClientConnectFailed() override;
   void OnNewClientConnected(int fd, SocketAddr& loc, SocketAddr& remote) override;
-  // initializer callback
-  void OnSuccessInit(RefProtoService& serivce);
+
+  //override Initializer::Provider
+  void OnClientServiceReady(const RefProtoService&) override;
+  const ClientConfig& GetClientConfig() const override {return config_;}
+  const url::RemoteInfo& GetRemoteInfo() const override {return remote_info_;}
 
   //override from ClientChannel::Delegate
   uint32_t HeartBeatInterval() const override {return config_.heart_beat_ms;}
-  const ClientConfig& GetClientConfig() const override {return config_;}
-  const url::RemoteInfo& GetRemoteInfo() const override {return remote_info_;}
   void OnClientChannelClosed(const RefClientChannel& channel) override;
   void OnRequestGetResponse(const RefProtocolMessage&, const RefProtocolMessage&) override;
 

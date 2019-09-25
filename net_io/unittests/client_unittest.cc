@@ -502,7 +502,7 @@ TEST_CASE("client.http.bench", "[http client send request benchmark]") {
   loop.WaitLoopEnd();
 }
 
-TEST_CASE("client.router", "[redis client]") {
+TEST_CASE("client.redis_client", "[redis client]") {
   static const int connections = 2;
 
   LOG(INFO) << "start test client.router with redis protocal";
@@ -512,8 +512,8 @@ TEST_CASE("client.router", "[redis client]") {
   loop.Start();
 
   std::vector<std::string> remote_hosts = {
-    "redis://localhost:6380",
-    "redis://127.0.0.1:6379"
+    //"redis://localhost:6380?db=2",
+    "redis://127.0.0.1:6379?db=3"
   };
 
   net::ClientConfig config;
@@ -545,7 +545,7 @@ TEST_CASE("client.router", "[redis client]") {
 
       auto redis_request = std::make_shared<net::RedisRequest>();
 
-      //redis_request->SetWithExpire("name", "huan.gong", 2000);
+      redis_request->SetWithExpire("name", "huan.gong", 2000);
       //redis_request->Delete("name");
       redis_request->MGet("name", "abc", "efg");
 /*

@@ -25,7 +25,7 @@ public:
     virtual void OnRequestGetResponse(const RefProtocolMessage&, const RefProtocolMessage&) = 0;
   };
 
-  ClientChannel(Delegate* d, RefProtoService& service);
+  ClientChannel(Delegate* d, const RefProtoService& service);
   virtual ~ClientChannel() {}
 
   virtual void StartClient();
@@ -41,7 +41,7 @@ protected:
   uint32_t request_timeout_ = 5000; //1s
 };
 
-RefClientChannel CreateClientChannel(ClientChannel::Delegate*, RefProtoService&);
+RefClientChannel CreateClientChannel(ClientChannel::Delegate*, const RefProtoService&);
 
 
 }}//end namespace

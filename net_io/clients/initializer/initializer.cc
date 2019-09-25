@@ -5,10 +5,6 @@ namespace lt {
 namespace net {
 
 Initializer::~Initializer() {}
-Initializer::Initializer(const url::RemoteInfo& remote, const ClientConfig& config)
-  : remote_(remote),
-    config_(config) {
-}
 
 void Initializer::Init(RefProtoService& service) {
   service->SetDelegate(this);
@@ -16,11 +12,8 @@ void Initializer::Init(RefProtoService& service) {
 }
 
 void Initializer::OnProtocolServiceReady(const RefProtoService& service) {
-  if (success_fn_) {
-    RefProtoService guard(service);
-    client_serivces_.erase(service);
-    success_fn_(guard);
-  }
+  client_serivces_.erase(service);
+  provider_->OnClientServiceReady(service);
 }
 
 void Initializer::OnProtocolServiceGone(const RefProtoService& service) {
@@ -28,7 +21,13 @@ void Initializer::OnProtocolServiceGone(const RefProtoService& service) {
 }
 
 void Initializer::OnProtocolMessage(const RefProtocolMessage& message) {
+  RefProtoService service = message->GetIOCtx().protocol_service.lock();
+  if (!service) {
+    return;
+  }
 
+  client_serivces_.erase(service);
+  provider_->OnClientServiceReady(service);
 }
 
 

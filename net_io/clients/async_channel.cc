@@ -5,13 +5,12 @@
 namespace lt {
 namespace net {
 
-RefAsyncChannel AsyncChannel::Create(Delegate* d, RefProtoService& s) {
+RefAsyncChannel AsyncChannel::Create(Delegate* d, const RefProtoService& s) {
   return RefAsyncChannel(new AsyncChannel(d, s));
 }
 
-AsyncChannel::AsyncChannel(Delegate* d, RefProtoService& s)
+AsyncChannel::AsyncChannel(Delegate* d, const RefProtoService& s)
   : ClientChannel(d, s) {
-
 }
 
 AsyncChannel::~AsyncChannel() {

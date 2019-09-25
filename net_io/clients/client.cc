@@ -1,6 +1,7 @@
 #include "client.h"
 
 #include "base/base_constants.h"
+#include "initializer/init_factory.h"
 #include "base/utils/string/str_utils.h"
 #include "base/coroutine/coroutine_runner.h"
 
@@ -34,8 +35,8 @@ void Client::SetDelegate(ClientDelegate* delegate) {
 
 void Client::Initialize(const ClientConfig& config) {
   config_ = config;
-  initializer_ = new Initializer(remote_info_, config_);
-  initializer_->SetSuccessCallback(std::bind(&Client::OnSuccessInit, this, std::placeholders::_1));
+  CHECK(initializer_ == NULL);
+  initializer_ = ClientInitialzerFactory::Create(remote_info_.protocol, this);
 
   for (uint32_t i = 0; i < config_.connections; i++) {
     auto functor = std::bind(&Connector::Launch, connector_, address_);
@@ -95,7 +96,7 @@ void Client::OnNewClientConnected(int socket_fd, SocketAddr& local, SocketAddr& 
   initializer_->Init(proto_service);
 }
 
-void Client::OnSuccessInit(RefProtoService& service) {
+void Client::OnClientServiceReady(const RefProtoService& service) {
   auto client_channel = CreateClientChannel(this, service);
   client_channel->SetRequestTimeout(config_.message_timeout);
   client_channel->StartClient();
