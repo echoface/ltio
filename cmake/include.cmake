@@ -17,7 +17,7 @@ include_directories(
 
   ${GLOG_INCLUDE_DIR}
 
-  ${MYSQL_INCLUDE_DIRS}
-  ${MYSQL_INCLUDE_DIRS}/mysql
-  ${MYSQL_INCLUDE_DIRS}/mariadb
+  ${MYSQL_INCLUDE_DIR}
+  ${MYSQL_INCLUDE_DIR}/mysql
+  ${MYSQL_INCLUDE_DIR}/mariadb
 )
