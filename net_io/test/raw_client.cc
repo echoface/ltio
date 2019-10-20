@@ -26,7 +26,7 @@ void SendRawRequest(net::LtRawMessage::RefRawMessage& message) {
 
 int main(int argc, char** argv) {
   //gflags::ParseCommandLineFlags(&argc, &argv, true);
-  //google::ParseCommandLineFlags(&argc, &argv, true);
+  gflags::ParseCommandLineFlags(&argc, &argv, true);
   base::MessageLoop mainloop;
 
   net::ClientConfig config;

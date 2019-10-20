@@ -33,7 +33,7 @@ public:
   bool BeforeSendResponseMessage(HttpRequest*, HttpResponse*);
   bool SendResponseMessage(const RefProtocolMessage& req, const RefProtocolMessage& res) override;
 
-  const RefProtocolMessage NewResponseFromRequest(const RefProtocolMessage &) override;
+  const RefProtocolMessage NewResponse(const ProtocolMessage*) override;
 private:
   bool ParseHttpRequest(const RefTcpChannel&, IOBuffer*);
   bool ParseHttpResponse(const RefTcpChannel&, IOBuffer*);

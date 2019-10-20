@@ -89,7 +89,6 @@ class Str {
         return result;
       }
 
-
     template<typename ...Args>
       static std::string Concat(Args&&... args) {
         std::ostringstream oss;

@@ -56,11 +56,11 @@ void Client::Finalize() {
 }
 
 void Client::FinalizeSync() {
-
   Finalize();
 
   std::unique_lock<std::mutex> lck(mtx_);
   cv_.wait(lck, [&]{
+    LOG(INFO) << " conditional value wait timeout";
     auto channels = std::atomic_load(&roundrobin_channes_);
     return channels->empty();
   });
@@ -113,9 +113,11 @@ void Client::OnClientServiceReady(const RefProtoService& service) {
 
 /*on the loop of client IO, need managed by connector loop*/
 void Client::OnClientChannelClosed(const RefClientChannel& channel) {
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << " enter";
   if (!work_loop_->IsInLoopThread()) {
     auto functor = std::bind(&Client::OnClientChannelClosed, this, channel);
     work_loop_->PostTask(NewClosure(std::move(functor)));
+    VLOG(GLOG_VTRACE) << __FUNCTION__ << " leave for not in same loop";
     return;
   }
 
@@ -138,7 +140,11 @@ void Client::OnClientChannelClosed(const RefClientChannel& channel) {
   VLOG(GLOG_VINFO) << __FUNCTION__ << ClientInfo();
 
   if (is_stopping_ && channels_.empty()) {//for sync stopping
+    VLOG(GLOG_VTRACE) << __FUNCTION__ << " for notify cv wait";
     cv_.notify_all();
+    if (delegate_) {
+      delegate_->OnClientStoped(this);
+    }
   }
 }
 

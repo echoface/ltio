@@ -109,7 +109,7 @@ void RawServer::HandleRawRequest(const RefProtocolMessage request) {
     return;
   }
 
-  RefProtocolMessage response = raw_service->NewResponseFromRequest(request);
+  RefProtocolMessage response = raw_service->NewResponse(request.get());
   do {
     if (dispatcher_ && !dispatcher_->SetWorkContext(request.get())) {
       LOG(ERROR) << __FUNCTION__ << " Set WorkerContext failed";

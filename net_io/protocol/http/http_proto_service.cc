@@ -272,16 +272,14 @@ bool HttpProtoService::ResponseToBuffer(const HttpResponse* response, IOBuffer* 
   return true;
 }
 
-const RefProtocolMessage HttpProtoService::NewResponseFromRequest(const RefProtocolMessage& request)  {
+const RefProtocolMessage HttpProtoService::NewResponse(const ProtocolMessage* request)  {
   CHECK(request && request->GetMessageType() == MessageType::kRequest);
-
-  const HttpRequest* http_request = static_cast<HttpRequest*>(request.get());
+  const HttpRequest* http_request = (HttpRequest*)request;//static_cast<HttpRequest*>(request);
 
   RefHttpResponse http_res = HttpResponse::CreatWithCode(500);
 
   http_res->SetKeepAlive(http_request->IsKeepAlive());
   http_res->InsertHeader("Content-Type", "text/plain");
-
   return std::move(http_res);
 }
 

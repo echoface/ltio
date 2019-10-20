@@ -32,7 +32,7 @@ bool ProtoService::BindToSocket(int fd,
 
 void ProtoService::CloseService() {
 	CHECK(channel_->InIOLoop());
-
+  LOG(INFO) << __FUNCTION__ << " enter";
 	BeforeCloseService();
 	channel_->ShutdownChannel();
 }
@@ -44,6 +44,7 @@ void ProtoService::SetIsServerSide(bool server_side) {
 void ProtoService::OnChannelClosed(const SocketChannel* channel) {
 	CHECK(channel == channel_.get());
 
+  LOG(INFO) << __FUNCTION__ << " enter";
 	VLOG(GLOG_VTRACE) << __FUNCTION__ << channel_->ChannelInfo() << " closed";
 
 	RefProtoService guard = shared_from_this();

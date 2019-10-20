@@ -40,7 +40,6 @@ public:
 
   virtual void BeforeCloseService() {};
   virtual void AfterChannelClosed() {};
-  virtual void StartHeartBeat(int32_t ms) {};
 
   //async clients request
   virtual bool KeepSequence() {return true;};
@@ -48,7 +47,7 @@ public:
   virtual bool SendRequestMessage(const RefProtocolMessage& message) = 0;
   virtual bool SendResponseMessage(const RefProtocolMessage& req, const RefProtocolMessage& res) = 0;
 
-  virtual const RefProtocolMessage NewResponseFromRequest(const RefProtocolMessage &) {return NULL;}
+  virtual const RefProtocolMessage NewResponse(const ProtocolMessage*) {return NULL;}
 
   virtual const std::string& protocol() const {
     const static std::string kEmpty;

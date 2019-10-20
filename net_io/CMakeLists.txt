@@ -1,6 +1,10 @@
 ADD_DEFINITIONS(-std=c++11)
 SET(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+include_directories(
+  ./client/
+)
+
 set(LTNET_SOURCE
   #server.cc
   address.cc
@@ -23,7 +27,6 @@ set(LTNET_SOURCE
   protocol/http/parser_context.cc
   protocol/http/http_proto_service.cc
   protocol/raw/raw_message.cc
-  protocol/raw/raw_proto_service.cc
   protocol/redis/redis_request.cc
   protocol/redis/redis_response.cc
   protocol/redis/resp_service.cc
@@ -54,6 +57,7 @@ set(LTNET_SOURCE
 )
 
 SET(LTNETEXECUTE_LINKLIBS
+  gflags
   ${Tcmalloc_LIBRARIES}
   ${GFLAG_LIBRARY}
   ${GLOG_LIBRARY}
@@ -98,10 +102,6 @@ ADD_EXECUTABLE(client_test
 )
 ADD_EXECUTABLE(new_server_model
   test/new_server_model.cc
-)
-target_link_libraries(new_server_model
-  gflags
-  ${LTNETEXECUTE_LINKLIBS}
 )
 ADD_EXECUTABLE(raw_client
   test/raw_client.cc

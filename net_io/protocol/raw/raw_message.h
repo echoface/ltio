@@ -3,73 +3,72 @@
 
 #include <cinttypes>
 #include "protocol/proto_message.h"
+#include "channel.h"
 
 namespace lt {
 namespace net {
 
-struct LtRawHeader {
-public:
+typedef struct LtRawHeader {
   static const uint64_t kHeaderSize;
-  static const uint64_t kHeartBeatId;
-
   LtRawHeader* ToNetOrder();
   LtRawHeader* FromNetOrder();
   const std::string Dump() const;
-  inline uint64_t identify_id() const {return sequence_id_;}
+  /* 消息序列id,raw service支持异步消息*/
+  inline uint64_t seq_id() const {return sequence_id_;}
 
-  /* use for status code*/
+  /*status code*/
   uint8_t code = 0;
-  /* Method of this message*/
+  /*Method of this message*/
   uint8_t method = 0;
-private:
-  friend class RawProtoService;
   /* Frame: frame_size = sizeof(LtRawHeader) + content_size*/
   uint64_t content_size_ = 0;
-  /* 0: heart beat sequence id
-   * other: application message*/
   uint64_t sequence_id_ = 0;
-};
+}LtRawHeader;
 
-template <typename HeaderType>
+/*
+ * this is a raw message wrap class only support POD header data
+ * POD header need provider a static self-decode method and a trait
+ * of it's size
+ *
+ * for raw protoservice, any message need provide
+ * Message::Create
+ * Message::CreateResponse
+ * Message::Decode
+ * Message::Encode
+ * */
 class RawMessage : public ProtocolMessage {
-public:
-  typedef RawMessage<HeaderType> ResponseType;
+ public:
+  typedef RawMessage ResponseType;
+  typedef std::shared_ptr<RawMessage> RefRawMessage;
 
-  typedef RawMessage<HeaderType> ConcreteRawMessage;
-  typedef std::shared_ptr<ConcreteRawMessage> RefRawMessage;
+  static RefRawMessage Create(bool request);
+  static RefRawMessage CreateResponse(RawMessage* request);
+  static bool Encode(const RawMessage*, SocketChannel* channel);
+  static RefRawMessage Decode(IOBuffer* buffer, bool server_side);
 
-  static RefRawMessage Create(bool request) {
-    auto t = request ? MessageType::kRequest : MessageType::kResponse;
-    return std::make_shared<ConcreteRawMessage>(t);
-  };
+  RawMessage(MessageType t);
+  ~RawMessage(){};
 
-  RawMessage(MessageType t) :ProtocolMessage(t) {};
-  virtual ~RawMessage() {};
+  //override from ProtocalMessage
+  void SetAsyncId(uint64_t id) override {header_.sequence_id_ = id;}
+  const uint64_t AsyncId() const override {return header_.seq_id();};
 
-  const std::string& Content() const {return content_;}
-  uint64_t ContentLength() const {return content_.size();}
-  void SetContent(const std::string& c) {content_ = c;};
-  void SetContent(const char* content) {content_ = content;}
-  void AppendContent(const char* c, uint64_t len) {content_.append(c, len);}
+  void SetContent(const char* c);
+  void SetContent(const std::string& c);
+  void AppendContent(const char* c, uint64_t len);
 
-  HeaderType* MutableHeader() {return &header_;}
-  const HeaderType& Header() const {return header_;}
+  const std::string& Content() const { return content_;}
+  uint64_t ContentLength() const { return content_.size(); }
 
-  const std::string Dump() const {
-    std::ostringstream oss;
-
-    oss << "{\"type\": \"" << TypeAsStr() << "\","
-        << "\"header\": " << header_.Dump() << ","
-        << "\"content\": \"" << content_ << "\""
-        << "}";
-    return std::move(oss.str());
-  }
+  LtRawHeader* MutableHeader() { return &header_; }
+  const LtRawHeader& Header() const {return header_;}
+  const std::string Dump() const;
 private:
-  HeaderType header_;
+  LtRawHeader header_;
   std::string content_;
 };
+typedef RawMessage LtRawMessage;
 
-typedef RawMessage<LtRawHeader> LtRawMessage;
-
-}}//end namespace net
+}  // namespace net
+}  // namespace lt
 #endif

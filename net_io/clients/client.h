@@ -26,6 +26,10 @@
 namespace lt {
 namespace net {
 
+class Client;
+typedef std::shared_ptr<Client> RefClient;
+typedef std::function<void(ProtocolMessage*)> AsyncCallBack;
+
 class ClientDelegate {
 public:
   virtual base::MessageLoop* NextIOLoopForClient() = 0;
@@ -33,11 +37,9 @@ public:
    * or enable keepalive action etc*/
   virtual void OnClientChannelReady(ClientChannel* channel) {}
   virtual void OnClientChannelGone(ClientChannel* channel) {}
+  virtual void OnClientStoped(Client* client) {};
 };
 
-class Client;
-typedef std::shared_ptr<Client> RefClient;
-typedef std::function<void(ProtocolMessage*)> AsyncCallBack;
 
 class Client: public ConnectorDelegate,
               public Initializer::Provider,

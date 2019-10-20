@@ -9,8 +9,7 @@ const RefProtocolMessage ProtocolMessage::kNullMessage = RefProtocolMessage();
 
 ProtocolMessage::ProtocolMessage(MessageType type)
   : type_(type),
-    fail_code_(kSuccess),
-    responded_(false) {
+    fail_code_(kSuccess) {
   work_context_.loop = NULL;
 }
 

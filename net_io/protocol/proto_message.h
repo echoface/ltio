@@ -26,10 +26,6 @@ typedef struct {
   WeakProtoService protocol_service;
 } IOContext;
 
-typedef enum {
-  KNullId = 0,
-} SequenceIdentify;
-
 typedef struct {
   base::MessageLoop* loop;
   base::StlClosure resumer_fn;
@@ -73,9 +69,8 @@ public:
 
   /* use for those async-able protocol message,
    * use for matching request and response*/
-  void SetAsyncIdentify(uint64_t id) {async_id_ = id;}
-  const uint64_t AsyncIdentify() const {return async_id_;};
-
+  virtual void SetAsyncId(uint64_t id) {};
+  virtual const uint64_t AsyncId() const {return 0;};
   virtual const std::string Dump() const {return "";};
 protected:
   IOContext io_context_;
@@ -83,11 +78,9 @@ protected:
 private:
   MessageType type_;
   std::string remote_host_;
-
   MessageCode fail_code_;
-  bool responded_;
+  bool responded_ = false;
   RefProtocolMessage response_;
-  uint64_t async_id_ = SequenceIdentify::KNullId;
 };
 
 }}

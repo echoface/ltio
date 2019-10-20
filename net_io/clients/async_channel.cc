@@ -38,9 +38,7 @@ void AsyncChannel::SendRequest(RefProtocolMessage request)  {
   auto functor = std::bind(&AsyncChannel::OnRequestTimeout, shared_from_this(), weak);
   IOLoop()->PostDelayTask(NewClosure(functor), request_timeout_);
 
-  uint64_t message_identify = request->AsyncIdentify();
-
-  CHECK(message_identify != SequenceIdentify::KNullId);
+  uint64_t message_identify = request->AsyncId();
   in_progress_.insert(std::make_pair(message_identify, std::move(request)));
 }
 
@@ -50,8 +48,7 @@ void AsyncChannel::OnRequestTimeout(WeakProtocolMessage weak) {
     return;
   }
 
-  uint64_t identify = request->AsyncIdentify();
-  CHECK(identify != SequenceIdentify::KNullId);
+  uint64_t identify = request->AsyncId();
 
   size_t numbers = in_progress_.erase(identify);
   CHECK(numbers == 1);
@@ -63,17 +60,14 @@ void AsyncChannel::OnRequestTimeout(WeakProtocolMessage weak) {
 void AsyncChannel::OnProtocolMessage(const RefProtocolMessage& res) {
   DCHECK(IOLoop()->IsInLoopThread());
 
-  uint64_t identify = res->AsyncIdentify();
-  CHECK(identify != SequenceIdentify::KNullId);
-
+  uint64_t identify = res->AsyncId();
 
   auto iter = in_progress_.find(identify);
   if (iter == in_progress_.end()) {
     VLOG(GLOG_VINFO) << __FUNCTION__ << " response:" << identify << " not found corresponding request";
     return;
   }
-
-  CHECK(iter->second->AsyncIdentify() == identify);
+  CHECK(iter->second->AsyncId() == identify);
 
   delegate_->OnRequestGetResponse(iter->second, res);
   in_progress_.erase(iter);

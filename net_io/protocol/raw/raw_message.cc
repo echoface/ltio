@@ -6,7 +6,6 @@
 namespace lt {
 namespace net {
 
-const uint64_t LtRawHeader::kHeartBeatId = 0;
 const uint64_t LtRawHeader::kHeaderSize = sizeof(LtRawHeader);
 
 LtRawHeader* LtRawHeader::ToNetOrder() {
@@ -31,4 +30,74 @@ const std::string LtRawHeader::Dump() const {
   return std::move(oss.str());
 }
 
-}}//end net
+LtRawMessage::RefRawMessage RawMessage::Create(bool request) {
+  auto t = request ? MessageType::kRequest : MessageType::kResponse;
+  return std::make_shared<RawMessage>(t);
+}
+
+RawMessage::RefRawMessage RawMessage::CreateResponse(RawMessage* request) {
+  auto response = Create(false);
+  response->header_.code = 0;
+  response->header_.method = 0;
+  response->header_.content_size_ = 0;
+  response->header_.sequence_id_ = request->header_.seq_id();
+  return std::move(response);
+}
+
+RawMessage::RefRawMessage RawMessage::Decode(IOBuffer* buffer, bool server_side) {
+  if (buffer->CanReadSize() < LtRawHeader::kHeaderSize) {
+    return NULL;
+  }
+  const LtRawHeader* predict_header = (const LtRawHeader*)buffer->GetRead();
+  const uint64_t body_size = predict_header->content_size_;
+  if (buffer->CanReadSize() < LtRawHeader::kHeaderSize + body_size) {
+    return NULL;
+  }
+  //decode
+  auto message = Create(server_side);
+  ::memcpy(&message->header_, buffer->GetRead(), LtRawHeader::kHeaderSize);
+  buffer->Consume(LtRawHeader::kHeaderSize);
+  if (body_size > 0) {
+    message->AppendContent((const char*)buffer->GetRead(), body_size);
+    buffer->Consume(body_size);
+  }
+  return message;
+}
+
+RawMessage::RawMessage(MessageType t) :
+  ProtocolMessage(t) {
+}
+
+bool RawMessage::Encode(const RawMessage* m, SocketChannel* ch) {
+  if (ch->Send((const uint8_t*)(&m->header_), LtRawHeader::kHeaderSize) < 0) {
+    return false;
+  }
+  return ch->Send((const uint8_t*)m->content_.data(), m->content_.size()) >= 0;
+}
+
+void RawMessage::SetContent(const char* c) {
+  content_ = c;
+  header_.content_size_ = content_.size();
+}
+
+void RawMessage::SetContent(const std::string& c) {
+  content_ = c;
+  header_.content_size_ = content_.size();
+}
+
+void RawMessage::AppendContent(const char* c, uint64_t len) {
+  content_.append(c, len);
+  header_.content_size_ = content_.size();
+}
+
+const std::string RawMessage::Dump() const {
+  std::ostringstream oss;
+  oss << "{\"type\": \"" << TypeAsStr() << "\","
+    << "\"header\": " << header_.Dump() << ","
+    << "\"content\": \"" << content_ << "\""
+    << "}";
+  return std::move(oss.str());
+}
+
+}  // namespace net
+}  // namespace lt

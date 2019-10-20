@@ -66,6 +66,16 @@ public:
     io_round_count++;
     return loops[io_round_count % loops.size()];
   }
+
+  void OnClientStoped(net::Client* client) {
+    if (client == http_client) {
+      LOG(INFO) << " http client closed";
+    } else if (client == raw_client) {
+      LOG(INFO) << " raw client closed";
+    } else if (client == redis_client) {
+      LOG(INFO) << " redis client closed";
+    }
+  }
 };
 
 RouterManager router_manager;
@@ -228,16 +238,27 @@ void PrepareLoops(uint32_t io_count, uint32_t worker_count) {
 net::RawServer* rserver = NULL;
 net::HttpServer* hserver = NULL;
 
-void signalHandler( int signum ){
-  LOG(INFO) << "sighandler sig:" << signum;
+void StopAllService() {
+  LOG(INFO) << __FUNCTION__ << " stop enter";
   http_client->FinalizeSync();
+  LOG(INFO) << __FUNCTION__ << " http client stoped";
 #ifdef ENBALE_RAW_CLIENT
   raw_client->FinalizeSync();
+  LOG(INFO) << __FUNCTION__ << " raw client stoped";
 #endif
   rserver->StopServerSync();
+  LOG(INFO) << __FUNCTION__ << " raw server stoped";
   hserver->StopServerSync();
+  LOG(INFO) << __FUNCTION__ << " http server stoped";
   main_loop.QuitLoop();
+  LOG(INFO) << __FUNCTION__ << " stop leave";
 }
+
+void signalHandler( int signum ){
+  LOG(INFO) << "sighandler sig:" << signum;
+  StopAllService();
+}
+
 
 int main(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
