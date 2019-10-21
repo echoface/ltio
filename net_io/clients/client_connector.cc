@@ -20,6 +20,7 @@ bool Connector::Launch(const net::SocketAddr &address) {
     return false;
   }
 
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << " connect to add:" << address.IpPort();
   const struct sockaddr* sock_addr = net::socketutils::sockaddr_cast(address.SockAddrIn());
 
   bool success = false;
@@ -43,10 +44,11 @@ bool Connector::Launch(const net::SocketAddr &address) {
       InitEvent(fd_event);
 
       connecting_sockets_.insert(fd_event);
+      VLOG(GLOG_VTRACE) << __FUNCTION__ << " " << address.IpPort() << " connecting";
     } break;
     default: {
       success = false;
-      LOG(ERROR) << " setup client connect failed:" << base::StrError(state);
+      LOG(ERROR) << __FUNCTION__ << " launch client connect failed:" << base::StrError(state);
       net::socketutils::CloseSocket(sock_fd);
     } break;
   }
@@ -60,8 +62,8 @@ void Connector::OnWrite(WeakPtrFdEvent weak_fdevent) {
   base::RefFdEvent fd_event = weak_fdevent.lock();
 
   if (!fd_event) {
-    LOG(ERROR) << __FUNCTION__ << " FdEvent Has Gone Before Connection Setup";
     delegate_->OnClientConnectFailed();
+    LOG(ERROR) << __FUNCTION__ << " FdEvent Has Gone Before Connection Setup";
     return ;
   }
 
@@ -116,7 +118,7 @@ void Connector::CleanUpBadChannel(base::RefFdEvent& event) {
   loop_->Pump()->RemoveFdEvent(event.get());
 
   connecting_sockets_.erase(event);
-  LOG(INFO) << "Now Has " << connecting_sockets_.size() << " In Connecting Progress";
+  VLOG(GLOG_INFO) << " connecting list size:" << connecting_sockets_.size();
 }
 
 }}//end namespace

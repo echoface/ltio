@@ -17,48 +17,53 @@ using namespace lt;
 using namespace base;
 
 #define ENBALE_RAW_CLIENT
+#define ENBALE_RDS_CLIENT
+#define USE_CORO_DISPATCH 1
 
-void SendRawRequest();
+void DumpRedisResponse(RedisResponse* redis_response);
+net::ClientConfig DeafaultClientConfig(int count = 2) {
+  net::ClientConfig config;
+  config.connections = count;
+  config.recon_interval = 500;
+  config.message_timeout = 1000;
+  return config;
+}
 
 base::MessageLoop main_loop;
-std::vector<base::MessageLoop*> loops;
-std::vector<base::MessageLoop*> workers;
 
-CoroDispatcher* dispatcher_ = new CoroDispatcher(true);
-Dispatcher* common_dispatcher = new Dispatcher(true);
-
-std::atomic_int64_t http_count;
-static const std::string kresponse(3650, 'c');
-
-void HandleHttp(net::HttpContext* context) {
-  net::HttpRequest* req = context->Request();
-
-  LOG_EVERY_N(INFO, 10000) << " got 1w Http request, body:" << req->Dump();
-  http_count++;
-
-#ifdef ENBALE_RAW_CLIENT
-  if (req->RequestUrl() == "/br") {
-    SendRawRequest();
-  }
-#endif
-  context->ReplyString(kresponse);
-}
-
-void HandleRaw(const LtRawMessage* req, LtRawMessage* res) {
-  LOG_EVERY_N(INFO, 10000) << " got 1w Raw request" << req->Dump();
-
-  res->MutableHeader()->code = 0;
-  res->MutableHeader()->method = req->Header().method;
-  res->SetContent("Raw Message");
-}
-
-net::Client*  raw_client; //(base::MessageLoop*, const SocketAddr&);
-net::Client*  http_client; //(base::MessageLoop*, const SocketAddr&);
-net::Client*  redis_client;
-
-static std::atomic_int io_round_count;
-class RouterManager: public net::ClientDelegate {
+class SampleApp: public net::ClientDelegate {
 public:
+  SampleApp() {
+    int loop_count = std::min(4, int(std::thread::hardware_concurrency()));
+    for (int i = 0; i < loop_count; i++) {
+      auto loop = new(base::MessageLoop);
+      loop->SetLoopName("io_" + std::to_string(i));
+      loop->Start();
+      loops.push_back(loop);
+    }
+
+#ifdef USE_CORO_DISPATCH
+    dispatcher_ = new net::CoroDispatcher(true);
+#else
+    dispatcher_ = new net::Dispatcher(true);
+#endif
+    dispatcher_->SetWorkerLoops(loops);
+  }
+
+  ~SampleApp() {
+    delete dispatcher_;
+#ifdef ENBALE_RAW_CLIENT
+    delete raw_client;
+#endif
+#ifdef ENBALE_RDS_CLIENT
+    delete redis_client;
+#endif
+    for (auto loop : loops) {
+      delete loop;
+    }
+    loops.clear();
+  }
+
   base::MessageLoop* NextIOLoopForClient() {
     if (loops.empty()) {
       return NULL;
@@ -76,74 +81,169 @@ public:
       LOG(INFO) << " redis client closed";
     }
   }
+
+  void StartHttpClients(std::string url) {
+    net::url::RemoteInfo server_info;
+    LOG_IF(ERROR, !net::url::ParseRemote(url, server_info)) << " server can't be resolve";
+    http_client = new net::Client(NextIOLoopForClient(), server_info);
+    net::ClientConfig config = DeafaultClientConfig(2);
+    http_client->SetDelegate(this);
+    http_client->Initialize(config);
+  }
+
+  void SendHttpRequest() {
+    auto http_request = std::make_shared<HttpRequest>();
+    http_request->SetMethod("GET");
+    http_request->SetRequestURL("/ping");
+    http_request->SetKeepAlive(true);
+
+    HttpResponse* http_response = http_client->SendRecieve(http_request);
+    if (http_response) {
+      LOG(INFO) << "http client got response:" << http_response->Body();
+    } else {
+      LOG(ERROR) << "http client request failed:";
+    }
+  }
+
+#ifdef ENBALE_RDS_CLIENT
+  void StartRedisClient() {
+    net::url::RemoteInfo server_info;
+    LOG_IF(ERROR, !net::url::ParseRemote("redis://127.0.0.1:6379", server_info)) << " server can't be resolve";
+    redis_client = new net::Client(NextIOLoopForClient(), server_info);
+    net::ClientConfig config = DeafaultClientConfig();
+    redis_client->SetDelegate(this);
+    redis_client->Initialize(config);
+  }
+
+  void SendRedisMessage() {
+    auto redis_request = std::make_shared<RedisRequest>();
+
+    redis_request->SetWithExpire("name", "huan.gong", 2000);
+    redis_request->Exists("name");
+    redis_request->Delete("name");
+
+    redis_request->Incr("counter");
+    redis_request->IncrBy("counter", 10);
+
+    redis_request->Decr("counter");
+    redis_request->DecrBy("counter", 10);
+
+    redis_request->TTL("counter");
+    redis_request->Expire("counter", 200);
+
+    redis_request->Persist("counter");
+    redis_request->TTL("counter");
+
+    auto redis_response  = redis_client->SendRecieve(redis_request);
+    if (redis_response) {
+      DumpRedisResponse(redis_response);
+    } else {
+      LOG(ERROR) << "redis client request failed:" << redis_request->FailCode();
+    }
+  }
+#endif
+
+#ifdef ENBALE_RAW_CLIENT
+  void StartRawClient(std::string server_addr) {
+    net::url::RemoteInfo server_info;
+    LOG_IF(ERROR, !net::url::ParseRemote(server_addr, server_info)) << " server can't be resolve";
+    raw_client = new net::Client(NextIOLoopForClient(), server_info);
+    net::ClientConfig config = DeafaultClientConfig();
+    raw_client->SetDelegate(this);
+    raw_client->Initialize(config);
+  }
+
+  void SendRawRequest() {
+    auto raw_request = LtRawMessage::Create(true);
+    raw_request->MutableHeader()->method = 12;
+    raw_request->SetContent("ABC");
+    LtRawMessage* raw_response = raw_client->SendRecieve(raw_request);
+    if (!raw_response) {
+      LOG(ERROR) << "raw client request failed:" << raw_request->FailCode();
+    }
+  }
+#endif
+
+
+  void StopAllService() {
+    LOG(INFO) << __FUNCTION__ << " stop enter";
+
+    LOG(INFO) << __FUNCTION__ << " start stop httpclient";
+    http_client->FinalizeSync();
+    LOG(INFO) << __FUNCTION__ << " http client has stoped";
+
+#ifdef ENBALE_RAW_CLIENT
+    LOG(INFO) << __FUNCTION__ << " start stop rawclient";
+    raw_client->FinalizeSync();
+    LOG(INFO) << __FUNCTION__ << " raw client has stoped";
+#endif
+
+#ifdef ENBALE_RDS_CLIENT
+    LOG(INFO) << __FUNCTION__ << " start stop rdsclient";
+    redis_client->FinalizeSync();
+    LOG(INFO) << __FUNCTION__ << " redis client has stoped";
+#endif
+
+    main_loop.QuitLoop();
+    LOG(INFO) << __FUNCTION__ << " stop leave";
+  }
+
+
+#ifdef ENBALE_RAW_CLIENT
+  net::Client*  raw_client = NULL; //(base::MessageLoop*, const SocketAddr&);
+#endif
+#ifdef ENBALE_RDS_CLIENT
+  net::Client*  redis_client = NULL;
+#endif
+
+  net::Client*  http_client = NULL; //(base::MessageLoop*, const SocketAddr&);
+  static std::atomic_int io_round_count;
+  std::vector<base::MessageLoop*> loops;
+
+#ifdef USE_CORO_DISPATCH
+  CoroDispatcher* dispatcher_ = NULL;
+#else
+  Dispatcher* dispatcher_ = NULL;
+#endif
 };
+std::atomic_int SampleApp::io_round_count = {0};
 
-RouterManager router_manager;
 
-void StartRedisClient() {
-  net::url::RemoteInfo server_info;
-  LOG_IF(ERROR, !net::url::ParseRemote("redis://127.0.0.1:6379", server_info)) << " server can't be resolve";
+SampleApp app;
 
-  redis_client = new net::Client(&main_loop, server_info);
-  net::ClientConfig config;
-  config.connections = 2;
-  config.recon_interval = 5000;
-  config.message_timeout = 1000;
-  redis_client->SetDelegate(&router_manager);
+void HandleHttp(net::HttpContext* context) {
+  net::HttpRequest* req = context->Request();
+  LOG_EVERY_N(INFO, 10000) << " got 1w Http request, body:" << req->Dump();
 
-  redis_client->Initialize(config);
-}
-
-void StartRawClient(std::string server_addr) {
-  net::url::RemoteInfo server_info;
-  LOG_IF(ERROR, !net::url::ParseRemote(server_addr, server_info)) << " server can't be resolve";
-
-  raw_client = new net::Client(&main_loop, server_info);
-  net::ClientConfig config;
-  config.connections = 4;
-  config.recon_interval = 100;
-  config.message_timeout = 1000;
-  raw_client->SetDelegate(&router_manager);
-
-  raw_client->Initialize(config);
-}
-
-void StartHttpClients(std::string url) {
-  net::url::RemoteInfo server_info;
-  LOG_IF(ERROR, !net::url::ParseRemote(url, server_info)) << " server can't be resolve";
-  http_client = new net::Client(&main_loop, server_info);
-  net::ClientConfig config;
-  config.connections = 2;
-  config.recon_interval = 100;
-  config.message_timeout = 1000;
-
-  http_client->SetDelegate(&router_manager);
-  http_client->Initialize(config);
-}
-
-void SendHttpRequest() {
-  auto http_request = std::make_shared<HttpRequest>();
-  http_request->SetMethod("GET");
-  http_request->SetRequestURL("/abc/list");
-  http_request->SetKeepAlive(true);
-
-  HttpResponse* http_response = http_client->SendRecieve(http_request);
-  if (http_response) {
-    LOG(INFO) << "http client got response:" << http_response->Body();
-  } else {
-    LOG(ERROR) << "http client request failed:";
+#ifdef ENBALE_RAW_CLIENT
+  if (req->RequestUrl() == "/raw") {
+    app.SendRawRequest();
+    return context->ReplyString("do raw request.");
   }
+#endif
+
+#ifdef ENBALE_RDS_CLIENT
+  if (req->RequestUrl() == "/rds") {
+    app.SendRedisMessage();
+    return context->ReplyString("do rds request.");
+  }
+#endif
+
+  if (req->RequestUrl() == "/http") {
+    app.SendHttpRequest();
+    return context->ReplyString("do http request.");
+  } else if (req->RequestUrl() == "/ping") {
+    return context->ReplyString("pong");
+  }
+  static const std::string kresponse(3650, 'c');
+  context->ReplyString(kresponse);
 }
 
-void SendRawRequest() {
-  auto raw_request = LtRawMessage::Create(true);
-  raw_request->MutableHeader()->method = 12;
-  raw_request->SetContent("ABC");
-
-  LtRawMessage* raw_response = raw_client->SendRecieve(raw_request);
-  if (!raw_response) {
-    LOG(ERROR) << "raw client request failed:" << raw_request->FailCode();
-  }
+void HandleRaw(const LtRawMessage* req, LtRawMessage* res) {
+  LOG_EVERY_N(INFO, 10000) << " got 1w Raw request" << req->Dump();
+  res->MutableHeader()->code = 0;
+  res->MutableHeader()->method = req->Header().method;
+  res->SetContent(req->Content());
 }
 
 void DumpRedisResponse(RedisResponse* redis_response) {
@@ -189,114 +289,49 @@ void DumpRedisResponse(RedisResponse* redis_response) {
   }
 }
 
-void SendRedisMessage() {
-  auto redis_request = std::make_shared<RedisRequest>();
-
-  redis_request->SetWithExpire("name", "huan.gong", 2000);
-  redis_request->Exists("name");
-  redis_request->Delete("name");
-
-  redis_request->Incr("counter");
-  redis_request->IncrBy("counter", 10);
-  redis_request->Decr("counter");
-  redis_request->DecrBy("counter", 10);
-
-  redis_request->Select("1");
-  redis_request->Auth("");
-
-  redis_request->TTL("counter");
-  redis_request->Expire("counter", 200);
-  redis_request->Persist("counter");
-  redis_request->TTL("counter");
-
-  auto redis_response  = redis_client->SendRecieve(redis_request);
-  if (redis_response) {
-    DumpRedisResponse(redis_response);
-  } else {
-    LOG(ERROR) << "redis client request failed:" << redis_request->FailCode();
-  }
-}
-
-void PrepareLoops(uint32_t io_count, uint32_t worker_count) {
-  for (uint32_t i = 0; i < io_count; i++) {
-    auto loop = new(base::MessageLoop);
-
-    loop->SetLoopName("io_" + std::to_string(i));
-    loop->Start();
-    loops.push_back(loop);
-  }
-
-  for (uint32_t i = 0; i < worker_count; i++) {
-    auto worker = new(base::MessageLoop);
-
-    worker->SetLoopName("worker_" + std::to_string(i));
-    worker->Start();
-    workers.push_back(worker);
-  }
-}
-
-net::RawServer* rserver = NULL;
-net::HttpServer* hserver = NULL;
-
-void StopAllService() {
-  LOG(INFO) << __FUNCTION__ << " stop enter";
-  http_client->FinalizeSync();
-  LOG(INFO) << __FUNCTION__ << " http client stoped";
-#ifdef ENBALE_RAW_CLIENT
-  raw_client->FinalizeSync();
-  LOG(INFO) << __FUNCTION__ << " raw client stoped";
-#endif
-  rserver->StopServerSync();
-  LOG(INFO) << __FUNCTION__ << " raw server stoped";
-  hserver->StopServerSync();
-  LOG(INFO) << __FUNCTION__ << " http server stoped";
-  main_loop.QuitLoop();
-  LOG(INFO) << __FUNCTION__ << " stop leave";
-}
-
 void signalHandler( int signum ){
   LOG(INFO) << "sighandler sig:" << signum;
-  StopAllService();
+  app.StopAllService();
 }
-
 
 int main(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
-  //google::InitGoogleLogging(argv[0]);
-  //google::SetVLOGLevel(NULL, 26);
 
   main_loop.SetLoopName("main");
   main_loop.Start();
-  http_count.store(0);
-  PrepareLoops(std::thread::hardware_concurrency(), 1);
-
-  StartHttpClients("http://127.0.0.1:80");
-
-  dispatcher_->SetWorkerLoops(loops);
-  common_dispatcher->SetWorkerLoops(loops);
 
   net::RawServer raw_server;
-  raw_server.SetIOLoops(loops);
-  raw_server.SetDispatcher(dispatcher_);
-  raw_server.ServeAddressSync("raw://0.0.0.0:5005", std::bind(HandleRaw, std::placeholders::_1, std::placeholders::_2));
-  rserver = &raw_server;
+  net::RawServer* rserver = &raw_server;
+  raw_server.SetIOLoops(app.loops);
+  raw_server.SetDispatcher(app.dispatcher_);
+  raw_server.ServeAddressSync("raw://0.0.0.0:5005",
+                              std::bind(HandleRaw, std::placeholders::_1, std::placeholders::_2));
 
   net::HttpServer http_server;
-  http_server.SetIOLoops(loops);
-  http_server.SetDispatcher(dispatcher_);
-  http_server.ServeAddressSync("http://0.0.0.0:5006", std::bind(HandleHttp, std::placeholders::_1));
-  hserver = &http_server;
+  net::HttpServer* hserver = &http_server;
+  http_server.SetIOLoops(app.loops);
+  http_server.SetDispatcher(app.dispatcher_);
+  http_server.ServeAddressSync("http://0.0.0.0:5006",
+                               std::bind(HandleHttp, std::placeholders::_1));
+
+  app.StartHttpClients("http://127.0.0.1:5006");
 
 #ifdef ENBALE_RAW_CLIENT
-  StartRawClient("raw://127.0.0.1:5005");
+  app.StartRawClient("raw://127.0.0.1:5005");
 #endif
 
-#if 0
-  StartRedisClient();
-  std::this_thread::sleep_for(std::chrono::seconds(5));
+#ifdef ENBALE_RDS_CLIENT
+  app.StartRedisClient();
 #endif
+
   signal(SIGINT, signalHandler);
   signal(SIGTERM, signalHandler);
+
   main_loop.WaitLoopEnd();
+
+  rserver->StopServerSync();
+  hserver->StopServerSync();
+
+  std::this_thread::sleep_for(std::chrono::seconds(5));
 }
 

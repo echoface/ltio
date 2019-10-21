@@ -15,6 +15,10 @@ typedef struct LtRawHeader {
   const std::string Dump() const;
   /* 消息序列id,raw service支持异步消息*/
   inline uint64_t seq_id() const {return sequence_id_;}
+  //payload size without header
+  inline uint64_t payload_size() const {return content_size_;};
+  //frame_size = header_size + frame_size
+  inline uint64_t frame_size() const {return content_size_ + kHeaderSize;};
 
   /*status code*/
   uint8_t code = 0;

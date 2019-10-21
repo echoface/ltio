@@ -40,7 +40,7 @@ class RawProtoService : public ProtoService {
   bool KeepSequence() override { return false; };
 
   bool SendRequestMessage(const RefProtocolMessage& message) override {
-    RawMessage* request = static_cast<RawMessage*>(message.get());
+    RawMessageType* request = static_cast<RawMessageType*>(message.get());
     CHECK(request->GetMessageType() == MessageType::kRequest);
 
     request->SetAsyncId(RawProtoService::sequence_id_++);
@@ -48,8 +48,8 @@ class RawProtoService : public ProtoService {
   };
 
   bool SendResponseMessage(const RefProtocolMessage& req, const RefProtocolMessage& res) override {
-    auto raw_request = static_cast<RawMessage*>(req.get());
-    auto raw_response = static_cast<RawMessage*>(res.get());
+    auto raw_request = static_cast<RawMessageType*>(req.get());
+    auto raw_response = static_cast<RawMessageType*>(res.get());
 
     CHECK(raw_request->AsyncId() == raw_response->AsyncId());
     VLOG(GLOG_VTRACE) << __FUNCTION__ << " request:" << raw_request->Dump() << " response:" << raw_response->Dump();

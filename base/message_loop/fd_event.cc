@@ -96,7 +96,7 @@ void FdEvent::HandleEvent() {
   VLOG(GLOG_VTRACE) << __FUNCTION__ << EventInfo() << " rcv event:" << RcvEventAsString();
   do {
     if (revents_ & LtEv::LT_EVENT_ERROR) {
-      if (read_callback_) {
+      if (error_callback_) {
         error_callback_();
       }
       break;

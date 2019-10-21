@@ -49,14 +49,16 @@ RawMessage::RefRawMessage RawMessage::Decode(IOBuffer* buffer, bool server_side)
     return NULL;
   }
   const LtRawHeader* predict_header = (const LtRawHeader*)buffer->GetRead();
-  const uint64_t body_size = predict_header->content_size_;
-  if (buffer->CanReadSize() < LtRawHeader::kHeaderSize + body_size) {
+  if (buffer->CanReadSize() < predict_header->frame_size()) {
     return NULL;
   }
+
   //decode
   auto message = Create(server_side);
   ::memcpy(&message->header_, buffer->GetRead(), LtRawHeader::kHeaderSize);
   buffer->Consume(LtRawHeader::kHeaderSize);
+
+  const uint64_t body_size = message->header_.payload_size();
   if (body_size > 0) {
     message->AppendContent((const char*)buffer->GetRead(), body_size);
     buffer->Consume(body_size);
@@ -69,6 +71,8 @@ RawMessage::RawMessage(MessageType t) :
 }
 
 bool RawMessage::Encode(const RawMessage* m, SocketChannel* ch) {
+  CHECK(m->content_.size() == m->header_.payload_size());
+
   if (ch->Send((const uint8_t*)(&m->header_), LtRawHeader::kHeaderSize) < 0) {
     return false;
   }

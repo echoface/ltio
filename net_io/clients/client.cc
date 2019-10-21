@@ -68,6 +68,7 @@ void Client::FinalizeSync() {
 
 void Client::OnClientConnectFailed() {
   CHECK(work_loop_->IsInLoopThread());
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << " connect failed";
   if (is_stopping_ || config_.connections <= channels_.size()) {
     return;
   }
@@ -91,8 +92,8 @@ void Client::OnNewClientConnected(int socket_fd, SocketAddr& local, SocketAddr& 
 
   auto proto_service = ProtoServiceFactory::Create(remote_info_.protocol, false);
   proto_service->BindToSocket(socket_fd, local, remote, io_loop);
-  VLOG(GLOG_VINFO) << __FUNCTION__ << ClientInfo() << " new protocol service started";
 
+  VLOG(GLOG_VINFO) << __FUNCTION__ << ClientInfo() << " connected, initializing...";
   initializer_->Init(proto_service);
 }
 
@@ -108,7 +109,7 @@ void Client::OnClientServiceReady(const RefProtoService& service) {
   if (delegate_) {
     delegate_->OnClientChannelReady(client_channel.get());
   }
-  VLOG(GLOG_VINFO) << __FUNCTION__ << ClientInfo() << " new protocol service started";
+  VLOG(GLOG_VINFO) << __FUNCTION__ << ClientInfo() << " new protocol service ready";
 }
 
 /*on the loop of client IO, need managed by connector loop*/
