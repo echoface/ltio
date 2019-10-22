@@ -190,7 +190,6 @@ bool Client::AsyncSendRequest(RefProtocolMessage& req, AsyncCallBack callback) {
 }
 
 ProtocolMessage* Client::SendClientRequest(RefProtocolMessage& message) {
-
   if (!base::MessageLoop::Current() || !base::CoroRunner::CanYield()) {
     LOG(ERROR) << __FUNCTION__ << " must call on coroutine task";
     return NULL;
@@ -200,11 +199,11 @@ ProtocolMessage* Client::SendClientRequest(RefProtocolMessage& message) {
   message->SetWorkerCtx(base::MessageLoop::Current(), co_resumer);
 
   auto channels = std::atomic_load(&roundrobin_channes_);
-
   if (channels->empty()) { //avoid x/0 Error
-    LOG(ERROR) << " No Connection Established To Server:" << address_.IpPort();
+    message->SetFailCode(MessageCode::kNotConnected);
     return NULL;
   }
+
   uint32_t client_index = next_index_.fetch_add(1) % channels->size();
 
   RefClientChannel& client_channel = channels->at(client_index);
@@ -217,7 +216,6 @@ ProtocolMessage* Client::SendClientRequest(RefProtocolMessage& message) {
   }
 
   co_yield;
-
   return message->RawResponse();
 }
 

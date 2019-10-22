@@ -15,23 +15,17 @@ using namespace lt;
 typedef std::unique_ptr<net::Client> ClientPtr;
 ClientPtr raw_router;
 
-void RequestRepeatedTask() {
-    std::string content;
-    std::cout << "intpu content:";
-    std::cin >> content;
-
-    auto raw_request = net::LtRawMessage::Create(true);
-    auto header = raw_request->MutableHeader();
-    header->method = 12;
-    raw_request->SetContent(content);
-
-    net::LtRawMessage* response = raw_router->SendRecieve(raw_request);
-    if (response) {
-      std::cout << "res:" << response->Dump() << std::endl;
-    } else {
-      std::cout << "err:" << raw_request->FailCode() << std::endl;
-    }
-    co_go std::bind(RequestRepeatedTask);
+void RequestRepeatedTask(const std::string& content) {
+  auto raw_request = net::LtRawMessage::Create(true);
+  auto header = raw_request->MutableHeader();
+  header->method = 12;
+  raw_request->SetContent(content);
+  net::LtRawMessage* response = raw_router->SendRecieve(raw_request);
+  if (response) {
+    std::cout << "res:" << response->Dump() << std::endl;
+  } else {
+    std::cout << "err:" << raw_request->FailCode() << std::endl;
+  }
 }
 
 int main(int argc, char** argv) {
@@ -56,12 +50,24 @@ int main(int argc, char** argv) {
 
   raw_router.reset(new net::Client(&mainloop, server_info));
 
-  config.connections = 5;
-  config.recon_interval = 100;
-  config.message_timeout = 500;
+  config.connections = 4;
+  config.recon_interval = 1000;
+  config.message_timeout = 5000;
 
   raw_router->Initialize(config);
   std::this_thread::sleep_for(std::chrono::seconds(1));
-  co_go &mainloop << std::bind(RequestRepeatedTask);
+  while(1) {
+    std::string line;
+    std::cout << "send:";
+    std::flush(std::cout);
+    std::getline(std::cin, line);
+    if (line == "quit") {
+      raw_router->FinalizeSync();
+      mainloop.QuitLoop();
+      break;
+    }
+    co_go &mainloop << std::bind(RequestRepeatedTask, line);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+  }
   mainloop.WaitLoopEnd();
 }

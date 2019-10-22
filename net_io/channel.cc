@@ -40,7 +40,6 @@ void SocketChannel::setup_channel() {
     fd_event_->ResetCallback();
     SetChannelStatus(Status::CLOSED);
     reciever_->OnChannelClosed(this);
-
     LOG(ERROR) << __FUNCTION__ << " status changed in prepare channel, " << ChannelInfo();
     return;
   }
@@ -96,4 +95,3 @@ const std::string SocketChannel::StatusAsString() const {
 }
 
 }}
-

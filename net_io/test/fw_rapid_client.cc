@@ -17,18 +17,16 @@ typedef std::unique_ptr<net::Client> ClientPtr;
 ClientPtr raw_router;
 
 void RequestRepeatedTask(std::string content) {
-    auto raw_request = FwRapidMessage::Create(true);
-    auto header = raw_request->Header();
-    header->cmdid = 1000;
-    raw_request->SetContent(content);
-
-    FwRapidMessage* response = raw_router->SendRecieve(raw_request);
-    if (response) {
-      std::cout << "res:" << response->Content()  << std::endl;
-    } else {
-      std::cout << "err:" << raw_request->FailCode() << std::endl;
-    }
-    std::cout << "intpu content:";
+  auto raw_request = FwRapidMessage::Create(true);
+  auto header = raw_request->Header();
+  header->cmdid = 1000;
+  raw_request->SetContent(content);
+  FwRapidMessage* response = raw_router->SendRecieve(raw_request);
+  if (response) {
+    std::cout << "res:" << response->Content()  << std::endl;
+  } else {
+    std::cout << "err:" << raw_request->FailCode() << std::endl;
+  }
 }
 
 int main(int argc, char** argv) {
@@ -66,13 +64,16 @@ int main(int argc, char** argv) {
   std::this_thread::sleep_for(std::chrono::seconds(1));
   while (1) {
     std::string content;
-    std::cin >> content;
+    std::cout << "send:";
+    std::flush(std::cout);
+    std::getline(std::cin, content);
     if (content == "quit") {
       raw_router->FinalizeSync();
       mainloop.QuitLoop();
       break;
     }
     co_go &mainloop << std::bind(RequestRepeatedTask, content);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
   };
   mainloop.WaitLoopEnd();
 }

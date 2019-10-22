@@ -118,7 +118,7 @@ void Connector::CleanUpBadChannel(base::RefFdEvent& event) {
   loop_->Pump()->RemoveFdEvent(event.get());
 
   connecting_sockets_.erase(event);
-  VLOG(GLOG_INFO) << " connecting list size:" << connecting_sockets_.size();
+  VLOG(GLOG_VINFO) << " connecting list size:" << connecting_sockets_.size();
 }
 
 }}//end namespace

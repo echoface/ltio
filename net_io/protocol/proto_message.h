@@ -19,6 +19,7 @@ typedef enum {
   kTimeOut = 1,
   kConnBroken = 2,
   kBadMessage = 3,
+  kNotConnected = 4,
 } MessageCode;
 
 typedef struct {

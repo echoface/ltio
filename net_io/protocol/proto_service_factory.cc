@@ -55,7 +55,6 @@ void ProtoServiceFactory::InitInnerDefault() {
   }));
   creators_.insert(std::make_pair("raw", []()->RefProtoService{
     auto service = std::make_shared<RawProtoService<RawMessage>>();
-    //std::shared_ptr<RawProtoService<RawMessage>> service(new ());
     return std::static_pointer_cast<ProtoService>(service);
   }));
   creators_.insert(std::make_pair("redis", []()->RefProtoService{
