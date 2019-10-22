@@ -46,7 +46,7 @@ class RawMessage : public ProtocolMessage {
   typedef std::shared_ptr<RawMessage> RefRawMessage;
 
   static RefRawMessage Create(bool request);
-  static RefRawMessage CreateResponse(RawMessage* request);
+  static RefRawMessage CreateResponse(const RawMessage* request);
   static bool Encode(const RawMessage*, SocketChannel* channel);
   static RefRawMessage Decode(IOBuffer* buffer, bool server_side);
 
@@ -57,6 +57,12 @@ class RawMessage : public ProtocolMessage {
   void SetAsyncId(uint64_t id) override {header_.sequence_id_ = id;}
   const uint64_t AsyncId() const override {return header_.seq_id();};
 
+
+  uint8_t Code() const {return header_.code;}
+  void SetCode(const uint8_t code) {header_.code = code;}
+  uint8_t Method() const {return header_.method;}
+  void SetMethod(const uint8_t code) {header_.method = code;}
+
   void SetContent(const char* c);
   void SetContent(const std::string& c);
   void AppendContent(const char* c, uint64_t len);
@@ -64,8 +70,6 @@ class RawMessage : public ProtocolMessage {
   const std::string& Content() const { return content_;}
   uint64_t ContentLength() const { return content_.size(); }
 
-  LtRawHeader* MutableHeader() { return &header_; }
-  const LtRawHeader& Header() const {return header_;}
   const std::string Dump() const;
 private:
   LtRawHeader header_;

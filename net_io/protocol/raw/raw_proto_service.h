@@ -25,6 +25,7 @@ class RawProtoService : public ProtoService {
       if (!raw_message) {
         break;
       }
+      VLOG(GLOG_VTRACE) << __FUNCTION__ << "  decode a message success";
       if (delegate_) {
         raw_message->SetIOCtx(shared_from_this());
         delegate_->OnProtocolMessage(RefCast(ProtocolMessage, raw_message));

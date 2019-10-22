@@ -27,7 +27,7 @@ class FwRapidMessage : public lt::net::ProtocolMessage {
       return msg;
     }
 
-    static RefFwRapidMessage CreateResponse(FwRapidMessage* request) {
+    static RefFwRapidMessage CreateResponse(const FwRapidMessage* request) {
       auto res = Create(false);
       res->header_ = request->header_;
       res->header_.size = sizeof(RapidHeader);
@@ -36,6 +36,7 @@ class FwRapidMessage : public lt::net::ProtocolMessage {
     }
 
     static bool Encode(const FwRapidMessage* m, net::SocketChannel* ch) {
+      VLOG(GLOG_VTRACE) << __FUNCTION__ << " frame size:" << m->header_.size;
       if (ch->Send((const uint8_t*)(&m->header_), sizeof(RapidHeader)) < 0) {
         return false;
       }
@@ -46,7 +47,7 @@ class FwRapidMessage : public lt::net::ProtocolMessage {
       if (buffer->CanReadSize() < sizeof(RapidHeader)) {
         return NULL;
       }
-      uint64_t frame_size = *(uint32_t*)(buffer->GetRead());
+      uint32_t frame_size = *(uint32_t*)(buffer->GetRead());
       if (buffer->CanReadSize() < frame_size) {
         return NULL;
       }
@@ -65,8 +66,16 @@ class FwRapidMessage : public lt::net::ProtocolMessage {
     FwRapidMessage(net::MessageType t) : ProtocolMessage(t) {}
     ~FwRapidMessage() {};
 
-    RapidHeader* Header() {return &header_;}
-    const std::string& Content() {return content_;}
+    uint8_t Type() const {return header_.type;}
+    void SetType(uint8_t t) {header_.type = t;}
+
+    uint16_t CmdId() const {return header_.cmdid;}
+    void SetCmdId(uint16_t id) {header_.cmdid = id;}
+    
+    uint8_t Version() const {return header_.version;}
+    void SetVersion(uint8_t ver) {header_.version = ver;}
+
+    const std::string& Content() const {return content_;}
     void SetContent(const std::string& c) {
       header_.size = sizeof(RapidHeader) + c.size();
       content_ = c;

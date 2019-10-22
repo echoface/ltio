@@ -17,8 +17,7 @@ ClientPtr raw_router;
 
 void RequestRepeatedTask(const std::string& content) {
   auto raw_request = net::LtRawMessage::Create(true);
-  auto header = raw_request->MutableHeader();
-  header->method = 12;
+  raw_request->SetMethod(12);
   raw_request->SetContent(content);
   net::LtRawMessage* response = raw_router->SendRecieve(raw_request);
   if (response) {

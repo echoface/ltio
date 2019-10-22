@@ -11,6 +11,7 @@ HttpContext::HttpContext(const RefHttpRequest& request)
 }
 
 void HttpContext::ReplyFile(const std::string& path, uint16_t code) {
+  CHECK(false);
   if (did_reply_) return;
 }
 

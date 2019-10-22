@@ -155,7 +155,7 @@ public:
 
   void SendRawRequest() {
     auto raw_request = LtRawMessage::Create(true);
-    raw_request->MutableHeader()->method = 12;
+    raw_request->SetMethod(12);
     raw_request->SetContent("ABC");
     LtRawMessage* raw_response = raw_client->SendRecieve(raw_request);
     if (!raw_response) {
@@ -239,11 +239,14 @@ void HandleHttp(net::HttpContext* context) {
   context->ReplyString(kresponse);
 }
 
-void HandleRaw(const LtRawMessage* req, LtRawMessage* res) {
-  LOG_EVERY_N(INFO, 10000) << " got 1w Raw request" << req->Dump();
-  res->MutableHeader()->code = 0;
-  res->MutableHeader()->method = req->Header().method;
+void HandleRaw(net::RawServerContext* context) {
+  const LtRawMessage* req = context->GetRequest<LtRawMessage>();
+  LOG_EVERY_N(INFO, 10000) << " got request:" << req->Dump();
+
+  auto res = LtRawMessage::CreateResponse(req);
+  res->SetMethod(req->Method());
   res->SetContent(req->Content());
+  return context->SendResponse(res);
 }
 
 void DumpRedisResponse(RedisResponse* redis_response) {
@@ -305,7 +308,7 @@ int main(int argc, char* argv[]) {
   raw_server.SetIOLoops(app.loops);
   raw_server.SetDispatcher(app.dispatcher_);
   raw_server.ServeAddressSync("raw://0.0.0.0:5005",
-                              std::bind(HandleRaw, std::placeholders::_1, std::placeholders::_2));
+                              std::bind(HandleRaw, std::placeholders::_1));
 
   net::HttpServer http_server;
   net::HttpServer* hserver = &http_server;

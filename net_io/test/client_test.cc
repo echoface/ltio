@@ -49,10 +49,8 @@ bool SendRequest(int sequence_id) {
 void SendRawRequest(int sequence_id) {
   auto raw_request = net::LtRawMessage::Create(true);
   std::string content("this is a raw request");
+  raw_request->SetMethod(12);
   raw_request->SetContent(content);
-  auto header = raw_request->MutableHeader();
-  header->method = 12;
-
   auto response = raw_router->SendRecieve(raw_request);
   if (response) {
     LOG(ERROR) << "Get RawResponse:\n" << response->Dump();

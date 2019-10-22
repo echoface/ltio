@@ -18,8 +18,7 @@ ClientPtr raw_router;
 
 void RequestRepeatedTask(std::string content) {
   auto raw_request = FwRapidMessage::Create(true);
-  auto header = raw_request->Header();
-  header->cmdid = 1000;
+  raw_request->SetCmdId(100);
   raw_request->SetContent(content);
   FwRapidMessage* response = raw_router->SendRecieve(raw_request);
   if (response) {

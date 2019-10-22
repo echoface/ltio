@@ -241,9 +241,7 @@ TEST_CASE("client.raw.request", "[raw client send request]") {
   auto raw_request_task = [&]() {
 
     auto request = net::LtRawMessage::Create(true);
-    auto lt_header = request->MutableHeader();
-    lt_header->code = 0;
-    lt_header->method = 12;
+    request->SetMethod(12);
     request->SetContent("RawRequest");
 
     net::LtRawMessage* response = raw_router.SendRecieve(request);
@@ -303,9 +301,7 @@ TEST_CASE("client.timer.request", "[fetch resource every interval]") {
   co_go &loop << [&]() {
     do {
       auto request = net::LtRawMessage::Create(true);
-      auto lt_header = request->MutableHeader();
-      lt_header->code = 0;
-      lt_header->method = 12;
+      request->SetMethod(12);
       request->SetContent("RawRequest");
 
       net::LtRawMessage* response = raw_router.SendRecieve(request);
@@ -389,9 +385,7 @@ TEST_CASE("client.raw.bench", "[raw client send request benchmark]") {
     while(total_task-- > 0) {
 
       auto request = net::LtRawMessage::Create(true);
-      auto lt_header = request->MutableHeader();
-      lt_header->code = 0;
-      lt_header->method = 12;
+      request->SetMethod(12);
       request->SetContent("RawRequest");
 
       net::LtRawMessage* response = raw_router.SendRecieve(request);

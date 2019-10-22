@@ -103,6 +103,9 @@ ADD_EXECUTABLE(client_test
 ADD_EXECUTABLE(new_server_model
   test/new_server_model.cc
 )
+ADD_EXECUTABLE(fw_rapid_server
+  test/fw_rapid_server.cc
+)
 ADD_EXECUTABLE(raw_client
   test/raw_client.cc
 )

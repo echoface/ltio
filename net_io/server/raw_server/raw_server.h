@@ -17,8 +17,24 @@
 namespace lt {
 namespace net {
 
-typedef std::function<void(const LtRawMessage*, LtRawMessage*)> RawMessageHandler;
+class RawServerContext {
+public:
+  RawServerContext(const RefProtocolMessage& req) : request_(req) {};
 
+  bool IsResponded() const {return did_reply_;}
+
+  template<typename T>
+  const T* GetRequest() const {return (T*)request_.get();}
+
+  void SendResponse(const RefProtocolMessage& response);
+private:
+  void do_response(const RefProtocolMessage& response);
+
+  bool did_reply_ = false;
+  RefProtocolMessage request_;
+};
+
+typedef std::function<void(RawServerContext* context)> RawMessageHandler;
 class RawServer : public IOServiceDelegate {
 public:
   RawServer();
