@@ -78,7 +78,6 @@ private:
   LtEvent revents_;
   bool owner_fd_life_;
 
-  EventHandler* handler_ = NULL;
   FdEventWatcher* watcher_ = NULL;
 
   EventCallback read_callback_;

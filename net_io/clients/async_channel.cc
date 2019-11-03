@@ -30,7 +30,9 @@ void AsyncChannel::SendRequest(RefProtocolMessage request)  {
   bool success = protocol_service_->SendRequestMessage(request);
   if (!success) {
     request->SetFailCode(MessageCode::kConnBroken);
-    delegate_->OnRequestGetResponse(request, ProtocolMessage::kNullMessage);
+    if (delegate_) {
+      delegate_->OnRequestGetResponse(request, ProtocolMessage::kNullMessage);
+    }
     return;
   }
 
@@ -49,12 +51,27 @@ void AsyncChannel::OnRequestTimeout(WeakProtocolMessage weak) {
   }
 
   uint64_t identify = request->AsyncId();
+  LOG(INFO) << "request timeout, async id is:" << identify;
 
   size_t numbers = in_progress_.erase(identify);
   CHECK(numbers == 1);
 
   request->SetFailCode(MessageCode::kTimeOut);
-  delegate_->OnRequestGetResponse(request, ProtocolMessage::kNullMessage);
+  if (delegate_) {
+    delegate_->OnRequestGetResponse(request, ProtocolMessage::kNullMessage);
+  }
+}
+
+void AsyncChannel::BeforeCloseChannel() {
+  DCHECK(IOLoop()->IsInLoopThread());
+
+  for (auto kv : in_progress_) {
+    kv.second->SetFailCode(MessageCode::kConnBroken);
+    if (delegate_) {
+      delegate_->OnRequestGetResponse(kv.second, ProtocolMessage::kNullMessage);
+    }
+  }
+  in_progress_.clear();
 }
 
 void AsyncChannel::OnProtocolMessage(const RefProtocolMessage& res) {
@@ -71,7 +88,9 @@ void AsyncChannel::OnProtocolMessage(const RefProtocolMessage& res) {
   in_progress_.erase(iter);
   CHECK(request->AsyncId() == identify);
 
-  delegate_->OnRequestGetResponse(request, res);
+  if (delegate_) {
+    delegate_->OnRequestGetResponse(request, res);
+  }
 }
 
 void AsyncChannel::OnProtocolServiceGone(const RefProtoService& service) {
@@ -79,11 +98,15 @@ void AsyncChannel::OnProtocolServiceGone(const RefProtoService& service) {
 
   for (auto kv : in_progress_) {
     kv.second->SetFailCode(MessageCode::kConnBroken);
-    delegate_->OnRequestGetResponse(kv.second, ProtocolMessage::kNullMessage);
+    if (delegate_) {
+      delegate_->OnRequestGetResponse(kv.second, ProtocolMessage::kNullMessage);
+    }
   }
   in_progress_.clear();
-  auto guard = shared_from_this();
-  delegate_->OnClientChannelClosed(guard);
+  if (delegate_) {
+    auto guard = shared_from_this();
+    delegate_->OnClientChannelClosed(guard);
+  }
 }
 
 

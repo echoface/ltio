@@ -29,6 +29,7 @@ private:
   void OnRequestTimeout(WeakProtocolMessage request);
 
   // override form ProtocolServiceDelegate
+  void BeforeCloseChannel() override;
   void OnProtocolMessage(const RefProtocolMessage& res) override;
   void OnProtocolServiceGone(const RefProtoService& service) override;
 private:

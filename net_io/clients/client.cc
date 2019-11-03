@@ -199,12 +199,15 @@ ProtocolMessage* Client::SendClientRequest(RefProtocolMessage& message) {
   auto channel = get_ready_channel();
   if (!channel) {
     message->SetFailCode(MessageCode::kNotConnected);
+    LOG(ERROR) << "no established client connection send request";
     return NULL;
   }
 
   base::MessageLoop* io_loop = channel->IOLoop();
   bool success = io_loop->PostTask(NewClosure(std::bind(&ClientChannel::SendRequest, channel, message)));
   if (!success) {
+    message->SetFailCode(MessageCode::kConnBroken);
+    LOG(ERROR) << "schedule task to io_loop failed";
     return NULL;
   }
 

@@ -10,11 +10,11 @@
 namespace base {
 
 static base::SpinLock g_coro_lock;
-static std::atomic_int64_t coroutine_counter;
+static std::atomic_int64_t g_counter;
 
 //static
 int64_t SystemCoroutineCount() {
-  return coroutine_counter.load();
+  return g_counter.load();
 }
 
 //static
@@ -47,18 +47,22 @@ Coroutine::Coroutine(CoroEntry entry, bool main) :
     base::SpinLockGuard guard(g_coro_lock);
     coro_create(this, entry, this, stack_.sptr, stack_.ssze);
   }
-  coroutine_counter.fetch_add(1);
-  VLOG(GLOG_VTRACE) << "coroutine born! count:" << coroutine_counter.load() << "st:" << StateToString();
+  g_counter.fetch_add(1);
+  VLOG(GLOG_VTRACE) << "coroutine born! count:" << g_counter.load()
+    << " st:" << StateToString()
+    << " main:" << (is_main() ? "True" : "False");
 }
 
 Coroutine::~Coroutine() {
   if (stack_.ssze != 0) { //none main coroutine
     coro_stack_free(&stack_);
-    coroutine_counter.fetch_sub(1);
+    g_counter.fetch_sub(1);
     CHECK(state_ != CoroState::kRunning);
   }
 
-  VLOG(GLOG_VTRACE) << "coroutine gone! count:" << coroutine_counter.load() << "st:" << StateToString();
+  VLOG(GLOG_VTRACE) << "coroutine gone! count:" << g_counter.load()
+    << " st:" << StateToString()
+    << " main:" << (is_main() ? "True" : "False");
 }
 
 void Coroutine::SelfHolder(RefCoroutine& self) {

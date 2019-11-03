@@ -103,6 +103,7 @@ private:
   //a channels copy for client caller
   std::atomic<uint32_t> next_index_;
   RefClientChannelList in_use_channels_;
+  DISALLOW_COPY_AND_ASSIGN(Client);
 };
 
 }}//end namespace lt::net

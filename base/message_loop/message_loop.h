@@ -83,7 +83,8 @@ class MessageLoop : public PumpDelegate {
   private:
     void ThreadMain();
     void SetThreadNativeName();
-    class ReplyTaskHelper;
+
+    bool PendingNestedTask(TaskBasePtr& task);
 
     void RunCommandTask(ScheduledTaskType t);
 

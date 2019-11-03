@@ -74,6 +74,7 @@ protected:
   void StashIfNeeded();
   /* a callback function using for resume a kPaused coroutine */
   void ResumeCoroutine(std::weak_ptr<Coroutine> coro, uint64_t id);
+
   /* judge wheather running in a main coroutine with thread*/
   bool InMainCoroutine() const { return (main_coro_ == current_);}
 
@@ -84,6 +85,7 @@ protected:
   std::string RunnerInfo() const;
   static void CoroutineMain(void *coro);
 private:
+  void do_resume(std::weak_ptr<Coroutine> coro, uint64_t id, int type);
   TaskBasePtr retrieve_task();
   Coroutine* current_;
   Coroutine* main_coro_;

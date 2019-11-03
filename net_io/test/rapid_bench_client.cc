@@ -26,10 +26,11 @@ std::vector<base::MessageLoop*> InitLoop(int n) {
   return lops;
 }
 
+std::vector<base::MessageLoop*> loops;
 static std::atomic_int io_round_count;
-class RouterManager: public net::ClientDelegate{
+class SampleApp: public net::ClientDelegate{
   public:
-    RouterManager() {
+    SampleApp() {
       net::ProtoServiceFactory::Instance().RegisterCreator("rapid", []() -> net::RefProtoService {
         auto service = std::make_shared<net::RawProtoService<FwRapidMessage>>();
         return std::static_pointer_cast<net::ProtoService>(service);
@@ -45,44 +46,37 @@ class RouterManager: public net::ClientDelegate{
     }
 };
 
-std::vector<base::MessageLoop*> loops;
+DEFINE_int32(c, 4, "concurrency threads count");
+DEFINE_int32(n, 5000,"benchmark request numbers");
+DEFINE_string(url, "", "remote rapid server url, eg:rapid://127.0.0.1:5004");
+
 int main(int argc, char** argv) {
+  gflags::ParseCommandLineFlags(&argc, &argv, false);
 
-  ArgumentParser parser(" rapid client bench client");
-  parser.add_argument("-c", "concurrency count", true);
-  parser.add_argument("-n", "bench request count", true);
-  parser.add_argument("--url", "remote rapid server url", true);
-  try {
-    parser.parse(argc, argv);
-  } catch (const ArgumentParser::ArgumentNotFound& ex) {
-    LOG(ERROR) << " args parse failed:" << ex.what();
-    return 0;
-  }
-  if (parser.is_help()) return 0;
-
-  int concurency = parser.get<int>("c");
-  int req_count = parser.get<int>("n");
-  std::string url = parser.get<std::string>("url");
+  int concurency = FLAGS_c;
+  int req_count = FLAGS_n;
+  std::string url = FLAGS_url;
   LOG(INFO) << "c:" << concurency << " n:" << req_count << " url:" << url;
+  if (url.empty()) return -1;
+
+  SampleApp app;
+  loops = InitLoop(4);
 
   base::MessageLoop loop;
   loop.SetLoopName("client");
   loop.Start();
 
-  loops = InitLoop(concurency);
-  RouterManager router_delegate;
 
   net::url::RemoteInfo server_info;
   LOG_IF(ERROR, !net::url::ParseRemote(url, server_info)) << " server can't be resolve";
   net::Client raw_router(&loop, server_info);
-
 
   net::ClientConfig config;
   config.recon_interval = 1000;
   config.message_timeout = 5000;
   config.connections = connections;
 
-  raw_router.SetDelegate(&router_delegate);
+  raw_router.SetDelegate(&app);
   raw_router.Initialize(config);
 
   std::atomic_int64_t  total_task;
@@ -108,25 +102,33 @@ int main(int argc, char** argv) {
       } else {
         failed_request++;
       }
+      if (total_task <= 0) {
+        break;
+      }
     };
     wc.Done();
-    LOG(INFO) << " request task run coro end";
   };
 
   sleep(3);
   LOG(INFO) << " start bench started.............<<<<<<";
   for (int i = 0; i < concurency; i++) {
     wc.Add(1);
-    auto l = loops[i % loops.size()];
-    co_go l << raw_request_task;
+    base::MessageLoop* loop = loops[i % loops.size()];
+    co_go loop << raw_request_task;
   }
 
   co_go &loop << [&]() {
     wc.Wait();
+    LOG(INFO) << "success:" << success_request << " failed:" << failed_request;
     raw_router.Finalize();
     loop.QuitLoop();
   };
   loop.WaitLoopEnd();
+  for (auto loop : loops) {
+    delete loop;
+  }
+  loops.clear();
   LOG(INFO) << " main loop quit";
+  std::this_thread::sleep_for(std::chrono::seconds(2));
 }
 

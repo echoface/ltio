@@ -111,34 +111,35 @@ void CoroRunner::SleepMillsecond(uint64_t ms) {
   YieldCurrent();
 }
 
-
-/* 如果本身是在一个子coro里面, 需要在重新将resumecoroutine调度到主coroutine内
- * 不支持嵌套的coroutinetransfer........
- * 如果本身是主coro，则直接tranfer去执行.
- * 如果不是在调度的线程里， 则posttask去Resume*/
-void CoroRunner::ResumeCoroutine(std::weak_ptr<Coroutine> weak, uint64_t id) {
-  if (!bind_loop_->IsInLoopThread() || CanYield()) {
-    auto f = std::bind(&CoroRunner::ResumeCoroutine, this, weak, id);
-    bind_loop_->PostTask(NewClosure(f));
-    return;
-  }
-
-  CHECK(InMainCoroutine());
+void CoroRunner::do_resume(std::weak_ptr<Coroutine> weak, uint64_t id, int type) {
+  DCHECK(InMainCoroutine() && !CanYield());
   Coroutine* coroutine = nullptr;
   {
     auto coro = weak.lock();
     if (!coro) {return;}
-
     coroutine = coro.get();
   }
 
-  if (coroutine->state_ != CoroState::kPaused || coroutine->identify_ != id) {
+  if (!coroutine->IsPaused() || coroutine->identify_ != id) {
     return;
   }
 
   VLOG(GLOG_VTRACE) << __FUNCTION__ << RunnerInfo() << " resume coro:" << coroutine;
   coroutine->identify_++;
   TransferTo(coroutine);
+}
+
+/* 如果本身是在一个子coro里面, 需要在重新将resumecoroutine调度到主coroutine内
+ * 不支持嵌套的coroutinetransfer........
+ * 如果本身是主coro，则直接tranfer去执行.
+ * 如果不是在调度的线程里,则post task去Resume*/
+void CoroRunner::ResumeCoroutine(std::weak_ptr<Coroutine> weak, uint64_t id) {
+  if (!bind_loop_->IsInLoopThread() || CanYield()) {
+    auto f = std::bind(&CoroRunner::do_resume, this, weak, id, 2);
+    CHECK(bind_loop_->PostTask(NewClosure(f)));
+    return;
+  }
+  do_resume(weak, id, 1);
 }
 
 StlClosure CoroRunner::CurrentCoroResumeCtx() {

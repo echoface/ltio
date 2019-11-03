@@ -49,6 +49,8 @@ public:
   void SetRequestTimeout(uint32_t ms) {request_timeout_ = ms;};
   base::MessageLoop* IOLoop() {return protocol_service_->IOLoop();};
 
+  // a change for close all inprogress request
+  virtual void BeforeCloseChannel() = 0;
   //override from ProtoServiceDelegate
   virtual void OnProtocolServiceReady(const RefProtoService& service);
 protected:

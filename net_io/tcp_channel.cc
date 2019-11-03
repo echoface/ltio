@@ -128,8 +128,7 @@ void TcpChannel::ShutdownChannel(bool half_close) {
 
   schedule_shutdown_ = true;
   SetChannelStatus(Status::CLOSING);
-  if (half_close && !fd_event_->IsWriteEnable()) {
-    HandleClose();
+  if (half_close && fd_event_->IsWriteEnable()) {
     schedule_shutdown_ = false;
   } else {
     HandleClose();

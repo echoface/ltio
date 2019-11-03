@@ -191,7 +191,7 @@ void MessageLoop::ThreadMain() {
 }
 
 bool MessageLoop::PostDelayTask(TaskBasePtr task, uint32_t ms) {
-  CHECK(status_ == ST_STARTED);
+  LOG_IF(ERROR, status_ != ST_STARTED) << "loop not started, loc:" << task->TaskLocation().ToString();
 
   if (!IsInLoopThread()) {
     return PostTask(TaskBasePtr(new TimeoutTaskHelper(std::move(task), &event_pump_, ms)));
@@ -203,20 +203,27 @@ bool MessageLoop::PostDelayTask(TaskBasePtr task, uint32_t ms) {
   return true;
 }
 
+bool MessageLoop::PendingNestedTask(TaskBasePtr& task) {
+  DCHECK(IsInLoopThread());
+
+  in_loop_tasks_.push_back(std::move(task));
+  //if (!notify_flag_.test_and_set()) {
+  Notify(task_fd_, &kTaskFdCounter, sizeof(kTaskFdCounter));
+  //}
+  return true;
+}
+
 bool MessageLoop::PostTask(TaskBasePtr task) {
-  CHECK(status_ == ST_STARTED);
+  LOG_IF(ERROR, status_ != ST_STARTED) << "loop not started, loc:" << task->TaskLocation().ToString();
 
   if (IsInLoopThread()) {
-    in_loop_tasks_.push_back(std::move(task));
-    if (!notify_flag_.test_and_set()) {
-      Notify(task_fd_, &kTaskFdCounter, sizeof(kTaskFdCounter));
-    }
-    return true;
+    return PendingNestedTask(task);
   }
+
   bool ret = scheduled_tasks_.enqueue(std::move(task));
-  if (!notify_flag_.test_and_set()) {
-    Notify(task_fd_, &kTaskFdCounter, sizeof(kTaskFdCounter));
-  }
+  //if (!notify_flag_.test_and_set()) {
+  Notify(task_fd_, &kTaskFdCounter, sizeof(kTaskFdCounter));
+  //}
   return ret;
 }
 

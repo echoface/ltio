@@ -35,7 +35,7 @@ void ProtoService::Initialize() {
 
 void ProtoService::CloseService() {
 	CHECK(channel_->InIOLoop());
-  LOG(INFO) << __FUNCTION__ << " enter";
+
 	BeforeCloseService();
 	channel_->ShutdownChannel(false);
 }

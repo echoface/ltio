@@ -47,7 +47,7 @@ private:
   void SetCoroState(CoroState st) {state_ = st;}
   void ReleaseSelfHolder() {self_holder_.reset();};
   std::weak_ptr<Coroutine> AsWeakPtr() {return shared_from_this();}
-
+  bool is_main() const {return stack_.ssze == 0;}
 private:
   CoroState state_;
   coro_stack stack_;

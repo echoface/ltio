@@ -45,7 +45,11 @@ void ClientChannel::Close() {
 	base::MessageLoop* io = IOLoop();
   CHECK(io->IsInLoopThread());
   state_ = kClosing;
+  VLOG(GLOG_VTRACE) << " close client channel";
+  //notify impl to close all in progress request
+  BeforeCloseChannel();
 
+  delegate_ = NULL;
   protocol_service_->CloseService();
 }
 
@@ -56,7 +60,9 @@ void ClientChannel::ResetDelegate() {
 //override
 void ClientChannel::OnProtocolServiceReady(const RefProtoService& service) {
   state_ = kReady;
-  delegate_->OnClientChannelInited(this);
+  if (delegate_) {
+    delegate_->OnClientChannelInited(this);
+  }
 };
 
 }}

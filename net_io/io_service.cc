@@ -65,8 +65,8 @@ void IOService::StopIOService() {
 
   //async
   for (auto& proto_service : protocol_services) {
-      base::MessageLoop* loop = proto_service->IOLoop();
-      loop->PostTask(NewClosure(std::bind(&ProtoService::CloseService, proto_service)));
+    base::MessageLoop* loop = proto_service->IOLoop();
+    loop->PostTask(NewClosure(std::bind(&ProtoService::CloseService, proto_service)));
   }
 
   if (protocol_services.empty()) {
