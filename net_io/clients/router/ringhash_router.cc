@@ -9,7 +9,7 @@ RingHashRouter::RingHashRouter(uint32_t vnode_count)
 
 void RingHashRouter::StopAllClients() {
   for (auto& client : all_clients_) {
-    client->FinalizeSync();
+    client->Finalize();
   }
 }
 

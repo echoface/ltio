@@ -67,10 +67,11 @@ void AsyncChannel::OnProtocolMessage(const RefProtocolMessage& res) {
     VLOG(GLOG_VINFO) << __FUNCTION__ << " response:" << identify << " not found corresponding request";
     return;
   }
-  CHECK(iter->second->AsyncId() == identify);
-
-  delegate_->OnRequestGetResponse(iter->second, res);
+  auto request = std::move(iter->second);
   in_progress_.erase(iter);
+  CHECK(request->AsyncId() == identify);
+
+  delegate_->OnRequestGetResponse(request, res);
 }
 
 void AsyncChannel::OnProtocolServiceGone(const RefProtoService& service) {

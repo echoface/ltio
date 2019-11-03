@@ -33,16 +33,14 @@ public:
   Connector(base::MessageLoop* loop, ConnectorDelegate* delegate);
   ~Connector() {};
 
+  void Stop();
   //TODO: add a connect timeout
   bool Launch(const net::SocketAddr &address);
 
   void OnWrite(WeakPtrFdEvent weak_fdevent);
   void OnError(WeakPtrFdEvent weak_fdevent);
 
-  void DiscardAllConnectingClient();
-
 private:
-  void InitEvent(base::RefFdEvent& fd_event);
   void CleanUpBadChannel(base::RefFdEvent& event);
 
 private:

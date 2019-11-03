@@ -92,8 +92,8 @@ TEST_CASE("client.base", "[http client]") {
   http_client.Initialize(config);
 
   loop.PostDelayTask(NewClosure([&](){
-	  REQUIRE(http_client.ClientCount() == connections);
-	  http_client.FinalizeSync();
+	  REQUIRE(http_client.ConnectedCount() == connections);
+	  http_client.Finalize();
     loop.QuitLoop();
   }), 500);
 
@@ -128,14 +128,14 @@ TEST_CASE("client.async", "[http client]") {
     LOG_IF(INFO, response) << "response:" << response->Dump();
 
     LOG(INFO) << __FUNCTION__ << " call FinalizeSync";
-    http_client.FinalizeSync();
+    http_client.Finalize();
 
     LOG(INFO) << __FUNCTION__ << " call quit loop";
     loop.QuitLoop();
   };
 
   loop.PostDelayTask(NewClosure([&](){
-	  REQUIRE(http_client.ClientCount() == connections);
+	  REQUIRE(http_client.ConnectedCount() == connections);
 
     net::RefHttpRequest request = std::make_shared<net::HttpRequest>();
     request->SetKeepAlive(true);
@@ -201,10 +201,10 @@ TEST_CASE("client.http.request", "[http client send request]") {
   }
 
   loop.PostDelayTask(NewClosure([&](){
-    REQUIRE(http_client.ClientCount() == connections);
+    REQUIRE(http_client.ConnectedCount() == connections);
     REQUIRE((failed_request + success_request) == total_task);
 
-    http_client.FinalizeSync();
+    http_client.Finalize();
     loop.QuitLoop();
   }), 5000);
 
@@ -261,10 +261,10 @@ TEST_CASE("client.raw.request", "[raw client send request]") {
   }
 
   loop.PostDelayTask(NewClosure([&](){
-    REQUIRE(raw_router.ClientCount() == connections);
+    REQUIRE(raw_router.ConnectedCount() == connections);
     REQUIRE((failed_request + success_request) == total_task);
 
-    raw_router.FinalizeSync();
+    raw_router.Finalize();
     loop.QuitLoop();
   }), 5000);
 
@@ -313,7 +313,7 @@ TEST_CASE("client.timer.request", "[fetch resource every interval]") {
 
     loop.PostTask(NewClosure([&](){
 
-      raw_router.FinalizeSync();
+      raw_router.Finalize();
 
       loop.PostTask(NewClosure([&](){
         loop.QuitLoop();
@@ -332,7 +332,6 @@ TEST_CASE("client.timer.request", "[fetch resource every interval]") {
 
   LOG(INFO) << " end test client.timer.request, raw client send request";
 }
-
 
 TEST_CASE("client.raw.bench", "[raw client send request benchmark]") {
 
@@ -366,7 +365,7 @@ TEST_CASE("client.raw.bench", "[raw client send request benchmark]") {
   static const int connections = 10;
 
   net::ClientConfig config;
-  config.recon_interval = 10;
+  config.recon_interval = 1000;
   config.message_timeout = 5000;
   config.connections = connections;
 
@@ -401,7 +400,7 @@ TEST_CASE("client.raw.bench", "[raw client send request benchmark]") {
           << "success:" << success_request
           << " failed: " << failed_request
           << " test_count:" << bench_count;
-        raw_router.FinalizeSync();
+        raw_router.Finalize();
         loop.QuitLoop();
       }
     };
@@ -479,7 +478,7 @@ TEST_CASE("client.http.bench", "[http client send request benchmark]") {
           << "success:" << success_request
           << " failed: " << failed_request
           << " test_count:" << bench_count;
-        http_client.FinalizeSync();
+        http_client.Finalize();
         loop.QuitLoop();
       }
     };

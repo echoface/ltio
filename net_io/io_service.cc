@@ -101,6 +101,7 @@ void IOService::OnNewConnection(int fd, const SocketAddr& peer_addr) {
 
   proto_service->SetDelegate(this);
   proto_service->BindToSocket(fd, local_addr, peer_addr, io_loop);
+  proto_service->Initialize();
 
   StoreProtocolService(proto_service);
 

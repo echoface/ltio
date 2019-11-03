@@ -23,7 +23,7 @@ public:
   ~TcpChannel();
 
   int32_t Send(const uint8_t* data, const int32_t len) override;
-  void ShutdownChannel() override;
+  void ShutdownChannel(bool half_close) override;
 protected:
   TcpChannel(int socket_fd,
              const SocketAddr& loc,

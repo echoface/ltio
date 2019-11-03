@@ -71,7 +71,7 @@ class FwRapidMessage : public lt::net::ProtocolMessage {
 
     uint16_t CmdId() const {return header_.cmdid;}
     void SetCmdId(uint16_t id) {header_.cmdid = id;}
-    
+
     uint8_t Version() const {return header_.version;}
     void SetVersion(uint8_t ver) {header_.version = ver;}
 

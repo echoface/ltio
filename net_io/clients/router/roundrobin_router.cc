@@ -6,7 +6,7 @@ namespace net {
 
 void RoundRobinRouter::StopAllClients() {
   for (auto& client : clients_) {
-    client->FinalizeSync();
+    client->Finalize();
   }
 }
 

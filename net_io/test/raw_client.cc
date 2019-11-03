@@ -61,7 +61,7 @@ int main(int argc, char** argv) {
     std::flush(std::cout);
     std::getline(std::cin, line);
     if (line == "quit") {
-      raw_router->FinalizeSync();
+      raw_router->Finalize();
       mainloop.QuitLoop();
       break;
     }

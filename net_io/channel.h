@@ -43,7 +43,7 @@ public:
   /* a initiative call from application level to clase this channel
    * 1. shutdown writer if writing is enable
    * 2. directly unregiste fdevent from pump and close socket*/
-  virtual void ShutdownChannel() = 0;
+  virtual void ShutdownChannel(bool half_close) = 0;
 
   base::MessageLoop* IOLoop() const {return io_loop_;}
   bool InIOLoop() const {return io_loop_->IsInLoopThread();};

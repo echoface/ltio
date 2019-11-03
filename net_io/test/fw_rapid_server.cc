@@ -51,10 +51,6 @@ public:
     return loops[io_round_count % loops.size()];
   }
 
-  void OnClientStoped(net::Client* client) {
-    LOG(INFO) << " a client closed";
-  }
-
   void StopAllService() {
     LOG(INFO) << __FUNCTION__ << " stop enter";
     main_loop.QuitLoop();

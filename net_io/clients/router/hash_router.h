@@ -18,7 +18,7 @@ public:
 
   void StopAllClients() override {
     for (auto& client : clients_) {
-      client->FinalizeSync();
+      client->Finalize();
     }
   }
 

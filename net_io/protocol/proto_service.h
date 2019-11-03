@@ -17,6 +17,7 @@ public:
   virtual void OnProtocolMessage(const RefProtocolMessage& message) = 0;
 };
 
+typedef std::function<void (const RefProtoService& srvice, bool succss)> InitCallback;
 /* a stateless encoder/decoder and
  * transfer the ProtoMessage to real Handler */
 class ProtoService : public SocketChannel::Reciever,
@@ -31,6 +32,8 @@ public:
                             const SocketAddr& local,
                             const SocketAddr& peer,
                             base::MessageLoop* loop);
+
+  virtual void Initialize();
 
   TcpChannel* Channel() {return channel_.get();};
   base::MessageLoop* IOLoop() {return channel_ ? channel_->IOLoop() : NULL;}

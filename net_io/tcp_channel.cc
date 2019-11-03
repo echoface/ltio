@@ -118,7 +118,7 @@ void TcpChannel::HandleClose() {
   close_channel();
 }
 
-void TcpChannel::ShutdownChannel() {
+void TcpChannel::ShutdownChannel(bool half_close) {
   CHECK(InIOLoop());
   VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
 
@@ -128,9 +128,11 @@ void TcpChannel::ShutdownChannel() {
 
   schedule_shutdown_ = true;
   SetChannelStatus(Status::CLOSING);
-  if (!fd_event_->IsWriteEnable()) {
+  if (half_close && !fd_event_->IsWriteEnable()) {
     HandleClose();
     schedule_shutdown_ = false;
+  } else {
+    HandleClose();
   }
 }
 

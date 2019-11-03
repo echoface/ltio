@@ -72,16 +72,6 @@ public:
     return loops[io_round_count % loops.size()];
   }
 
-  void OnClientStoped(net::Client* client) {
-    if (client == http_client) {
-      LOG(INFO) << " http client closed";
-    } else if (client == raw_client) {
-      LOG(INFO) << " raw client closed";
-    } else if (client == redis_client) {
-      LOG(INFO) << " redis client closed";
-    }
-  }
-
   void StartHttpClients(std::string url) {
     net::url::RemoteInfo server_info;
     LOG_IF(ERROR, !net::url::ParseRemote(url, server_info)) << " server can't be resolve";
@@ -164,23 +154,22 @@ public:
   }
 #endif
 
-
   void StopAllService() {
     LOG(INFO) << __FUNCTION__ << " stop enter";
 
     LOG(INFO) << __FUNCTION__ << " start stop httpclient";
-    http_client->FinalizeSync();
+    http_client->Finalize();
     LOG(INFO) << __FUNCTION__ << " http client has stoped";
 
 #ifdef ENBALE_RAW_CLIENT
     LOG(INFO) << __FUNCTION__ << " start stop rawclient";
-    raw_client->FinalizeSync();
+    raw_client->Finalize();
     LOG(INFO) << __FUNCTION__ << " raw client has stoped";
 #endif
 
 #ifdef ENBALE_RDS_CLIENT
     LOG(INFO) << __FUNCTION__ << " start stop rdsclient";
-    redis_client->FinalizeSync();
+    redis_client->Finalize();
     LOG(INFO) << __FUNCTION__ << " redis client has stoped";
 #endif
 

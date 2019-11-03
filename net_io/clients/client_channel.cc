@@ -25,24 +25,38 @@ ClientChannel::ClientChannel(Delegate* d, const RefProtoService& service)
 		  protocol_service_(service) {
 }
 
+ClientChannel::~ClientChannel() {
+  protocol_service_->SetDelegate(NULL);
+}
+
 void ClientChannel::StartClient() {
   protocol_service_->SetDelegate(this);
 
   // if has client side heart beat, start it
   uint32_t heart_beat_interval = delegate_->HeartBeatInterval();
   if (heart_beat_interval > 0) {
-    //TODO do client side 
+    //TODO do client side
     //protocol_service_->StartHeartBeat(heart_beat_interval);
   }
+  protocol_service_->Initialize();
 }
 
-void ClientChannel::CloseClientChannel() {
+void ClientChannel::Close() {
 	base::MessageLoop* io = IOLoop();
-	if (io->IsInLoopThread()) {
-		protocol_service_->CloseService();
-		return;
-	}
-	io->PostTask(NewClosure(std::bind(&ProtoService::CloseService, protocol_service_)));
+  CHECK(io->IsInLoopThread());
+  state_ = kClosing;
+
+  protocol_service_->CloseService();
 }
+
+void ClientChannel::ResetDelegate() {
+  delegate_ = NULL;
+}
+
+//override
+void ClientChannel::OnProtocolServiceReady(const RefProtoService& service) {
+  state_ = kReady;
+  delegate_->OnClientChannelInited(this);
+};
 
 }}

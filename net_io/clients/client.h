@@ -21,7 +21,6 @@
 #include "client_base.h"
 #include "clients/queued_channel.h"
 #include "clients/client_connector.h"
-#include "initializer/initializer.h"
 
 namespace lt {
 namespace net {
@@ -35,24 +34,19 @@ public:
   virtual base::MessageLoop* NextIOLoopForClient() = 0;
   /* do some init things like select db for redis,
    * or enable keepalive action etc*/
-  virtual void OnClientChannelReady(ClientChannel* channel) {}
-  virtual void OnClientChannelGone(ClientChannel* channel) {}
-  virtual void OnClientStoped(Client* client) {};
+  virtual void OnClientChannelReady(const ClientChannel* channel) {}
 };
 
 
 class Client: public ConnectorDelegate,
-              public Initializer::Provider,
               public ClientChannel::Delegate {
 public:
   Client(base::MessageLoop*, const url::RemoteInfo&);
   virtual ~Client();
 
-  void SetDelegate(ClientDelegate* delegate);
-  void Initialize(const ClientConfig& config);
-
   void Finalize();
-  void FinalizeSync();
+  void Initialize(const ClientConfig& config);
+  void SetDelegate(ClientDelegate* delegate);
 
   template<class T>
   typename T::element_type::ResponseType* SendRecieve(T& m) {
@@ -68,48 +62,47 @@ public:
   void OnNewClientConnected(int fd, SocketAddr& loc, SocketAddr& remote) override;
 
   //override Initializer::Provider
-  void OnClientServiceReady(const RefProtoService&) override;
   const ClientConfig& GetClientConfig() const override {return config_;}
   const url::RemoteInfo& GetRemoteInfo() const override {return remote_info_;}
 
   //override from ClientChannel::Delegate
   uint32_t HeartBeatInterval() const override {return config_.heart_beat_ms;}
+
+  void OnClientChannelInited(const ClientChannel* channel) override;
+
+  //only called when passive close, active close won't be notified for thread-safe reason
   void OnClientChannelClosed(const RefClientChannel& channel) override;
+
   void OnRequestGetResponse(const RefProtocolMessage&, const RefProtocolMessage&) override;
 
-  uint64_t ClientCount() const;
+  uint64_t ConnectedCount() const;
   std::string ClientInfo() const;
   std::string RemoteIpPort() const;
 private:
-  //Get a io work loop for channel, if no loop provide, use default io_loop_;
-  base::MessageLoop* GetLoopForClient();
+  /*return a connected and initialized channel*/
+  RefClientChannel get_ready_channel();
+
+  /*return a io loop for client channel work on*/
+  base::MessageLoop* next_client_io_loop();
 
   SocketAddr address_;
   const url::RemoteInfo remote_info_;
 
   /* workloop mean: all client channel born & die, not mean
-   * clientchannel io loop, client channel may work in other loop*/
+   * clientchannel io_loop, client channel may work in other loop*/
   base::MessageLoop* work_loop_;
 
-  bool is_stopping_;
-
-  //sync start or stop
-  std::mutex mtx_;
-  std::condition_variable cv_;
+  std::atomic<bool> stopping_;
 
   ClientConfig config_;
   RefConnector connector_;
   ClientDelegate* delegate_;
-  Initializer* initializer_ = NULL;
   typedef std::vector<RefClientChannel> ClientChannelList;
   typedef std::shared_ptr<ClientChannelList> RefClientChannelList;
 
-  /*channels_ only access & modify in this client worker loop*/
-  ClientChannelList channels_;
-
   //a channels copy for client caller
   std::atomic<uint32_t> next_index_;
-  RefClientChannelList roundrobin_channes_;
+  RefClientChannelList in_use_channels_;
 };
 
 }}//end namespace lt::net

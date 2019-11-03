@@ -51,9 +51,9 @@ set(LTNET_SOURCE
   clients/router/maglev_router.cc
   clients/router/ringhash_router.cc
   clients/router/roundrobin_router.cc
-  clients/initializer/initializer.cc
-  clients/initializer/init_factory.cc
-  clients/initializer/redis_initializer.cc
+  #clients/initializer/initializer.cc
+  #clients/initializer/init_factory.cc
+  #clients/initializer/redis_initializer.cc
 )
 
 SET(LTNETEXECUTE_LINKLIBS
@@ -87,6 +87,10 @@ link_libraries(
 )
 
 ADD_SUBDIRECTORY(unittests)
+
+ADD_EXECUTABLE(rapid_bench_client
+  test/rapid_bench_client.cc
+)
 
 ADD_EXECUTABLE(reuseport_test
   test/reuseport_test.cc

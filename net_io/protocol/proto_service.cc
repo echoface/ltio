@@ -25,16 +25,19 @@ bool ProtoService::BindToSocket(int fd,
 
   channel_ = TcpChannel::Create(fd, local, peer, loop);
 	channel_->SetReciever(this);
-
-  channel_->Start();
   return true;
+}
+
+void ProtoService::Initialize() {
+  channel_->Start();
+  //on client side, do the setup-things(auth,login,db) when channel ready callback
 }
 
 void ProtoService::CloseService() {
 	CHECK(channel_->InIOLoop());
   LOG(INFO) << __FUNCTION__ << " enter";
 	BeforeCloseService();
-	channel_->ShutdownChannel();
+	channel_->ShutdownChannel(false);
 }
 
 void ProtoService::SetIsServerSide(bool server_side) {
@@ -44,7 +47,6 @@ void ProtoService::SetIsServerSide(bool server_side) {
 void ProtoService::OnChannelClosed(const SocketChannel* channel) {
 	CHECK(channel == channel_.get());
 
-  LOG(INFO) << __FUNCTION__ << " enter";
 	VLOG(GLOG_VTRACE) << __FUNCTION__ << channel_->ChannelInfo() << " closed";
 
 	RefProtoService guard = shared_from_this();
@@ -59,6 +61,7 @@ void ProtoService::OnChannelReady(const SocketChannel*) {
   if (delegate_) {
     delegate_->OnProtocolServiceReady(guard);
   }
+  //do initializing for client side, like set db, auth etc
 }
 
 }}// end namespace
