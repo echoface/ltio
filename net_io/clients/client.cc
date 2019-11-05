@@ -199,7 +199,7 @@ ProtocolMessage* Client::SendClientRequest(RefProtocolMessage& message) {
   auto channel = get_ready_channel();
   if (!channel) {
     message->SetFailCode(MessageCode::kNotConnected);
-    LOG(ERROR) << "no established client connection send request";
+    LOG(ERROR) << "no established client can use";
     return NULL;
   }
 
@@ -223,7 +223,9 @@ uint64_t Client::ConnectedCount() const {
 
 std::string Client::ClientInfo() const {
   std::ostringstream oss;
-  oss << "[remote:" << RemoteIpPort() << ", clients:" << ConnectedCount() << "]";
+  oss << "[remote:" << RemoteIpPort()
+      << ", connections:" << ConnectedCount()
+      << "]";
   return oss.str();
 }
 

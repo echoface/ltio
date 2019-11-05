@@ -38,7 +38,6 @@ std::string RedisResponse::DebugDump() const {
         oss << "index:" << i << " type:" << value.type() << " res:" << "null" << "\n";
       } break;
       case resp::ty_array: {
-        LOG(INFO) << "got array result";
         resp::unique_array<resp::unique_value> arr = value.array();
 
         std::ostringstream os;
