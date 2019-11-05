@@ -7,8 +7,14 @@
 namespace lt {
 namespace net {
 
+class RedisResponse;
 class RespService : public ProtoService {
 public:
+  typedef enum _ {
+    kWaitAuth     = 0x01,
+    kWaitSelectDB = 0x01 << 1,
+  } InitWaitFlags;
+
   RespService();
   ~RespService();
 
@@ -19,7 +25,12 @@ public:
 
 	bool SendRequestMessage(const RefProtocolMessage &message) override;
 	bool SendResponseMessage(const RefProtocolMessage& req, const RefProtocolMessage& res) override;
+protected:
+  void OnChannelReady(const SocketChannel*) override;
+
 private:
+  void HandleInitResponse(RedisResponse* response);
+  uint8_t  init_wait_res_flags_ = 0;
   uint32_t next_incoming_count_ = 0;
   RefRedisResponse current_response;// = std::make_shared<RedisResponse>();
   resp::decoder decoder_;

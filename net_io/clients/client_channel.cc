@@ -58,6 +58,14 @@ void ClientChannel::ResetDelegate() {
 }
 
 //override
+const url::RemoteInfo* ClientChannel::GetRemoteInfo() const {
+  if (delegate_) {
+    return &(delegate_->GetRemoteInfo());
+  }
+  return NULL;
+}
+
+//override
 void ClientChannel::OnProtocolServiceReady(const RefProtoService& service) {
   state_ = kReady;
   if (delegate_) {

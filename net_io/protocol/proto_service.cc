@@ -61,7 +61,6 @@ void ProtoService::OnChannelReady(const SocketChannel*) {
   if (delegate_) {
     delegate_->OnProtocolServiceReady(guard);
   }
-  //do initializing for client side, like set db, auth etc
 }
 
 }}// end namespace

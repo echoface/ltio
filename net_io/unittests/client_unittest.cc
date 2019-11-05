@@ -511,7 +511,7 @@ TEST_CASE("client.redis_client", "[redis client]") {
 
   net::ClientConfig config;
 
-  config.recon_interval = 10;
+  config.recon_interval = 1000;
   config.message_timeout = 5000;
   config.connections = connections;
 
@@ -570,7 +570,7 @@ TEST_CASE("client.redis_client", "[redis client]") {
     loop.QuitLoop();
   };
 
-  sleep(2);
+  sleep(5);
 
   co_go &loop << task;
   loop.WaitLoopEnd();

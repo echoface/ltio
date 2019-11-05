@@ -4,7 +4,7 @@
 #include "channel.h"
 #include "net_callback.h"
 #include "tcp_channel.h"
-
+#include "url_utils.h"
 #include "proto_message.h"
 
 namespace lt {
@@ -15,6 +15,8 @@ public:
   virtual void OnProtocolServiceReady(const RefProtoService& service) {};
   virtual void OnProtocolServiceGone(const RefProtoService& service) = 0;
   virtual void OnProtocolMessage(const RefProtocolMessage& message) = 0;
+  //for client side
+  virtual const url::RemoteInfo* GetRemoteInfo() const {return NULL;};
 };
 
 typedef std::function<void (const RefProtoService& srvice, bool succss)> InitCallback;
@@ -27,7 +29,9 @@ public:
   virtual ~ProtoService();
 
   void SetDelegate(ProtoServiceDelegate* d);
-  /* this can be override if some protocol need difference channel, eg SSLChannel, UdpChannel */
+  /* this can be override
+   * if need difference channel type,
+   * eg SSLChannel, UdpChannel */
   virtual bool BindToSocket(int fd,
                             const SocketAddr& local,
                             const SocketAddr& peer,
@@ -63,11 +67,13 @@ public:
     return server_side_ ? MessageType::kRequest : MessageType::kResponse;
   }
 protected:
-  void OnChannelReady(const SocketChannel*) override;
+  // override this do initializing for client side, like set db, auth etc
+  virtual void OnChannelReady(const SocketChannel*) override;
+
   void OnChannelClosed(const SocketChannel*) override;
 
-  RefTcpChannel channel_;
   bool server_side_;
+  RefTcpChannel channel_;
   ProtoServiceDelegate* delegate_ = NULL;
 };
 
