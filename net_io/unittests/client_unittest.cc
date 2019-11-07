@@ -288,7 +288,7 @@ TEST_CASE("client.timer.request", "[fetch resource every interval]") {
 
   {
     net::ClientConfig config;
-    config.heart_beat_ms = 5000;
+    config.heartbeat_ms = 5000;
     config.recon_interval = 1000;
     config.message_timeout = 5000;
     config.connections = connections;

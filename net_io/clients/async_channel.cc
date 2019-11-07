@@ -30,9 +30,7 @@ void AsyncChannel::SendRequest(RefProtocolMessage request)  {
   bool success = protocol_service_->SendRequestMessage(request);
   if (!success) {
     request->SetFailCode(MessageCode::kConnBroken);
-    if (delegate_) {
-      delegate_->OnRequestGetResponse(request, ProtocolMessage::kNullMessage);
-    }
+    HandleResponse(request, ProtocolMessage::kNullMessage);
     return;
   }
 
@@ -51,15 +49,12 @@ void AsyncChannel::OnRequestTimeout(WeakProtocolMessage weak) {
   }
 
   uint64_t identify = request->AsyncId();
-  LOG(INFO) << "request timeout, async id is:" << identify;
 
   size_t numbers = in_progress_.erase(identify);
   CHECK(numbers == 1);
 
   request->SetFailCode(MessageCode::kTimeOut);
-  if (delegate_) {
-    delegate_->OnRequestGetResponse(request, ProtocolMessage::kNullMessage);
-  }
+  HandleResponse(request, ProtocolMessage::kNullMessage);
 }
 
 void AsyncChannel::BeforeCloseChannel() {
@@ -67,9 +62,7 @@ void AsyncChannel::BeforeCloseChannel() {
 
   for (auto kv : in_progress_) {
     kv.second->SetFailCode(MessageCode::kConnBroken);
-    if (delegate_) {
-      delegate_->OnRequestGetResponse(kv.second, ProtocolMessage::kNullMessage);
-    }
+    HandleResponse(kv.second, ProtocolMessage::kNullMessage);
   }
   in_progress_.clear();
 }
@@ -87,20 +80,16 @@ void AsyncChannel::OnProtocolMessage(const RefProtocolMessage& res) {
   auto request = std::move(iter->second);
   in_progress_.erase(iter);
   CHECK(request->AsyncId() == identify);
-
-  if (delegate_) {
-    delegate_->OnRequestGetResponse(request, res);
-  }
+  HandleResponse(request, res);
 }
 
 void AsyncChannel::OnProtocolServiceGone(const RefProtoService& service) {
 	DCHECK(IOLoop()->IsInLoopThread());
+  ClientChannel::OnProtocolServiceGone(service);
 
   for (auto kv : in_progress_) {
     kv.second->SetFailCode(MessageCode::kConnBroken);
-    if (delegate_) {
-      delegate_->OnRequestGetResponse(kv.second, ProtocolMessage::kNullMessage);
-    }
+    HandleResponse(kv.second, ProtocolMessage::kNullMessage);
   }
   in_progress_.clear();
   if (delegate_) {

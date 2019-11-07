@@ -35,12 +35,12 @@ class FwRapidMessage : public lt::net::ProtocolMessage {
       return std::move(res);
     }
 
-    static bool Encode(const FwRapidMessage* m, net::SocketChannel* ch) {
-      VLOG(GLOG_VTRACE) << __FUNCTION__ << " frame size:" << m->header_.size;
-      if (ch->Send((const uint8_t*)(&m->header_), sizeof(RapidHeader)) < 0) {
+    bool EncodeTo(net::SocketChannel* ch) {
+      VLOG(GLOG_VTRACE) << __FUNCTION__ << " frame size:" << header_.size;
+      if (ch->Send((const char*)(&header_), sizeof(RapidHeader)) < 0) {
         return false;
       }
-      return ch->Send((const uint8_t*)m->content_.data(), m->content_.size()) >= 0;
+      return ch->Send(content_.data(), content_.size()) >= 0;
     }
 
     static RefFwRapidMessage Decode(net::IOBuffer* buffer, bool server_side) {

@@ -38,7 +38,7 @@ public:
   /* return -1 when error,
    * return 0 when all data pending to buffer,
    * other case return the byte of writen*/
-  virtual int32_t Send(const uint8_t* data, const int32_t len) = 0;
+  virtual int32_t Send(const char* data, const int32_t len) = 0;
 
   /* a initiative call from application level to clase this channel
    * 1. shutdown writer if writing is enable

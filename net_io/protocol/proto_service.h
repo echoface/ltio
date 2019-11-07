@@ -48,12 +48,15 @@ public:
   virtual void BeforeCloseService() {};
   virtual void AfterChannelClosed() {};
 
+  /* feature indentify*/
   //async clients request
   virtual bool KeepSequence() {return true;};
+  virtual bool KeepHeartBeat() {return false;}
 
   virtual bool SendRequestMessage(const RefProtocolMessage& message) = 0;
   virtual bool SendResponseMessage(const RefProtocolMessage& req, const RefProtocolMessage& res) = 0;
 
+  virtual const RefProtocolMessage NewHeartbeat() {return NULL;}
   virtual const RefProtocolMessage NewResponse(const ProtocolMessage*) {return NULL;}
 
   virtual const std::string& protocol() const {

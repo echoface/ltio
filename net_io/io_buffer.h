@@ -20,11 +20,11 @@ public:
   ~IOBuffer();
 
   bool HasALine();
-  const uint8_t* FindCRLF();
+  const char* FindCRLF();
   bool EnsureWritableSize(int64_t len);
 
-  uint8_t* GetWrite();
-  const uint8_t* GetRead();
+  char* GetWrite();
+  const char* GetRead();
 
   inline uint64_t CanReadSize() {return write_index_ - read_index_;}
   inline uint64_t CanWriteSize() {return data_.size() - write_index_;}
@@ -33,13 +33,13 @@ public:
   void WriteRawData(const void* data, size_t len);
 
   template <typename T> void Append(T data) {
-    union _X {
+    union __X {
       T _data;
       char _x;
     };
     uint32_t len = sizeof(data);
     EnsureWritableSize(len);
-    ::memcpy(MutableWrite(), (uint8_t*) &data, len);
+    ::memcpy(MutableWrite(), &data, len);
     Produce(len);
   }
 
@@ -48,12 +48,12 @@ public:
   void Consume(uint64_t len);
   inline void Produce(uint64_t len) {write_index_ += len;}
 private:
-  uint8_t* MutableRead();
-  uint8_t* MutableWrite();
+  char* MutableRead();
+  char* MutableWrite();
 
   uint64_t read_index_;
   uint64_t write_index_;
-  std::vector<uint8_t> data_;
+  std::vector<char> data_;
 };
 
 }}

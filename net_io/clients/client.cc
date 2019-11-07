@@ -65,7 +65,8 @@ void Client::OnClientConnectFailed() {
   }
   auto functor = std::bind(&Connector::Launch, connector_, address_);
   work_loop_->PostDelayTask(NewClosure(functor), config_.recon_interval);
-  VLOG(GLOG_VERROR) << __FUNCTION__ << ClientInfo() << " try after " << config_.recon_interval << " ms";
+  VLOG(GLOG_VERROR) << __FUNCTION__ << ClientInfo()
+    << " try after " << config_.recon_interval << " ms";
 }
 
 base::MessageLoop* Client::next_client_io_loop() {
@@ -124,7 +125,7 @@ void Client::OnClientChannelInited(const ClientChannel* channel) {;
 
 /*on the loop of client IO, need managed by connector loop*/
 void Client::OnClientChannelClosed(const RefClientChannel& channel) {
-  if (!work_loop_->IsInLoopThread()) {
+  if (!work_loop_->IsInLoopThread() && !stopping_) {
     auto functor = std::bind(&Client::OnClientChannelClosed, this, channel);
     work_loop_->PostTask(NewClosure(std::move(functor)));
     return;
@@ -148,6 +149,9 @@ void Client::OnClientChannelClosed(const RefClientChannel& channel) {
     return;
   }
 
+  if (connected_count == 0 && delegate_) {
+    delegate_->OnAllClientPassiveBroken(this);
+  }
   //reconnect
   if (!stopping_ && connected_count < config_.connections) {
     auto f = std::bind(&Connector::Launch, connector_, address_);

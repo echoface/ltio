@@ -87,14 +87,14 @@ bool HttpProtoService::ParseHttpRequest(const RefTcpChannel& channel, IOBuffer* 
     LOG(ERROR) << " Not Supported Now";
 
     request_context_->current_.reset();
-    channel->Send((const uint8_t*)HttpConstant::kBadRequest.data(), HttpConstant::kBadRequest.size());
+    channel->Send(HttpConstant::kBadRequest.data(), HttpConstant::kBadRequest.size());
 
     return false;
   } else if (nparsed != buffer_size) {
     LOG(ERROR) << " Parse Occur ERROR, nparsed" << nparsed << " buffer_size:" << buffer_size;
 
     request_context_->current_.reset();
-    channel->Send((const uint8_t*)HttpConstant::kBadRequest.data(), HttpConstant::kBadRequest.size());
+    channel->Send(HttpConstant::kBadRequest.data(), HttpConstant::kBadRequest.size());
 
     return false;
   }

@@ -70,13 +70,12 @@ RawMessage::RawMessage(MessageType t) :
   ProtocolMessage(t) {
 }
 
-bool RawMessage::Encode(const RawMessage* m, SocketChannel* ch) {
-  CHECK(m->content_.size() == m->header_.payload_size());
-
-  if (ch->Send((const uint8_t*)(&m->header_), LtRawHeader::kHeaderSize) < 0) {
+bool RawMessage::EncodeTo(SocketChannel* ch) {
+  CHECK(content_.size() == header_.payload_size());
+  if (ch->Send((const char*)(&header_), LtRawHeader::kHeaderSize) < 0) {
     return false;
   }
-  return ch->Send((const uint8_t*)m->content_.data(), m->content_.size()) >= 0;
+  return ch->Send(content_.data(), content_.size()) >= 0;
 }
 
 void RawMessage::SetContent(const char* c) {

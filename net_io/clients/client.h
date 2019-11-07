@@ -35,6 +35,10 @@ public:
   /* do some init things like select db for redis,
    * or enable keepalive action etc*/
   virtual void OnClientChannelReady(const ClientChannel* channel) {}
+  /* when a abnormal broken happend, here a chance to notify
+   * application level for handle this case, eg:remote server
+   * shutdown,crash etc*/
+  virtual void OnAllClientPassiveBroken(const Client* client) {};
 };
 
 
@@ -57,22 +61,17 @@ public:
 
   bool AsyncSendRequest(RefProtocolMessage& req, AsyncCallBack);
 
-  //override from ConnectorDelegate
+  // notified from connector
   void OnClientConnectFailed() override;
+  // notified from connector
   void OnNewClientConnected(int fd, SocketAddr& loc, SocketAddr& remote) override;
 
-  //override Initializer::Provider
+  // clientchanneldelegate
   const ClientConfig& GetClientConfig() const override {return config_;}
   const url::RemoteInfo& GetRemoteInfo() const override {return remote_info_;}
-
-  //override from ClientChannel::Delegate
-  uint32_t HeartBeatInterval() const override {return config_.heart_beat_ms;}
-
   void OnClientChannelInited(const ClientChannel* channel) override;
-
   //only called when passive close, active close won't be notified for thread-safe reason
   void OnClientChannelClosed(const RefClientChannel& channel) override;
-
   void OnRequestGetResponse(const RefProtocolMessage&, const RefProtocolMessage&) override;
 
   uint64_t ConnectedCount() const;

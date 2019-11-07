@@ -59,17 +59,17 @@ bool IOBuffer::EnsureWritableSize(int64_t len) {
   return true;
 }
 
-inline uint8_t* IOBuffer::MutableRead() {
+inline char* IOBuffer::MutableRead() {
   return &data_[read_index_];
 }
-inline uint8_t* IOBuffer::MutableWrite() {
+inline char* IOBuffer::MutableWrite() {
   return &data_[write_index_];
 }
 
-const uint8_t* IOBuffer::GetRead() {
+const char* IOBuffer::GetRead() {
   return &data_[read_index_];
 }
-uint8_t* IOBuffer::GetWrite() {
+char* IOBuffer::GetWrite() {
   return &data_[write_index_];
 }
 
@@ -102,11 +102,11 @@ bool IOBuffer::HasALine() {
   return NULL !=  memchr(GetRead(), '\n', CanReadSize());
 }
 
-const uint8_t* IOBuffer::FindCRLF() {
+const char* IOBuffer::FindCRLF() {
   if (!CanReadSize()) {
     return NULL;
   }
-  const uint8_t* res = std::search(MutableRead(), MutableWrite(), kCRLF, kCRLF+2);
+  const char* res = std::search(MutableRead(), MutableWrite(), kCRLF, kCRLF+2);
   return res == GetWrite() ? NULL : res;
 }
 

@@ -38,14 +38,21 @@ class RawProtoService : public ProtoService {
     return RawMessageType::CreateResponse((RawMessageType*)req);
   }
 
-  bool KeepSequence() override { return false; };
+  const RefProtocolMessage NewHeartbeat() {
+    auto message = RawMessageType::Create(true);
+    return std::move(message);
+  }
+
+  //feature list
+  bool KeepSequence() override { return false;};
+  bool KeepHeartBeat() override {return true;}
 
   bool SendRequestMessage(const RefProtocolMessage& message) override {
     RawMessageType* request = static_cast<RawMessageType*>(message.get());
     CHECK(request->GetMessageType() == MessageType::kRequest);
 
     request->SetAsyncId(RawProtoService::sequence_id_++);
-    return RawMessageType::Encode(request, channel_.get());
+    return request->EncodeTo(channel_.get());
   };
 
   bool SendResponseMessage(const RefProtocolMessage& req, const RefProtocolMessage& res) override {
@@ -54,7 +61,7 @@ class RawProtoService : public ProtoService {
 
     CHECK(raw_request->AsyncId() == raw_response->AsyncId());
     VLOG(GLOG_VTRACE) << __FUNCTION__ << " request:" << raw_request->Dump() << " response:" << raw_response->Dump();
-    return RawMessageType::Encode(raw_response, channel_.get());
+    return raw_response->EncodeTo(channel_.get());
   };
  private:
   static std::atomic<uint64_t> sequence_id_;

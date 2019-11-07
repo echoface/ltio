@@ -135,7 +135,7 @@ void TcpChannel::ShutdownChannel(bool half_close) {
   }
 }
 
-int32_t TcpChannel::Send(const uint8_t* data, const int32_t len) {
+int32_t TcpChannel::Send(const char* data, const int32_t len) {
   DCHECK(io_loop_->IsInLoopThread());
 
   if (!IsConnected()) {

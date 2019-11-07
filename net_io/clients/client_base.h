@@ -6,9 +6,9 @@ namespace net {
 
 typedef struct {
   uint32_t connections = 1;
-  // heart beat_ms only work for protocol service supported
-  // 0 mean not need heart beat keep
-  uint32_t heart_beat_ms = 0;
+  // 0: without heartbeat needed
+  // heartbeat need protocol service supported
+  uint32_t heartbeat_ms = 0;
 
   uint32_t recon_interval = 5000;
 

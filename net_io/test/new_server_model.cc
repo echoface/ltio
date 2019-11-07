@@ -26,6 +26,7 @@ net::ClientConfig DeafaultClientConfig(int count = 2) {
   config.connections = count;
   config.recon_interval = 500;
   config.message_timeout = 1000;
+  config.heartbeat_ms = 500;
   return config;
 }
 

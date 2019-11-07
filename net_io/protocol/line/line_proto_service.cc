@@ -22,7 +22,7 @@ void LineProtoService::OnDataFinishSend(const SocketChannel* channel) {
 }
 
 void LineProtoService::OnDataReceived(const SocketChannel*, IOBuffer *buf) {
-  const uint8_t* line_crlf =  buf->FindCRLF();
+  const char* line_crlf =  buf->FindCRLF();
   if (!line_crlf) {
     return;
   }
@@ -31,11 +31,11 @@ void LineProtoService::OnDataReceived(const SocketChannel*, IOBuffer *buf) {
     std::shared_ptr<LineMessage> msg(new LineMessage(InComingType()));
     msg->SetIOCtx(shared_from_this());
 
-    const uint8_t* start = buf->GetRead();
+    const char* start = buf->GetRead();
     uint64_t len = line_crlf - start;
 
     std::string& body = msg->MutableBody();
-    body.assign((const char*)start, len);
+    body.assign(start, len);
 
     buf->Consume(len + 2/*lenth of /r/n*/);
 
@@ -48,11 +48,11 @@ void LineProtoService::OnDataReceived(const SocketChannel*, IOBuffer *buf) {
 bool LineProtoService::SendRequestMessage(const RefProtocolMessage &message) {
   static const std::string kCRCN("\r\n");
   const LineMessage* line_msg = static_cast<const LineMessage*>(message.get());
-  int ret = channel_->Send((const uint8_t*)line_msg->Body().data(), line_msg->Body().size());
+  int ret = channel_->Send(line_msg->Body().data(), line_msg->Body().size());
   if (ret < 0) {
     return false;
   }
-  ret = channel_->Send((const uint8_t*)kCRCN.data(), 2);
+  ret = channel_->Send(kCRCN.data(), 2);
   return ret >= 0;
 }
 

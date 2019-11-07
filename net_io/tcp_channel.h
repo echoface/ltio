@@ -22,7 +22,7 @@ public:
                               base::MessageLoop* loop);
   ~TcpChannel();
 
-  int32_t Send(const uint8_t* data, const int32_t len) override;
+  int32_t Send(const char* data, const int32_t len) override;
   void ShutdownChannel(bool half_close) override;
 protected:
   TcpChannel(int socket_fd,

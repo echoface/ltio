@@ -46,9 +46,7 @@ bool QueuedChannel::TrySendNext() {
       ing_request_ = next;
     } else {
       next->SetFailCode(MessageCode::kConnBroken);
-      if (delegate_) {
-        delegate_->OnRequestGetResponse(next, ProtocolMessage::kNullMessage);
-      }
+      HandleResponse(next, ProtocolMessage::kNullMessage);
     }
   }
 
@@ -64,18 +62,14 @@ bool QueuedChannel::TrySendNext() {
 void QueuedChannel::BeforeCloseChannel() {
   if (ing_request_) {
     ing_request_->SetFailCode(MessageCode::kConnBroken);
-    if (delegate_) {
-      delegate_->OnRequestGetResponse(ing_request_, ProtocolMessage::kNullMessage);
-    }
+    HandleResponse(ing_request_, ProtocolMessage::kNullMessage);
     ing_request_.reset();
   }
 
   while(waiting_list_.size()) {
     RefProtocolMessage& request = waiting_list_.front();
     request->SetFailCode(MessageCode::kConnBroken);
-    if (delegate_) {
-      delegate_->OnRequestGetResponse(request, ProtocolMessage::kNullMessage);
-    }
+    HandleResponse(request, ProtocolMessage::kNullMessage);
     waiting_list_.pop_front();
   }
 }
@@ -92,9 +86,7 @@ void QueuedChannel::OnRequestTimeout(WeakProtocolMessage weak) {
   VLOG(GLOG_VINFO) << __FUNCTION__ << protocol_service_->Channel()->ChannelInfo() << " timeout reached";
 
   request->SetFailCode(MessageCode::kTimeOut);
-  if (delegate_) {
-    delegate_->OnRequestGetResponse(request, ProtocolMessage::kNullMessage);
-  }
+  HandleResponse(request, ProtocolMessage::kNullMessage);
   ing_request_.reset();
 
   if (protocol_service_->IsConnected()) {
@@ -114,30 +106,25 @@ void QueuedChannel::OnProtocolMessage(const RefProtocolMessage& res) {
   const RefProtocolMessage guard_req(ing_request_);
   ing_request_.reset();
 
-  if (delegate_) {
-    delegate_->OnRequestGetResponse(guard_req, res);
-  }
+  HandleResponse(guard_req, res);
 
   TrySendNext();
 }
 
 void QueuedChannel::OnProtocolServiceGone(const RefProtoService& service) {
   VLOG(GLOG_VTRACE) << __FUNCTION__ << service->Channel()->ChannelInfo() << " protocol service closed";
+  ClientChannel::OnProtocolServiceGone(service);
 
   if (ing_request_) {
     ing_request_->SetFailCode(MessageCode::kConnBroken);
-    if (delegate_) {
-      delegate_->OnRequestGetResponse(ing_request_, ProtocolMessage::kNullMessage);
-    }
+    HandleResponse(ing_request_, ProtocolMessage::kNullMessage);
     ing_request_.reset();
   }
 
   while(waiting_list_.size()) {
     RefProtocolMessage& request = waiting_list_.front();
     request->SetFailCode(MessageCode::kConnBroken);
-    if (delegate_) {
-      delegate_->OnRequestGetResponse(request, ProtocolMessage::kNullMessage);
-    }
+    HandleResponse(request, ProtocolMessage::kNullMessage);
     waiting_list_.pop_front();
   }
 

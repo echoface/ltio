@@ -17,9 +17,8 @@ class ClientChannel : public ProtoServiceDelegate {
 public:
   class Delegate {
   public:
-    virtual const url::RemoteInfo& GetRemoteInfo() const = 0;
     virtual const ClientConfig& GetClientConfig() const = 0;
-    virtual uint32_t HeartBeatInterval() const {return 0;};
+    virtual const url::RemoteInfo& GetRemoteInfo() const = 0;
 
     virtual void OnClientChannelInited(const ClientChannel* channel) = 0;
     virtual void OnClientChannelClosed(const RefClientChannel& channel) = 0;
@@ -49,16 +48,24 @@ public:
   void SetRequestTimeout(uint32_t ms) {request_timeout_ = ms;};
   base::MessageLoop* IOLoop() {return protocol_service_->IOLoop();};
 
+
   // a change for close all inprogress request
   virtual void BeforeCloseChannel() = 0;
   //override from ProtoServiceDelegate
   const url::RemoteInfo* GetRemoteInfo() const;
-  virtual void OnProtocolServiceReady(const RefProtoService& service);
+  void OnProtocolServiceGone(const RefProtoService& service) override;
+  void OnProtocolServiceReady(const RefProtoService& service) override;
 protected:
+  void OnHearbeatTimerInvoke();
+  // return true when message be handled, otherwise return false
+  bool HandleResponse(const RefProtocolMessage& req,
+                      const RefProtocolMessage& res);
   Delegate* delegate_;
   State state_ = kInitialing;
   RefProtoService protocol_service_;
   uint32_t request_timeout_ = 5000; //5s
+  base::TimeoutEvent* heartbeat_timer_ = NULL;
+  RefProtocolMessage heartbeat_message_;
 };
 
 RefClientChannel CreateClientChannel(ClientChannel::Delegate*, const RefProtoService&);

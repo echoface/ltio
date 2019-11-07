@@ -6,4 +6,5 @@
 在ltnet 中,
 - Client
   - loop // 一个client 工作的loop, 用于管理具体的client channel
-  - connector // client连接器, 用于创建具体的网络socket 
+  - connector // client连接器, 用于创建具体的网络socket
+  - ClientChannels // 一组客户端链接的, 链接同一个远端节点

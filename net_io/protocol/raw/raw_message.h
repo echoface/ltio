@@ -35,10 +35,11 @@ typedef struct LtRawHeader {
  * of it's size
  *
  * for raw protoservice, any message need provide
- * Message::Create
- * Message::CreateResponse
- * Message::Decode
- * Message::Encode
+ * Message::Create()
+ * Message::CreateResponse()
+ * Message::DecodeFrom()
+ * Message::EncodeTo(channel)
+ * Message::AsHeartbeat()
  * */
 class RawMessage : public ProtocolMessage {
  public:
@@ -47,7 +48,7 @@ class RawMessage : public ProtocolMessage {
 
   static RefRawMessage Create(bool request);
   static RefRawMessage CreateResponse(const RawMessage* request);
-  static bool Encode(const RawMessage*, SocketChannel* channel);
+  bool EncodeTo(SocketChannel* channel);
   static RefRawMessage Decode(IOBuffer* buffer, bool server_side);
 
   RawMessage(MessageType t);

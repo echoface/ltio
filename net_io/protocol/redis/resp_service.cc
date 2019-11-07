@@ -96,7 +96,7 @@ void RespService::OnChannelReady(const SocketChannel* ch) {
   }
 
   auto db_iter = info->querys.find("db");
-  if (!db_iter->second.empty()) {
+  if (db_iter != info->querys.end() && !db_iter->second.empty()) {
     request->Select(db_iter->second);
     init_wait_res_flags_ |= InitWaitFlags::kWaitSelectDB;
   }
@@ -119,7 +119,7 @@ bool RespService::SendRequestMessage(const RefProtocolMessage &message) {
   CHECK(next_incoming_count_ == 0);
 
   RedisRequest* request = (RedisRequest*)message.get();
-  if (channel_->Send((uint8_t*)request->body_.data(), request->body_.size()) >= 0) {
+  if (channel_->Send(request->body_.data(), request->body_.size()) >= 0) {
     next_incoming_count_ = request->CmdCount();
     return true;
   }
