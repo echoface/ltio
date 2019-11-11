@@ -64,7 +64,8 @@ void RespService::HandleInitResponse(RedisResponse* response) {
     init_wait_res_flags_ &= ~(InitWaitFlags::kWaitAuth);
 
     auto& res_value = response->ResultAtIndex(res_index++);
-    if (res_value.type() != resp::ty_string || 0 != ::strncmp("OK", res_value.string().data(), 2)) {
+    if (res_value.type() != resp::ty_string ||
+        ::strncmp("OK", res_value.string().data(), 2) != 0) {
       LOG(ERROR) << " redis auth failed";
       return CloseService();
     }
@@ -73,7 +74,8 @@ void RespService::HandleInitResponse(RedisResponse* response) {
     init_wait_res_flags_ &= ~(InitWaitFlags::kWaitSelectDB);
 
     auto& res_value = response->ResultAtIndex(res_index++);
-    if (res_value.type() != resp::ty_string || 0 != ::strncmp("OK", res_value.string().data(), 2)) {
+    if (res_value.type() != resp::ty_string ||
+        ::strncmp("OK", res_value.string().data(), 2) != 0) {
       LOG(ERROR) << " redis select db failed";
       return CloseService();
     }
@@ -109,6 +111,15 @@ void RespService::OnChannelReady(const SocketChannel* ch) {
     return CloseService();
   }
   next_incoming_count_ = request->CmdCount();
+}
+
+const RefProtocolMessage RespService::NewHeartbeat() {
+  if (IsServerSide()) {
+    return NULL;
+  }
+  auto request = std::make_shared<RedisRequest>();
+  request->AsHeartbeat();
+  return RefCast(ProtocolMessage, request);
 }
 
 bool RespService::SendRequestMessage(const RefProtocolMessage &message) {

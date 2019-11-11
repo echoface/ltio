@@ -6,6 +6,8 @@
 namespace lt {
 namespace net {
 
+const bool RawMessage::SupportAsyncId = true;
+const uint8_t LtRawHeader::kHeartbeatMethodId = 0xFF;
 const uint64_t LtRawHeader::kHeaderSize = sizeof(LtRawHeader);
 
 LtRawHeader* LtRawHeader::ToNetOrder() {
@@ -77,6 +79,16 @@ bool RawMessage::EncodeTo(SocketChannel* ch) {
   }
   return ch->Send(content_.data(), content_.size()) >= 0;
 }
+
+bool RawMessage::AsHeartbeat() {
+  SetCode(0);
+  SetMethod(LtRawHeader::kHeartbeatMethodId);
+  return true;
+}
+
+bool RawMessage::IsHeartbeat() const {
+  return Code() == 0 && Method() == LtRawHeader::kHeartbeatMethodId;
+};
 
 void RawMessage::SetContent(const char* c) {
   content_ = c;

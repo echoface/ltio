@@ -14,6 +14,15 @@ void RedisResponse::AddResult(resp::result& result) {
   results_.push_back(result.value());
 }
 
+bool RedisResponse::IsHeartbeat() const {
+  if (Count() != 1) {
+    return false;
+  }
+  auto& value = ResultAtIndex(0);
+  return resp::ty_string == value.type() &&
+    ::strncasecmp(value.string().data(), "PONG", 4) == 0;
+}
+
 std::string RedisResponse::DebugDump() const {
   std::ostringstream oss;
 #define RESPBUF_TO_STRING(v) std::string(v.data(), v.size())

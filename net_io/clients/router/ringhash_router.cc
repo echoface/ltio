@@ -18,7 +18,6 @@ void RingHashRouter::AddClient(ClientPtr&& client) {
     ClientNode node(client.get(), i);
     clients_.insert(node);
   }
-  LOG(INFO) << "ringhash router add client:" << client->RemoteIpPort();
   all_clients_.push_back(std::move(client));
 }
 
@@ -29,7 +28,7 @@ Client* RingHashRouter::GetNextClient(const std::string& key, ProtocolMessage* r
                      key.size(),
                      0x80000000,
                      &hash_value);
-  CHashMap::iterator iter = clients_.find(hash_value);
+  NodeContainer::iterator iter = clients_.find(hash_value);
   if (iter == clients_.end()) {
     return NULL;
   }

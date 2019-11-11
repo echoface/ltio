@@ -21,14 +21,21 @@ class RawProtoService : public ProtoService {
   // override from ProtoService
   void OnDataReceived(const SocketChannel*, IOBuffer* buffer) override {
     do {
-      RawMessageTypePtr raw_message = RawMessageType::Decode(buffer, IsServerSide());
-      if (!raw_message) {
+      RawMessageTypePtr message = RawMessageType::Decode(buffer, IsServerSide());
+      if (!message) {
         break;
       }
+      message->SetIOCtx(shared_from_this());
       VLOG(GLOG_VTRACE) << __FUNCTION__ << "  decode a message success";
-      if (delegate_) {
-        raw_message->SetIOCtx(shared_from_this());
-        delegate_->OnProtocolMessage(RefCast(ProtocolMessage, raw_message));
+
+      if (IsServerSide() && message->IsHeartbeat()) {
+        auto response = NewHeartbeat();
+        if (response) {
+          SendResponseMessage(RefCast(ProtocolMessage, message),
+                              RefCast(ProtocolMessage, response));
+        }
+      } else if (delegate_) {
+        delegate_->OnProtocolMessage(RefCast(ProtocolMessage, message));
       }
     } while (1);
   }
@@ -39,8 +46,11 @@ class RawProtoService : public ProtoService {
   }
 
   const RefProtocolMessage NewHeartbeat() {
-    auto message = RawMessageType::Create(true);
-    return std::move(message);
+    auto message = RawMessageType::Create(!IsServerSide());
+    if (message->AsHeartbeat()) {
+      return std::move(message);
+    }
+    return NULL;
   }
 
   //feature list
@@ -60,7 +70,9 @@ class RawProtoService : public ProtoService {
     auto raw_response = static_cast<RawMessageType*>(res.get());
 
     CHECK(raw_request->AsyncId() == raw_response->AsyncId());
-    VLOG(GLOG_VTRACE) << __FUNCTION__ << " request:" << raw_request->Dump() << " response:" << raw_response->Dump();
+    VLOG(GLOG_VTRACE) << __FUNCTION__
+      << " request:" << raw_request->Dump()
+      << " response:" << raw_response->Dump();
     return raw_response->EncodeTo(channel_.get());
   };
  private:

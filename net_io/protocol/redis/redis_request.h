@@ -86,6 +86,7 @@ public:
   void Select(const std::string& db);
   void Auth(const std::string& password);
 
+  void Ping();
   void TTL(const std::string& key);
   void Persist(const std::string& key);
   void Expire(const std::string& key, uint64_t second);
@@ -112,6 +113,9 @@ public:
 */
 
   inline uint32_t CmdCount() const {return cmd_counter_;}
+
+  bool AsHeartbeat() override;
+  bool IsHeartbeat() const override;
 private:
   friend class RespService;
 

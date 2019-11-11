@@ -22,7 +22,9 @@ class RedisResponse : public ProtocolMessage {
     size_t Count() const {return results_.size();}
     const resp::unique_value& ResultAtIndex(size_t idx) const {return results_[idx];}
 
+    bool IsHeartbeat() const override;
     std::string DebugDump() const;
+    const std::string Dump() const override {return DebugDump();};
   private:
     friend class RespService;
     void AddResult(resp::result& result);

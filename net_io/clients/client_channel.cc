@@ -76,8 +76,9 @@ void ClientChannel::OnHearbeatTimerInvoke() {
 bool ClientChannel::HandleResponse(const RefProtocolMessage& req,
                                    const RefProtocolMessage& res) {
   if (heartbeat_message_.get() == req.get()) {
-    LOG(ERROR) << __FUNCTION__ << " heartbeat response, alive";
     heartbeat_message_.reset();
+    LOG(INFO) << __FUNCTION__ << " heatbeat response:" << res->Dump();
+    LOG_IF(INFO, !res->IsHeartbeat()) << "heartbeat message go a none heartbeat response";
     return true;
   }
   if (delegate_) {
@@ -94,7 +95,6 @@ void ClientChannel::OnProtocolServiceGone(const RefProtoService& service) {
     delete heartbeat_timer_;
     heartbeat_timer_ = NULL;
   }
-
 }
 
 //override

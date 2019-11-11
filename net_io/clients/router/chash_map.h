@@ -1,10 +1,10 @@
+#ifndef _LT_CONSISTENT_HASH_H__
+#define _LT_CONSISTENT_HASH_H__
+
 #include <map>
 #include <string>
 #include <functional>
 #include <algorithm>
-
-#ifndef _LT_CONSISTENT_HASH_H__
-#define _LT_CONSISTENT_HASH_H__
 
 namespace lt {
 namespace net {
@@ -12,7 +12,7 @@ namespace net {
 template <typename T,
 				 typename Hash,
 				 typename Alloc = std::allocator<std::pair<const typename Hash::result_type, T>>>
-class consistent_hash_map {
+class CHashMap {
 	public:
 		typedef typename Hash::result_type size_type;
 		typedef std::map<size_type,T,std::less<size_type>,Alloc> map_type;
@@ -23,9 +23,9 @@ class consistent_hash_map {
 		typedef typename map_type::reverse_iterator reverse_iterator;
 		typedef Alloc allocator_type;
 	public:
-		consistent_hash_map() {}
+		CHashMap() {}
 
-		~consistent_hash_map() {}
+		~CHashMap() {}
 
 		std::size_t size() const {
 			return nodes_.size();

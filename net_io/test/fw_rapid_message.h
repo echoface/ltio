@@ -20,6 +20,8 @@ class FwRapidMessage : public lt::net::ProtocolMessage {
     typedef FwRapidMessage ResponseType;
     typedef std::shared_ptr<FwRapidMessage> RefFwRapidMessage;
 
+    const static bool SupportAsyncId = true;
+
     static RefFwRapidMessage Create(bool request) {
       auto t = request ? net::MessageType::kRequest : net::MessageType::kResponse;
       auto msg = std::make_shared<FwRapidMessage>(t);
@@ -84,6 +86,9 @@ class FwRapidMessage : public lt::net::ProtocolMessage {
     //overide from protocolmessage
     void SetAsyncId(uint64_t id) override {header_.seqid = id;}
     const uint64_t AsyncId() const override {return header_.seqid;};
+
+    bool AsHeartbeat() override {SetType(0xFF); return true;};
+    bool IsHeartbeat() const override {return Type() == 0xFF;};
   private:
     RapidHeader header_;
     std::string content_;

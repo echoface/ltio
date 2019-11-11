@@ -653,3 +653,50 @@ TEST_CASE("client.ringhash_router", "[redis ringhash router client]") {
   loop.WaitLoopEnd();
   return;
 }
+
+TEST_CASE("client.redis_heartbeat", "[redis client heartbeat]") {
+  static const int connections = 1;
+  LOG(INFO) << "start test client.redis_heartbeat with redis protocal";
+
+  base::MessageLoop loop;
+  loop.SetLoopName("client");
+  loop.Start();
+
+  std::vector<std::string> remote_hosts = {
+    "redis://127.0.0.1:6379?db=2"
+    "redis://127.0.0.1:6379?db=3"
+  };
+
+  net::ClientConfig config;
+
+  config.recon_interval = 1000;
+  config.message_timeout = 5000;
+  config.heartbeat_ms = 1000;
+  config.connections = connections;
+
+  net::RoundRobinRouter router;
+  for (auto& remote : remote_hosts) {
+    net::url::RemoteInfo server_info;
+    bool success = net::url::ParseRemote(remote, server_info);
+    LOG_IF(ERROR, !success) << " server:" << remote << " can't be resolve";
+    if (!success) {
+      LOG(INFO) << "host:" << server_info.host << " ip:" << server_info.host_ip
+        << " port:" << server_info.port << " protocol:" << server_info.protocol;
+      return;
+    }
+
+    net::ClientPtr client(new net::Client(&loop, server_info));
+    client->SetDelegate(&router_delegate);
+    client->Initialize(config);
+
+    router.AddClient(std::move(client));
+  }
+
+  sleep(10);
+  co_go &loop << [&]() {
+    router.StopAllClients();
+    loop.QuitLoop();
+  };
+  loop.WaitLoopEnd();
+  return;
+}

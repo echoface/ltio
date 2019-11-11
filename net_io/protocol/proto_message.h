@@ -70,9 +70,12 @@ public:
 
   /* use for those async-able protocol message,
    * use for matching request and response*/
+  virtual bool AsHeartbeat() {return false;};
+  virtual bool IsHeartbeat() const {return false;};
   virtual void SetAsyncId(uint64_t id) {};
   virtual const uint64_t AsyncId() const {return 0;};
   virtual const std::string Dump() const {return "";};
+
 protected:
   IOContext io_context_;
   WorkContext work_context_;

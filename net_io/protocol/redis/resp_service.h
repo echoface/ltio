@@ -8,6 +8,13 @@ namespace lt {
 namespace net {
 
 class RedisResponse;
+/*
+ * A RESP protocol client side codec service
+ * Note: not support as service side service
+ *
+ * - 支持客户端对db/auth等初始化操作
+ * - 支持以Redis Ping命令作为心跳请求来与服务端保持活跃确认
+ * */
 class RespService : public ProtoService {
 public:
   typedef enum _ {
@@ -25,6 +32,10 @@ public:
 
 	bool SendRequestMessage(const RefProtocolMessage &message) override;
 	bool SendResponseMessage(const RefProtocolMessage& req, const RefProtocolMessage& res) override;
+
+  //
+  bool KeepHeartBeat() override {return true;}
+  const RefProtocolMessage NewHeartbeat() override;
 protected:
   void OnChannelReady(const SocketChannel*) override;
 

@@ -10,6 +10,7 @@ namespace net {
 
 typedef struct LtRawHeader {
   static const uint64_t kHeaderSize;
+  static const uint8_t kHeartbeatMethodId;
   LtRawHeader* ToNetOrder();
   LtRawHeader* FromNetOrder();
   const std::string Dump() const;
@@ -39,17 +40,18 @@ typedef struct LtRawHeader {
  * Message::CreateResponse()
  * Message::DecodeFrom()
  * Message::EncodeTo(channel)
- * Message::AsHeartbeat()
  * */
 class RawMessage : public ProtocolMessage {
  public:
   typedef RawMessage ResponseType;
   typedef std::shared_ptr<RawMessage> RefRawMessage;
 
+  //feature trait
+  const static bool SupportAsyncId;
   static RefRawMessage Create(bool request);
   static RefRawMessage CreateResponse(const RawMessage* request);
-  bool EncodeTo(SocketChannel* channel);
   static RefRawMessage Decode(IOBuffer* buffer, bool server_side);
+  bool EncodeTo(SocketChannel* channel);
 
   RawMessage(MessageType t);
   ~RawMessage(){};
@@ -57,7 +59,8 @@ class RawMessage : public ProtocolMessage {
   //override from ProtocalMessage
   void SetAsyncId(uint64_t id) override {header_.sequence_id_ = id;}
   const uint64_t AsyncId() const override {return header_.seq_id();};
-
+  bool AsHeartbeat() override;
+  bool IsHeartbeat() const override;
 
   uint8_t Code() const {return header_.code;}
   void SetCode(const uint8_t code) {header_.code = code;}

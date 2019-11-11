@@ -2,9 +2,8 @@
 #define _LT_NET_RINGHASH_ROUTER_H_H
 
 #include <zlib.h> //crc32
-
+#include "chash_map.h"
 #include "client_router.h"
-#include "consistant_hash_map.h"
 #include "thirdparty/murmurhash/MurmurHash3.h"
 
 namespace lt {
@@ -36,7 +35,7 @@ struct crc32_hasher {
   typedef uint32_t result_type;
 };
 
-typedef consistent_hash_map<ClientNode, crc32_hasher> CHashMap;
+typedef CHashMap<ClientNode, crc32_hasher> NodeContainer;
 
 /*consistant hash based router*/
 class RingHashRouter : public ClientRouter {
@@ -50,7 +49,7 @@ class RingHashRouter : public ClientRouter {
     Client* GetNextClient(const std::string& key,
                           ProtocolMessage* request = NULL) override;
   private:
-    CHashMap clients_;
+    NodeContainer clients_;
     std::list<ClientPtr> all_clients_;
     const uint32_t vnode_count_ = 50;
 };

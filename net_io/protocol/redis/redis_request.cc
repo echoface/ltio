@@ -166,4 +166,22 @@ void RedisRequest::Expire(const std::string& key, uint64_t second) {
   cmd_counter_++;
 }
 
+void RedisRequest::Ping() {
+  for (auto& buffer : encoder_.encode("PING")) {
+    body_.append(buffer.data(), buffer.size());
+  }
+  cmd_counter_++;
+}
+
+bool RedisRequest::AsHeartbeat() {
+  body_.clear();
+  cmd_counter_ = 0;
+  Ping();
+  return true;
+}
+
+bool RedisRequest::IsHeartbeat() const {;
+  return body_ == "PING";
+}
+
 }} //end namespace
