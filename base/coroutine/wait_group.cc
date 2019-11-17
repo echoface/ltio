@@ -52,8 +52,6 @@ void WaitGroup::wake_up() {//timeout or done
   if (wakeup_flag_.test_and_set()) {
     return;
   }
-
-  CHECK(resumer_);
   resumer_();
 }
 
