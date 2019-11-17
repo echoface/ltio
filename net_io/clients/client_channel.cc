@@ -69,7 +69,6 @@ void ClientChannel::OnHearbeatTimerInvoke() {
     return;
   }
   heartbeat_message_ = protocol_service_->NewHeartbeat();
-  LOG(INFO) << __FUNCTION__ << " send heartbeat message";
   return SendRequest(heartbeat_message_);
 }
 
@@ -77,10 +76,10 @@ bool ClientChannel::HandleResponse(const RefProtocolMessage& req,
                                    const RefProtocolMessage& res) {
   if (heartbeat_message_.get() == req.get()) {
     heartbeat_message_.reset();
-    LOG(INFO) << __FUNCTION__ << " heatbeat response:" << res->Dump();
     LOG_IF(INFO, !res->IsHeartbeat()) << "heartbeat message go a none heartbeat response";
     return true;
   }
+
   if (delegate_) {
     delegate_->OnRequestGetResponse(req, res);
     return true;
