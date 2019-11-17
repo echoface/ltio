@@ -14,7 +14,7 @@ namespace lt {
 namespace net {
 
 class TcpChannel : public SocketChannel,
-                   public std::enable_shared_from_this<TcpChannel> {
+                   public EnableShared(TcpChannel) {
 public:
   static RefTcpChannel Create(int socket_fd,
                               const SocketAddr& local,
@@ -22,8 +22,8 @@ public:
                               base::MessageLoop* loop);
   ~TcpChannel();
 
-  int32_t Send(const char* data, const int32_t len) override;
   void ShutdownChannel(bool half_close) override;
+  int32_t Send(const char* data, const int32_t len) override;
 protected:
   TcpChannel(int socket_fd,
              const SocketAddr& loc,

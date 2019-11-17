@@ -18,7 +18,7 @@ class AsyncChannel;
 typedef std::shared_ptr<AsyncChannel> RefAsyncChannel;
 
 class AsyncChannel : public ClientChannel,
-                     public std::enable_shared_from_this<AsyncChannel> {
+                     public EnableShared(AsyncChannel) {
 public:
 	static RefAsyncChannel Create(Delegate*, const RefProtoService&);
   ~AsyncChannel();

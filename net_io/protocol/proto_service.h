@@ -19,11 +19,10 @@ public:
   virtual const url::RemoteInfo* GetRemoteInfo() const {return NULL;};
 };
 
-typedef std::function<void (const RefProtoService& srvice, bool succss)> InitCallback;
 /* a stateless encoder/decoder and
  * transfer the ProtoMessage to real Handler */
 class ProtoService : public SocketChannel::Reciever,
-                     public std::enable_shared_from_this<ProtoService> {
+                     public EnableShared(ProtoService) {
 public:
   ProtoService();
   virtual ~ProtoService();

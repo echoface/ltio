@@ -54,8 +54,8 @@ class RawProtoService : public ProtoService {
   }
 
   //feature list
-  bool KeepSequence() override { return false;};
-  bool KeepHeartBeat() override {return true;}
+  bool KeepSequence() override { return RawMessageType::KeepQueue();};
+  bool KeepHeartBeat() override {return RawMessageType::WithHeartbeat();}
 
   bool SendRequestMessage(const RefProtocolMessage& message) override {
     RawMessageType* request = static_cast<RawMessageType*>(message.get());
@@ -65,7 +65,8 @@ class RawProtoService : public ProtoService {
     return request->EncodeTo(channel_.get());
   };
 
-  bool SendResponseMessage(const RefProtocolMessage& req, const RefProtocolMessage& res) override {
+  bool SendResponseMessage(const RefProtocolMessage& req,
+                           const RefProtocolMessage& res) override {
     auto raw_request = static_cast<RawMessageType*>(req.get());
     auto raw_response = static_cast<RawMessageType*>(res.get());
 

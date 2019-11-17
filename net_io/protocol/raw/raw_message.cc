@@ -6,7 +6,6 @@
 namespace lt {
 namespace net {
 
-const bool RawMessage::SupportAsyncId = true;
 const uint8_t LtRawHeader::kHeartbeatMethodId = 0xFF;
 const uint64_t LtRawHeader::kHeaderSize = sizeof(LtRawHeader);
 

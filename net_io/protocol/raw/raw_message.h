@@ -36,10 +36,14 @@ typedef struct LtRawHeader {
  * of it's size
  *
  * for raw protoservice, any message need provide
- * Message::Create()
- * Message::CreateResponse()
- * Message::DecodeFrom()
- * Message::EncodeTo(channel)
+ * //decide which type client channel will be used(asyncchannel or queuechannel)
+ * static bool Message::KeepQueue()
+ *
+ * static Message::Create(bool request);
+ * static Message::CreateResponse(const Message* request);
+ * static Message::DecodeFrom(IOBuffer* buffer, bool server);
+ *
+ * member: Message::EncodeTo(channel)
  * */
 class RawMessage : public ProtocolMessage {
  public:
@@ -47,7 +51,8 @@ class RawMessage : public ProtocolMessage {
   typedef std::shared_ptr<RawMessage> RefRawMessage;
 
   //feature trait
-  const static bool SupportAsyncId;
+  static bool KeepQueue() {return true;}
+  static bool WithHeartbeat() {return true;}
   static RefRawMessage Create(bool request);
   static RefRawMessage CreateResponse(const RawMessage* request);
   static RefRawMessage Decode(IOBuffer* buffer, bool server_side);

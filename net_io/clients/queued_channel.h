@@ -15,7 +15,7 @@ class QueuedChannel;
 typedef std::shared_ptr<QueuedChannel> RefQueuedChannel;
 
 class QueuedChannel : public ClientChannel,
-                      public std::enable_shared_from_this<QueuedChannel> {
+                      public EnableShared(QueuedChannel) {
 public:
 	static RefQueuedChannel Create(Delegate*, const RefProtoService&);
   ~QueuedChannel();
