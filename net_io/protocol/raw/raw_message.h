@@ -51,7 +51,7 @@ class RawMessage : public ProtocolMessage {
   typedef std::shared_ptr<RawMessage> RefRawMessage;
 
   //feature trait
-  static bool KeepQueue() {return true;}
+  static bool KeepQueue() {return false;}
   static bool WithHeartbeat() {return true;}
   static RefRawMessage Create(bool request);
   static RefRawMessage CreateResponse(const RawMessage* request);

@@ -52,8 +52,8 @@ public:
   virtual bool KeepSequence() {return true;};
   virtual bool KeepHeartBeat() {return false;}
 
-  virtual bool SendRequestMessage(const RefProtocolMessage& message) = 0;
-  virtual bool SendResponseMessage(const RefProtocolMessage& req, const RefProtocolMessage& res) = 0;
+  virtual bool SendRequestMessage(ProtocolMessage* message) = 0;
+  virtual bool SendResponseMessage(const ProtocolMessage* req, ProtocolMessage* res) = 0;
 
   virtual const RefProtocolMessage NewHeartbeat() {return NULL;}
   virtual const RefProtocolMessage NewResponse(const ProtocolMessage*) {return NULL;}

@@ -107,7 +107,7 @@ void RespService::OnChannelReady(const SocketChannel* ch) {
     return ProtoService::OnChannelReady(ch);
   }
 
-  if (!SendRequestMessage(RefCast(ProtocolMessage, request))) {
+  if (!SendRequestMessage(request.get())) {
     return CloseService();
   }
   next_incoming_count_ = request->CmdCount();
@@ -122,14 +122,14 @@ const RefProtocolMessage RespService::NewHeartbeat() {
   return RefCast(ProtocolMessage, request);
 }
 
-bool RespService::SendRequestMessage(const RefProtocolMessage &message) {
+bool RespService::SendRequestMessage(ProtocolMessage* message) {
   if (message->GetMessageType() != MessageType::kRequest) {
     LOG(ERROR) << " only redis client side protocol supported";
     return false;
   }
   CHECK(next_incoming_count_ == 0);
 
-  RedisRequest* request = (RedisRequest*)message.get();
+  RedisRequest* request = (RedisRequest*)message;
   if (channel_->Send(request->body_.data(), request->body_.size()) >= 0) {
     next_incoming_count_ = request->CmdCount();
     return true;
@@ -137,7 +137,7 @@ bool RespService::SendRequestMessage(const RefProtocolMessage &message) {
   return false;
 }
 
-bool RespService::SendResponseMessage(const RefProtocolMessage& req, const RefProtocolMessage& res) {
+bool RespService::SendResponseMessage(const ProtocolMessage* req, ProtocolMessage* res) {
 	LOG(FATAL) << __FUNCTION__ << " should not reached here, resp only client service supported";
   return false;
 };

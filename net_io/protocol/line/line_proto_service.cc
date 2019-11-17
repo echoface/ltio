@@ -45,9 +45,9 @@ void LineProtoService::OnDataReceived(const SocketChannel*, IOBuffer *buf) {
   }
 }
 
-bool LineProtoService::SendRequestMessage(const RefProtocolMessage &message) {
+bool LineProtoService::SendRequestMessage(ProtocolMessage* message) {
   static const std::string kCRCN("\r\n");
-  const LineMessage* line_msg = static_cast<const LineMessage*>(message.get());
+  const LineMessage* line_msg = static_cast<const LineMessage*>(message);
   int ret = channel_->Send(line_msg->Body().data(), line_msg->Body().size());
   if (ret < 0) {
     return false;
@@ -56,7 +56,7 @@ bool LineProtoService::SendRequestMessage(const RefProtocolMessage &message) {
   return ret >= 0;
 }
 
-bool LineProtoService::SendResponseMessage(const RefProtocolMessage& req, const RefProtocolMessage& res) {
+bool LineProtoService::SendResponseMessage(const ProtocolMessage* req, ProtocolMessage* res) {
   return SendRequestMessage(res);
 };
 

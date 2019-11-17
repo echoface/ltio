@@ -203,10 +203,10 @@ bool HttpProtoService::RequestToBuffer(const HttpRequest* request, IOBuffer* buf
   return true;
 }
 
-bool HttpProtoService::SendRequestMessage(const RefProtocolMessage &message) {
+bool HttpProtoService::SendRequestMessage(ProtocolMessage* message) {
 	CHECK(message->GetMessageType() == MessageType::kRequest);
 
-  auto request = static_cast<HttpRequest*>(message.get());
+  auto request = static_cast<HttpRequest*>(message);
   BeforeSendRequest(request);
 
   IOBuffer buffer;
@@ -216,9 +216,9 @@ bool HttpProtoService::SendRequestMessage(const RefProtocolMessage &message) {
   return channel_->Send(buffer.GetRead(), buffer.CanReadSize()) >= 0;
 }
 
-bool HttpProtoService::SendResponseMessage(const RefProtocolMessage& req, const RefProtocolMessage& res) {
-  HttpRequest* request = static_cast<HttpRequest*>(req.get());
-  HttpResponse* response = static_cast<HttpResponse*>(res.get());
+bool HttpProtoService::SendResponseMessage(const ProtocolMessage* req, ProtocolMessage* res) {
+  HttpResponse* response = static_cast<HttpResponse*>(res);
+  const HttpRequest* request = static_cast<const HttpRequest*>(req);
 
   BeforeSendResponseMessage(request, response);
 
@@ -302,7 +302,7 @@ void HttpProtoService::BeforeSendRequest(HttpRequest* out_message) {
   }
 }
 
-bool HttpProtoService::BeforeSendResponseMessage(HttpRequest* request, HttpResponse* response) {
+bool HttpProtoService::BeforeSendResponseMessage(const HttpRequest* request, HttpResponse* response) {
   //response compression if needed
   if (response->Body().size() > kCompressionThreshold &&
       !response->HasHeaderField(HttpConstant::kContentEncoding)) {

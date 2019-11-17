@@ -16,10 +16,10 @@ public:
   }
   ~TcpProtoService() {
   }
-  bool SendRequestMessage(const RefProtocolMessage &message) override {
+  bool SendRequestMessage(ProtocolMessage* message) override {
     return true;
   };
-  bool SendResponseMessage(const RefProtocolMessage& req, const RefProtocolMessage& res) override {
+  bool SendResponseMessage(const ProtocolMessage* req, ProtocolMessage* res) override {
     return true;
   };
 
@@ -31,7 +31,7 @@ public:
   }
 
   void OnDataReceived(const SocketChannel* channel, IOBuffer *buffer) override {
-    LOG(INFO) << " RefTcpChannel  recieve data";
+    LOG(INFO) << " RefTcpChannel  recieve data" << buffer->CanReadSize();
     CHECK(channel == Channel());
     int32_t size = Channel()->Send(buffer->GetRead(), buffer->CanReadSize());
     if (size > 0) {

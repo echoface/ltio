@@ -30,8 +30,8 @@ public:
 
   void OnDataReceived(const SocketChannel*, IOBuffer *) override;
 
-	bool SendRequestMessage(const RefProtocolMessage &message) override;
-	bool SendResponseMessage(const RefProtocolMessage& req, const RefProtocolMessage& res) override;
+	bool SendRequestMessage(ProtocolMessage* message) override;
+	bool SendResponseMessage(const ProtocolMessage* req, ProtocolMessage* res) override;
 
   //
   bool KeepHeartBeat() override {return true;}

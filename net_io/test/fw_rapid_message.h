@@ -20,7 +20,7 @@ class FwRapidMessage : public lt::net::ProtocolMessage {
     typedef FwRapidMessage ResponseType;
     typedef std::shared_ptr<FwRapidMessage> RefFwRapidMessage;
 
-    static bool KeepQueue() {return true;}
+    static bool KeepQueue() {return false;}
     static bool WithHeartbeat() {return true;}
 
     static RefFwRapidMessage Create(bool request) {

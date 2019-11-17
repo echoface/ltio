@@ -30,9 +30,9 @@ class RawProtoService : public ProtoService {
 
       if (IsServerSide() && message->IsHeartbeat()) {
         auto response = NewHeartbeat();
+        response->SetAsyncId(message->AsyncId());
         if (response) {
-          SendResponseMessage(RefCast(ProtocolMessage, message),
-                              RefCast(ProtocolMessage, response));
+          SendResponseMessage(message.get(), response.get());
         }
       } else if (delegate_) {
         delegate_->OnProtocolMessage(RefCast(ProtocolMessage, message));
@@ -57,19 +57,17 @@ class RawProtoService : public ProtoService {
   bool KeepSequence() override { return RawMessageType::KeepQueue();};
   bool KeepHeartBeat() override {return RawMessageType::WithHeartbeat();}
 
-  bool SendRequestMessage(const RefProtocolMessage& message) override {
-    RawMessageType* request = static_cast<RawMessageType*>(message.get());
+  bool SendRequestMessage(ProtocolMessage* message) override {
+    RawMessageType* request = static_cast<RawMessageType*>(message);
     CHECK(request->GetMessageType() == MessageType::kRequest);
 
     request->SetAsyncId(RawProtoService::sequence_id_++);
     return request->EncodeTo(channel_.get());
   };
 
-  bool SendResponseMessage(const RefProtocolMessage& req,
-                           const RefProtocolMessage& res) override {
-    auto raw_request = static_cast<RawMessageType*>(req.get());
-    auto raw_response = static_cast<RawMessageType*>(res.get());
-
+  bool SendResponseMessage(const ProtocolMessage* req, ProtocolMessage* res) override {
+    auto raw_response = static_cast<RawMessageType*>(res);
+    auto raw_request = static_cast<const RawMessageType*>(req);
     CHECK(raw_request->AsyncId() == raw_response->AsyncId());
     VLOG(GLOG_VTRACE) << __FUNCTION__
       << " request:" << raw_request->Dump()

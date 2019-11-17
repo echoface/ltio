@@ -28,10 +28,10 @@ public:
   static bool ResponseToBuffer(const HttpResponse*, IOBuffer*);
 
   void BeforeSendRequest(HttpRequest*);
-  bool SendRequestMessage(const RefProtocolMessage &message) override;
+  bool SendRequestMessage(ProtocolMessage* message) override;
 
-  bool BeforeSendResponseMessage(HttpRequest*, HttpResponse*);
-  bool SendResponseMessage(const RefProtocolMessage& req, const RefProtocolMessage& res) override;
+  bool BeforeSendResponseMessage(const HttpRequest*, HttpResponse*);
+  bool SendResponseMessage(const ProtocolMessage* req, ProtocolMessage* res) override;
 
   const RefProtocolMessage NewResponse(const ProtocolMessage*) override;
 private:

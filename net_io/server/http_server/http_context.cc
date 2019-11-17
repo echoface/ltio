@@ -59,19 +59,16 @@ void HttpContext::DoReplyResponse(RefHttpResponse& response) {
     auto req = request_;
 
     auto functor = [=]() {
-      bool success = service->SendResponseMessage(RefCast(ProtocolMessage, req),
-                                                  RefCast(ProtocolMessage, response));
+      bool success = service->SendResponseMessage(req.get(), response.get());
       if (!keep_alive || !success) {
         service->CloseService();
       }
     };
     io_loop_->PostTask(NewClosure(std::move(functor)));
-
     return;
   }
 
-  bool success = service->SendResponseMessage(RefCast(ProtocolMessage, request_),
-                                              RefCast(ProtocolMessage, response));
+  bool success = service->SendResponseMessage(request_.get(), response.get());
   if (!keep_alive || !success) {
     service->CloseService();
   }
