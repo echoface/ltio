@@ -1,11 +1,14 @@
 lib/
 build/
+cbuild/
 
 *.o
 *.user
 .idea
 .vscode
+.vscode/
 cmake-build-*
+*build*/
 
 compile_commands.json
 
