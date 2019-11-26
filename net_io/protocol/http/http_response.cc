@@ -13,7 +13,7 @@ namespace net {
 RefHttpResponse HttpResponse::CreatWithCode(uint16_t code) {
   auto r = std::make_shared<HttpResponse>();
   r->SetResponseCode(code);
-  return std::move(r);
+  return r;
 }
 
 HttpResponse::HttpResponse()

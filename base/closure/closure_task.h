@@ -13,12 +13,6 @@
 
 #include <concurrentqueue/concurrentqueue.h>
 
-#define NewClosureAlias(Location, Functor) ::base::CreateClosure(Location, Functor)
-#define NewClosureWithCallbackAlias(Location, Functor, Cleanup) ::base::CreateClosureWithCallback(Location, Functor, Cleanup)
-
-#define NewClosure(Functor) NewClosureAlias(FROM_HERE, Functor)
-#define NewClosureWithCleanup(Functor, Cleanup) NewClosureWithCallbackAlias(Location, Functor, Cleanup)
-
 namespace base {
 
 typedef std::function<void()> StlClosure;
@@ -99,5 +93,13 @@ static TaskBasePtr CreateTaskWithCallback(const Location& location,
   return TaskBasePtr(new TaskWithCleanup<Closure,Cleanup>(location, closure, cleanup));
 }
 
-}// end namespace
+}// end base namespace
+
+#define NewClosureAlias(Location, Functor) base::CreateClosure(Location, Functor)
+#define NewClosureWithCallbackAlias(Location, Functor, Cleanup) base::CreateClosureWithCallback(Location, Functor, Cleanup)
+
+#define NewClosure(Functor) NewClosureAlias(FROM_HERE, Functor)
+#define NewClosureWithCleanup(Functor, Cleanup) NewClosureWithCallbackAlias(Location, Functor, Cleanup)
+
+
 #endif

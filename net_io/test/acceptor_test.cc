@@ -54,14 +54,11 @@ int main(int argc, char** argv) {
 
   net::SocketAcceptor* acceptor;
   loop.PostTask(NewClosure([&]() {
-
     net::SocketAddr addr(5005);
     acceptor = new net::SocketAcceptor(loop.Pump(), addr);
-
     acceptor->SetNewConnectionCallback(std::bind(on_new_connection, std::placeholders::_1, std::placeholders::_2));
-    CHECK(acceptor->StartListen());
+    //CHECK(acceptor->StartListen());
   }));
-
 
   loop.WaitLoopEnd();
   return 0;

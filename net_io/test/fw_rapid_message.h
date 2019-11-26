@@ -35,7 +35,7 @@ class FwRapidMessage : public lt::net::ProtocolMessage {
       res->header_ = request->header_;
       res->header_.size = sizeof(RapidHeader);
       res->header_.extra = 0;
-      return std::move(res);
+      return res;
     }
 
     bool EncodeTo(net::SocketChannel* ch) {

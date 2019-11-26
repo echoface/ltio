@@ -42,7 +42,7 @@ RawMessage::RefRawMessage RawMessage::CreateResponse(const RawMessage* request) 
   response->header_.method = 0;
   response->header_.content_size_ = 0;
   response->header_.sequence_id_ = request->header_.seq_id();
-  return std::move(response);
+  return response;
 }
 
 RawMessage::RefRawMessage RawMessage::Decode(IOBuffer* buffer, bool server_side) {
