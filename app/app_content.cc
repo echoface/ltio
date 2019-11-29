@@ -20,7 +20,6 @@ base::MessageLoop* App::MainLoop() {
 
 void App::Run() {
   LOG(INFO) << " Application Start";
-
   auto functor = std::bind(&App::ContentMain, this);
   content_loop_.PostTask(NewClosure(functor));
 

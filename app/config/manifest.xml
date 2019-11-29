@@ -1,0 +1,23 @@
+<config>
+  <global
+    statck_size="32768"
+    io_loop_count="8"
+    worker_loop_count="0"/>
+
+  <services dispacther="coro">
+    <server addr="raw://0.0.0.0:5005"/>
+    <server addr="http://0.0.0.0:5006"/>
+  </services>
+
+  <clients>
+    <group name="redis", router="hash">
+      <client address='redis://127.0.0.1:6379' timeout='500' count='50' hearbeat='0' />
+      <client address='redis://127.0.0.1:6379' timeout='500' count='50' hearbeat='0' />
+      <client address='redis://127.0.0.1:6379' timeout='500' count='50' hearbeat='0' />
+      <client address='redis://127.0.0.1:6379' timeout='500' count='50' hearbeat='0' />
+    </group>
+
+    <remote name='test', registry="etcd://127.0.0.1">
+    </remote>
+  </clients>
+</config>

@@ -110,7 +110,6 @@ void RawServer::ServeAddress(const std::string address, RawMessageHandler handle
       service->StartIOService();
     }
   }
-
 }
 
 void RawServer::OnRequestMessage(const RefProtocolMessage& request) {

@@ -33,7 +33,6 @@ public:
 protected:
   void LoadConfig();
 private:
-  json manifest_;
   std::shared_ptr<net::Server> server_;
 
   //typedef std::vector<RefClientRouter> ClientRouterList;
