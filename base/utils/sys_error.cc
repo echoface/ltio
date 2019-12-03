@@ -1,45 +1,46 @@
-#include "config.h"    
+#include "config.h"
 #include <string.h>
 #include "sys_error.h"
 #include <vector>
- 
+
 #if HAVE_ERRNO_H
 #include <errno.h>
 #endif
- 
+
 namespace base {
- 
+
 std::string StrError() {
   return StrError(errno);
 }
 
 std::string StrError(int errnum) {
 
-  std::string str;
+  std::string error_str;
   if (errnum == 0)
-    return str;
+    return error_str;
 
-  const int MaxErrStrLen = 2000;
-  static std::vector<char> buffer(MaxErrStrLen);  
+  const int MaxErrStrLen = 256;
+  static std::vector<char> buffer(MaxErrStrLen);
 
   buffer[0] = '\0';
 
-#if defined(HAVE_STRERROR_R)
- 
+//posix
+#if !defined(_WIN32) && (defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__)))
+
 #if defined(__GLIBC__)
    // glibc defines its own incompatible version of strerror_r
    // which may not use the buffer supplied.
-   str = strerror_r(errnum, &buffer[0], MaxErrStrLen - 1);
+   error_str = strerror_r(errnum, &buffer[0], MaxErrStrLen - 1);
 #else
    strerror_r(errnum, &buffer[0], MaxErrStrLen - 1);
-   str = buffer;
-#endif
-  
-#else
-  str = strerror(errnum);
+   error_str = (char*)buffer[0];
 #endif
 
-  return str;
+#else
+  error_str = strerror(errnum);
+#endif
+
+  return error_str;
 }  // namespace base
 
 }
