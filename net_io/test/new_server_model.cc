@@ -289,6 +289,8 @@ void signalHandler( int signum ){
 
 int main(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
+  //google::InitGoogleLogging(argv[0]);
+  //google::SetVLOGLevel(NULL, 26);
 
   main_loop.SetLoopName("main");
   main_loop.Start();

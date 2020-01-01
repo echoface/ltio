@@ -104,12 +104,18 @@ ADD_EXECUTABLE(ioservice_test
 ADD_EXECUTABLE(client_test
   test/client_test.cc
 )
-ADD_EXECUTABLE(new_server_model
-  test/new_server_model.cc
-)
 ADD_EXECUTABLE(fw_rapid_server
   test/fw_rapid_server.cc
 )
+ADD_EXECUTABLE(new_server_model
+  test/new_server_model.cc
+)
+target_link_libraries(new_server_model
+  glog
+  gflags
+  ${LTNETEXECUTE_LINKLIBS}
+)
+
 ADD_EXECUTABLE(raw_client
   test/raw_client.cc
 )

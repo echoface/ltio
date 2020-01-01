@@ -52,7 +52,6 @@ std::string& Str::TrimRight(std::string &s) {
 std::vector<std::string> Str::Split(const std::string &str,
                                     const char delim) {
   std::vector<std::string> elems;
-
   std::string token;
   std::stringstream ss(str);
   while (std::getline(ss, token, delim)) {
@@ -68,20 +67,20 @@ std::vector<std::string> Str::Split(const std::string &text,
   std::size_t current, previous = 0;
   current = text.find(delims);
   while (current != std::string::npos) {
-    if (current == previous && !ignore_empty) {
+    if (current > previous) {
       tokens.push_back(text.substr(previous, current - previous));
-    } else {
+    } else if (!ignore_empty) {
       tokens.push_back(text.substr(previous, current - previous));
     }
     previous = current + 1;
     current = text.find(delims, previous);
   }
-  if (current == previous && !ignore_empty) {
+  if (current > previous) {
     tokens.push_back(text.substr(previous, current - previous));
-  } else {
+  } else if (!ignore_empty) {
     tokens.push_back(text.substr(previous, current - previous));
   }
-  return std::move(tokens);
+  return tokens;
 }
 
 } // enabase

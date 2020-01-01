@@ -83,9 +83,14 @@ class Str {
       }
 
     template <typename T>
-      static T Parse(const std::string &str) {
+      static T Parse(const std::string &str, bool *success = NULL) {
         T result;
-        std::istringstream(str) >> result;
+
+        std::istringstream iss(str);
+        iss >> result;
+        if (success != nullptr) {
+          *success = (!iss.fail());
+        }
         return result;
       }
 
@@ -98,21 +103,29 @@ class Str {
 };
 
 template <>
-inline std::string Str::Parse(const std::string &str) {
+inline std::string Str::Parse(const std::string &str, bool *success) {
+  if (success != nullptr) {
+    *success = true;
+  }
   return str;
 }
 
 template <>
-inline const char* Str::Parse(const std::string &str) {
+inline const char* Str::Parse(const std::string &str, bool *success) {
+  if (success != nullptr) {
+    *success = true;
+  }
   return str.c_str();
 }
 
 template <>
-inline bool Str::Parse(const std::string &str) {
+inline bool Str::Parse(const std::string &str, bool *success) {
+  if (success != nullptr) {
+    *success = true;
+  }
   std::string s = str;
   ToLower(s);
-
-  return s == "1" || s == "on" || s == "yes" || s == "true";
+  return s == "on" || s == "yes" || s == "true";
 }
 
 }  // namespace base
