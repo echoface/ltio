@@ -234,7 +234,7 @@ std::string Client::ClientInfo() const {
 }
 
 std::string Client::RemoteIpPort() const {
-  return base::Str::Concat(remote_info_.host_ip, ":", remote_info_.port);
+  return base::StrUtil::Concat(remote_info_.host_ip, ":", remote_info_.port);
 }
 
 }}//end namespace lt::net
