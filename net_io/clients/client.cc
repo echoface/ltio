@@ -29,6 +29,16 @@ void Client::SetDelegate(ClientDelegate* delegate) {
   delegate_ = delegate;
 }
 
+Client* Client::Use(Interceptor* interceptor) {
+  interceptors_.push_back(interceptor);
+  return this;
+}
+
+Client* Client::Use(InterceptArgList interceptors) {
+  interceptors_.insert(interceptors_.end(), interceptors.begin(), interceptors.end());
+  return this;
+}
+
 void Client::Initialize(const ClientConfig& config) {
   config_ = config;
   for (uint32_t i = 0; i < config_.connections; i++) {
@@ -36,6 +46,7 @@ void Client::Initialize(const ClientConfig& config) {
     work_loop_->PostTask(NewClosure(functor));
   }
 }
+
 
 void Client::Finalize() {
   if (stopping_.exchange(true)) {
@@ -170,7 +181,7 @@ void Client::OnRequestGetResponse(const RefProtocolMessage& request,
 bool Client::AsyncSendRequest(RefProtocolMessage& req, AsyncCallBack callback) {
   base::MessageLoop* worker = base::MessageLoop::Current();
   if (!worker) {
-    LOG(ERROR) << " not in a MessageLoop, can't send request here:";
+    LOG(ERROR) << " can't request here out of a MessageLoop";
     return false;
   }
 
@@ -203,13 +214,13 @@ ProtocolMessage* Client::SendClientRequest(RefProtocolMessage& message) {
   auto channel = get_ready_channel();
   if (!channel) {
     message->SetFailCode(MessageCode::kNotConnected);
-    LOG(ERROR) << "no established client can use";
+    LOG_EVERY_N(INFO, 1000) << "no established client can use";
     return NULL;
   }
 
   base::MessageLoop* io_loop = channel->IOLoop();
-  bool success = io_loop->PostTask(NewClosure(std::bind(&ClientChannel::SendRequest, channel, message)));
-  if (!success) {
+  bool ok = io_loop->PostTask(NewClosure(std::bind(&ClientChannel::SendRequest, channel, message)));
+  if (!ok) {
     message->SetFailCode(MessageCode::kConnBroken);
     LOG(ERROR) << "schedule task to io_loop failed";
     return NULL;
