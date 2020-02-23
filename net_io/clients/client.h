@@ -9,6 +9,7 @@
 #include <cinttypes>
 #include <condition_variable> // std::condition_variable, std::cv_status
 #include <url_utils.h>
+#include <initializer_list>
 
 #include "address.h"
 #include "tcp_channel.h"
@@ -41,9 +42,19 @@ public:
   virtual void OnAllClientPassiveBroken(const Client* client) {};
 };
 
-
 class Client: public ConnectorDelegate,
               public ClientChannel::Delegate {
+public:
+  class Interceptor {
+    public:
+      Interceptor() {};
+      virtual ~Interceptor() {};
+    public:
+      //if has a response, return a response without call next, else call next for continue
+      virtual ProtocolMessage* Intercept(const Client* c, const ProtocolMessage* req) = 0;
+  };
+  typedef std::initializer_list<Interceptor*> InterceptArgList;
+
 public:
   Client(base::MessageLoop*, const url::RemoteInfo&);
   virtual ~Client();
@@ -51,6 +62,8 @@ public:
   void Finalize();
   void Initialize(const ClientConfig& config);
   void SetDelegate(ClientDelegate* delegate);
+  Client* Use(Interceptor* interceptor);
+  Client* Use(InterceptArgList interceptors);
 
   template<class T>
   typename T::element_type::ResponseType* SendRecieve(T& m) {
@@ -102,6 +115,7 @@ private:
   //a channels copy for client caller
   std::atomic<uint32_t> next_index_;
   RefClientChannelList in_use_channels_;
+  std::vector<Interceptor*> interceptors_;
   DISALLOW_COPY_AND_ASSIGN(Client);
 };
 

@@ -2,6 +2,7 @@ ADD_EXECUTABLE(base_unittest
   catch_main.cc
   coro_unittest.cc
   utils_unittest.cc
+  base64_unittest.cc
   messageloop_unittest.cc
   repeat_timer_unittest.cc
 )

@@ -5,17 +5,17 @@ ADD_SUBDIRECTORY(resp)
 ADD_SUBDIRECTORY(libcoro)
 
 if (BUILD_CONCURRENTQUEUE_ALL)
-  include(ExternalProject)
-  ExternalProject_Add(concurrentqueue
-    CONFIGURE_COMMAND ""
-    SOURCE_DIR ${PROJECT_SOURCE_DIR}/thirdparty/concurrentqueue
-    UPDATE_COMMAND ""
-    BUILD_COMMAND ${MAKE}
-    # Specify build dir location
-    BINARY_DIR ${PROJECT_SOURCE_DIR}/thirdparty/concurrentqueue/build
-    #BUILD_IN_SOURCE 0
-    INSTALL_COMMAND ""
-  )
+        include(ExternalProject)
+        ExternalProject_Add(concurrentqueue
+                CONFIGURE_COMMAND ""
+                SOURCE_DIR ${PROJECT_SOURCE_DIR}/thirdparty/concurrentqueue
+                UPDATE_COMMAND ""
+                BUILD_COMMAND ${MAKE}
+                # Specify build dir location
+                BINARY_DIR ${PROJECT_SOURCE_DIR}/thirdparty/concurrentqueue/build
+                #BUILD_IN_SOURCE 0
+                INSTALL_COMMAND ""
+                )
 endif(BUILD_CONCURRENTQUEUE_ALL)
 
 SET(CRC_SOURCES

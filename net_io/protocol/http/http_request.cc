@@ -117,7 +117,7 @@ const std::string HttpRequest::Dump() const {
 
 void HttpRequest::SetMethod(const std::string method) {
   method_ = method;
-  base::Str::ToUpper(method_);
+  base::StrUtil::ToUpper(method_);
 }
 
 bool HttpRequest::IsKeepAlive() const {

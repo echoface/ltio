@@ -1,15 +1,14 @@
 // file: base64_encoder.h
-//
 #ifndef LT_BASE_UTILS_BASE64_H_H_
 #define LT_BASE_UTILS_BASE64_H_H_
+
+// copy from boost implement for base64
 
 #include <cctype>
 #include <string>
 #include <utility>
 
-namespace boost {
-namespace beast {
-namespace detail {
+namespace base {
 
 namespace base64 {
 
@@ -162,10 +161,7 @@ decode(void* dest, char const* src, std::size_t len)
 } // base64
 
 template<class = void>
-std::string
-base64_encode (std::uint8_t const* data,
-    std::size_t len)
-{
+std::string base64_encode(std::uint8_t const* data, std::size_t len) {
     std::string dest;
     dest.resize(base64::encoded_size(len));
     dest.resize(base64::encode(&dest[0], data, len));
@@ -173,30 +169,19 @@ base64_encode (std::uint8_t const* data,
 }
 
 inline
-std::string
-base64_encode(std::string const& s)
-{
-    return base64_encode (reinterpret_cast <
-        std::uint8_t const*> (s.data()), s.size());
+std::string base64_encode(std::string const& s) {
+    return base64_encode(reinterpret_cast<std::uint8_t const*>(s.data()), s.size());
 }
 
 template<class = void>
-std::string
-base64_decode(std::string const& data)
-{
+std::string base64_decode(std::string const& data) {
     std::string dest;
     dest.resize(base64::decoded_size(data.size()));
-    auto const result = base64::decode(
-        &dest[0], data.data(), data.size());
+    auto const result = base64::decode(&dest[0], data.data(), data.size());
     dest.resize(result.first);
     return dest;
 }
 
-} // detail
-} // beast
-} // boost
-
-#endif
-
+} //base 
 
 #endif
