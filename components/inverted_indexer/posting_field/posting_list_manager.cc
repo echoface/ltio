@@ -12,7 +12,7 @@ namespace component {
 #define FULLUINT64BIT 0xFFFFFFFFFFFFFFFF
 BitMapPlPtr PostingListManager::CreateMergePostingList() {
   BitMapPlPtr pl(new BitMapPostingList(sorted_doc_ids_.size(), 0, FULLUINT64BIT));
-  return std::move(pl);
+  return pl;
 }
 
 BitMapPostingList* PostingListManager::BuildBitMapPostingListForIds(const std::set<int64_t>& ids) {
@@ -64,7 +64,7 @@ std::set<int64_t> PostingListManager::GetIdsFromPostingList(const BitMapPostingL
       result.insert(sorted_doc_ids_[i]);
     }
   }
-  return std::move(result);
+  return result;
 }
 
 }

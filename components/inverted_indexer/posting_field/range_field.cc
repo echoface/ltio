@@ -44,7 +44,7 @@ std::vector<BitMapPostingList*> RangeField::GetIncludeBitmap(
   if (iter != include_pl_.end()) {
     result.push_back(iter->second);
   }
-  return std::move(result);
+  return result;
 }
 
 std::vector<BitMapPostingList*> RangeField::GetExcludeBitmap(
@@ -60,7 +60,7 @@ std::vector<BitMapPostingList*> RangeField::GetExcludeBitmap(
   if (iter != exclude_pl_.end()) {
     result.push_back(iter->second);
   }
-  return std::move(result);
+  return result;
 }
 
 bool RangeField::ParseRange(const std::string& assign, int32_t& start,

@@ -192,7 +192,7 @@ FieldPtr DefaultDelegate::CreatePostinglistField(const std::string& name) {
   } else {  // use GeneralStrField
     field_ptr.reset(new GeneralStrField(name));
   }
-  return std::move(field_ptr);
+  return field_ptr;
 };
 
 const std::set<std::string> DefaultDelegate::AllRegisterFields() const {
