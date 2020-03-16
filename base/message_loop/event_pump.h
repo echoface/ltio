@@ -16,14 +16,16 @@ namespace base {
 class IOMux;
 
 typedef struct timeouts TimeoutWheel;
+typedef std::unique_ptr<TimeoutWheel> TimeoutWheelPtr;
+
 typedef std::function<void()> QuitClosure;
 typedef std::shared_ptr<FdEvent> RefFdEvent;
 typedef std::vector<TimeoutEvent*> TimerEventList;
 
 class PumpDelegate {
 public:
-  virtual void BeforePumpRun() {};
-  virtual void AfterPumpRun() {};
+  virtual void PumpStarted() {};
+  virtual void PumpStopped() {};
 
   virtual void RunNestedTask() {};
   virtual void RunTimerClosure(const TimerEventList&) {};
@@ -48,7 +50,6 @@ public:
   void AddTimeoutEvent(TimeoutEvent* timeout_ev);
   void RemoveTimeoutEvent(TimeoutEvent* timeout_ev);
 
-  QuitClosure Quit_Clourse();
   bool IsInLoopThread() const;
 
   bool Running() { return running_; }
@@ -71,6 +72,7 @@ protected:
   /*calculate abs timeout time and add to timeout wheel*/
   void add_timer_internal(uint64_t now_us, TimeoutEvent* event);
 private:
+
   PumpDelegate* delegate_;
   bool running_;
 
@@ -80,9 +82,8 @@ private:
   // replace by new timeout_wheel for more effective perfomance [ O(1) ]
   //TimerTaskQueue timer_queue_;
 #endif
-  TimeoutWheel* timeout_wheel_ = NULL;
-
   std::thread::id tid_;
+  TimeoutWheel* timeout_wheel_ = nullptr;
 };
 
 }

@@ -78,8 +78,8 @@ class MessageLoop : public PumpDelegate {
     void QuitLoop();
     EventPump* Pump() {return &event_pump_;}
 
-    void BeforePumpRun() override;
-    void AfterPumpRun() override;
+    void PumpStarted() override;
+    void PumpStopped() override;
   private:
     void ThreadMain();
     void SetThreadNativeName();

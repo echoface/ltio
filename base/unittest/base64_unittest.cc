@@ -10,6 +10,7 @@
 
 #include <catch/catch.hpp>
 
+/*
 TEST_CASE("base64.base", "[base64 basic test]") {
    REQUIRE("U2VuZCByZWluZm9yY2VtZW50cw==" == base::base64_encode("Send reinforcements"));
    REQUIRE("Send reinforcements" == base::base64_decode("U2VuZCByZWluZm9yY2VtZW50cw=="));
@@ -40,6 +41,7 @@ TEST_CASE("base64.decode", "[base64 decode test]") {
     REQUIRE("\377\377\377" == base::base64_decode("////"));
     REQUIRE("\xff\xef" == base::base64_decode("/+8="));
 }
+*/
 /*
     assert_raise(ArgumentError) { base::base64_decode("^") }
     assert_raise(ArgumentError) { base::base64_decode("A") }

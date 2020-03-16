@@ -9,6 +9,7 @@
 
 #include "clients/client_connector.h"
 #include "clients/client.h"
+#include "base/utils/string/str_utils.h"
 
 #include <csignal>
 
@@ -16,9 +17,16 @@ using namespace lt::net;
 using namespace lt;
 using namespace base;
 
-#define ENBALE_RAW_CLIENT
-#define ENBALE_RDS_CLIENT
 #define USE_CORO_DISPATCH 1
+
+DEFINE_string(raw, "0.0.0.0:5006", "host:port used for raw service listen on");
+DEFINE_string(http, "0.0.0.0:5006", "host:port used for http service listen on");
+DEFINE_string(redis, "0.0.0.0:6379", "host:port used for redis client connected");
+
+DEFINE_bool(redis_client, false, "wheather enable redis client");
+DEFINE_bool(raw_client, false, "wheather enable self connected http client");
+DEFINE_bool(http_client, true, "wheather enable self connected raw client");
+
 
 void DumpRedisResponse(RedisResponse* redis_response);
 net::ClientConfig DeafaultClientConfig(int count = 2) {
@@ -35,7 +43,7 @@ base::MessageLoop main_loop;
 class SampleApp: public net::ClientDelegate {
 public:
   SampleApp() {
-    int loop_count = std::min(4, int(std::thread::hardware_concurrency()));
+    int loop_count = std::min(8, int(std::thread::hardware_concurrency()));
     for (int i = 0; i < loop_count; i++) {
       auto loop = new(base::MessageLoop);
       loop->SetLoopName("io_" + std::to_string(i));
@@ -53,12 +61,12 @@ public:
 
   ~SampleApp() {
     delete dispatcher_;
-#ifdef ENBALE_RAW_CLIENT
-    delete raw_client;
-#endif
-#ifdef ENBALE_RDS_CLIENT
-    delete redis_client;
-#endif
+    if (FLAGS_raw_client) {
+      delete raw_client;
+    }
+    if (FLAGS_redis_client) {
+      delete redis_client;
+    }
     for (auto loop : loops) {
       delete loop;
     }
@@ -96,7 +104,6 @@ public:
     }
   }
 
-#ifdef ENBALE_RDS_CLIENT
   void StartRedisClient() {
     net::url::RemoteInfo server_info;
     LOG_IF(ERROR, !net::url::ParseRemote("redis://127.0.0.1:6379", server_info)) << " server can't be resolve";
@@ -132,9 +139,7 @@ public:
       LOG(ERROR) << "redis client request failed:" << redis_request->FailCode();
     }
   }
-#endif
 
-#ifdef ENBALE_RAW_CLIENT
   void StartRawClient(std::string server_addr) {
     net::url::RemoteInfo server_info;
     LOG_IF(ERROR, !net::url::ParseRemote(server_addr, server_info)) << " server can't be resolve";
@@ -153,7 +158,6 @@ public:
       LOG(ERROR) << "raw client request failed:" << raw_request->FailCode();
     }
   }
-#endif
 
   void StopAllService() {
     LOG(INFO) << __FUNCTION__ << " stop enter";
@@ -162,29 +166,23 @@ public:
     http_client->Finalize();
     LOG(INFO) << __FUNCTION__ << " http client has stoped";
 
-#ifdef ENBALE_RAW_CLIENT
-    LOG(INFO) << __FUNCTION__ << " start stop rawclient";
-    raw_client->Finalize();
-    LOG(INFO) << __FUNCTION__ << " raw client has stoped";
-#endif
+    if (FLAGS_raw_client) {
+      LOG(INFO) << __FUNCTION__ << " start stop rawclient";
+      raw_client->Finalize();
+      LOG(INFO) << __FUNCTION__ << " raw client has stoped";
+    }
 
-#ifdef ENBALE_RDS_CLIENT
     LOG(INFO) << __FUNCTION__ << " start stop rdsclient";
     redis_client->Finalize();
     LOG(INFO) << __FUNCTION__ << " redis client has stoped";
-#endif
 
     main_loop.QuitLoop();
     LOG(INFO) << __FUNCTION__ << " stop leave";
   }
 
 
-#ifdef ENBALE_RAW_CLIENT
   net::Client*  raw_client = NULL; //(base::MessageLoop*, const SocketAddr&);
-#endif
-#ifdef ENBALE_RDS_CLIENT
   net::Client*  redis_client = NULL;
-#endif
 
   net::Client*  http_client = NULL; //(base::MessageLoop*, const SocketAddr&);
   static std::atomic_int io_round_count;
@@ -205,12 +203,10 @@ void HandleHttp(net::HttpContext* context) {
   net::HttpRequest* req = context->Request();
   LOG_EVERY_N(INFO, 10000) << " got 1w Http request, body:" << req->Dump();
 
-#ifdef ENBALE_RAW_CLIENT
-  if (req->RequestUrl() == "/raw") {
+  if (req->RequestUrl() == "/raw" && FLAGS_raw_client) {
     app.SendRawRequest();
     return context->ReplyString("do raw request.");
   }
-#endif
 
 #ifdef ENBALE_RDS_CLIENT
   if (req->RequestUrl() == "/rds") {
@@ -286,9 +282,10 @@ void signalHandler( int signum ){
   LOG(INFO) << "sighandler sig:" << signum;
   app.StopAllService();
 }
-
 int main(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
+
+  gflags::SetUsageMessage("usage: exec --http=ip:port --raw=ip:port --noredis_client ...");
   //google::InitGoogleLogging(argv[0]);
   //google::SetVLOGLevel(NULL, 26);
 
@@ -299,25 +296,25 @@ int main(int argc, char* argv[]) {
   net::RawServer* rserver = &raw_server;
   raw_server.SetIOLoops(app.loops);
   raw_server.SetDispatcher(app.dispatcher_);
-  raw_server.ServeAddressSync("raw://0.0.0.0:5005",
+  raw_server.ServeAddressSync(base::StrUtil::Concat("raw://", FLAGS_raw),
                               std::bind(HandleRaw, std::placeholders::_1));
 
   net::HttpServer http_server;
   net::HttpServer* hserver = &http_server;
   http_server.SetIOLoops(app.loops);
   http_server.SetDispatcher(app.dispatcher_);
-  http_server.ServeAddressSync("http://0.0.0.0:5006",
+  http_server.ServeAddressSync(base::StrUtil::Concat("http://", FLAGS_http),
                                std::bind(HandleHttp, std::placeholders::_1));
 
-  app.StartHttpClients("http://127.0.0.1:5006");
+  app.StartHttpClients(base::StrUtil::Concat("http://", FLAGS_http));
 
-#ifdef ENBALE_RAW_CLIENT
-  app.StartRawClient("raw://127.0.0.1:5005");
-#endif
+  if (FLAGS_raw_client) {
+    app.StartRawClient(base::StrUtil::Concat("raw://", FLAGS_raw));
+  }
 
-#ifdef ENBALE_RDS_CLIENT
-  app.StartRedisClient();
-#endif
+  if (FLAGS_redis_client) {
+    app.StartRedisClient();
+  }
 
   signal(SIGINT, signalHandler);
   signal(SIGTERM, signalHandler);

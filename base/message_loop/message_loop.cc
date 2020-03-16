@@ -95,17 +95,11 @@ MessageLoop::MessageLoop()
 
 MessageLoop::~MessageLoop() {
   LOG(INFO) << "MessageLoop: [" << LoopName() << "] Gone...";
+  CHECK(status_.load() != ST_STARTED || !IsInLoopThread());
 
-  if (status_ == ST_STARTED) {
-
-    while (Notify(wakeup_pipe_in_, &kQuit, sizeof(kQuit)) != sizeof(kQuit)) {
-      LOG_IF(ERROR, EAGAIN == errno) << "Write to pipe Failed:" << StrError();
-      std::this_thread::sleep_for(std::chrono::microseconds(1));
-    }
-
-    WaitLoopEnd();
-  }
-
+  QuitLoop();
+  Notify(wakeup_pipe_in_, &kQuit, sizeof(kQuit));
+  WaitLoopEnd();
   wakeup_event_.reset();
   close(wakeup_pipe_in_);
 
@@ -123,40 +117,45 @@ bool MessageLoop::IsInLoopThread() const {
 }
 
 void MessageLoop::Start() {
-  bool run = running_.test_and_set(std::memory_order_acquire);
-  LOG_IF(INFO, run) << "Messageloop [" << LoopName() << "] aready runing...";
-  if (run) {return;}
+  if (running_.test_and_set(std::memory_order_acquire)) {
+    LOG(INFO) << "Messageloop [" << LoopName() << "] aready runing...";
+    return;
+  }
 
   thread_ptr_.reset(new std::thread(std::bind(&MessageLoop::ThreadMain, this)));
-
   {
     std::unique_lock<std::mutex> lk(start_stop_lock_);
-    cv_.wait(lk, [&]{return status_ == ST_STARTED;});
+    while(cv_.wait_for(lk, std::chrono::milliseconds(1)) == std::cv_status::timeout) {
+      if (status_.load() == ST_STARTED) break;
+    }
   }
 }
 
 void MessageLoop::WaitLoopEnd(int32_t ms) {
+  //can't wait stop in loop thread
   CHECK(!IsInLoopThread());
-
-  if (status_ == ST_STOPED) {
-    return;
-  }
-
-  {
-    std::unique_lock<std::mutex> lk(start_stop_lock_);
-    cv_.wait(lk, [&]{return status_ == ST_STOPED;});
-  }
-
+  //first join, others wait util loop end
   int32_t has_join = has_join_.exchange(1);
   if (has_join == 0 && thread_ptr_ && thread_ptr_->joinable()) {
+    LOG(INFO) << " join here wait loop end";
     thread_ptr_->join();
+  } else {
+    LOG(INFO) << " cv wait here wait loop end";
+    std::unique_lock<std::mutex> lk(start_stop_lock_);
+    while(cv_.wait_for(lk, std::chrono::milliseconds(100)) == std::cv_status::timeout) {
+      if (status_.load() != ST_STARTED) break;
+    }
   }
 }
 
-void MessageLoop::BeforePumpRun() {
+void MessageLoop::PumpStarted() {
+  status_.store(ST_STARTED);
+  cv_.notify_all();
 }
 
-void MessageLoop::AfterPumpRun() {
+void MessageLoop::PumpStopped() {
+  status_.store(ST_STOPED);
+  cv_.notify_all();
 }
 
 void MessageLoop::ThreadMain() {
@@ -169,11 +168,6 @@ void MessageLoop::ThreadMain() {
 
   LOG(INFO) << "MessageLoop: [" << loop_name_ << "] Start Running";
 
-  {
-    status_.store(ST_STARTED);
-    cv_.notify_all();
-  }
-
   //delegate_->BeforeLoopRun();
   event_pump_.Run();
   //delegate_->AfterLoopRun();
@@ -184,10 +178,6 @@ void MessageLoop::ThreadMain() {
   threadlocal_current_ = NULL;
   LOG(INFO) << "MessageLoop: [" << loop_name_ << "] Stop Running";
 
-  {
-    status_.store(ST_STOPED);
-    cv_.notify_all();
-  }
 }
 
 bool MessageLoop::PostDelayTask(TaskBasePtr task, uint32_t ms) {
@@ -228,8 +218,8 @@ bool MessageLoop::PostTask(TaskBasePtr task) {
 }
 
 void MessageLoop::RunTimerClosure(const TimerEventList& timer_evs) {
-  for (auto& te : timer_evs) {
-    te->Invoke();
+  for (auto& timeout_event : timer_evs) {
+    timeout_event->Invoke();
   }
 }
 

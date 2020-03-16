@@ -146,3 +146,35 @@ TEST_CASE("messageloop.tasklocation", "[new task tracking location ]") {
   }), 2000);
   loop.WaitLoopEnd();
 }
+
+TEST_CASE("CocurrencyWrite", "[new task tracking location ]") {
+  google::InstallFailureSignalHandler();
+  google::InstallFailureWriter(FailureDump);
+
+  LOG(INFO) << " CocurrencyWrite start";
+  std::vector<std::shared_ptr<base::MessageLoop>> loops;
+  for (size_t i = 0; i < 4; i++) {
+    auto loop = std::make_shared<base::MessageLoop>();
+    loop->Start();
+    loops.push_back(loop);
+  }
+
+  std::atomic_int64_t randv;
+  std::vector<int64_t> values(10, 0);
+  auto f = [&](std::shared_ptr<base::MessageLoop> l) {
+        int64_t i = 10000000;
+        LOG(INFO) << "start write value:" << i << " times";
+        while(i-- > 0) {
+            values[0] = randv++;
+        }
+        l->QuitLoop();
+        LOG(INFO) << "end write value total:" << i << " times";
+  };
+  for (auto loop : loops) {
+    loop->PostTask(NewClosure(std::bind(f, loop)));
+  }
+
+  for (auto loop : loops) {
+    loop->WaitLoopEnd();
+  }
+}

@@ -3,17 +3,24 @@
 #include "glog/logging.h"
 #include "io_mux_epoll.h"
 #include "linux_signal.h"
+#include "utils/sys_error.h"
 
 namespace base {
 
-EventPump::EventPump() : delegate_(NULL), running_(false) {
-  multiplexer_.reset(new base::IOMuxEpoll());
+EventPump::EventPump() :
+  delegate_(NULL),
+  running_(false) {
+
   InitializeTimeWheel();
+  multiplexer_.reset(new base::IOMuxEpoll());
 }
 
-EventPump::EventPump(PumpDelegate *d) : delegate_(d), running_(false) {
-  multiplexer_.reset(new base::IOMuxEpoll());
+EventPump::EventPump(PumpDelegate *d) :
+  delegate_(d),
+  running_(false) {
+
   InitializeTimeWheel();
+  multiplexer_.reset(new base::IOMuxEpoll());
 }
 
 EventPump::~EventPump() {
@@ -28,15 +35,13 @@ void EventPump::Run() {
 
   IgnoreSigPipeSignalOnCurrentThread();
 
-  if (delegate_) {
-    delegate_->BeforePumpRun();
-  }
-
-  running_ = true;
-
+  uint64_t perfect_timeout_ms = 0;
   std::vector<FdEvent *> active_events;
 
-  uint64_t perfect_timeout_ms = 0;
+  running_ = true;
+  if (delegate_) {
+    delegate_->PumpStarted();
+  }
   while (running_) {
     active_events.clear();
 
@@ -53,11 +58,10 @@ void EventPump::Run() {
       delegate_->RunNestedTask();
     }
   }
-  running_ = false;
   FinalizeTimeWheel();
-
+  running_ = false;
   if (delegate_) {
-    delegate_->AfterPumpRun();
+    delegate_->PumpStopped();
   }
 }
 
@@ -65,10 +69,6 @@ void EventPump::Quit() { running_ = false; }
 
 bool EventPump::IsInLoopThread() const {
   return tid_ == std::this_thread::get_id();
-}
-
-QuitClosure EventPump::Quit_Clourse() {
-  return std::bind(&EventPump::Quit, this);
 }
 
 bool EventPump::InstallFdEvent(FdEvent *fd_event) {
@@ -144,7 +144,6 @@ void EventPump::ProcessTimerEvent() {
 
 timeout_t EventPump::NextTimerTimeout(timeout_t default_timeout) {
   ::timeouts_update(timeout_wheel_, time_ms());
-
   if (::timeouts_expired(timeout_wheel_)) {
     return 0;
   }
@@ -155,19 +154,21 @@ timeout_t EventPump::NextTimerTimeout(timeout_t default_timeout) {
 }
 
 void EventPump::InitializeTimeWheel() {
+  CHECK(timeout_wheel_ == NULL);
+
   int err = 0;
   timeout_wheel_ = ::timeouts_open(TIMEOUT_mHZ, &err);
+  CHECK(err == 0);
   ::timeouts_update(timeout_wheel_, time_ms());
 }
 
 void EventPump::FinalizeTimeWheel() {
+  CHECK(timeout_wheel_ != NULL);
 
   std::vector<TimeoutEvent *> to_be_delete;
-
   Timeout *to = NULL;
   TIMEOUTS_FOREACH(to, timeout_wheel_, TIMEOUTS_ALL) {
     TimeoutEvent *toe = static_cast<TimeoutEvent *>(to);
-
     ::timeouts_del(timeout_wheel_, to);
     if (toe->DelAfterInvoke()) {
       to_be_delete.push_back(toe);
