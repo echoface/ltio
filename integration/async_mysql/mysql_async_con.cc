@@ -426,7 +426,7 @@ void MysqlAsyncConnect::WaitMysqlStatus(int status) {
 
   base::EventPump* pump = loop_->Pump();
   if (!fd_event_) {
-    int fd = mysql_get_socket(&mysql_);
+    int fd = ::mysql_get_socket(&mysql_);
     fd_event_ = base::FdEvent::Create(fd, base::LtEv::LT_EVENT_NONE);
     fd_event_->GiveupOwnerFd();
     fd_event_->SetErrorCallback(std::bind(&MysqlAsyncConnect::OnError, this));
