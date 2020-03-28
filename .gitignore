@@ -6,10 +6,8 @@ cbuild/
 *.user
 .idea
 .vscode
-.vscode/
-cmake-build-*
 *build*/
-
+.clangd
 compile_commands.json
 
 .DS_*
