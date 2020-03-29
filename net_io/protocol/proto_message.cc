@@ -1,4 +1,5 @@
 #include "glog/logging.h"
+
 #include "proto_message.h"
 #include "proto_service.h"
 

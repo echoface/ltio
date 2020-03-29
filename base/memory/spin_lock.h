@@ -7,7 +7,7 @@
 #include <unistd.h>
 #include <atomic>
 #include <x86intrin.h>
-#include <base_micro.h>
+#include <base/base_micro.h>
 namespace base {
 
 class SpinLock {

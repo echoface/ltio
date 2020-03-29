@@ -2,13 +2,13 @@
 #ifndef _NET_HTTP_PROTO_PARSER_CONTEXT_H_
 #define _NET_HTTP_PROTO_PARSER_CONTEXT_H_
 
-#include <string>
-#include <list>
-#include <vector>
-
 #include "http_request.h"
 #include "http_response.h"
-#include "http_parser/http_parser.h"
+
+#include <list>
+#include <string>
+#include <vector>
+#include <thirdparty/http_parser/http_parser.h>
 
 namespace lt {
 namespace net {

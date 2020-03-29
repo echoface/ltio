@@ -1,15 +1,16 @@
 #ifndef BASE_REPEATING_TIMER_H_H
 #define BASE_REPEATING_TIMER_H_H
 
+#include <mutex>
+#include <atomic>
 #include <memory>
 #include <inttypes.h>
+#include <condition_variable>
+
 #include <base/base_micro.h>
 #include <base/closure/closure_task.h>
-#include <base/message_loop/message_loop.h>
-#include <atomic>
 
-#include <mutex>
-#include <condition_variable>
+#include "message_loop.h"
 
 namespace base {
 // Sample RepeatingTimer usage:

@@ -5,11 +5,11 @@
 #include <atomic>
 
 #include "glog/logging.h"
-#include <time/time_utils.h>
-#include <coroutine/coroutine.h>
-#include <message_loop/message_loop.h>
-#include <coroutine/coroutine_runner.h>
-#include <coroutine/wait_group.h>
+#include <base/time/time_utils.h>
+#include <base/coroutine/coroutine.h>
+#include <base/message_loop/message_loop.h>
+#include <base/coroutine/coroutine_runner.h>
+#include <base/coroutine/wait_group.h>
 
 #include <catch/catch.hpp>
 

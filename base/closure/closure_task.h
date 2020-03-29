@@ -4,14 +4,14 @@
 #include <list>
 #include <memory>
 #include <queue>
+#include <atomic>
 #include <assert.h>
 #include <functional>
-#include "glog/logging.h"
-#include "location.h"
-#include "base/base_micro.h"
-#include <atomic>
-
+#include <glog/logging.h>
+#include <base/base_micro.h>
 #include <concurrentqueue/concurrentqueue.h>
+
+#include "location.h"
 
 namespace base {
 

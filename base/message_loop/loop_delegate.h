@@ -10,7 +10,7 @@ public:
   virtual ~LoopDelegate();
   virtual void BeforeMessageLoopRun(base::MessageLoop* l) = 0;
   virtual void AfterMessageLoopRun(base::MessageLoop* l) = 0;
-}
+};
 
 }
 #endif

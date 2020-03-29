@@ -5,9 +5,9 @@
 #include <map>
 #include <sstream>
 
-#include "net_io/io_buffer.h"
-#include "protocol/proto_message.h"
-#include "http_parser/http_parser.h"
+#include <net_io/io_buffer.h>
+#include <net_io/protocol/proto_message.h>
+#include <thirdparty/http_parser/http_parser.h>
 
 namespace lt {
 namespace net {

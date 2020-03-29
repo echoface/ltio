@@ -16,5 +16,5 @@ check_include_files (ucontext.h HAVE_UCONTEXT_H)
 check_include_files (setjmp.h HAVE_SETJMP_H)
 check_symbol_exists (sigaltstack "signal.h" HAVE_SIGALTSTACK)
 
-configure_file(config.h.in config.h)
-include_directories("${PROJECT_BINARY_DIR}")
+configure_file(config.h.in ${PROJECT_SOURCE_DIR}/config.h)
+#include_directories("${PROJECT_BINARY_DIR}")

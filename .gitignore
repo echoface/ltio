@@ -1,13 +1,12 @@
-lib/
-build/
-cbuild/
-
 *.o
 *.user
+
 .idea
 .vscode
-*build*/
 .clangd
+
+lib/
+*build*/
 compile_commands.json
 
 .DS_*

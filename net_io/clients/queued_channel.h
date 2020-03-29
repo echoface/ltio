@@ -2,11 +2,11 @@
 #define _LT_NET_QUEUED_CLIENT_CHANNEL_H
 
 #include <list>
-#include "tcp_channel.h"
-#include "net_callback.h"
 #include "client_channel.h"
-#include "protocol/proto_message.h"
-#include "protocol/proto_service.h"
+#include <net_io/tcp_channel.h>
+#include <net_io/net_callback.h>
+#include <net_io/protocol/proto_message.h>
+#include <net_io/protocol/proto_service.h>
 
 namespace lt {
 namespace net {

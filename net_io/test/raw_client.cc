@@ -3,10 +3,10 @@
 #include <functional>
 #include <glog/logging.h>
 #include <gflags/gflags.h>
-#include "clients/client.h"
-#include "coroutine/coroutine_runner.h"
-#include "protocol/raw/raw_message.h"
-#include "protocol/raw/raw_proto_service.h"
+#include "net_io/clients/client.h"
+#include "base/coroutine/coroutine_runner.h"
+#include "net_io/protocol/raw/raw_message.h"
+#include "net_io/protocol/raw/raw_proto_service.h"
 
 std::string arg_host;
 

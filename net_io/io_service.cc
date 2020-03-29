@@ -1,15 +1,13 @@
-
+#include <atomic>
+#include "glog/logging.h"
+#include <base/base_constants.h>
+#include "base/closure/closure_task.h"
 
 #include "io_service.h"
-#include "closure/closure_task.h"
-#include "glog/logging.h"
 #include "tcp_channel.h"
 #include "protocol/proto_service.h"
 #include "protocol/proto_message.h"
 #include "protocol/proto_service_factory.h"
-
-#include <atomic>
-#include <base/base_constants.h>
 
 namespace lt {
 namespace net {

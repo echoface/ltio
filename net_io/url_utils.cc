@@ -10,10 +10,10 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include "glog/logging.h"
+#include <base/string/string_view.hpp>
+#include <base/utils/string/str_utils.h>
 
 #include "url_utils.h"
-#include "utils/string/str_utils.h"
-#include <base/string/string_view.hpp>
 
 namespace lt {
 namespace net {

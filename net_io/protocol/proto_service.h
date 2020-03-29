@@ -1,11 +1,11 @@
 #ifndef _NET_PROTOCOL_SERVICE_H_H
 #define _NET_PROTOCOL_SERVICE_H_H
 
-#include "channel.h"
-#include "net_callback.h"
-#include "tcp_channel.h"
-#include "url_utils.h"
 #include "proto_message.h"
+
+#include <net_io/url_utils.h>
+#include <net_io/net_callback.h>
+#include <net_io/tcp_channel.h>
 
 namespace lt {
 namespace net {

@@ -2,6 +2,8 @@
 #ifndef UTILS_ARRAYUTILS_H
 #define UTILS_ARRAYUTILS_H
 
+#include <cstddef>
+
 namespace base {
 
 class ArrayUtils {

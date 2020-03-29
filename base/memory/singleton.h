@@ -4,7 +4,5 @@
 
 namespace base {
 
-
-
 }
 #endif

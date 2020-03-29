@@ -1,15 +1,15 @@
 #include <vector>
-#include "base/message_loop/message_loop.h"
-#include "protocol/redis/redis_request.h"
-#include "server/raw_server/raw_server.h"
-#include "server/http_server/http_server.h"
-#include "dispatcher/coro_dispatcher.h"
-#include "dispatcher/workload_dispatcher.h"
-#include "coroutine/coroutine_runner.h"
+#include "net_io/clients/client.h"
+#include "net_io/clients/client_connector.h"
+#include "net_io/protocol/redis/redis_request.h"
+#include "net_io/server/raw_server/raw_server.h"
+#include "net_io/server/http_server/http_server.h"
+#include "net_io/dispatcher/coro_dispatcher.h"
+#include "net_io/dispatcher/workload_dispatcher.h"
 
-#include "clients/client_connector.h"
-#include "clients/client.h"
 #include "base/utils/string/str_utils.h"
+#include "base/coroutine/coroutine_runner.h"
+#include "base/message_loop/message_loop.h"
 
 #include <csignal>
 

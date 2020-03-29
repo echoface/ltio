@@ -1,17 +1,15 @@
 #include <vector>
+#include <csignal>
+#include "base/coroutine/coroutine_runner.h"
 #include "base/message_loop/message_loop.h"
-#include "server/raw_server/raw_server.h"
-#include "dispatcher/coro_dispatcher.h"
-#include "dispatcher/workload_dispatcher.h"
-#include "coroutine/coroutine_runner.h"
-#include "protocol/raw/raw_proto_service.h"
-
-#include "clients/client_connector.h"
-#include "clients/client.h"
+#include "net_io/clients/client.h"
+#include "net_io/clients/client_connector.h"
+#include "net_io/server/raw_server/raw_server.h"
+#include "net_io/dispatcher/coro_dispatcher.h"
+#include "net_io/dispatcher/workload_dispatcher.h"
+#include "net_io/protocol/raw/raw_proto_service.h"
 
 #include "fw_rapid_message.h"
-
-#include <csignal>
 
 using namespace lt::net;
 using namespace lt;

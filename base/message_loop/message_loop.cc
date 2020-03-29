@@ -5,24 +5,22 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
 #include <errno.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <chrono>
 #include <csignal>
 #include <limits.h>
 #include <string>
 #include <sstream>
 #include <functional>
-#include <chrono>
-#include <map>
+#include <iostream>
 
 #include <sys/eventfd.h>
 
-#include <iostream>
-#include "file_util_linux.h"
 #include "timeout_event.h"
+#include "file_util_linux.h"
 #include <base/time/time_utils.h>
 #include <base/utils/sys_error.h>
 

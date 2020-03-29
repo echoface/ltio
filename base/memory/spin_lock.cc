@@ -1,3 +1,4 @@
+/* a spin lock implement from internet*/
 
 #include <thread>
 #include "spin_lock.h"

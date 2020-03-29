@@ -3,13 +3,15 @@
 #include <functional>
 #include <glog/logging.h>
 #include <gflags/gflags.h>
-#include "clients/client.h"
-#include "coroutine/coroutine_runner.h"
-#include "protocol/raw/raw_proto_service.h"
-#include "protocol/proto_service_factory.h"
-#include "fw_rapid_message.h"
+#include "net_io/clients/client.h"
+#include "net_io/protocol/raw/raw_proto_service.h"
+#include "net_io/protocol/proto_service_factory.h"
 #include "thirdparty/argparser/argparse.h"
+
 #include "base/coroutine/wait_group.h"
+#include "base/coroutine/coroutine_runner.h"
+
+#include "fw_rapid_message.h"
 
 using namespace lt;
 

@@ -1,12 +1,11 @@
+#include "http_constants.h"
+#include "http_proto_service.h"
 
 #include "glog/logging.h"
-
-#include "io_buffer.h"
-#include "tcp_channel.h"
-#include "http_proto_service.h"
-#include "http_constants.h"
-#include "protocol/proto_message.h"
-#include "base/utils/gzip/gzip_utils.h"
+#include <net_io/io_buffer.h>
+#include <net_io/tcp_channel.h>
+#include <net_io/protocol/proto_message.h>
+#include <base/utils/gzip/gzip_utils.h>
 
 namespace lt {
 namespace net {

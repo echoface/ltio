@@ -2,7 +2,8 @@
 #define _NET_PROTOCOL_RESP_SERVICE_H_H
 
 #include "redis_response.h"
-#include "protocol/proto_service.h"
+
+#include <net_io/protocol/proto_service.h>
 
 namespace lt {
 namespace net {

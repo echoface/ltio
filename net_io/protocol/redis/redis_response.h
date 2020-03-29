@@ -3,9 +3,10 @@
 
 #include <vector>
 #include <memory>
-#include "base/base_micro.h"
-#include "protocol/proto_message.h"
-#include "thirdparty/resp/resp/all.hpp"
+
+#include <base/base_micro.h>
+#include <thirdparty/resp/resp/all.hpp>
+#include <net_io/protocol/proto_message.h>
 
 namespace lt {
 namespace net {

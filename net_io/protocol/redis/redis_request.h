@@ -1,11 +1,12 @@
 #ifndef _NET_PROTOCOL_REDIS_MESSAGE_H_
 #define _NET_PROTOCOL_REDIS_MESSAGE_H_
 
-#include <vector>
-#include "base/base_micro.h"
 #include "redis_response.h"
-#include "protocol/proto_message.h"
-#include "thirdparty/resp/resp/all.hpp"
+
+#include <vector>
+#include <base/base_micro.h>
+#include <thirdparty/resp/resp/all.hpp>
+#include <net_io/protocol/proto_message.h>
 
 namespace lt {
 namespace net {

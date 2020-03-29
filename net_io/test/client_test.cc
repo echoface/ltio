@@ -1,24 +1,24 @@
 #include <glog/logging.h>
 
 #include <vector>
-#include "address.h"
-#include "tcp_channel.h"
-#include "socket_utils.h"
-#include "socket_acceptor.h"
+#include "net_io/address.h"
+#include "net_io/tcp_channel.h"
+#include "net_io/socket_utils.h"
+#include "net_io/socket_acceptor.h"
+#include "net_io/protocol/proto_service.h"
+#include "net_io/protocol/line/line_message.h"
+#include "net_io/protocol/http/http_request.h"
+#include "net_io/protocol/http/http_response.h"
+#include "net_io/protocol/proto_service_factory.h"
+#include "net_io/clients/client.h"
+#include "net_io/clients/client_connector.h"
+#include "net_io/dispatcher/coro_dispatcher.h"
+#include "net_io/dispatcher/coro_dispatcher.h"
+#include "net_io/protocol/raw/raw_message.h"
+#include "net_io/protocol/raw/raw_proto_service.h"
 
-#include "protocol/proto_service.h"
-#include "protocol/line/line_message.h"
-#include "protocol/http/http_request.h"
-#include "protocol/http/http_response.h"
-#include "protocol/proto_service_factory.h"
-#include "clients/client_connector.h"
-#include "clients/client.h"
-#include "dispatcher/coro_dispatcher.h"
-#include "base/coroutine/coroutine_runner.h"
 #include "base/closure/closure_task.h"
-#include "dispatcher/coro_dispatcher.h"
-#include "protocol/raw/raw_message.h"
-#include "protocol/raw/raw_proto_service.h"
+#include "base/coroutine/coroutine_runner.h"
 
 base::MessageLoop loop;
 base::MessageLoop wloop;

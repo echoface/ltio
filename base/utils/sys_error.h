@@ -1,4 +1,4 @@
-#ifndef BASE_SYSERRORNO_H_ 
+#ifndef BASE_SYSERRORNO_H_
 #define BASE_SYSERRORNO_H_
 
 #include <cerrno>

@@ -15,17 +15,6 @@ struct Holder {
 };
 
 }
-/*
-template<typename T>
-struct DoubleLinkedTraits {
-  inline static T* pre(T* t) {return t->pre_;}
-  inline static T* next(T* t) {return t->next_;}
-  inline static void set_pre(T* t, T* pre) {t->pre_ = pre;}
-  inline static void set_next(T* t, T* next) {t->next_ = next;}
-  inline static DoubleLinkedItemHolder* holder(T* t) {return t->holder_;}
-  inline static void set_holder(T* t, DoubleLinkedItemHolder* h) {t->holder_ = h;};
-};
-*/
 
 template<class T>
 struct EnableDoubleLinked {

@@ -2,7 +2,8 @@
 #define NET_PROTOCOL_MESSAGE_H
 
 #include <string>
-#include <net_callback.h>
+
+#include <net_io/net_callback.h>
 #include <base/coroutine/coroutine.h>
 #include <base/message_loop/message_loop.h>
 

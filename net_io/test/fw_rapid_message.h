@@ -1,8 +1,8 @@
 #ifndef _LT_FW_RAPID_MESSAGE_H_
 #define _LT_FW_RAPID_MESSAGE_H_
 
-#include <protocol/proto_message.h>
 #include <string>
+#include <net_io/protocol/proto_message.h>
 
 using namespace lt;
 

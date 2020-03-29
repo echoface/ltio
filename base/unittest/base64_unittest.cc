@@ -5,8 +5,8 @@
 #include <atomic>
 
 #include "glog/logging.h"
-#include <time/time_utils.h>
-#include <utils/base64/base64.hpp>
+#include <base/time/time_utils.h>
+#include <base/utils/base64/base64.hpp>
 
 #include <catch/catch.hpp>
 

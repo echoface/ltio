@@ -2,8 +2,9 @@
 #define _NET_RAW_PROTOMESSAGE_H_H
 
 #include <cinttypes>
-#include "protocol/proto_message.h"
-#include "channel.h"
+
+#include <net_io/channel.h>
+#include <net_io/protocol/proto_message.h>
 
 namespace lt {
 namespace net {

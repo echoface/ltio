@@ -1,8 +1,9 @@
 #ifndef NET_RAW_PROTO_SERVICE_H
 #define NET_RAW_PROTO_SERVICE_H
 
-#include "protocol/proto_service.h"
 #include "raw_message.h"
+
+#include <net_io/protocol/proto_service.h>
 
 namespace lt {
 namespace net {

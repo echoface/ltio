@@ -1,12 +1,12 @@
 #ifndef _LT_COMPONENT_INVERTED_INDEX_EXPRESSION_H_H
 #define _LT_COMPONENT_INVERTED_INDEX_EXPRESSION_H_H
 
-#include <memory>
-#include <nlohmann/json.hpp>
 #include <set>
+#include <memory>
 #include <string>
-#include <unordered_map>
 #include <vector>
+#include <unordered_map>
+#include <thirdparty/nlohmann/json.hpp>
 
 namespace component {
 

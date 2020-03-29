@@ -5,9 +5,10 @@
 #include <set>
 #include <vector>
 #include <cinttypes>
-#include "base_micro.h"
-#include "coroutine/coroutine.h"
+#include <base/base_micro.h>
 #include <base/message_loop/message_loop.h>
+
+#include "coroutine.h"
 
 namespace base {
 

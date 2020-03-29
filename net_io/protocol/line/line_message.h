@@ -1,8 +1,8 @@
 #ifndef _NET_LINE_PROTO_MESSAGE_H
 #define _NET_LINE_PROTO_MESSAGE_H
 
-#include "protocol/proto_service.h"
-#include "protocol/proto_message.h"
+#include <net_io/protocol/proto_service.h>
+#include <net_io/protocol/proto_message.h>
 
 namespace lt {
 namespace net {

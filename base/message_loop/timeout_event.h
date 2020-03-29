@@ -2,8 +2,8 @@
 #define BASE_TimeoutEvent_EVENT_H_
 
 #include <cinttypes>
-#include "time/timestamp.h"
-#include "closure/closure_task.h"
+#include <base/time/timestamp.h>
+#include <base/closure/closure_task.h>
 #include <thirdparty/timeout/timeout.h>
 
 typedef struct timeout Timeout;

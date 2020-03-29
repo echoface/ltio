@@ -1,11 +1,12 @@
 #ifndef _LT_NET_CLIENT_CHANNEL_H
 #define _LT_NET_CLIENT_CHANNEL_H
 
-#include "url_utils.h"
-#include "net_callback.h"
+#include "net_io/url_utils.h"
+#include "net_io/net_callback.h"
+#include "net_io/protocol/proto_message.h"
+#include "net_io/protocol/proto_service.h"
+
 #include "client_base.h"
-#include "protocol/proto_message.h"
-#include "protocol/proto_service.h"
 
 namespace lt {
 namespace net {

@@ -6,7 +6,7 @@
 #include <inttypes.h>
 #include <functional>
 #include <unordered_map>
-#include <memory/spin_lock.h>
+#include <base/memory/spin_lock.h>
 
 namespace component {
 

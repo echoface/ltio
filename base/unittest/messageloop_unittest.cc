@@ -1,8 +1,8 @@
 #include <catch/catch.hpp>
 
 #include <iostream>
-#include "message_loop/event_pump.h"
-#include "message_loop/message_loop.h"
+#include <base/message_loop/event_pump.h>
+#include <base/message_loop/message_loop.h>
 
 void FailureDump(const char* s, int sz) {
   std::string failure_info(s, sz);

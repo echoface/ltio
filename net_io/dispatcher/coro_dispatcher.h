@@ -2,7 +2,7 @@
 #define NET_COROWORKLOAD_DISPATCHER_H_H
 
 #include "workload_dispatcher.h"
-#include "base/closure/closure_task.h"
+#include <base/closure/closure_task.h>
 
 namespace lt {
 namespace net {

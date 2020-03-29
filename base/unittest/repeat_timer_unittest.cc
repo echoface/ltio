@@ -1,7 +1,7 @@
 #include <catch/catch.hpp>
 
-#include <message_loop/message_loop.h>
-#include <message_loop/repeating_timer.h>
+#include <base/message_loop/message_loop.h>
+#include <base/message_loop/repeating_timer.h>
 
 TEST_CASE("repeat_timer.normal", "[repeating time test]") {
   base::MessageLoop loop;

@@ -4,8 +4,8 @@
 #include <memory>
 #include <vector>
 #include <atomic>
-#include <clients/client.h>
-#include <protocol/proto_message.h>
+#include <net_io/clients/client.h>
+#include <net_io/protocol/proto_message.h>
 
 
 namespace lt {

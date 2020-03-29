@@ -1,8 +1,8 @@
 #ifndef BASE_TIMESTAMP_H_H
 #define BASE_TIMESTAMP_H_H
 
-#include "time_utils.h"
 #include <string>
+#include "time_utils.h"
 
 namespace base {
 //time ensure the us always less than 1000000

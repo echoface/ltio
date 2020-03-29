@@ -2,8 +2,8 @@
 #define BASE_TIMER_EVENT_H_
 
 #include <cinttypes>
-#include "time/timestamp.h"
-#include "closure/closure_task.h"
+#include <base/time/timestamp.h>
+#include <base/closure/closure_task.h>
 
 namespace base {
 

@@ -2,16 +2,16 @@
 #define NET_RAW_SERVER_H_H
 
 #include <list>
+#include <mutex>              // std::mutex, std::unique_lock
 #include <vector>
 #include <chrono>             // std::chrono::seconds
 #include <functional>
-#include <mutex>              // std::mutex, std::unique_lock
 #include <condition_variable> // std::condition_variable, std::cv_status
 
-#include "io_service.h"
 #include "base/base_micro.h"
-#include "protocol/proto_message.h"
-#include "protocol/raw/raw_message.h"
+#include "net_io/io_service.h"
+#include "net_io/protocol/proto_message.h"
+#include "net_io/protocol/raw/raw_message.h"
 #include "base/message_loop/message_loop.h"
 
 namespace lt {

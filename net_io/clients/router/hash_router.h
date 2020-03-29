@@ -3,9 +3,9 @@
 
 #include <memory>
 #include <vector>
-#include <clients/client.h>
-#include <protocol/proto_message.h>
 #include "client_router.h"
+#include <net_io/clients/client.h>
+#include <net_io/protocol/proto_message.h>
 
 namespace lt {
 namespace net {

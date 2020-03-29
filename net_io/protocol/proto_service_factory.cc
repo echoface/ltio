@@ -1,11 +1,10 @@
-
 #include "proto_service_factory.h"
-
-#include "memory/lazy_instance.h"
 #include "redis/resp_service.h"
 #include "raw/raw_proto_service.h"
 #include "line/line_proto_service.h"
 #include "http/http_proto_service.h"
+
+#include <base/memory/lazy_instance.h>
 
 namespace lt {
 namespace net {

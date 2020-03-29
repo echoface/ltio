@@ -1,8 +1,9 @@
 
 #include "glog/logging.h"
+#include <base/closure/closure_task.h>
+#include <base/memory/lazy_instance.h>
+
 #include "coroutine_runner.h"
-#include "closure/closure_task.h"
-#include "memory/lazy_instance.h"
 
 namespace base {
 static const int kMaxReuseCoroutineNumbersPerThread = 500;

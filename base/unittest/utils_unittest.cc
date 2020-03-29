@@ -1,7 +1,7 @@
 #include <vector>
 #include <iostream>
 
-#include <utils/string/str_utils.h>
+#include <base/utils/string/str_utils.h>
 
 #include <catch/catch.hpp>
 

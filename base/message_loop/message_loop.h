@@ -5,18 +5,17 @@
 #include <thread>
 #include <queue>
 #include <mutex>
+#include <condition_variable>
 
 #include "fd_event.h"
 #include "event_pump.h"
+
 #include "glog/logging.h"
-#include "base_constants.h"
-
-#include "closure/task_queue.h"
-#include "memory/spin_lock.h"
-#include "memory/scoped_ref_ptr.h"
-#include "memory/refcountedobject.h"
-
-#include <condition_variable>
+#include "base/base_constants.h"
+#include "base/closure/task_queue.h"
+#include "base/memory/spin_lock.h"
+#include "base/memory/scoped_ref_ptr.h"
+#include "base/memory/refcountedobject.h"
 
 namespace base {
 

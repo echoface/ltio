@@ -1,8 +1,8 @@
 
-#include "glog/logging.h"
 #include "workload_dispatcher.h"
 
-#include "protocol/proto_message.h"
+#include "glog/logging.h"
+#include <net_io/protocol/proto_message.h>
 
 namespace lt {
 namespace net {

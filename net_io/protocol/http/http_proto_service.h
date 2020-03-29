@@ -3,10 +3,11 @@
 
 #include <vector>
 #include <string>
-#include "net_callback.h"
 #include "parser_context.h"
-#include "protocol/proto_service.h"
-#include "http_parser/http_parser.h"
+
+#include "net_io/net_callback.h"
+#include "net_io/protocol/proto_service.h"
+#include "thirdparty/http_parser/http_parser.h"
 
 namespace lt {
 namespace net {

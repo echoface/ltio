@@ -2,26 +2,25 @@
 #define LT_NET_CLIENT_H_H
 
 #include <vector>
-
 #include <memory>
 #include <chrono>             // std::chrono::seconds
 #include <mutex>              // std::mutex, std::unique_lock
 #include <cinttypes>
-#include <condition_variable> // std::condition_variable, std::cv_status
-#include <url_utils.h>
 #include <initializer_list>
-
-#include "address.h"
-#include "tcp_channel.h"
-#include "socket_utils.h"
-#include "socket_acceptor.h"
-#include "protocol/proto_service.h"
-#include "protocol/proto_message.h"
-#include "protocol/proto_service_factory.h"
+#include <condition_variable> // std::condition_variable, std::cv_status
 
 #include "client_base.h"
-#include "clients/queued_channel.h"
-#include "clients/client_connector.h"
+#include "queued_channel.h"
+#include "client_connector.h"
+
+#include <net_io/url_utils.h>
+#include "net_io/address.h"
+#include "net_io/tcp_channel.h"
+#include "net_io/socket_utils.h"
+#include "net_io/socket_acceptor.h"
+#include "net_io/protocol/proto_service.h"
+#include "net_io/protocol/proto_message.h"
+#include "net_io/protocol/proto_service_factory.h"
 
 namespace lt {
 namespace net {

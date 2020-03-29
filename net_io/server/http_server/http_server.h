@@ -9,12 +9,12 @@
 #include <condition_variable> // std::condition_variable, std::cv_status
 
 #include "http_context.h"
-#include "io_service.h"
 #include "base/base_micro.h"
-#include "protocol/proto_message.h"
-#include "protocol/http/http_request.h"
-#include "protocol/http/http_response.h"
 #include "base/message_loop/message_loop.h"
+#include "net_io/io_service.h"
+#include "net_io/protocol/proto_message.h"
+#include "net_io/protocol/http/http_request.h"
+#include "net_io/protocol/http/http_response.h"
 
 namespace lt {
 namespace net {

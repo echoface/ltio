@@ -1,9 +1,8 @@
 #include "glog/logging.h"
-#include "tcp_channel.h"
-#include "io_service.h"
-
-#include "protocol/proto_service.h"
-#include "protocol/proto_service_factory.h"
+#include "net_io/tcp_channel.h"
+#include "net_io/io_service.h"
+#include "net_io/protocol/proto_service.h"
+#include "net_io/protocol/proto_service_factory.h"
 #include "base/message_loop/linux_signal.h"
 
 namespace lt {

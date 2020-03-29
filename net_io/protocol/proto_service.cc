@@ -1,8 +1,8 @@
 #include "proto_service.h"
 #include "proto_message.h"
-#include "glog/logging.h"
 
-#include "tcp_channel.h"
+#include "glog/logging.h"
+#include <net_io/tcp_channel.h>
 
 namespace lt {
 namespace net {

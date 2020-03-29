@@ -1,7 +1,7 @@
 #include "async_channel.h"
 #include "queued_channel.h"
-#include "base/base_constants.h"
-#include "protocol/proto_service.h"
+#include <base/base_constants.h>
+#include <net_io/protocol/proto_service.h>
 
 namespace lt {
 namespace net {

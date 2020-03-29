@@ -1,8 +1,9 @@
-#include "glog/logging.h"
 #include "parser_context.h"
 #include "http_constants.h"
-#include "protocol/proto_message.h"
-#include "base/utils/gzip/gzip_utils.h"
+
+#include "glog/logging.h"
+#include <base/utils/gzip/gzip_utils.h>
+#include <net_io/protocol/proto_message.h>
 
 namespace lt {
 namespace net {

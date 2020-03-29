@@ -1,7 +1,7 @@
 
-#include "raw_message.h"
-
 #include <endian.h>
+
+#include "raw_message.h"
 
 namespace lt {
 namespace net {
