@@ -27,7 +27,7 @@ std::vector<BitMapPostingList*> GeneralStrField::GetIncludeBitmap(const std::str
   if (iter != include_pl_.end()) {
     result.push_back(iter->second);
   }
-  return std::move(result);
+  return result;
 }
 
 std::vector<BitMapPostingList*> GeneralStrField::GetExcludeBitmap(const std::string& value) {
@@ -36,7 +36,7 @@ std::vector<BitMapPostingList*> GeneralStrField::GetExcludeBitmap(const std::str
   if (iter != exclude_pl_.end()) {
     result.push_back(iter->second);
   }
-  return std::move(result);
+  return result;
 }
 
 } //end namespace component

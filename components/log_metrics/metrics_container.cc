@@ -127,7 +127,7 @@ std::vector<uint32_t> MetricDist::CalculatePecentile(std::vector<uint32_t> perce
       result_i++;
     }
   }
-  return std::move(result);
+  return result;
 }
 
 void to_json(Json& j, const MetricDist& dist) {

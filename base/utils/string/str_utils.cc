@@ -66,7 +66,7 @@ std::vector<std::string> StrUtil::Split(const std::string &str,
   while (std::getline(ss, token, delim)) {
     elems.push_back(token);
   }
-  return std::move(elems);
+  return elems;
 }
 
 std::vector<std::string> StrUtil::Split(const std::string &text,

@@ -86,8 +86,7 @@ void IOBuffer::WriteRawData(const void* data, size_t len) {
 }
 
 std::string IOBuffer::AsString() {
-  std::string str(data_.begin() + read_index_, data_.begin() + write_index_);
-  return std::move(str);
+  return std::string(data_.begin() + read_index_, data_.begin() + write_index_);
 }
 
 void IOBuffer::Consume(uint64_t len) {
