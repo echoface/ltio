@@ -9,7 +9,7 @@
 #include <functional>
 #include <glog/logging.h>
 #include <base/base_micro.h>
-#include <concurrentqueue/concurrentqueue.h>
+#include <thirdparty/cameron_queue/concurrentqueue.h>
 
 #include "location.h"
 
