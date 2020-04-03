@@ -109,7 +109,7 @@ bool HttpProtoService::ParseHttpRequest(const RefTcpChannel& channel, IOBuffer* 
 
     message->SetIOCtx(shared_from_this());
     CHECK(message->GetMessageType() == MessageType::kRequest);
-
+    VLOG(GLOG_VTRACE) << " pass message to message reciever" << channel_->ChannelInfo();
     delegate_->OnProtocolMessage(std::static_pointer_cast<ProtocolMessage>(message));
   }
   return true;

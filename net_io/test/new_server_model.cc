@@ -172,9 +172,11 @@ public:
       LOG(INFO) << __FUNCTION__ << " raw client has stoped";
     }
 
-    LOG(INFO) << __FUNCTION__ << " start stop rdsclient";
-    redis_client->Finalize();
-    LOG(INFO) << __FUNCTION__ << " redis client has stoped";
+    if (FLAGS_redis_client) {
+      LOG(INFO) << __FUNCTION__ << " start stop rdsclient";
+      redis_client->Finalize();
+      LOG(INFO) << __FUNCTION__ << " redis client has stoped";
+    }
 
     main_loop.QuitLoop();
     LOG(INFO) << __FUNCTION__ << " stop leave";
@@ -196,11 +198,11 @@ public:
 };
 std::atomic_int SampleApp::io_round_count = {0};
 
-
 SampleApp app;
 
 void HandleHttp(net::HttpContext* context) {
   net::HttpRequest* req = context->Request();
+  VLOG(1) << " GOT Http request, body:" << req->Dump();
   LOG_EVERY_N(INFO, 10000) << " got 1w Http request, body:" << req->Dump();
 
   if (req->RequestUrl() == "/raw" && FLAGS_raw_client) {
@@ -280,7 +282,7 @@ void DumpRedisResponse(RedisResponse* redis_response) {
 
 void signalHandler( int signum ){
   LOG(INFO) << "sighandler sig:" << signum;
-  app.StopAllService();
+  main_loop.PostTask(NewClosure(std::bind(&SampleApp::StopAllService, &app)));
 }
 int main(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);

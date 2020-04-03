@@ -182,6 +182,7 @@ void HttpServer::StopServerSync() {
   while (cv_.wait_for(lck, std::chrono::milliseconds(500)) == std::cv_status::timeout) {
     LOG(INFO) << "stoping... ... ...";
   }
+  LOG(INFO) << "HttpServer Stoped";
 }
 
 void HttpServer::StopServer() {

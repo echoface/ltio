@@ -225,6 +225,7 @@ void RawServer::StopServerSync() {
 }
 
 void RawServer::StopServer() {
+  std::unique_lock<std::mutex> lck(mtx_);
   for (auto& service : ioservices_) {
     service->StopIOService();
   }

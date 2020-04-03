@@ -9,5 +9,3 @@ include_directories(
   ${MYSQL_INCLUDE_DIR}/mysql
   ${MYSQL_INCLUDE_DIR}/mariadb
 )
-
-MESSAGE(STATUS "include dir from dependency:" ${LtIO_INCLUDE_DIRS})
