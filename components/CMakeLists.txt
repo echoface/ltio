@@ -31,6 +31,8 @@ SET(COMPONENT_SOURCES
 )
 
 ADD_LIBRARY(ltcomponent STATIC ${COMPONENT_SOURCES})
+ltio_default_properties(ltcomponent)
+
 ADD_LIBRARY(ltcomponent_shared SHARED ${COMPONENT_SOURCES})
 
 set_target_properties(ltcomponent_shared PROPERTIES OUTPUT_NAME "ltcomponent")
@@ -41,14 +43,14 @@ set_target_properties(ltcomponent_shared PROPERTIES CLEAN_DIRECT_OUTPUT 1)
 TARGET_LINK_LIBRARIES(ltcomponent
 	3rd
 	ltbase
-	${GLOG_LIBRARY}
+  ${GLOG_LIBRARIES}
 )
 
 LINK_LIBRARIES(
 	3rd
 	ltbase
 	ltcomponent
-	${GLOG_LIBRARY}
+  ${GLOG_LIBRARIES}
 )
 
 # all follow target or library will dependency the ltcomponent

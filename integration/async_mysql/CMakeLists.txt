@@ -13,7 +13,7 @@ ADD_EXECUTABLE(async_mysql_test
 TARGET_LINK_LIBRARIES(async_mysql_test
   ltmysql
   ltbase
-  ${GLOG_LIBRARY}
+  ${GLOG_LIBRARIES}
   ${MYSQL_LIBRARIES}
   ${LTBASE_LINKLIBS}
   pthread

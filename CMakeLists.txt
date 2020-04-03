@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.5)
 
 project(LightingIO)
 
@@ -12,22 +12,30 @@ MESSAGE(STATUS "CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
 MESSAGE(STATUS "PROJECT_SOURCE_DIR: ${PROJECT_SOURCE_DIR}")
 MESSAGE(STATUS "PROJECT_BINARY_DIR: ${PROJECT_BINARY_DIR}")
 
-include(${CMAKE_CONFIG_DIR}/global.cmake)
+include(ExternalProject)
+include(GNUInstallDirs)
+
 include(${CMAKE_CONFIG_DIR}/common.cmake)
-include(${CMAKE_CONFIG_DIR}/include.cmake)
 #include(${CMAKE_CONFIG_DIR}/googletest.cmake)
+include(${CMAKE_CONFIG_DIR}/dependency.cmake)
+include(${CMAKE_CONFIG_DIR}/include.cmake)
+
+
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
+MESSAGE(STATUS "LtIO_LINKER_LIBS" ${LtIO_LINKER_LIBS})
+MESSAGE(STATUS "LtIO_INCLUDE_DIRS" ${LtIO_INCLUDE_DIRS})
+
 # add a default linked path to build/lib
-LINK_DIRECTORIES(${CMAKE_BINARY_DIR}/lib)
+#LINK_DIRECTORIES(${CMAKE_BINARY_DIR}/lib)
 
 ADD_SUBDIRECTORY(base)
 ADD_SUBDIRECTORY(net_io)
-ADD_SUBDIRECTORY(components)
-ADD_SUBDIRECTORY(integration)
+#ADD_SUBDIRECTORY(components)
+#ADD_SUBDIRECTORY(integration)
 ADD_SUBDIRECTORY(thirdparty)
 ADD_SUBDIRECTORY(playground)
 

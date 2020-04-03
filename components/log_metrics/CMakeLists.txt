@@ -13,7 +13,7 @@ ADD_EXECUTABLE(log_metrics_test
 
 TARGET_LINK_LIBRARIES(log_metrics_test
   logmetrics
-	${GLOG_LIBRARY}
+  ${GLOG_LIBRARIES}
   pthread
 )
 set_target_properties(log_metrics_test PROPERTIES EXCLUDE_FROM_ALL TRUE)
