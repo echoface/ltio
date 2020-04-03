@@ -7,6 +7,5 @@ endif(CCACHE_FOUND)
 
 find_package(ZLIB REQUIRED)
 find_package(GLOG REQUIRED)
-find_package(Gflags REQUIRED)
 find_package(MYSQL  REQUIRED)
 find_package(Tcmalloc)
