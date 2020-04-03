@@ -1,10 +1,6 @@
 ADD_DEFINITIONS(-std=c++11)
 SET(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-include_directories(
-  ./client/
-)
-
 set(LTNET_SOURCE
   #server.cc
   address.cc
@@ -57,10 +53,7 @@ set(LTNET_SOURCE
 )
 
 SET(LTNETEXECUTE_LINKLIBS
-  gflags
   ${Tcmalloc_LIBRARIES}
-  ${GFLAG_LIBRARY}
-  ${GLOG_LIBRARY}
   ${ZLIB_LIBRARIES}
   ltnet
   ltbase
@@ -72,6 +65,8 @@ SET(LTNETEXECUTE_LINKLIBS
 SET(LTNET_DEPENDENCY ltbase)
 
 ADD_LIBRARY(ltnet STATIC ${LTNET_SOURCE})
+ltio_default_properties(ltnet)
+
 ADD_LIBRARY(ltnet_shared SHARED ${LTNET_SOURCE})
 
 set_target_properties(ltnet_shared PROPERTIES OUTPUT_NAME "ltnet")
@@ -111,8 +106,6 @@ ADD_EXECUTABLE(new_server_model
   test/new_server_model.cc
 )
 target_link_libraries(new_server_model
-  glog
-  gflags
   ${LTNETEXECUTE_LINKLIBS}
 )
 

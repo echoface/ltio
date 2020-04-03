@@ -37,22 +37,21 @@ SET(LTBASE_LINKLIBS
   3rd
   coro
   pthread
-  timeout
-  ${GLOG_LIBRARY}
   ${ZLIB_LIBRARIES}
 )
 
 ADD_LIBRARY(ltbase STATIC ${BASE_SOURCES})
-ADD_LIBRARY(ltbase_shared SHARED ${BASE_SOURCES})
+ltio_default_properties(ltbase)
 
-TARGET_LINK_LIBRARIES(ltbase
-  ${LTBASE_LINKLIBS}
-)
+ADD_LIBRARY(ltbase_shared SHARED ${BASE_SOURCES})
+ltio_default_properties(ltbase_shared)
+
+TARGET_LINK_LIBRARIES(ltbase ${LtIO_LINKER_LIBS})
+
 set_target_properties(ltbase_shared PROPERTIES OUTPUT_NAME "ltbase")
 # make shared library and static lib exist same time
 set_target_properties(ltbase PROPERTIES CLEAN_DIRECT_OUTPUT 1)
 set_target_properties(ltbase_shared PROPERTIES CLEAN_DIRECT_OUTPUT 1)
-
 
 ADD_EXECUTABLE(eventloop_test
   message_loop/test/run_loop_test.cc

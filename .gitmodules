@@ -3,8 +3,14 @@
 	path = thirdparty/hat-trie
 	url = https://github.com/Tessil/hat-trie.git
 [submodule "thirdparty/gflags"]
+  shallow = true
 	path = thirdparty/gflags
-	url = https://github.com/gflags/gflags.git
+	url = https://gitee.com/ltecho/gflags.git
+[submodule "thirdparty/glog"]
+  shallow = true
+	path = thirdparty/glog
+	url = https://gitee.com/ltecho/glog.git
 [submodule "thirdparty/cameron_queue"]
+  shallow = true
 	path = thirdparty/cameron_queue
-	url = https://github.com/cameron314/concurrentqueue.git
+	url = https://gitee.com/ltecho/concurrentqueue.git

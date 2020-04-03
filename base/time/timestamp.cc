@@ -1,7 +1,6 @@
-#include "timestamp.h"
 #include <string>
-#include <glog/logging.h>
 
+#include "timestamp.h"
 namespace base {
 
 Timestamp::Timestamp(const timeval tv) {
