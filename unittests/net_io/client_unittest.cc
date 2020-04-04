@@ -11,7 +11,7 @@
 #include <base/message_loop/message_loop.h>
 #include <base/coroutine/coroutine_runner.h>
 
-#include <catch/catch.hpp>
+#include <thirdparty/catch/catch.hpp>
 
 #include <glog/logging.h>
 #include "net_io/address.h"

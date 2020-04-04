@@ -3,10 +3,6 @@ cmake_minimum_required(VERSION 2.8)
 ADD_DEFINITIONS(-std=c++11)
 SET(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-aux_source_directory(. LOGMETRICS_SOURCES)
-
-ADD_LIBRARY(ltmetrics STATIC ${LOGMETRICS_SOURCES})
-
 ADD_EXECUTABLE(log_metrics_test
   ./test/log_metrics_test.cc
 )

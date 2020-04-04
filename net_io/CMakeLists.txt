@@ -65,8 +65,6 @@ add_dependencies(ltnet
   ltbase
   )
 
-ADD_SUBDIRECTORY(unittests)
-
 ADD_EXECUTABLE(rapid_bench_client
   test/rapid_bench_client.cc
   )

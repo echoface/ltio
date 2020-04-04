@@ -1,16 +1,15 @@
 //
 // Created by gh on 18-9-16.
 //
+#include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <unistd.h>
 #include <stdlib.h>
-#include <atomic>
+#include "components/source_loader/loader/file_loader.h"
 #include "components/source_loader/source_impl/name_struct_source.h"
-#include "../loader/file_loader.h"
 
-#define CATCH_CONFIG_MAIN //only once
-#include <catch/catch.hpp>
-
+#include <thirdparty/catch/catch.hpp>
 
 class Person {
 public:

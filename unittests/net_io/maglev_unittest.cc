@@ -10,7 +10,7 @@
 #include "net_io/clients/router/maglev_router.h"
 #include "thirdparty/murmurhash/MurmurHash3.h"
 
-#include <catch/catch.hpp>
+#include <thirdparty/catch/catch.hpp>
 
 using namespace lt;
 

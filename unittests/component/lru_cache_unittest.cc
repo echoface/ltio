@@ -4,11 +4,9 @@
 #include <iostream>
 #include <unistd.h>
 #include <stdlib.h>
-#include "lru_cache.h"
+#include "components/lru_cache/lru_cache.h"
 
-
-#define CATCH_CONFIG_MAIN //only once
-#include <catch/catch.hpp>
+#include <thirdparty/catch/catch.hpp>
 
 TEST_CASE("base", "[base lru function case]") {
     component::LRUCache<std::string, int64_t> cache(5);

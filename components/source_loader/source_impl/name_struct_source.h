@@ -26,7 +26,8 @@ public:
 	}
 	const T& GetByName(const std::string& name) const {
 		static T kNull;
-		if (const auto& it = source_.find(name); it != source_.end()) {
+    const auto& it = source_.find(name); 
+		if (it != source_.end()) {
 			return it->second;
 		}
 		return kNull;

@@ -15,7 +15,7 @@
 #include <net_io/clients/router/ringhash_router.h>
 #include <net_io/clients/router/roundrobin_router.h>
 
-#include <catch/catch.hpp>
+#include <thirdparty/catch/catch.hpp>
 
 
 struct Hasher {

@@ -1,10 +1,8 @@
 #include <iostream>
 #include <unistd.h>
 #include <stdlib.h>
-#include "bloom_filter.h"
+#include "components/bloomfilter/bloom_filter.h"
 
-
-#define CATCH_CONFIG_MAIN //only once
 #include <catch/catch.hpp>
 
 TEST_CASE("base", "[Add New Item To BloomFilter]") {

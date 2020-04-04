@@ -65,6 +65,3 @@ TARGET_LINK_LIBRARIES(eventloop_benchmark
   ${LtIO_LINKER_LIBS}
   PRIVATE ltbase
 )
-
-# build base unittest
-ADD_SUBDIRECTORY(unittest)

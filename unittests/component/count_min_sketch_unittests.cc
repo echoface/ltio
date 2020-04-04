@@ -2,9 +2,8 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <atomic>
-#include "count_min_sketch.h"
+#include "components/count_min_sketch/count_min_sketch.h"
 
-#define CATCH_CONFIG_MAIN //only once
 #include <catch/catch.hpp>
 
 TEST_CASE("arg calulate", "[estimate and  calculate args]") {

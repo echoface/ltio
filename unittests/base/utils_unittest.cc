@@ -1,9 +1,7 @@
 #include <vector>
 #include <iostream>
-
 #include <base/utils/string/str_utils.h>
-
-#include <catch/catch.hpp>
+#include <thirdparty/catch/catch.hpp>
 
 TEST_CASE("string_utils", "[]") {
 

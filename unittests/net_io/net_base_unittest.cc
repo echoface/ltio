@@ -30,7 +30,7 @@
 #include "net_io/clients/client.h"
 #include "net_io/clients/client_connector.h"
 
-#include <catch/catch.hpp>
+#include <thirdparty/catch/catch.hpp>
 
 using namespace lt;
 

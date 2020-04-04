@@ -1,4 +1,4 @@
-#include <catch/catch.hpp>
+#include <thirdparty/catch/catch.hpp>
 
 #include <base/message_loop/message_loop.h>
 #include <base/message_loop/repeating_timer.h>

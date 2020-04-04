@@ -7,15 +7,11 @@ ADD_LIBRARY(ltmysql STATIC ${ASYNC_MYSQL_SOURCES})
 set_target_properties(ltmysql PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
 ADD_EXECUTABLE(async_mysql_test
-  ./test/async_main.cc
+  test/async_main.cc
 )
 
 TARGET_LINK_LIBRARIES(async_mysql_test
-  ltmysql
+  ${LtIO_LINKER_LIBS}
   ltbase
-  ${GLOG_LIBRARIES}
-  ${MYSQL_LIBRARIES}
-  ${LTBASE_LINKLIBS}
-  pthread
 )
 set_target_properties(async_mysql_test PROPERTIES EXCLUDE_FROM_ALL TRUE)

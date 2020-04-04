@@ -8,7 +8,7 @@
 #include <base/time/time_utils.h>
 #include <base/utils/base64/base64.hpp>
 
-#include <catch/catch.hpp>
+#include <thirdparty/catch/catch.hpp>
 
 /*
 TEST_CASE("base64.base", "[base64 basic test]") {

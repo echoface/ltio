@@ -1,5 +1,3 @@
-#include <catch/catch.hpp>
-
 #include <stdlib.h>
 #include <unistd.h>
 #include <atomic>
@@ -7,10 +5,9 @@
 #include <sstream>
 #include <fstream>
 #include <string>
-#include "../indexer.h"
-#include "../expression.h"
-#include "../bitmap_merger.h"
-#include "../posting_field/bitmap_posting_list.h"
+#include "components/inverted_indexer/indexer.h"
+
+#include <thirdparty/catch/catch.hpp>
 
 TEST_CASE("expression_base", "[test expression and document]") {
   component::Expression expr;

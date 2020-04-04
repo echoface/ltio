@@ -9,13 +9,14 @@
 # See https://github.com/nousxiong/resp for latest version.
 #
 
-cmake_minimum_required (VERSION 2.8.6 FATAL_ERROR)
-project (resp)
+cmake_minimum_required (VERSION 3.5 FATAL_ERROR)
+
+project (resp VERSION 0.2.1 LANGUAGES C CXX)
 
 # Provide user options to customise the build process.
 option (RESP_DEV "RESP dev mode" OFF)
-option (RESP_BUILD_EXAMPLE "Build RESP examples" OFF)
 option (RESP_BUILD_TEST "Build RESP tests" OFF)
+option (RESP_BUILD_EXAMPLE "Build RESP examples" OFF)
 
 include_directories (${PROJECT_SOURCE_DIR})
 

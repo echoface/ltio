@@ -11,7 +11,7 @@
 #include <base/coroutine/coroutine_runner.h>
 #include <base/coroutine/wait_group.h>
 
-#include <catch/catch.hpp>
+#include <thirdparty/catch/catch.hpp>
 
 void coro_c_function() {
   LOG(INFO) << __FUNCTION__ << " enter";
