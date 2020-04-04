@@ -52,18 +52,6 @@ set(LTNET_SOURCE
   #clients/initializer/redis_initializer.cc
 )
 
-SET(LTNETEXECUTE_LINKLIBS
-  ${Tcmalloc_LIBRARIES}
-  ${ZLIB_LIBRARIES}
-  ltnet
-  ltbase
-  3rd
-  coro
-  pthread
-)
-
-SET(LTNET_DEPENDENCY ltbase)
-
 ADD_LIBRARY(ltnet STATIC ${LTNET_SOURCE})
 ltio_default_properties(ltnet)
 
@@ -74,44 +62,88 @@ set_target_properties(ltnet PROPERTIES CLEAN_DIRECT_OUTPUT 1)
 set_target_properties(ltnet_shared PROPERTIES CLEAN_DIRECT_OUTPUT 1)
 
 add_dependencies(ltnet
-  ${LTNET_DEPENDENCY}
-)
-
-link_libraries(
-  ${LTNETEXECUTE_LINKLIBS}
-)
+  ltbase
+  )
 
 ADD_SUBDIRECTORY(unittests)
 
 ADD_EXECUTABLE(rapid_bench_client
   test/rapid_bench_client.cc
-)
+  )
+target_link_libraries(rapid_bench_client
+  ${LtIO_LINKER_LIBS}
+  PUBLIC ltnet
+  PUBLIC ltbase
+  )
 
 ADD_EXECUTABLE(reuseport_test
   test/reuseport_test.cc
-)
+  )
+target_link_libraries(reuseport_test
+  ${LtIO_LINKER_LIBS}
+  PUBLIC ltnet
+  PUBLIC ltbase
+  )
+
 ADD_EXECUTABLE(acceptor_test
   test/acceptor_test.cc
-)
+  )
+target_link_libraries(acceptor_test
+  ${LtIO_LINKER_LIBS}
+  PUBLIC ltnet
+  PUBLIC ltbase
+  )
+
 ADD_EXECUTABLE(ioservice_test
   test/io_service_test.cc
-)
+  )
+target_link_libraries(ioservice_test
+  ${LtIO_LINKER_LIBS}
+  PUBLIC ltnet
+  PUBLIC ltbase
+  )
+
 ADD_EXECUTABLE(client_test
   test/client_test.cc
-)
+  )
+target_link_libraries(client_test
+  ${LtIO_LINKER_LIBS}
+  PUBLIC ltnet
+  PUBLIC ltbase
+  )
+
 ADD_EXECUTABLE(fw_rapid_server
   test/fw_rapid_server.cc
-)
+  )
+target_link_libraries(fw_rapid_server
+  ${LtIO_LINKER_LIBS}
+  PUBLIC ltnet
+  PUBLIC ltbase
+  )
+
 ADD_EXECUTABLE(new_server_model
   test/new_server_model.cc
-)
+  )
 target_link_libraries(new_server_model
-  ${LTNETEXECUTE_LINKLIBS}
-)
+  ${LtIO_LINKER_LIBS}
+  PUBLIC ltnet
+  PUBLIC ltbase
+  )
 
 ADD_EXECUTABLE(raw_client
   test/raw_client.cc
-)
+  )
+target_link_libraries(raw_client
+  ${LtIO_LINKER_LIBS}
+  PUBLIC ltnet
+  PUBLIC ltbase
+  )
+
 ADD_EXECUTABLE(rapid_client
   test/fw_rapid_client.cc
-)
+  )
+target_link_libraries(rapid_client
+  ${LtIO_LINKER_LIBS}
+  PUBLIC ltnet
+  PUBLIC ltbase
+  )

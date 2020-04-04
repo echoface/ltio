@@ -37,7 +37,7 @@ if (NOT __GLOG_INCLUDED)
       UPDATE_COMMAND ""
       INSTALL_DIR ${gflags_INSTALL}
       PATCH_COMMAND autoreconf -i ${glog_PREFIX}/src/glog
-      CONFIGURE_COMMAND env "CFLAGS=${GLOG_C_FLAGS}" "CXXFLAGS=${GLOG_CXX_FLAGS}" ${glog_PREFIX}/src/glog/configure --prefix=${glog_INSTALL} --enable-shared=no --enable-static=yes --with-gflags=${GFLAGS_LIBRARY_DIRS}/..
+      CONFIGURE_COMMAND env "CFLAGS=${GLOG_C_FLAGS}" "CXXFLAGS=${GLOG_CXX_FLAGS}" ${glog_PREFIX}/src/glog/configure --prefix=${glog_INSTALL} --enable-shared=yes --enable-static=no --with-gflags=${GFLAGS_LIBRARY_DIRS}/..
       LOG_DOWNLOAD 1
       LOG_CONFIGURE 1
       LOG_INSTALL 1
@@ -45,7 +45,7 @@ if (NOT __GLOG_INCLUDED)
 
     set(GLOG_FOUND TRUE)
     set(GLOG_INCLUDE_DIRS ${glog_INSTALL}/include)
-    set(GLOG_LIBRARIES ${GFLAGS_LIBRARIES} ${glog_INSTALL}/lib/libglog.a)
+    set(GLOG_LIBRARIES ${GFLAGS_LIBRARIES} -lunwind ${glog_INSTALL}/lib/libglog.a)
     set(GLOG_LIBRARY_DIRS ${glog_INSTALL}/lib)
     set(GLOG_EXTERNAL TRUE)
 

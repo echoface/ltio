@@ -6,12 +6,13 @@ set(BUILD_TESTING OFF CACHE BOOL "enable glog uinittest functionality" FORCE)
 ADD_SUBDIRECTORY(resp)
 ADD_SUBDIRECTORY(libcoro)
 
-#ADD_SUBDIRECTORY(gflags)
-#option (WITH_GFLAGS "Use gflags" OFF)
-##set(CMAKE_SKIP_INSTALL_RULES ON CACHE BOOL "disable glog install action" FORCE)
-#ADD_SUBDIRECTORY(glog)
+#set_source_files_properties(md5/md5.c PROPERTIES LANGUAGE CXX)
+#set_source_files_properties(urlsafe64/urlsafe64.c PROPERTIES LANGUAGE CXX)
+#set_source_files_properties(http_parser/http_parser.c PROPERTIES LANGUAGE CXX)
+#set_source_files_properties(timeout/timeout.c PROPERTIES LANGUAGE CXX)
+#set_source_files_properties(timeout/timeout-bitops.c PROPERTIES LANGUAGE CXX)
 
-SET(LT_THIRDPARTY_SRC
+ADD_LIBRARY(3rd STATIC
   urlsafe64/urlsafe64.c
   tinyxml2/tinyxml2.cpp
   http_parser/http_parser.c
@@ -24,8 +25,4 @@ SET(LT_THIRDPARTY_SRC
   # timeout wheel
   timeout/timeout.c
   timeout/timeout-bitops.c
-)
-
-ADD_LIBRARY(3rd STATIC
-  ${LT_THIRDPARTY_SRC}
 )

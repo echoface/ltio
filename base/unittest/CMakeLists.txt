@@ -7,6 +7,6 @@ ADD_EXECUTABLE(base_unittest
   repeat_timer_unittest.cc
 )
 TARGET_LINK_LIBRARIES(base_unittest
-  ltbase
-  ${LTBASE_LINKLIBS}
+  ${LtIO_LINKER_LIBS}
+  PRIVATE ltbase
 )
