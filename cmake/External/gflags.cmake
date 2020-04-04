@@ -11,10 +11,8 @@ if (NOT __GFLAGS_INCLUDED) # guard against multiple includes
 
     # build directory
     set(gflags_PREFIX ${CMAKE_BINARY_DIR}/external/gflags-prefix)
-    MESSAGE(STATUS " gflags_PREFIX:" ${gflags_PREFIX})
     # install directory
     set(gflags_INSTALL ${CMAKE_BINARY_DIR}/external/gflags-install)
-    MESSAGE(STATUS " gflags_INSTALL:" ${gflags_INSTALL})
 
     # we build gflags statically, but want to link it into the caffe shared library
     # this requires position-independent code
