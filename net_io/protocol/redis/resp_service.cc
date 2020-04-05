@@ -109,7 +109,7 @@ void RespService::OnChannelReady(const SocketChannel* ch) {
     return ProtoService::OnChannelReady(ch);
   }
 
-  if (!SendRequestMessage(request.get())) {
+  if (!EncodeToChannel(request.get())) {
     init_wait_res_flags_ = InitWaitFlags::kWaitNone;
     return CloseService();
   }
@@ -127,7 +127,7 @@ const RefProtocolMessage RespService::NewHeartbeat() {
   return RefCast(ProtocolMessage, request);
 }
 
-bool RespService::SendRequestMessage(ProtocolMessage* message) {
+bool RespService::EncodeToChannel(ProtocolMessage* message) {
   if (message->GetMessageType() != MessageType::kRequest) {
     LOG(ERROR) << __FUNCTION__ << " only client side supported";
     return false;
@@ -143,7 +143,7 @@ bool RespService::SendRequestMessage(ProtocolMessage* message) {
   return false;
 }
 
-bool RespService::SendResponseMessage(const ProtocolMessage* req, ProtocolMessage* res) {
+bool RespService::EncodeResponseToChannel(const ProtocolMessage* req, ProtocolMessage* res) {
 	LOG(FATAL) << __FUNCTION__ << " resp only client service supported";
   return false;
 };

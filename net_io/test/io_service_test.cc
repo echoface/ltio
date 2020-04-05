@@ -16,10 +16,10 @@ public:
   }
   ~TcpProtoService() {
   }
-  bool SendRequestMessage(ProtocolMessage* message) override {
+  bool EncodeToChannel(ProtocolMessage* message) override {
     return true;
   };
-  bool SendResponseMessage(const ProtocolMessage* req, ProtocolMessage* res) override {
+  bool EncodeResponseToChannel(const ProtocolMessage* req, ProtocolMessage* res) override {
     return true;
   };
 

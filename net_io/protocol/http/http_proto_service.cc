@@ -206,7 +206,7 @@ bool HttpProtoService::RequestToBuffer(const HttpRequest* request, IOBuffer* buf
   return true;
 }
 
-bool HttpProtoService::SendRequestMessage(ProtocolMessage* message) {
+bool HttpProtoService::EncodeToChannel(ProtocolMessage* message) {
 	CHECK(message->GetMessageType() == MessageType::kRequest);
 
   auto request = static_cast<HttpRequest*>(message);
@@ -219,7 +219,7 @@ bool HttpProtoService::SendRequestMessage(ProtocolMessage* message) {
   return channel_->Send(buffer.GetRead(), buffer.CanReadSize()) >= 0;
 }
 
-bool HttpProtoService::SendResponseMessage(const ProtocolMessage* req, ProtocolMessage* res) {
+bool HttpProtoService::EncodeResponseToChannel(const ProtocolMessage* req, ProtocolMessage* res) {
   HttpResponse* response = static_cast<HttpResponse*>(res);
   const HttpRequest* request = static_cast<const HttpRequest*>(req);
 

@@ -30,10 +30,10 @@ public:
   static bool ResponseToBuffer(const HttpResponse*, IOBuffer*);
 
   void BeforeSendRequest(HttpRequest*);
-  bool SendRequestMessage(ProtocolMessage* message) override;
+  bool EncodeToChannel(ProtocolMessage* message) override;
 
   bool BeforeSendResponseMessage(const HttpRequest*, HttpResponse*);
-  bool SendResponseMessage(const ProtocolMessage* req, ProtocolMessage* res) override;
+  bool EncodeResponseToChannel(const ProtocolMessage* req, ProtocolMessage* res) override;
 
   const RefProtocolMessage NewResponse(const ProtocolMessage*) override;
 private:

@@ -30,10 +30,11 @@ public:
 
 class Connector {
 public:
-  Connector(base::MessageLoop* loop, ConnectorDelegate* delegate);
+  Connector(base::EventPump* pump, ConnectorDelegate* delegate);
   ~Connector() {};
 
   void Stop();
+
   //TODO: add a connect timeout
   bool Launch(const net::SocketAddr &address);
 
@@ -44,7 +45,7 @@ private:
   void CleanUpBadChannel(base::RefFdEvent& event);
 
 private:
-  base::MessageLoop* loop_;
+  base::EventPump* pump_;
   ConnectorDelegate* delegate_;
   std::set<base::RefFdEvent> connecting_sockets_;
 };

@@ -22,8 +22,8 @@ bool ParseURI(const std::string, SchemeIpPort& out);
 bool HostResolve(const std::string& host, std::string& host_ip);
 
 typedef std::unordered_map<std::string, std::string> QueryMap;
-typedef struct {
-  uint16_t port;
+typedef struct RemoteInfo{
+  uint16_t port = 0;
   std::string user;
   std::string passwd;
   std::string host;
@@ -39,6 +39,7 @@ typedef struct {
     protocol.clear();
     querys.clear();
   }
+  std::string HostIpPort() const;
 } RemoteInfo;
 /* uniform uri parse: http://user:password@host:port?arg1=1&arg2=2
  * protocol://user:password@hots:port?query_string*/

@@ -70,11 +70,11 @@ public:
   template<class T>
   typename T::element_type::ResponseType* SendRecieve(T& m) {
     RefProtocolMessage message = std::static_pointer_cast<ProtocolMessage>(m);
-    return (typename T::element_type::ResponseType*)(SendClientRequest(message));
+    return (typename T::element_type::ResponseType*)(DoRequest(message));
   }
-  ProtocolMessage* SendClientRequest(RefProtocolMessage& message);
+  ProtocolMessage* DoRequest(RefProtocolMessage& message);
 
-  bool AsyncSendRequest(RefProtocolMessage& req, AsyncCallBack);
+  bool AsyncDoRequest(RefProtocolMessage& req, AsyncCallBack);
 
   // notified from connector
   void OnClientConnectFailed() override;

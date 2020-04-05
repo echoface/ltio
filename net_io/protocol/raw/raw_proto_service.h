@@ -37,7 +37,7 @@ class RawProtoService : public ProtoService {
         auto response = NewHeartbeat();
         response->SetAsyncId(message->AsyncId());
         if (response) {
-          SendResponseMessage(message.get(), response.get());
+          EncodeResponseToChannel(message.get(), response.get());
         }
       } else if (delegate_) {
         delegate_->OnProtocolMessage(RefCast(ProtocolMessage, message));
@@ -62,7 +62,7 @@ class RawProtoService : public ProtoService {
   bool KeepSequence() override { return RawMessageType::KeepQueue();};
   bool KeepHeartBeat() override {return RawMessageType::WithHeartbeat();}
 
-  bool SendRequestMessage(ProtocolMessage* message) override {
+  bool EncodeToChannel(ProtocolMessage* message) override {
     RawMessageType* request = static_cast<RawMessageType*>(message);
     CHECK(request->GetMessageType() == MessageType::kRequest);
 
@@ -70,7 +70,7 @@ class RawProtoService : public ProtoService {
     return request->EncodeTo(channel_.get());
   };
 
-  bool SendResponseMessage(const ProtocolMessage* req, ProtocolMessage* res) override {
+  bool EncodeResponseToChannel(const ProtocolMessage* req, ProtocolMessage* res) override {
     auto raw_response = static_cast<RawMessageType*>(res);
     auto raw_request = static_cast<const RawMessageType*>(req);
     CHECK(raw_request->AsyncId() == raw_response->AsyncId());

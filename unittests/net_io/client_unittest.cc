@@ -144,7 +144,7 @@ TEST_CASE("client.async", "[http client]") {
     request->InsertHeader("Host", "127.0.0.1");
     request->InsertHeader("User-Agent", "curl/7.58.0");
     auto message = std::static_pointer_cast<net::ProtocolMessage>(request);
-    http_client.AsyncSendRequest(message, callback);
+    http_client.AsyncDoRequest(message, callback);
 
   }), 500);
 

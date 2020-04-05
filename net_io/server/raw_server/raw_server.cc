@@ -27,7 +27,7 @@ void RawServerContext::do_response(const RefProtocolMessage& response) {
   base::MessageLoop* io = service->IOLoop();
 
   if (io->IsInLoopThread()) {
-    bool success = service->SendResponseMessage(request_.get(), response.get());
+    bool success = service->EncodeResponseToChannel(request_.get(), response.get());
     if (!success) {
       service->CloseService();
     }
@@ -35,7 +35,7 @@ void RawServerContext::do_response(const RefProtocolMessage& response) {
   }
 
   auto functor = [=]() {
-    bool success = service->SendResponseMessage(request_.get(), response.get());
+    bool success = service->EncodeResponseToChannel(request_.get(), response.get());
     if (!success) {
       service->CloseService();
     }

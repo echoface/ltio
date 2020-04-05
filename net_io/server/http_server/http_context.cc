@@ -61,7 +61,7 @@ void HttpContext::DoReplyResponse(RefHttpResponse& response) {
     auto req = request_;
 
     auto functor = [=]() {
-      bool success = service->SendResponseMessage(req.get(), response.get());
+      bool success = service->EncodeResponseToChannel(req.get(), response.get());
       if (!keep_alive || !success) {
         service->CloseService();
       }
@@ -70,7 +70,7 @@ void HttpContext::DoReplyResponse(RefHttpResponse& response) {
     return;
   }
 
-  bool success = service->SendResponseMessage(request_.get(), response.get());
+  bool success = service->EncodeResponseToChannel(request_.get(), response.get());
   if (!keep_alive || !success) {
     service->CloseService();
   }
