@@ -1,3 +1,4 @@
+#include "base/message_loop/message_loop.h"
 #include "line_message.h"
 #include "line_proto_service.h"
 
@@ -8,8 +9,8 @@
 namespace lt {
 namespace net {
 
-LineProtoService::LineProtoService()
-  : ProtoService() {
+LineProtoService::LineProtoService(base::MessageLoop* loop)
+  : ProtoService(loop) {
 }
 
 LineProtoService::~LineProtoService() {
@@ -23,6 +24,7 @@ void LineProtoService::OnDataFinishSend(const SocketChannel* channel) {
 }
 
 void LineProtoService::OnDataReceived(const SocketChannel*, IOBuffer *buf) {
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << " enter";
   const char* line_crlf =  buf->FindCRLF();
   if (!line_crlf) {
     return;

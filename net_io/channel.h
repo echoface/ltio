@@ -6,10 +6,12 @@
 #define LIGHTINGIO_NET_CHANNEL_H
 
 #include "address.h"
+#include "base/message_loop/event_pump.h"
 #include "io_buffer.h"
 #include "net_callback.h"
 #include "base/base_micro.h"
 #include "base/message_loop/message_loop.h"
+#include <cstdint>
 
 // socket chennel interface and base class
 namespace lt {
@@ -31,8 +33,9 @@ public:
     virtual void OnChannelClosed(const SocketChannel*) = 0;
     virtual void OnDataReceived(const SocketChannel*, IOBuffer *) = 0;
   }Reciever;
+
 public:
-  void Start();
+  void StartChannel();
   void SetReciever(SocketChannel::Reciever* consumer);
 
   /* return -1 when error,
@@ -45,8 +48,6 @@ public:
    * 2. directly unregiste fdevent from pump and close socket*/
   virtual void ShutdownChannel(bool half_close) = 0;
 
-  base::MessageLoop* IOLoop() const {return io_loop_;}
-  bool InIOLoop() const {return io_loop_->IsInLoopThread();};
   bool IsConnected() const {return status_ == Status::CONNECTED;};
 
   std::string ChannelInfo() const;
@@ -56,19 +57,23 @@ protected:
   SocketChannel(int socket_fd,
                 const SocketAddr& loc,
                 const SocketAddr& peer,
-                base::MessageLoop* loop);
-  virtual ~SocketChannel() {}
+                base::EventPump* pump);
+  virtual ~SocketChannel() {
+    CHECK(status_ == Status::CLOSED);
+  }
 
   void setup_channel();
   void close_channel();
+  int32_t binded_fd() const;
+  std::string local_name() const;
+  std::string remote_name() const;
 
   void SetChannelStatus(Status st);
 
-  /* channel relative things should happened on io_loop*/
-  base::MessageLoop* io_loop_;
+  /* channel-relatived pump for event notify */
+  base::EventPump* pump_;
 
   bool schedule_shutdown_ = false;
-  Status status_ = Status::CLOSED;
 
   base::RefFdEvent fd_event_;
 
@@ -81,6 +86,9 @@ protected:
   IOBuffer out_buffer_;
 
   SocketChannel::Reciever* reciever_ = NULL;
+private:
+  Status status_ = Status::CONNECTING;
+
   DISALLOW_COPY_AND_ASSIGN(SocketChannel);
 };
 

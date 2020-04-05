@@ -1,6 +1,7 @@
 #ifndef NET_RAW_PROTO_SERVICE_H
 #define NET_RAW_PROTO_SERVICE_H
 
+#include "base/message_loop/message_loop.h"
 #include "raw_message.h"
 
 #include <net_io/protocol/proto_service.h>
@@ -15,12 +16,15 @@ class RawProtoService : public ProtoService {
   typedef T RawMessageType;
   typedef std::shared_ptr<T> RawMessageTypePtr;
 
-  RawProtoService() : ProtoService() {}
+  RawProtoService(base::MessageLoop* loop)
+    : ProtoService(loop) {
+  }
   ~RawProtoService(){};
 
   void AfterChannelClosed() override { ; }
   // override from ProtoService
   void OnDataReceived(const SocketChannel*, IOBuffer* buffer) override {
+    VLOG(GLOG_VTRACE) << __FUNCTION__ << " enter";
     do {
       RawMessageTypePtr message = RawMessageType::Decode(buffer, IsServerSide());
       if (!message) {

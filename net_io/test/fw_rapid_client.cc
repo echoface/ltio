@@ -3,6 +3,7 @@
 #include <functional>
 #include <glog/logging.h>
 #include <gflags/gflags.h>
+#include "base/message_loop/message_loop.h"
 #include "net_io/clients/client.h"
 #include "base/coroutine/coroutine_runner.h"
 #include "net_io/protocol/raw/raw_proto_service.h"
@@ -33,10 +34,11 @@ int main(int argc, char** argv) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   base::MessageLoop mainloop;
 
-  net::ProtoServiceFactory::Instance().RegisterCreator("rapid", []() -> net::RefProtoService {
-    auto service = std::make_shared<net::RawProtoService<FwRapidMessage>>();
-    return std::static_pointer_cast<net::ProtoService>(service);
-  });
+  net::ProtoServiceFactory::RegisterCreator(
+    "rapid", [](base::MessageLoop* loop) -> net::RefProtoService {
+      auto service = std::make_shared<net::RawProtoService<FwRapidMessage>>(loop);
+      return std::static_pointer_cast<net::ProtoService>(service);
+    });
 
   net::ClientConfig config;
   net::url::RemoteInfo server_info;

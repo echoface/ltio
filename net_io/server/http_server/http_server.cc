@@ -53,7 +53,7 @@ void HttpServer::ServeAddress(const std::string address, HttpMessageHandler hand
     LOG(ERROR) << "address format error,eg [http://xx.xx.xx.xx:port]";
     CHECK(false);
   }
-  if (!ProtoServiceFactory::Instance().HasProtoServiceCreator(sch_ip_port.protocol)) {
+  if (!ProtoServiceFactory::HasCreator(sch_ip_port.protocol)) {
     LOG(ERROR) << "No ProtoServiceCreator Find for protocol scheme:" << sch_ip_port.protocol;
     CHECK(false);
   }

@@ -3,6 +3,7 @@
 #include "tcp_channel.h"
 
 #include "base/base_constants.h"
+#include "base/message_loop/event_pump.h"
 #include "glog/logging.h"
 #include "base/closure/closure_task.h"
 #include <base/utils/sys_error.h>
@@ -14,18 +15,17 @@ namespace net {
 RefTcpChannel TcpChannel::Create(int socket_fd,
                                  const SocketAddr& local,
                                  const SocketAddr& peer,
-                                 base::MessageLoop* loop) {
+                                 base::EventPump* pump) {
 
   //std::make_shared<TcpChannel>(socket_fd, local, peer, loop);
-  return RefTcpChannel(new TcpChannel(socket_fd, local, peer, loop));
+  return RefTcpChannel(new TcpChannel(socket_fd, local, peer, pump));
 }
 
 TcpChannel::TcpChannel(int socket_fd,
                        const SocketAddr& loc,
                        const SocketAddr& peer,
-                       base::MessageLoop* loop)
-  : SocketChannel(socket_fd, loc, peer, loop) {
-  CHECK(io_loop_);
+                       base::EventPump* pump)
+  : SocketChannel(socket_fd, loc, peer, pump) {
 
   fd_event_->SetReadCallback(std::bind(&TcpChannel::HandleRead, this));
   fd_event_->SetWriteCallback(std::bind(&TcpChannel::HandleWrite, this));
@@ -35,7 +35,6 @@ TcpChannel::TcpChannel(int socket_fd,
 
 TcpChannel::~TcpChannel() {
   VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
-  CHECK(status_ == Status::CLOSED);
 }
 
 void TcpChannel::HandleRead() {
@@ -49,6 +48,7 @@ void TcpChannel::HandleRead() {
     if (bytes_read > 0) {
 
       in_buffer_.Produce(bytes_read);
+      VLOG(GLOG_VTRACE) << __FUNCTION__ << " call reciever_->OnDataReceived:" << bytes_read;
       reciever_->OnDataReceived(this, &in_buffer_);
 
     } else if (0 == bytes_read) {
@@ -58,6 +58,7 @@ void TcpChannel::HandleRead() {
 
     } else if (bytes_read == -1) {
       if (errno == EAGAIN || errno == EWOULDBLOCK) {
+        VLOG(GLOG_VTRACE) << __FUNCTION__ << "EAGAIN, EWOULDBLOCK";
         break;
       }
       LOG(ERROR) << __FUNCTION__ << ChannelInfo() << " read error:" << base::StrError();
@@ -108,35 +109,42 @@ void TcpChannel::HandleError() {
 }
 
 void TcpChannel::HandleClose() {
-  DCHECK(io_loop_->IsInLoopThread());
+  DCHECK(pump_->IsInLoopThread());
+
   VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
 
-  RefTcpChannel guard(shared_from_this());
-  if (Status() == Status::CLOSED) {
-    return;
+  if (!IsConnected()) {
+    return reciever_->OnChannelClosed(this);
   }
+
+  //avoid in callback delete/free it
+  RefTcpChannel guard(shared_from_this());
   close_channel();
 }
 
 void TcpChannel::ShutdownChannel(bool half_close) {
-  CHECK(InIOLoop());
+  CHECK(pump_->IsInLoopThread());
+
   VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
 
-  if (status_ == Status::CLOSED) {
-    return;
+  if (!IsConnected()) {
+    return reciever_->OnChannelClosed(this);
   }
 
   schedule_shutdown_ = true;
   SetChannelStatus(Status::CLOSING);
   if (half_close && fd_event_->IsWriteEnable()) {
     schedule_shutdown_ = false;
-  } else {
-    HandleClose();
+    return;
   }
+
+  //avoid in callback delete/free it
+  RefTcpChannel guard(shared_from_this());
+  close_channel();
 }
 
 int32_t TcpChannel::Send(const char* data, const int32_t len) {
-  DCHECK(io_loop_->IsInLoopThread());
+  DCHECK(pump_->IsInLoopThread());
 
   if (!IsConnected()) {
     return -1;

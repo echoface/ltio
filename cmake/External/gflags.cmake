@@ -23,6 +23,7 @@ if (NOT __GFLAGS_INCLUDED) # guard against multiple includes
     set(GFLAGS_CXX_FLAGS ${CMAKE_CXX_FLAGS} ${GFLAGS_EXTRA_COMPILER_FLAGS})
     set(GFLAGS_C_FLAGS ${CMAKE_C_FLAGS} ${GFLAGS_EXTRA_COMPILER_FLAGS})
 
+    MESSAGE(STATUS "CMAKE_BUILD_TYPE: ${DCMAKE_BUILD_TYPE}")
     ExternalProject_Add(gflags
       PREFIX ${gflags_PREFIX}
       GIT_REPOSITORY "https://gitee.com/ltecho/gflags.git"
@@ -31,7 +32,8 @@ if (NOT __GFLAGS_INCLUDED) # guard against multiple includes
       INSTALL_DIR ${gflags_INSTALL}
       CMAKE_ARGS -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
                  -DCMAKE_INSTALL_PREFIX=${gflags_INSTALL}
-                 -DBUILD_SHARED_LIBS=OFF
+                 -DBUILD_SHARED_LIBS=ON
+                 -DBUILD_gflags_LIB=ON
                  -DBUILD_STATIC_LIBS=ON
                  -DBUILD_PACKAGING=OFF
                  -DBUILD_TESTING=OFF
@@ -46,7 +48,7 @@ if (NOT __GFLAGS_INCLUDED) # guard against multiple includes
 
     set(GFLAGS_FOUND TRUE)
     set(GFLAGS_INCLUDE_DIRS ${gflags_INSTALL}/include)
-    set(GFLAGS_LIBRARIES ${gflags_INSTALL}/lib/libgflags.a ${CMAKE_THREAD_LIBS_INIT})
+    set(GFLAGS_LIBRARIES ${gflags_INSTALL}/lib/libgflags.so ${CMAKE_THREAD_LIBS_INIT})
     set(GFLAGS_LIBRARY_DIRS ${gflags_INSTALL}/lib)
     set(GFLAGS_EXTERNAL TRUE)
 

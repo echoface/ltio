@@ -8,8 +8,6 @@ ltio_default_properties(component_unittest)
 #set_target_properties(component_unittest PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
 TARGET_LINK_LIBRARIES(component_unittest
-  ${LtIO_LINKER_LIBS}
-  PRIVATE ltnet
-  PRIVATE ltbase
-  PRIVATE ltcomponent
+  PUBLIC ltcomponent
+  PUBLIC ${UNITTESTS_BINARY_DEPS}
   )

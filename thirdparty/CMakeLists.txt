@@ -26,3 +26,9 @@ ADD_LIBRARY(3rd STATIC
   timeout/timeout.c
   timeout/timeout-bitops.c
 )
+ltio_default_properties(3rd)
+
+# NOTE: archive all thirdparty static library to lib3rd
+#target_link_libraries(3rd
+#  coro
+#  )

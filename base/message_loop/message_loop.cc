@@ -19,6 +19,7 @@
 
 #include <sys/eventfd.h>
 
+#include "base/base_constants.h"
 #include "timeout_event.h"
 #include "file_util_linux.h"
 #include <base/time/time_utils.h>
@@ -164,7 +165,8 @@ void MessageLoop::ThreadMain() {
   event_pump_.InstallFdEvent(task_event_.get());
   event_pump_.InstallFdEvent(wakeup_event_.get());
 
-  LOG(INFO) << "MessageLoop: [" << loop_name_ << "] Start Running";
+  //LOG(INFO) << "MessageLoop: [" << loop_name_ << "] Start Running";
+  VLOG(GLOG_VINFO) << "MessageLoop: [" << loop_name_ << "] Start Running";
 
   //delegate_->BeforeLoopRun();
   event_pump_.Run();

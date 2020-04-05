@@ -1,6 +1,7 @@
 #ifndef NET_LINE_PROTO_SERVICE_H
 #define NET_LINE_PROTO_SERVICE_H
 
+#include "base/message_loop/message_loop.h"
 #include <net_io/protocol/proto_service.h>
 
 namespace lt {
@@ -8,7 +9,7 @@ namespace net {
 
 class LineProtoService : public ProtoService {
 public:
-  LineProtoService();
+  LineProtoService(base::MessageLoop* loop);
   ~LineProtoService();
 
   // override from ProtoService

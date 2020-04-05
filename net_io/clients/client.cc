@@ -3,6 +3,7 @@
 #include "base/base_constants.h"
 #include "base/utils/string/str_utils.h"
 #include "base/coroutine/coroutine_runner.h"
+#include "glog/logging.h"
 
 namespace lt {
 namespace net {
@@ -109,8 +110,10 @@ void Client::OnNewClientConnected(int socket_fd, SocketAddr& local, SocketAddr& 
 
   base::MessageLoop* io_loop = next_client_io_loop();
 
-  auto proto_service = ProtoServiceFactory::Create(remote_info_.protocol, false);
-  proto_service->BindToSocket(socket_fd, local, remote, io_loop);
+  auto proto_service =
+    ProtoServiceFactory::NewClientService(remote_info_.protocol, io_loop);
+
+  proto_service->BindToSocket(socket_fd, local, remote);
 
   auto client_channel = CreateClientChannel(this, proto_service);
   client_channel->SetRequestTimeout(config_.message_timeout);
@@ -181,26 +184,32 @@ void Client::OnRequestGetResponse(const RefProtocolMessage& request,
 bool Client::AsyncSendRequest(RefProtocolMessage& req, AsyncCallBack callback) {
   base::MessageLoop* worker = base::MessageLoop::Current();
   if (!worker) {
-    LOG(ERROR) << " can't request here out of a MessageLoop";
+    LOG(ERROR) << __FUNCTION__ << " Only Work IN MessageLoop";
     return false;
   }
 
-  //important: avoid self holder for capture list
-  ProtocolMessage* raw_request = req.get();
+  //IMPORTANT: avoid self holder for capture list
+  ProtocolMessage* request = req.get();
   base::StlClosure resumer = [=]() {
     if (worker->IsInLoopThread()) {
-      callback(raw_request->RawResponse());
-      return;
+      callback(request->RawResponse());
+    } else {
+      auto responser = std::bind(callback, request->RawResponse());
+      worker->PostTask(NewClosure(responser));
     }
-    worker->PostTask(NewClosure(std::bind(callback, raw_request->RawResponse())));
   };
 
   req->SetWorkerCtx(worker, std::move(resumer));
   req->SetRemoteHost(remote_info_.host);
 
   RefClientChannel client = get_ready_channel();
+  if (!client) {
+    return false;
+  }
+
   base::MessageLoop* io = client->IOLoop();
-  return io->PostTask(NewClosure(std::bind(&ClientChannel::SendRequest, client, req)));
+  return io->PostTask(
+    NewClosure(std::bind(&ClientChannel::SendRequest, client, req)));
 }
 
 ProtocolMessage* Client::SendClientRequest(RefProtocolMessage& message) {

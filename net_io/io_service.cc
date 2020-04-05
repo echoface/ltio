@@ -90,7 +90,7 @@ void IOService::OnNewConnection(int fd, const SocketAddr& peer_addr) {
     return;
   }
 
-  RefProtoService proto_service = ProtoServiceFactory::Create(protocol_, true);
+  RefProtoService proto_service = ProtoServiceFactory::NewServerService(protocol_, io_loop);
   if (!proto_service) {
     LOG(ERROR) << "no proto parser or no message handler, close this connection.";
     socketutils::CloseSocket(fd);
@@ -99,7 +99,7 @@ void IOService::OnNewConnection(int fd, const SocketAddr& peer_addr) {
   SocketAddr local_addr(socketutils::GetLocalAddrIn(fd));
 
   proto_service->SetDelegate(this);
-  proto_service->BindToSocket(fd, local_addr, peer_addr, io_loop);
+  proto_service->BindToSocket(fd, local_addr, peer_addr);
   proto_service->Initialize();
 
   StoreProtocolService(proto_service);

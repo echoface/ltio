@@ -1,3 +1,4 @@
+#include "base/message_loop/message_loop.h"
 #include "http_constants.h"
 #include "http_proto_service.h"
 
@@ -41,10 +42,10 @@ http_parser_settings HttpProtoService::res_parser_settings_ = {
   .on_chunk_complete = &ResParseContext::OnChunkFinished,
 };
 
-HttpProtoService::HttpProtoService()
-  : ProtoService(),
-    request_context_(NULL),
-    response_context_(NULL) {
+HttpProtoService::HttpProtoService(base::MessageLoop* loop)
+  : ProtoService(loop),
+    request_context_(nullptr),
+    response_context_(nullptr) {
 
   request_context_ = new ReqParseContext();
   response_context_ = new ResParseContext();
@@ -61,8 +62,9 @@ void HttpProtoService::OnStatusChanged(const SocketChannel* channel) {
 void HttpProtoService::OnDataFinishSend(const SocketChannel* channel) {
 }
 
-void HttpProtoService::OnDataReceived(const SocketChannel* channel, IOBuffer *buf) {;
+void HttpProtoService::OnDataReceived(const SocketChannel* channel, IOBuffer *buf) {
   DCHECK(channel == channel_.get());
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << " enter";
   bool success = IsServerSide() ? ParseHttpRequest(channel_, buf) : ParseHttpResponse(channel_, buf);
   if (!success) {
   	CloseService();
@@ -80,6 +82,7 @@ bool HttpProtoService::ParseHttpRequest(const RefTcpChannel& channel, IOBuffer* 
                                        buffer_start,
                                        buffer_size);
 
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << " http_parser_execute consumed size:" << nparsed;
   buf->Consume(nparsed);
 
   if (parser->upgrade) {
@@ -116,6 +119,7 @@ bool HttpProtoService::ParseHttpRequest(const RefTcpChannel& channel, IOBuffer* 
 }
 
 bool HttpProtoService::ParseHttpResponse(const RefTcpChannel& channel, IOBuffer* buf) {
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << " enter";
 
   size_t buffer_size = buf->CanReadSize();
   const char* buffer_start = (const char*)buf->GetRead();

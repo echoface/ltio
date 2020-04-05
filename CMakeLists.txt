@@ -9,13 +9,14 @@ set(CMAKE_CONFIG_DIR ${LightingIO_SOURCE_DIR}/cmake)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CONFIG_DIR}/Modules)
 
 option(LTIO_BUILD_EXAMPLES "Build UNITTEST" ON)
-option(LTIO_BUILD_UNITTESTS "Build UNITTEST" OFF)
+option(LTIO_BUILD_UNITTESTS "Build UNITTEST" ON)
 option(LTIO_BUILD_SHARED_LIBS "Build shared libraries" ON)
 
 include(ExternalProject)
 include(GNUInstallDirs)
 
 include(${CMAKE_CONFIG_DIR}/common.cmake)
+MESSAGE(STATUS "BEFORE CMAKE_BUILD_TYPE:" ${CMAKE_BUILD_TYPE})
 include(${CMAKE_CONFIG_DIR}/dependency.cmake)
 include(${CMAKE_CONFIG_DIR}/include.cmake)
 #include(${CMAKE_CONFIG_DIR}/googletest.cmake)

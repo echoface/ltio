@@ -1,6 +1,7 @@
 #ifndef _NET_PROTOCOL_RESP_SERVICE_H_H
 #define _NET_PROTOCOL_RESP_SERVICE_H_H
 
+#include "base/message_loop/message_loop.h"
 #include "redis_response.h"
 
 #include <net_io/protocol/proto_service.h>
@@ -23,7 +24,7 @@ public:
     kWaitSelectDB = 0x01 << 1,
   } InitWaitFlags;
 
-  RespService();
+  RespService(base::MessageLoop* loop);
   ~RespService();
 
   void OnStatusChanged(const SocketChannel*) override;

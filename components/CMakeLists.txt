@@ -41,11 +41,3 @@ set_target_properties(ltcomponent_shared PROPERTIES OUTPUT_NAME "ltcomponent")
 
 set_target_properties(ltcomponent PROPERTIES CLEAN_DIRECT_OUTPUT 1)
 set_target_properties(ltcomponent_shared PROPERTIES CLEAN_DIRECT_OUTPUT 1)
-
-TARGET_LINK_LIBRARIES(ltcomponent
-  ${LtIO_LINKER_LIBS}
-	ltbase
-	ltnet
-	3rd
-)
-

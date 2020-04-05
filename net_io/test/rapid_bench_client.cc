@@ -3,6 +3,7 @@
 #include <functional>
 #include <glog/logging.h>
 #include <gflags/gflags.h>
+#include "base/message_loop/message_loop.h"
 #include "net_io/clients/client.h"
 #include "net_io/protocol/raw/raw_proto_service.h"
 #include "net_io/protocol/proto_service_factory.h"
@@ -32,8 +33,9 @@ static std::atomic_int io_round_count;
 class SampleApp: public net::ClientDelegate{
   public:
     SampleApp() {
-      net::ProtoServiceFactory::Instance().RegisterCreator("rapid", []() -> net::RefProtoService {
-        auto service = std::make_shared<net::RawProtoService<FwRapidMessage>>();
+      net::ProtoServiceFactory::RegisterCreator(
+        "rapid", [](base::MessageLoop* loop) -> net::RefProtoService {
+        auto service = std::make_shared<net::RawProtoService<FwRapidMessage>>(loop);
         return std::static_pointer_cast<net::ProtoService>(service);
       });
     }

@@ -53,7 +53,7 @@ public:
   // a change for close all inprogress request
   virtual void BeforeCloseChannel() = 0;
   //override from ProtoServiceDelegate
-  const url::RemoteInfo* GetRemoteInfo() const;
+  const url::RemoteInfo* GetRemoteInfo() const override;
   void OnProtocolServiceGone(const RefProtoService& service) override;
   void OnProtocolServiceReady(const RefProtoService& service) override;
 protected:

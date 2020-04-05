@@ -33,7 +33,7 @@ if (NOT __GLOG_INCLUDED)
       DEPENDS ${GLOG_DEPENDS}
       PREFIX ${glog_PREFIX}
       GIT_REPOSITORY "https://gitee.com/ltecho/glog.git"
-      GIT_TAG "v0.4.0"
+      GIT_TAG "v0.3.5"
       UPDATE_COMMAND ""
       INSTALL_DIR ${gflags_INSTALL}
       PATCH_COMMAND autoreconf -i ${glog_PREFIX}/src/glog
@@ -49,7 +49,8 @@ if (NOT __GLOG_INCLUDED)
 
     set(GLOG_FOUND TRUE)
     set(GLOG_INCLUDE_DIRS ${glog_INSTALL}/include)
-    set(GLOG_LIBRARIES ${GFLAGS_LIBRARIES} ${glog_INSTALL}/lib/libglog.a)
+    set(GLOG_LIBRARY ${glog_INSTALL}/lib/libglog.so)
+    set(GLOG_LIBRARIES ${GFLAGS_LIBRARIES} ${glog_INSTALL}/lib/libglog.so)
     set(GLOG_LIBRARY_DIRS ${glog_INSTALL}/lib)
     set(GLOG_EXTERNAL TRUE)
 

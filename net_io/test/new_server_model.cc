@@ -1,4 +1,5 @@
 #include <vector>
+#include "gflags/gflags.h"
 #include "net_io/clients/client.h"
 #include "net_io/clients/client_connector.h"
 #include "net_io/protocol/redis/redis_request.h"
@@ -19,14 +20,14 @@ using namespace base;
 
 #define USE_CORO_DISPATCH 1
 
-DEFINE_string(raw, "0.0.0.0:5006", "host:port used for raw service listen on");
+DEFINE_string(raw, "0.0.0.0:5005", "host:port used for raw service listen on");
 DEFINE_string(http, "0.0.0.0:5006", "host:port used for http service listen on");
 DEFINE_string(redis, "0.0.0.0:6379", "host:port used for redis client connected");
 
 DEFINE_bool(redis_client, false, "wheather enable redis client");
 DEFINE_bool(raw_client, false, "wheather enable self connected http client");
 DEFINE_bool(http_client, true, "wheather enable self connected raw client");
-
+DEFINE_int32(loops, 4, "how many loops use for handle message and io");
 
 void DumpRedisResponse(RedisResponse* redis_response);
 net::ClientConfig DeafaultClientConfig(int count = 2) {
@@ -43,20 +44,12 @@ base::MessageLoop main_loop;
 class SampleApp: public net::ClientDelegate {
 public:
   SampleApp() {
-    int loop_count = std::min(8, int(std::thread::hardware_concurrency()));
-    for (int i = 0; i < loop_count; i++) {
-      auto loop = new(base::MessageLoop);
-      loop->SetLoopName("io_" + std::to_string(i));
-      loop->Start();
-      loops.push_back(loop);
-    }
 
 #ifdef USE_CORO_DISPATCH
     dispatcher_ = new net::CoroDispatcher(true);
 #else
     dispatcher_ = new net::Dispatcher(true);
 #endif
-    dispatcher_->SetWorkerLoops(loops);
   }
 
   ~SampleApp() {
@@ -71,6 +64,17 @@ public:
       delete loop;
     }
     loops.clear();
+  }
+
+  void Initialize() {
+    int loop_count = std::min(FLAGS_loops, int(std::thread::hardware_concurrency()));
+    for (int i = 0; i < loop_count; i++) {
+      auto loop = new(base::MessageLoop);
+      loop->SetLoopName("io_" + std::to_string(i));
+      loop->Start();
+      loops.push_back(loop);
+    }
+    dispatcher_->SetWorkerLoops(loops);
   }
 
   base::MessageLoop* NextIOLoopForClient() {
@@ -286,13 +290,15 @@ void signalHandler( int signum ){
 }
 int main(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
-
   gflags::SetUsageMessage("usage: exec --http=ip:port --raw=ip:port --noredis_client ...");
+
   //google::InitGoogleLogging(argv[0]);
   //google::SetVLOGLevel(NULL, 26);
 
   main_loop.SetLoopName("main");
   main_loop.Start();
+
+  app.Initialize();
 
   net::RawServer raw_server;
   net::RawServer* rserver = &raw_server;

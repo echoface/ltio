@@ -7,7 +7,5 @@ ADD_EXECUTABLE(net_unittest
 )
 
 TARGET_LINK_LIBRARIES(net_unittest
-  ${LtIO_LINKER_LIBS}
-	ltnet
-  ltbase
+  PUBLIC ${UNITTESTS_BINARY_DEPS}
 )

@@ -86,7 +86,7 @@ void RawServer::ServeAddress(const std::string address, RawMessageHandler handle
     LOG(ERROR) << "address format error,eg [raw://xx.xx.xx.xx:port]";
     CHECK(false);
   }
-  if (!ProtoServiceFactory::Instance().HasProtoServiceCreator(sch_ip_port.protocol)) {
+  if (!ProtoServiceFactory::HasCreator(sch_ip_port.protocol)) {
     LOG(ERROR) << "No ProtoServiceCreator Find for protocol scheme:" << sch_ip_port.protocol;
     CHECK(false);
   }

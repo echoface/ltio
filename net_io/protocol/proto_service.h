@@ -1,6 +1,7 @@
 #ifndef _NET_PROTOCOL_SERVICE_H_H
 #define _NET_PROTOCOL_SERVICE_H_H
 
+#include "base/message_loop/message_loop.h"
 #include "proto_message.h"
 
 #include <net_io/url_utils.h>
@@ -24,22 +25,20 @@ public:
 class ProtoService : public SocketChannel::Reciever,
                      public EnableShared(ProtoService) {
 public:
-  ProtoService();
-  virtual ~ProtoService();
+  ProtoService(base::MessageLoop* loop);
+  virtual ~ProtoService() {};
 
   void SetDelegate(ProtoServiceDelegate* d);
+
   /* this can be override
    * if need difference channel type,
    * eg SSLChannel, UdpChannel */
-  virtual bool BindToSocket(int fd,
-                            const SocketAddr& local,
-                            const SocketAddr& peer,
-                            base::MessageLoop* loop);
+  virtual bool BindToSocket(int fd, const SocketAddr& local, const SocketAddr& peer);
 
   virtual void Initialize();
 
   TcpChannel* Channel() {return channel_.get();};
-  base::MessageLoop* IOLoop() {return channel_ ? channel_->IOLoop() : NULL;}
+  base::MessageLoop* IOLoop() const { return binded_loop_;}
 
   void CloseService();
   bool IsConnected() const;
@@ -76,7 +75,8 @@ protected:
 
   bool server_side_;
   RefTcpChannel channel_;
-  ProtoServiceDelegate* delegate_ = NULL;
+  ProtoServiceDelegate* delegate_ = nullptr;
+  base::MessageLoop* binded_loop_ = nullptr;
 };
 
 }}

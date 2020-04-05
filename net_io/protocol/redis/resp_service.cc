@@ -1,5 +1,6 @@
 
 #include <cstring>
+#include "base/message_loop/message_loop.h"
 #include "resp_service.h"
 #include "redis_request.h"
 
@@ -11,8 +12,8 @@
 namespace lt {
 namespace net {
 
-RespService::RespService()
-  : ProtoService() {
+RespService::RespService(base::MessageLoop* loop)
+  : ProtoService(loop) {
 }
 
 RespService::~RespService() {
@@ -25,6 +26,7 @@ void RespService::OnDataFinishSend(const SocketChannel*) {
 }
 
 void RespService::OnDataReceived(const SocketChannel* channel, IOBuffer *buffer) {
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << " enter";
   CHECK(!IsServerSide());
 
   if (!current_response) {

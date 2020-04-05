@@ -1,3 +1,4 @@
+#include "base/message_loop/message_loop.h"
 #include "glog/logging.h"
 #include "net_io/tcp_channel.h"
 #include "net_io/io_service.h"
@@ -11,7 +12,7 @@ namespace net {
 class TcpProtoService : public ProtoService {
 public:
   TcpProtoService() :
-    ProtoService() {
+    ProtoService(nullptr) {
   }
   ~TcpProtoService() {
   }
@@ -63,7 +64,8 @@ public:
   void Start() {
     RegisterExitSignal();
 
-    ProtoServiceFactory::Instance().RegisterCreator("tcp", []()->ProtoServicePtr {
+    ProtoServiceFactory::RegisterCreator(
+      "tcp", [](base::MessageLoop*)->ProtoServicePtr {
       return ProtoServicePtr(new TcpProtoService);
     });
 
