@@ -38,6 +38,8 @@ class MaglevHelper {
     * weight (the measurment of how often we would see this endpoint
     * on CH ring) and hash value, which will be used as a seed value
     * (it should be unique value per endpoint for CH to work as expected)
+    *
+    * HuanGong: weight 不能大于ring size, 否则排序不对
     */
    struct Endpoint {
      uint32_t num;

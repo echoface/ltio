@@ -526,7 +526,7 @@ TEST_CASE("client.redis_client", "[redis client]") {
       return;
     }
 
-    net::ClientPtr client(new net::Client(&loop, server_info));
+    net::RefClient client(new net::Client(&loop, server_info));
     client->SetDelegate(&router_delegate);
     client->Initialize(config);
 
@@ -555,7 +555,7 @@ TEST_CASE("client.redis_client", "[redis client]") {
       redis_request->Persist("counter");
       redis_request->TTL("counter");
 */
-      net::Client* redis_client = router.GetNextClient("", redis_request.get());
+      net::RefClient redis_client = router.GetNextClient("", redis_request.get());
       LOG(INFO) << "use redis client:" << redis_client->ClientInfo();
 
       net::RedisResponse* redis_response  = redis_client->SendRecieve(redis_request);
@@ -566,7 +566,6 @@ TEST_CASE("client.redis_client", "[redis client]") {
       }
     }
 
-    router.StopAllClients();
     loop.QuitLoop();
   };
 
@@ -614,7 +613,7 @@ TEST_CASE("client.ringhash_router", "[redis ringhash router client]") {
       return;
     }
 
-    net::ClientPtr client(new net::Client(&loop, server_info));
+    net::RefClient client(new net::Client(&loop, server_info));
     client->SetDelegate(&router_delegate);
     client->Initialize(config);
 
@@ -631,7 +630,7 @@ TEST_CASE("client.ringhash_router", "[redis ringhash router client]") {
 
       redis_request->Incr("counter");
 
-      net::Client* redis_client = router.GetNextClient(key, redis_request.get());
+      net::RefClient redis_client = router.GetNextClient(key, redis_request.get());
 
       CHECK(redis_client);
 
@@ -643,7 +642,6 @@ TEST_CASE("client.ringhash_router", "[redis ringhash router client]") {
       }
     }
 
-    router.StopAllClients();
     loop.QuitLoop();
   };
 
@@ -685,7 +683,7 @@ TEST_CASE("client.redis_heartbeat", "[redis client heartbeat]") {
       return;
     }
 
-    net::ClientPtr client(new net::Client(&loop, server_info));
+    net::RefClient client(new net::Client(&loop, server_info));
     client->SetDelegate(&router_delegate);
     client->Initialize(config);
 
@@ -694,7 +692,6 @@ TEST_CASE("client.redis_heartbeat", "[redis client heartbeat]") {
 
   sleep(10);
   co_go &loop << [&]() {
-    router.StopAllClients();
     loop.QuitLoop();
   };
   loop.WaitLoopEnd();

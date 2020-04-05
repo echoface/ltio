@@ -16,26 +16,23 @@ public:
   HashRouter() {};
   virtual ~HashRouter() {};
 
-  void StopAllClients() override {
-    for (auto& client : clients_) {
-      client->Finalize();
-    }
-  }
-
-  void AddClient(ClientPtr&& client) override {
-    LOG(INFO) << __FUNCTION__ << " c:" << client.get();
+  //only call AddClient before use it
+  void AddClient(RefClient&& client) override {
+    LOG(INFO) << __FUNCTION__ << ", client:" << client->ClientInfo();
     clients_.push_back(std::move(client));
-  }
+  };
 
-  Client* GetNextClient(const std::string& key,
-                        ProtocolMessage* request) override {
-    uint64_t value = hasher_(key);
-    LOG(INFO) << __FUNCTION__ << " value:" << value << " idx:" << value % clients_.size();
-    return clients_[value % clients_.size()].get();
-  }
+  RefClient GetNextClient(const std::string& hash_key,
+                          ProtocolMessage* hint_message = NULL) override {
+
+    uint64_t value = hasher_(hash_key);
+    RefClient client = clients_[value % clients_.size()];
+    return client;
+  };
+
 private:
   Hasher hasher_;
-  std::vector<ClientPtr> clients_;
+  std::vector<RefClient> clients_;
 };
 
 }} //end lt::net

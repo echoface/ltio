@@ -11,21 +11,25 @@
 namespace lt {
 namespace net {
 
-typedef std::unique_ptr<Client> ClientPtr;
+
+REF_TYPEDEFINE(Client);
 /**
+ * Router:
  * ClientRouter manager a group of client(a client has N connection)
- * Decide the client choose strategy
+ *
+ * route reqeust to diffrent client do network request
  * */
 class ClientRouter {
 public:
   ClientRouter() {};
   virtual ~ClientRouter() {};
 
-  virtual void StopAllClients() = 0;
-
-  virtual void AddClient(ClientPtr&& client) = 0;
-  virtual Client* GetNextClient(const std::string& key,
-                                ProtocolMessage* request = NULL) = 0;
+  //** some of router need re-calculate values and adjustment
+  //** after StartRouter, DO NOT AddClient ANY MORE
+  virtual void StartRouter() {};
+  virtual void AddClient(RefClient&& client) = 0;
+  virtual RefClient GetNextClient(const std::string& hash_key,
+                                  ProtocolMessage* hint_message = NULL) = 0;
 };
 
 }}//lt::net

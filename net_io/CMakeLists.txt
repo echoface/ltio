@@ -11,6 +11,7 @@ set(LTNET_SOURCE
   socket_utils.cc
   socket_acceptor.cc
   url_utils.cc
+
   #protocol
   protocol/proto_message.cc
   protocol/proto_service.cc
@@ -36,12 +37,13 @@ set(LTNET_SOURCE
   server/http_server/http_context.cc
 
   #clients source
+  clients/client.cc
   clients/client_channel.cc
   clients/async_channel.cc
   clients/queued_channel.cc
   clients/client_connector.cc
-  clients/client.cc
-  clients/router/client_router.cc
+
+  # client rounter
   clients/router/maglev.cc
   clients/router/hash_router.h
   clients/router/maglev_router.cc

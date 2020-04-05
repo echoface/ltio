@@ -67,7 +67,7 @@ TEST_CASE("client.hashrouter", "[http client]") {
       return;
     }
 
-    lt::net::ClientPtr client(new lt::net::Client(&loop, server_info));
+    lt::net::RefClient client(new lt::net::Client(&loop, server_info));
     client->SetDelegate(&router_delegate);
     client->Initialize(config);
     router.AddClient(std::move(client));
@@ -75,7 +75,7 @@ TEST_CASE("client.hashrouter", "[http client]") {
 
   for (int i = 0; i < 10; i++) {
     std::string key = std::to_string(i);
-    lt::net::Client* c = router.GetNextClient(key, NULL);
+    lt::net::RefClient c = router.GetNextClient(key, NULL);
     LOG_IF(INFO, c != NULL) << "client:" << c;
   }
   loop.WaitLoopEnd();
