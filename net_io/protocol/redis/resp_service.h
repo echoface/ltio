@@ -20,6 +20,7 @@ class RedisResponse;
 class RespService : public ProtoService {
 public:
   typedef enum _ {
+    kWaitNone     = 0x0,
     kWaitAuth     = 0x01,
     kWaitSelectDB = 0x01 << 1,
   } InitWaitFlags;

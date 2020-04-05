@@ -29,13 +29,13 @@ public:
   virtual ~ProtoService() {};
 
   void SetDelegate(ProtoServiceDelegate* d);
+  /* this can be override for create diffrent type SocketChannel,
+   * eg SSLChannel, UdpChannel, ....... */
+  virtual bool BindToSocket(int fd,
+                            const SocketAddr& local,
+                            const SocketAddr& peer);
 
-  /* this can be override
-   * if need difference channel type,
-   * eg SSLChannel, UdpChannel */
-  virtual bool BindToSocket(int fd, const SocketAddr& local, const SocketAddr& peer);
-
-  virtual void Initialize();
+  virtual void StartProtocolService();
 
   TcpChannel* Channel() {return channel_.get();};
   base::MessageLoop* IOLoop() const { return binded_loop_;}

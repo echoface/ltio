@@ -15,7 +15,7 @@ namespace net {
 
 class AsyncChannel;
 
-typedef std::shared_ptr<AsyncChannel> RefAsyncChannel;
+REF_TYPEDEFINE(AsyncChannel);
 
 class AsyncChannel : public ClientChannel,
                      public EnableShared(AsyncChannel) {
@@ -23,7 +23,7 @@ public:
 	static RefAsyncChannel Create(Delegate*, const RefProtoService&);
   ~AsyncChannel();
 
-  void StartClient() override;
+  void StartClientChannel() override;
   void SendRequest(RefProtocolMessage request) override;
 private:
 	AsyncChannel(Delegate*, const RefProtoService&);

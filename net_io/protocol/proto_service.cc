@@ -29,9 +29,10 @@ bool ProtoService::BindToSocket(int fd,
   return true;
 }
 
-void ProtoService::Initialize() {
+void ProtoService::StartProtocolService() {
+  CHECK(binded_loop_->IsInLoopThread());
+
   channel_->StartChannel();
-  //on client side, do the setup-things(auth,login,db) when channel ready callback
 }
 
 void ProtoService::CloseService() {

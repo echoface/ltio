@@ -23,15 +23,15 @@ RefClientChannel CreateClientChannel(ClientChannel::Delegate* delegate,
 ClientChannel::ClientChannel(Delegate* d, const RefProtoService& service)
 		: delegate_(d),
 		  protocol_service_(service) {
+  protocol_service_->SetDelegate(this);
 }
 
 ClientChannel::~ClientChannel() {
   protocol_service_->SetDelegate(NULL);
 }
 
-void ClientChannel::StartClient() {
-  protocol_service_->SetDelegate(this);
-  protocol_service_->Initialize();
+void ClientChannel::StartClientChannel() {
+  protocol_service_->StartProtocolService();
 }
 
 void ClientChannel::Close() {

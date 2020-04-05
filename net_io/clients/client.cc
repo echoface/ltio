@@ -30,16 +30,6 @@ void Client::SetDelegate(ClientDelegate* delegate) {
   delegate_ = delegate;
 }
 
-Client* Client::Use(Interceptor* interceptor) {
-  interceptors_.push_back(interceptor);
-  return this;
-}
-
-Client* Client::Use(InterceptArgList interceptors) {
-  interceptors_.insert(interceptors_.end(), interceptors.begin(), interceptors.end());
-  return this;
-}
-
 void Client::Initialize(const ClientConfig& config) {
   config_ = config;
   for (uint32_t i = 0; i < config_.connections; i++) {
@@ -112,16 +102,21 @@ void Client::OnNewClientConnected(int socket_fd, SocketAddr& local, SocketAddr& 
 
   auto proto_service =
     ProtoServiceFactory::NewClientService(remote_info_.protocol, io_loop);
-
   proto_service->BindToSocket(socket_fd, local, remote);
 
   auto client_channel = CreateClientChannel(this, proto_service);
   client_channel->SetRequestTimeout(config_.message_timeout);
 
-  client_channel->StartClient();
-  VLOG(GLOG_VINFO) << __FUNCTION__ << ClientInfo() << " connected, initializing...";
-
   in_use_channels_->push_back(client_channel);
+
+  //这里的交互界面是Connector 《== 》与ClientChannel
+  if (io_loop->IsInLoopThread()) {
+    client_channel->StartClientChannel();
+  } else {
+    io_loop->PostTask(NewClosure(
+        std::bind(&ClientChannel::StartClientChannel, client_channel)));
+  }
+  VLOG(GLOG_VINFO) << __FUNCTION__ << ClientInfo() << " connected, initializing...";
 }
 
 void Client::OnClientChannelInited(const ClientChannel* channel) {;

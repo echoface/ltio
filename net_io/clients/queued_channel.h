@@ -20,7 +20,7 @@ public:
 	static RefQueuedChannel Create(Delegate*, const RefProtoService&);
   ~QueuedChannel();
 
-  void StartClient() override;
+  void StartClientChannel() override;
   void SendRequest(RefProtocolMessage request) override;
 private:
 	QueuedChannel(Delegate*, const RefProtoService&);

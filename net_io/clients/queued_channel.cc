@@ -17,9 +17,10 @@ QueuedChannel::QueuedChannel(Delegate* d, const RefProtoService& service)
 QueuedChannel::~QueuedChannel() {
 }
 
-void QueuedChannel::StartClient() {
-  //common part
-  ClientChannel::StartClient();
+void QueuedChannel::StartClientChannel() {
+  ClientChannel::StartClientChannel();
+
+  // Do other thing for initialize
 }
 
 void QueuedChannel::SendRequest(RefProtocolMessage request)  {

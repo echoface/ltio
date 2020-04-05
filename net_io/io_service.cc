@@ -74,37 +74,46 @@ void IOService::StopIOService() {
 }
 
 void IOService::OnNewConnection(int fd, const SocketAddr& peer_addr) {
-
   CHECK(accept_loop_->IsInLoopThread());
+
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << " connect apply from:" << peer_addr.IpPort();
 
   //check connection limit and others
   if (!delegate_->CanCreateNewChannel()) {
-    socketutils::CloseSocket(fd);
-    LOG(INFO) << "Max Channels Limit, Current Has:[" << protocol_services.size() << "] Channels";
-    return;
+    LOG(INFO) << __FUNCTION__ << " Stop accept new connection"
+      << ", current has:[" << protocol_services.size() << "]";
+    return socketutils::CloseSocket(fd);
   }
 
   base::MessageLoop* io_loop = delegate_->GetNextIOWorkLoop();
   if (!io_loop) {
-    socketutils::CloseSocket(fd);
-    return;
+    LOG(INFO) << __FUNCTION__ << " No IOLoop handle this connect request";
+    return socketutils::CloseSocket(fd);
   }
 
-  RefProtoService proto_service = ProtoServiceFactory::NewServerService(protocol_, io_loop);
+  RefProtoService proto_service =
+    ProtoServiceFactory::NewServerService(protocol_, io_loop);
+
   if (!proto_service) {
-    LOG(ERROR) << "no proto parser or no message handler, close this connection.";
-    socketutils::CloseSocket(fd);
-    return;
+    LOG(ERROR) << __FUNCTION__ << " scheme:" << protocol_ << " NOT-FOUND";
+    return socketutils::CloseSocket(fd);
   }
+
   SocketAddr local_addr(socketutils::GetLocalAddrIn(fd));
 
   proto_service->SetDelegate(this);
   proto_service->BindToSocket(fd, local_addr, peer_addr);
-  proto_service->Initialize();
 
+  if (io_loop->IsInLoopThread()) {
+    proto_service->StartProtocolService();
+  } else {
+    io_loop->PostTask(NewClosure(
+        std::bind(&ProtoService::StartProtocolService, proto_service)));
+  }
   StoreProtocolService(proto_service);
 
-  VLOG(GLOG_VTRACE) << " New Connection from:" << peer_addr.IpPort() << " establisted";
+  VLOG(GLOG_VTRACE) << __FUNCTION__
+    << " Connection from:" << peer_addr.IpPort() << " establisted";
 }
 
 void IOService::OnProtocolMessage(const RefProtocolMessage& message) {

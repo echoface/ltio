@@ -16,9 +16,9 @@ AsyncChannel::AsyncChannel(Delegate* d, const RefProtoService& s)
 AsyncChannel::~AsyncChannel() {
 }
 
-void AsyncChannel::StartClient() {
+void AsyncChannel::StartClientChannel() {
   //common part
-  ClientChannel::StartClient();
+  ClientChannel::StartClientChannel();
 }
 
 void AsyncChannel::SendRequest(RefProtocolMessage request)  {

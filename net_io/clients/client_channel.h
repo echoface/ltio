@@ -13,7 +13,8 @@ namespace net {
 
 class ClientChannel;
 
-typedef std::shared_ptr<ClientChannel> RefClientChannel;
+REF_TYPEDEFINE(ClientChannel);
+
 class ClientChannel : public ProtoServiceDelegate {
 public:
   class Delegate {
@@ -36,7 +37,7 @@ public:
   ClientChannel(Delegate* d, const RefProtoService& service);
   virtual ~ClientChannel();
 
-  virtual void StartClient();
+  virtual void StartClientChannel();
   virtual void SendRequest(RefProtocolMessage request) = 0;
 
   void Close();

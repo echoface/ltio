@@ -91,10 +91,9 @@ void RespService::OnChannelReady(const SocketChannel* ch) {
   if (!delegate_ || !delegate_->GetRemoteInfo()) {
     return ProtoService::OnChannelReady(ch);
   }
-  const url::RemoteInfo* info = delegate_->GetRemoteInfo();
+  const auto info = delegate_->GetRemoteInfo();
 
   auto request = std::make_shared<RedisRequest>();
-
   if (!info->passwd.empty()) {
     request->Auth(info->passwd);
     init_wait_res_flags_ |= InitWaitFlags::kWaitAuth;
@@ -111,6 +110,7 @@ void RespService::OnChannelReady(const SocketChannel* ch) {
   }
 
   if (!SendRequestMessage(request.get())) {
+    init_wait_res_flags_ = InitWaitFlags::kWaitNone;
     return CloseService();
   }
   next_incoming_count_ = request->CmdCount();
@@ -120,16 +120,19 @@ const RefProtocolMessage RespService::NewHeartbeat() {
   if (IsServerSide()) {
     return NULL;
   }
+
   auto request = std::make_shared<RedisRequest>();
+
   request->AsHeartbeat();
   return RefCast(ProtocolMessage, request);
 }
 
 bool RespService::SendRequestMessage(ProtocolMessage* message) {
   if (message->GetMessageType() != MessageType::kRequest) {
-    LOG(ERROR) << " only redis client side protocol supported";
+    LOG(ERROR) << __FUNCTION__ << " only client side supported";
     return false;
   }
+
   CHECK(next_incoming_count_ == 0);
 
   RedisRequest* request = (RedisRequest*)message;
@@ -141,7 +144,7 @@ bool RespService::SendRequestMessage(ProtocolMessage* message) {
 }
 
 bool RespService::SendResponseMessage(const ProtocolMessage* req, ProtocolMessage* res) {
-	LOG(FATAL) << __FUNCTION__ << " should not reached here, resp only client service supported";
+	LOG(FATAL) << __FUNCTION__ << " resp only client service supported";
   return false;
 };
 
