@@ -33,42 +33,40 @@ SET(BASE_SOURCES
   closure/location.cc
 )
 
-SET(LTBASE_LINKLIBS
-  3rd
-  coro
-  pthread
-  timeout
-  ${GLOG_LIBRARY}
-  ${ZLIB_LIBRARIES}
-)
-
 ADD_LIBRARY(ltbase STATIC ${BASE_SOURCES})
-ADD_LIBRARY(ltbase_shared SHARED ${BASE_SOURCES})
+ltio_default_properties(ltbase)
 
-TARGET_LINK_LIBRARIES(ltbase
-  ${LTBASE_LINKLIBS}
-)
-set_target_properties(ltbase_shared PROPERTIES OUTPUT_NAME "ltbase")
-# make shared library and static lib exist same time
-set_target_properties(ltbase PROPERTIES CLEAN_DIRECT_OUTPUT 1)
-set_target_properties(ltbase_shared PROPERTIES CLEAN_DIRECT_OUTPUT 1)
-
+if (LTIO_BUILD_SHARED_LIBS)
+  ADD_LIBRARY(ltbase_shared SHARED ${BASE_SOURCES})
+  ltio_default_properties(ltbase_shared)
+  set_target_properties(ltbase_shared PROPERTIES OUTPUT_NAME "ltbase")
+  # make shared library and static lib exist same time
+  set_target_properties(ltbase PROPERTIES CLEAN_DIRECT_OUTPUT 1)
+  set_target_properties(ltbase_shared PROPERTIES CLEAN_DIRECT_OUTPUT 1)
+endif(LTIO_BUILD_SHARED_LIBS)
 
 ADD_EXECUTABLE(eventloop_test
   message_loop/test/run_loop_test.cc
 )
 TARGET_LINK_LIBRARIES(eventloop_test
-  ltbase
-  ${LTBASE_LINKLIBS}
+  PUBLIC ltbase
+  PUBLIC 3rd
+  PUBLIC coro
+  PUBLIC ${GLOG_LIBRARIES}
+  ${LtIO_LINKER_LIBS}
+  PUBLIC ${GFLAGS_LIBRARIES}
+  PUBLIC ${LIBUNWIND_LIBRARIES}
 )
 
 ADD_EXECUTABLE(eventloop_benchmark
   message_loop/test/benchmark.cc
 )
 TARGET_LINK_LIBRARIES(eventloop_benchmark
-  ltbase
-  ${LTBASE_LINKLIBS}
+  PUBLIC ltbase
+  PUBLIC 3rd
+  PUBLIC coro
+  PUBLIC ${GLOG_LIBRARIES}
+  ${LtIO_LINKER_LIBS}
+  PUBLIC ${GFLAGS_LIBRARIES}
+  PUBLIC ${LIBUNWIND_LIBRARIES}
 )
-
-# build base unittest
-ADD_SUBDIRECTORY(unittest)

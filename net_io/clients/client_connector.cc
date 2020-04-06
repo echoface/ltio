@@ -6,18 +6,18 @@
 namespace lt {
 namespace net {
 
-Connector::Connector(base::MessageLoop* loop, ConnectorDelegate* delegate)
-  : loop_(loop),
-    delegate_(delegate) {
+Connector::Connector(base::EventPump* pump, ConnectorDelegate* d)
+  : pump_(pump),
+    delegate_(d) {
   CHECK(delegate_);
 }
 
 bool Connector::Launch(const net::SocketAddr &address) {
-  CHECK(loop_->IsInLoopThread());
+  CHECK(pump_->IsInLoopThread());
 
   int sock_fd = net::socketutils::CreateNonBlockingSocket(address.Family());
   if (sock_fd == -1) {
-    LOG(INFO) << __FUNCTION__ << " create none block socket failed";
+    LOG(ERROR) << __FUNCTION__ << " CreateNonBlockingSocket failed";
     return false;
   }
 
@@ -26,15 +26,24 @@ bool Connector::Launch(const net::SocketAddr &address) {
 
   bool success = false;
 
-  int state = 0;
-  socketutils::SocketConnect(sock_fd, sock_addr, &state);
+  int error = 0;
+  int ret = socketutils::SocketConnect(sock_fd, sock_addr, &error);
+  if (ret == 0 && error == 0) {
+    net::SocketAddr remote_addr(net::socketutils::GetPeerAddrIn(sock_fd));
+    net::SocketAddr local_addr(net::socketutils::GetLocalAddrIn(sock_fd));
+    if (delegate_) {
+      delegate_->OnNewClientConnected(sock_fd, local_addr, remote_addr);
+    } else {
+      net::socketutils::CloseSocket(sock_fd);
+    }
+    VLOG(GLOG_VTRACE) << __FUNCTION__ << " " << address.IpPort() << " connected at once";
+    return true;
+  }
 
-  switch(state) {
-    case 0:
+  switch(error) {
     case EINTR:
     case EISCONN:
     case EINPROGRESS: {
-
       success = true;
       base::RefFdEvent fd_event = base::FdEvent::Create(sock_fd, base::LtEv::LT_EVENT_NONE);
 
@@ -42,21 +51,26 @@ bool Connector::Launch(const net::SocketAddr &address) {
       fd_event->SetWriteCallback(std::bind(&Connector::OnWrite, this, weak_fd_event));
       fd_event->SetErrorCallback(std::bind(&Connector::OnError, this, weak_fd_event));
       fd_event->SetCloseCallback(std::bind(&Connector::OnError, this, weak_fd_event));
-      loop_->Pump()->InstallFdEvent(fd_event.get());
-      fd_event->EnableWriting();
 
+      fd_event->EnableWriting();
+      pump_->InstallFdEvent(fd_event.get());
       connecting_sockets_.insert(fd_event);
+
       VLOG(GLOG_VTRACE) << __FUNCTION__ << " " << address.IpPort() << " connecting";
     } break;
     default: {
       success = false;
-      LOG(ERROR) << __FUNCTION__ << " launch client connect failed:" << base::StrError(state);
-      net::socketutils::CloseSocket(sock_fd);
+      LOG(ERROR) << __FUNCTION__ << " launch connection failed:" << base::StrError(error);
     } break;
   }
-  if (!success && delegate_) {
-    delegate_->OnClientConnectFailed();
+
+  if (!success) {
+    if (delegate_) {
+      delegate_->OnClientConnectFailed();
+    }
+    net::socketutils::CloseSocket(sock_fd);
   }
+
   return success;
 }
 
@@ -79,7 +93,7 @@ void Connector::OnWrite(WeakPtrFdEvent weak_fdevent) {
     return;
   }
 
-  loop_->Pump()->RemoveFdEvent(fd_event.get());
+  pump_->RemoveFdEvent(fd_event.get());
   connecting_sockets_.erase(fd_event);
   if (delegate_) {
     fd_event->GiveupOwnerFd();
@@ -103,11 +117,12 @@ void Connector::OnError(WeakPtrFdEvent weak_fdevent) {
 }
 
 void Connector::Stop() {
-  CHECK(loop_->IsInLoopThread());
+  CHECK(pump_->IsInLoopThread());
+
   delegate_ = NULL;
-  for (base::RefFdEvent event : connecting_sockets_) {
+  for (auto& event : connecting_sockets_) {
     int socket_fd = event->fd();
-    loop_->Pump()->RemoveFdEvent(event.get());
+    pump_->RemoveFdEvent(event.get());
     net::socketutils::CloseSocket(socket_fd);
   }
   connecting_sockets_.clear();
@@ -116,7 +131,7 @@ void Connector::Stop() {
 void Connector::CleanUpBadChannel(base::RefFdEvent& event) {
 
   event->ResetCallback();
-  loop_->Pump()->RemoveFdEvent(event.get());
+  pump_->RemoveFdEvent(event.get());
 
   connecting_sockets_.erase(event);
   VLOG(GLOG_VINFO) << " connecting list size:" << connecting_sockets_.size();

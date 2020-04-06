@@ -44,9 +44,14 @@ int main(int argc, char** argv) {
 
   auto on_new_connection = [&](int fd, const net::SocketAddr& peer) {
     net::SocketAddr local(net::socketutils::GetLocalAddrIn(fd));
-    auto ch = net::TcpChannel::Create(fd, local, peer, &loop);
+    auto ch = net::TcpChannel::Create(fd, local, peer, loop.Pump());
     ch->SetReciever(&global_consumer);
-    ch->Start();
+
+    if (loop.IsInLoopThread()) {
+      ch->StartChannel();
+    } else {
+      loop.PostTask(NewClosure(std::bind(&net::TcpChannel::StartChannel, ch)));
+    }
 
     connections.insert(ch);
     LOG(INFO) << "channel:[" << ch->ChannelName() << "] connected, connections count:" << connections.size();

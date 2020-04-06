@@ -83,10 +83,11 @@ int main(int argc, char* argv[]) {
   main_loop.SetLoopName("main");
   main_loop.Start();
 
-  net::ProtoServiceFactory::Instance().RegisterCreator("rapid", []() -> net::RefProtoService {
-    auto service = std::make_shared<RawProtoService<FwRapidMessage>>();
-    return std::static_pointer_cast<ProtoService>(service);
-  });
+  net::ProtoServiceFactory::RegisterCreator(
+    "rapid", [](base::MessageLoop* loop) -> net::RefProtoService {
+      auto service = std::make_shared<RawProtoService<FwRapidMessage>>(loop);
+      return std::static_pointer_cast<ProtoService>(service);
+    });
 
   net::RawServer raw_server;
   net::RawServer* rserver = &raw_server;

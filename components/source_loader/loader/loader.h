@@ -4,7 +4,7 @@
 #include <string>
 #include <cinttypes>
 #include <iostream>
-#include <nlohmann/json.hpp>
+#include <thirdparty/nlohmann/json.hpp>
 
 namespace component {
 namespace sl {

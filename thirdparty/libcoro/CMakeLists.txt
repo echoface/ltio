@@ -1,11 +1,12 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.5)
 ADD_DEFINITIONS(-fPIC)
 
 include (CheckFunctionExists)
 include (CheckIncludeFiles)
 include (CheckSymbolExists)
 
-project (libcoro)
+project (libcoro VERSION 0.2.1 LANGUAGES C CXX)
+
 add_executable(coro_test test.c)
 add_library(coro coro.c coro.h)
 set_target_properties(coro PROPERTIES COMPILE_DEFINITIONS "CORO_ASM=1")

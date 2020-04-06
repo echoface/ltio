@@ -1,6 +1,7 @@
 #ifndef _NET_PROTOCOL_RESP_SERVICE_H_H
 #define _NET_PROTOCOL_RESP_SERVICE_H_H
 
+#include "base/message_loop/message_loop.h"
 #include "redis_response.h"
 
 #include <net_io/protocol/proto_service.h>
@@ -19,11 +20,12 @@ class RedisResponse;
 class RespService : public ProtoService {
 public:
   typedef enum _ {
+    kWaitNone     = 0x0,
     kWaitAuth     = 0x01,
     kWaitSelectDB = 0x01 << 1,
   } InitWaitFlags;
 
-  RespService();
+  RespService(base::MessageLoop* loop);
   ~RespService();
 
   void OnStatusChanged(const SocketChannel*) override;
@@ -31,10 +33,9 @@ public:
 
   void OnDataReceived(const SocketChannel*, IOBuffer *) override;
 
-	bool SendRequestMessage(ProtocolMessage* message) override;
-	bool SendResponseMessage(const ProtocolMessage* req, ProtocolMessage* res) override;
+	bool EncodeToChannel(ProtocolMessage* message) override;
+	bool EncodeResponseToChannel(const ProtocolMessage* req, ProtocolMessage* res) override;
 
-  //
   bool KeepHeartBeat() override {return true;}
   const RefProtocolMessage NewHeartbeat() override;
 protected:

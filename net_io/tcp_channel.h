@@ -4,6 +4,7 @@
 #include <memory>
 #include <functional>
 
+#include "base/message_loop/event_pump.h"
 #include "channel.h"
 #include "net_callback.h"
 #include "protocol/proto_message.h"
@@ -19,7 +20,7 @@ public:
   static RefTcpChannel Create(int socket_fd,
                               const SocketAddr& local,
                               const SocketAddr& peer,
-                              base::MessageLoop* loop);
+                              base::EventPump* pump);
   ~TcpChannel();
 
   void ShutdownChannel(bool half_close) override;
@@ -28,7 +29,7 @@ protected:
   TcpChannel(int socket_fd,
              const SocketAddr& loc,
              const SocketAddr& peer,
-             base::MessageLoop* loop);
+             base::EventPump* pump);
 
   void HandleRead();
   void HandleWrite();

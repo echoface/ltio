@@ -7,7 +7,7 @@
 #include "metrics_item.h"
 #include "metrics_define.h"
 #include "metrics_container.h"
-#include <concurrentqueue/blockingconcurrentqueue.h>
+#include <thirdparty/cameron_queue/blockingconcurrentqueue.h>
 
 namespace component {
 

@@ -6,10 +6,11 @@
 #include <chrono>             // std::chrono::seconds
 #include <mutex>              // std::mutex, std::unique_lock
 #include <cinttypes>
-#include <initializer_list>
 #include <condition_variable> // std::condition_variable, std::cv_status
 
 #include "client_base.h"
+#include "client_channel.h"
+#include "interceptor.h"
 #include "queued_channel.h"
 #include "client_connector.h"
 
@@ -24,6 +25,18 @@
 
 namespace lt {
 namespace net {
+
+/**
+ 设计上 Client 存在两个交互界面, 在扩展时设计上应该
+ 遵守这两个交互界面的设计, 避免出现不同loop建的耦合
+
+ - 一个来自Connector
+  - 处理来自connector的连接建立成功、失败、重试等逻辑
+
+ - 一个来自 Woker的请求与Response
+  - 处理请求/响应交互
+  - 处理来自连接初始化连接成功失败、状态变化等逻辑
+*/
 
 class Client;
 typedef std::shared_ptr<Client> RefClient;
@@ -44,16 +57,6 @@ public:
 class Client: public ConnectorDelegate,
               public ClientChannel::Delegate {
 public:
-  class Interceptor {
-    public:
-      Interceptor() {};
-      virtual ~Interceptor() {};
-    public:
-      //if has a response, return a response without call next, else call next for continue
-      virtual ProtocolMessage* Intercept(const Client* c, const ProtocolMessage* req) = 0;
-  };
-  typedef std::initializer_list<Interceptor*> InterceptArgList;
-
 public:
   Client(base::MessageLoop*, const url::RemoteInfo&);
   virtual ~Client();
@@ -67,11 +70,11 @@ public:
   template<class T>
   typename T::element_type::ResponseType* SendRecieve(T& m) {
     RefProtocolMessage message = std::static_pointer_cast<ProtocolMessage>(m);
-    return (typename T::element_type::ResponseType*)(SendClientRequest(message));
+    return (typename T::element_type::ResponseType*)(DoRequest(message));
   }
-  ProtocolMessage* SendClientRequest(RefProtocolMessage& message);
+  ProtocolMessage* DoRequest(RefProtocolMessage& message);
 
-  bool AsyncSendRequest(RefProtocolMessage& req, AsyncCallBack);
+  bool AsyncDoRequest(RefProtocolMessage& req, AsyncCallBack);
 
   // notified from connector
   void OnClientConnectFailed() override;
@@ -99,8 +102,12 @@ private:
   SocketAddr address_;
   const url::RemoteInfo remote_info_;
 
-  /* workloop mean: all client channel born & die, not mean
-   * clientchannel io_loop, client channel may work in other loop*/
+  /* NOTE:
+   * correct:
+   *  client channel born & die
+   * wrong:
+   *  clientchannel's io_loop
+   * */
   base::MessageLoop* work_loop_;
 
   std::atomic<bool> stopping_;
@@ -109,12 +116,13 @@ private:
   RefConnector connector_;
   ClientDelegate* delegate_;
   typedef std::vector<RefClientChannel> ClientChannelList;
-  typedef std::shared_ptr<ClientChannelList> RefClientChannelList;
 
   //a channels copy for client caller
   std::atomic<uint32_t> next_index_;
+
+  REF_TYPEDEFINE(ClientChannelList);
   RefClientChannelList in_use_channels_;
-  std::vector<Interceptor*> interceptors_;
+
   DISALLOW_COPY_AND_ASSIGN(Client);
 };
 

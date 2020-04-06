@@ -7,24 +7,34 @@
 #include <functional>
 #include <unordered_map>
 #include <net_io/net_callback.h>
+#include "base/message_loop/message_loop.h"
 
 namespace lt {
 namespace net {
 
-typedef std::function<RefProtoService()> ProtoserviceCreator;
+typedef std::function<RefProtoService (base::MessageLoop* loop)> ProtoserviceCreator;
 
 class ProtoServiceFactory {
 public:
-  static ProtoServiceFactory& Instance();
-  static RefProtoService Create(const std::string& proto, bool serve_server);
+  static RefProtoService NewServerService(const std::string& proto,
+                                          base::MessageLoop* loop);
+  static RefProtoService NewClientService(const std::string& proto,
+                                          base::MessageLoop* loop);
+
+  static bool HasCreator(const std::string&);
+
   // not thread safe,
   // this can cover the default protoservice or add new protocol support
-  bool HasProtoServiceCreator(const std::string&);
-  void RegisterCreator(const std::string, ProtoserviceCreator);
-
+  static void RegisterCreator(const std::string, ProtoserviceCreator);
+public:
   ProtoServiceFactory();
 private:
   void InitInnerDefault();
+
+  RefProtoService CreateProtocolService(const std::string&,
+                                        base::MessageLoop*,
+                                        bool server_service);
+
   std::unordered_map<std::string, ProtoserviceCreator> creators_;
 };
 

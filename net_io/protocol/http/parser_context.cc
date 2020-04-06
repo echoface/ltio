@@ -1,4 +1,5 @@
 #include "parser_context.h"
+#include "base/base_constants.h"
 #include "http_constants.h"
 
 #include "glog/logging.h"
@@ -47,6 +48,7 @@ http_parser* ReqParseContext::Parser() {
 int ReqParseContext::OnHttpRequestBegin(http_parser* parser) {
   ReqParseContext* context = (ReqParseContext*)parser->data;
   CHECK(context);
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << "enter";
 
   if (context->current_) {
     context->reset();
@@ -63,17 +65,20 @@ int ReqParseContext::OnUrlParsed(http_parser* parser, const char *url_start, siz
   ReqParseContext* context = (ReqParseContext*)parser->data;
   CHECK(context);
 
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << "on url parsed";
   context->current_->url_.append(url_start, url_len);
   return 0;
 }
 
 int ReqParseContext::OnStatusCodeParsed(http_parser* parser, const char *start, size_t len) {
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << "request should not reached here";
   return 0;
 }
 
 int ReqParseContext::OnHeaderFieldParsed(http_parser* parser, const char *header_start, size_t len) {
   ReqParseContext* context = (ReqParseContext*)parser->data;
   CHECK(context);
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << "enter";
 
   if (context->last_is_header_value) {
     if (!context->half_header.first.empty()) {
@@ -96,6 +101,7 @@ int ReqParseContext::OnHeaderValueParsed(http_parser* parser, const char *value_
     LOG(ERROR) << __FUNCTION__ << " Got A Empty HeaderFiled";
     return 0;
   }
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << " extract header value";
   context->half_header.second.append(value_start, len);
   return 0;
 }
@@ -103,6 +109,8 @@ int ReqParseContext::OnHeaderValueParsed(http_parser* parser, const char *value_
 int ReqParseContext::OnHeaderFinishParsed(http_parser* parser) {
   ReqParseContext* context = (ReqParseContext*)parser->data;
   CHECK(context);
+
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << " enter";
 
   if (!context->half_header.first.empty()) {
     context->current_->InsertHeader(context->half_header.first, context->half_header.second);
@@ -116,6 +124,7 @@ int ReqParseContext::OnHeaderFinishParsed(http_parser* parser) {
 
 int ReqParseContext::OnBodyParsed(http_parser* parser, const char *body_start, size_t len) {
   ReqParseContext* context = (ReqParseContext*)parser->data;
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << " enter";
 
   context->current_->MutableBody().append(body_start, len);
 
@@ -124,6 +133,8 @@ int ReqParseContext::OnBodyParsed(http_parser* parser, const char *body_start, s
 
 int ReqParseContext::OnHttpRequestEnd(http_parser* parser) {
   ReqParseContext* context = (ReqParseContext*)parser->data;
+
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << " enter";
 
   int type = parser->type;
   if (type != HTTP_REQUEST) {
@@ -160,6 +171,7 @@ int ReqParseContext::OnHttpRequestEnd(http_parser* parser) {
   //build params
   //extract host
 
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << " new message born";
   context->messages_.push_back(std::move(context->current_));
 
   context->current_.reset();

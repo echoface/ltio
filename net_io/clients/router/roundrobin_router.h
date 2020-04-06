@@ -11,12 +11,11 @@ class RoundRobinRouter : public ClientRouter {
     RoundRobinRouter() {};
     ~RoundRobinRouter() {};
 
-    void StopAllClients() override;
-    void AddClient(ClientPtr&& client) override;
-    Client* GetNextClient(const std::string& key,
-                          ProtocolMessage* request = NULL) override;
+    void AddClient(RefClient&& client) override;
+    RefClient GetNextClient(const std::string& key,
+                            ProtocolMessage* request = NULL) override;
   private:
-    std::vector<ClientPtr> clients_;
+    std::vector<RefClient> clients_;
     std::atomic_uint32_t round_index_;
 };
 

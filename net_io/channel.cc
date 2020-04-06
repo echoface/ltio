@@ -2,6 +2,9 @@
 // Created by gh on 18-12-5.
 //
 #include "channel.h"
+#include "base/base_constants.h"
+#include "base/message_loop/event_pump.h"
+#include "glog/logging.h"
 
 // socket chennel interface and base class
 namespace lt {
@@ -10,8 +13,8 @@ namespace net {
 SocketChannel::SocketChannel(int socket_fd,
                              const SocketAddr& loc,
                              const SocketAddr& peer,
-                             base::MessageLoop* loop)
-  : io_loop_(loop),
+                             base::EventPump* pump)
+  : pump_(pump),
     local_addr_(loc),
     peer_addr_(peer),
     name_(loc.IpPort()) {
@@ -22,56 +25,60 @@ SocketChannel::SocketChannel(int socket_fd,
 }
 
 void SocketChannel::SetReciever(SocketChannel::Reciever* rec) {
+  VLOG(GLOG_VTRACE) << " set reciever:" << rec << " fd:" << fd_event_->fd();
   reciever_ = rec;
 }
 
-void SocketChannel::Start() {
-  CHECK(fd_event_ && reciever_);
-  status_ = Status::CONNECTING;
+void SocketChannel::StartChannel() {
+  CHECK(fd_event_ &&
+        reciever_ &&
+        pump_->IsInLoopThread() &&
+        status_ == Status::CONNECTING);
 
-  auto t = std::bind(&SocketChannel::setup_channel, this);
-  io_loop_->PostTask(NewClosure(std::move(t)));
+  setup_channel();
 }
 
 void SocketChannel::setup_channel() {
-  CHECK(InIOLoop());
-
-  if (status_ != Status::CONNECTING) {
-    fd_event_->ResetCallback();
-    SetChannelStatus(Status::CLOSED);
-    reciever_->OnChannelClosed(this);
-    LOG(ERROR) << __FUNCTION__ << " status changed in prepare channel, " << ChannelInfo();
-    return;
-  }
 
   fd_event_->EnableReading();
-  base::EventPump* event_pump = io_loop_->Pump();
-  event_pump->InstallFdEvent(fd_event_.get());
+  pump_->InstallFdEvent(fd_event_.get());
+
   SetChannelStatus(Status::CONNECTED);
+
   reciever_->OnChannelReady(this);
 }
 
 void SocketChannel::close_channel() {
-  DCHECK(InIOLoop());
 
-  base::EventPump* event_pump = io_loop_->Pump();
-
-	event_pump->RemoveFdEvent(fd_event_.get());
+	pump_->RemoveFdEvent(fd_event_.get());
 	fd_event_->ResetCallback();
 
   SetChannelStatus(Status::CLOSED);
+
   reciever_->OnChannelClosed(this);
+}
+
+int32_t SocketChannel::binded_fd() const {
+  return fd_event_ ? fd_event_->fd() : -1;
+}
+
+std::string SocketChannel::local_name() const {
+  return local_addr_.IpPort();
+}
+
+std::string SocketChannel::remote_name() const {
+  return peer_addr_.IpPort();
 }
 
 std::string SocketChannel::ChannelInfo() const {
   std::ostringstream oss;
-  oss << " [name:" << name_
-      << ", fd:" << fd_event_->fd()
-      << ", loc:" << local_addr_.IpPort()
-      << ", peer:" << peer_addr_.IpPort()
+  oss << "[fd:" << binded_fd()
+      << ", loc:" << local_name()
+      << ", remote:" << remote_name()
       << ", status:" << StatusAsString() << "]";
   return oss.str();
 }
+
 
 void SocketChannel::SetChannelStatus(Status st) {
   status_ = st;

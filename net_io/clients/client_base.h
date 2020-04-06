@@ -1,10 +1,11 @@
 #ifndef LT_NET_CLIENT_BASE_H_H
 #define LT_NET_CLIENT_BASE_H_H
 
+#include <cstdint>
 namespace lt {
 namespace net {
 
-typedef struct {
+typedef struct ClientConfig {
   uint32_t connections = 1;
   // 0: without heartbeat needed
   // heartbeat need protocol service supported

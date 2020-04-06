@@ -3,6 +3,7 @@
 #include "base/base_constants.h"
 #include "base/utils/string/str_utils.h"
 #include "base/coroutine/coroutine_runner.h"
+#include "glog/logging.h"
 
 namespace lt {
 namespace net {
@@ -16,9 +17,11 @@ Client::Client(base::MessageLoop* loop, const url::RemoteInfo& info)
 
   next_index_ = 0;
   CHECK(work_loop_);
-  connector_ = std::make_shared<Connector>(work_loop_, this);
+
   auto empty_list = std::make_shared<ClientChannelList>();
   std::atomic_store(&in_use_channels_, empty_list);
+
+  connector_.reset(new Connector(work_loop_->Pump(), this));
 }
 
 Client::~Client() {
@@ -27,16 +30,6 @@ Client::~Client() {
 
 void Client::SetDelegate(ClientDelegate* delegate) {
   delegate_ = delegate;
-}
-
-Client* Client::Use(Interceptor* interceptor) {
-  interceptors_.push_back(interceptor);
-  return this;
-}
-
-Client* Client::Use(InterceptArgList interceptors) {
-  interceptors_.insert(interceptors_.end(), interceptors.begin(), interceptors.end());
-  return this;
 }
 
 void Client::Initialize(const ClientConfig& config) {
@@ -61,10 +54,12 @@ void Client::Finalize() {
 
   auto channels = std::atomic_load(&in_use_channels_);
   for (auto& ch : *channels) {
-    ch->IOLoop()->PostTask(NewClosure(std::bind(&ClientChannel::Close, ch)));
+    ch->IOLoop()->PostTask(
+      NewClosure(std::bind(&ClientChannel::CloseClientChannel, ch)));
   }
-  auto empty_list = std::make_shared<ClientChannelList>();
-  std::atomic_store(&in_use_channels_, empty_list);
+
+  channels->clear();
+  std::atomic_store(&in_use_channels_, channels);
 }
 
 void Client::OnClientConnectFailed() {
@@ -109,16 +104,23 @@ void Client::OnNewClientConnected(int socket_fd, SocketAddr& local, SocketAddr& 
 
   base::MessageLoop* io_loop = next_client_io_loop();
 
-  auto proto_service = ProtoServiceFactory::Create(remote_info_.protocol, false);
-  proto_service->BindToSocket(socket_fd, local, remote, io_loop);
+  auto proto_service =
+    ProtoServiceFactory::NewClientService(remote_info_.protocol, io_loop);
+  proto_service->BindToSocket(socket_fd, local, remote);
 
   auto client_channel = CreateClientChannel(this, proto_service);
   client_channel->SetRequestTimeout(config_.message_timeout);
 
-  client_channel->StartClient();
-  VLOG(GLOG_VINFO) << __FUNCTION__ << ClientInfo() << " connected, initializing...";
-
   in_use_channels_->push_back(client_channel);
+
+  //这里的交互界面是Connector 《== 》与ClientChannel
+  if (io_loop->IsInLoopThread()) {
+    client_channel->StartClientChannel();
+  } else {
+    io_loop->PostTask(NewClosure(
+        std::bind(&ClientChannel::StartClientChannel, client_channel)));
+  }
+  VLOG(GLOG_VINFO) << __FUNCTION__ << ClientInfo() << " connected, initializing...";
 }
 
 void Client::OnClientChannelInited(const ClientChannel* channel) {;
@@ -178,32 +180,38 @@ void Client::OnRequestGetResponse(const RefProtocolMessage& request,
   request->GetWorkCtx().resumer_fn();
 }
 
-bool Client::AsyncSendRequest(RefProtocolMessage& req, AsyncCallBack callback) {
+bool Client::AsyncDoRequest(RefProtocolMessage& req, AsyncCallBack callback) {
   base::MessageLoop* worker = base::MessageLoop::Current();
   if (!worker) {
-    LOG(ERROR) << " can't request here out of a MessageLoop";
+    LOG(ERROR) << __FUNCTION__ << " Only Work IN MessageLoop";
     return false;
   }
 
-  //important: avoid self holder for capture list
-  ProtocolMessage* raw_request = req.get();
+  //IMPORTANT: avoid self holder for capture list
+  ProtocolMessage* request = req.get();
   base::StlClosure resumer = [=]() {
     if (worker->IsInLoopThread()) {
-      callback(raw_request->RawResponse());
-      return;
+      callback(request->RawResponse());
+    } else {
+      auto responser = std::bind(callback, request->RawResponse());
+      worker->PostTask(NewClosure(responser));
     }
-    worker->PostTask(NewClosure(std::bind(callback, raw_request->RawResponse())));
   };
 
   req->SetWorkerCtx(worker, std::move(resumer));
   req->SetRemoteHost(remote_info_.host);
 
   RefClientChannel client = get_ready_channel();
+  if (!client) {
+    return false;
+  }
+
   base::MessageLoop* io = client->IOLoop();
-  return io->PostTask(NewClosure(std::bind(&ClientChannel::SendRequest, client, req)));
+  return io->PostTask(
+    NewClosure(std::bind(&ClientChannel::SendRequest, client, req)));
 }
 
-ProtocolMessage* Client::SendClientRequest(RefProtocolMessage& message) {
+ProtocolMessage* Client::DoRequest(RefProtocolMessage& message) {
   if (!base::MessageLoop::Current() || !base::CoroRunner::CanYield()) {
     LOG(ERROR) << __FUNCTION__ << " must call on coroutine task";
     return NULL;
@@ -214,13 +222,15 @@ ProtocolMessage* Client::SendClientRequest(RefProtocolMessage& message) {
   auto channel = get_ready_channel();
   if (!channel) {
     message->SetFailCode(MessageCode::kNotConnected);
-    LOG_EVERY_N(INFO, 1000) << "no established client can use";
+    LOG_EVERY_N(ERROR, 1000) << "no established client can use";
     return NULL;
   }
 
   base::MessageLoop* io_loop = channel->IOLoop();
-  bool ok = io_loop->PostTask(NewClosure(std::bind(&ClientChannel::SendRequest, channel, message)));
-  if (!ok) {
+  bool success = io_loop->PostTask(
+    NewClosure(std::bind(&ClientChannel::SendRequest, channel, message)));
+
+  if (!success) {
     message->SetFailCode(MessageCode::kConnBroken);
     LOG(ERROR) << "schedule task to io_loop failed";
     return NULL;

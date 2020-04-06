@@ -1,5 +1,6 @@
 
 #include <cstring>
+#include "base/message_loop/message_loop.h"
 #include "resp_service.h"
 #include "redis_request.h"
 
@@ -11,8 +12,8 @@
 namespace lt {
 namespace net {
 
-RespService::RespService()
-  : ProtoService() {
+RespService::RespService(base::MessageLoop* loop)
+  : ProtoService(loop) {
 }
 
 RespService::~RespService() {
@@ -25,6 +26,7 @@ void RespService::OnDataFinishSend(const SocketChannel*) {
 }
 
 void RespService::OnDataReceived(const SocketChannel* channel, IOBuffer *buffer) {
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << " enter";
   CHECK(!IsServerSide());
 
   if (!current_response) {
@@ -89,10 +91,9 @@ void RespService::OnChannelReady(const SocketChannel* ch) {
   if (!delegate_ || !delegate_->GetRemoteInfo()) {
     return ProtoService::OnChannelReady(ch);
   }
-  const url::RemoteInfo* info = delegate_->GetRemoteInfo();
+  const auto info = delegate_->GetRemoteInfo();
 
   auto request = std::make_shared<RedisRequest>();
-
   if (!info->passwd.empty()) {
     request->Auth(info->passwd);
     init_wait_res_flags_ |= InitWaitFlags::kWaitAuth;
@@ -108,7 +109,8 @@ void RespService::OnChannelReady(const SocketChannel* ch) {
     return ProtoService::OnChannelReady(ch);
   }
 
-  if (!SendRequestMessage(request.get())) {
+  if (!EncodeToChannel(request.get())) {
+    init_wait_res_flags_ = InitWaitFlags::kWaitNone;
     return CloseService();
   }
   next_incoming_count_ = request->CmdCount();
@@ -118,16 +120,19 @@ const RefProtocolMessage RespService::NewHeartbeat() {
   if (IsServerSide()) {
     return NULL;
   }
+
   auto request = std::make_shared<RedisRequest>();
+
   request->AsHeartbeat();
   return RefCast(ProtocolMessage, request);
 }
 
-bool RespService::SendRequestMessage(ProtocolMessage* message) {
+bool RespService::EncodeToChannel(ProtocolMessage* message) {
   if (message->GetMessageType() != MessageType::kRequest) {
-    LOG(ERROR) << " only redis client side protocol supported";
+    LOG(ERROR) << __FUNCTION__ << " only client side supported";
     return false;
   }
+
   CHECK(next_incoming_count_ == 0);
 
   RedisRequest* request = (RedisRequest*)message;
@@ -138,8 +143,8 @@ bool RespService::SendRequestMessage(ProtocolMessage* message) {
   return false;
 }
 
-bool RespService::SendResponseMessage(const ProtocolMessage* req, ProtocolMessage* res) {
-	LOG(FATAL) << __FUNCTION__ << " should not reached here, resp only client service supported";
+bool RespService::EncodeResponseToChannel(const ProtocolMessage* req, ProtocolMessage* res) {
+	LOG(FATAL) << __FUNCTION__ << " resp only client service supported";
   return false;
 };
 

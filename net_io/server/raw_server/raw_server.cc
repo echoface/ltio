@@ -27,7 +27,7 @@ void RawServerContext::do_response(const RefProtocolMessage& response) {
   base::MessageLoop* io = service->IOLoop();
 
   if (io->IsInLoopThread()) {
-    bool success = service->SendResponseMessage(request_.get(), response.get());
+    bool success = service->EncodeResponseToChannel(request_.get(), response.get());
     if (!success) {
       service->CloseService();
     }
@@ -35,7 +35,7 @@ void RawServerContext::do_response(const RefProtocolMessage& response) {
   }
 
   auto functor = [=]() {
-    bool success = service->SendResponseMessage(request_.get(), response.get());
+    bool success = service->EncodeResponseToChannel(request_.get(), response.get());
     if (!success) {
       service->CloseService();
     }
@@ -86,7 +86,7 @@ void RawServer::ServeAddress(const std::string address, RawMessageHandler handle
     LOG(ERROR) << "address format error,eg [raw://xx.xx.xx.xx:port]";
     CHECK(false);
   }
-  if (!ProtoServiceFactory::Instance().HasProtoServiceCreator(sch_ip_port.protocol)) {
+  if (!ProtoServiceFactory::HasCreator(sch_ip_port.protocol)) {
     LOG(ERROR) << "No ProtoServiceCreator Find for protocol scheme:" << sch_ip_port.protocol;
     CHECK(false);
   }
@@ -225,6 +225,7 @@ void RawServer::StopServerSync() {
 }
 
 void RawServer::StopServer() {
+  std::unique_lock<std::mutex> lck(mtx_);
   for (auto& service : ioservices_) {
     service->StopIOService();
   }

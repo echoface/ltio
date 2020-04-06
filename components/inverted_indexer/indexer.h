@@ -15,7 +15,7 @@ typedef std::map<std::string, std::vector<std::string>> IndexerQuerys;
 /* EntitysMeta is a middle infomation and data using for build a postinglinst
  * Indexer It can be destory after a indexer finish build for save memory, or
  * save it for more convenience debugging;   */
-typedef struct {
+typedef struct _ {
   std::set<int64_t> all_documens_ids_;
   std::vector<RefDocument> all_documents_;
   std::unordered_map<std::string, FieldEntity> field_entitys_;

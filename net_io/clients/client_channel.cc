@@ -5,6 +5,7 @@
 #include "client_channel.h"
 #include "async_channel.h"
 #include "queued_channel.h"
+#include <base/utils/string/str_utils.h>
 
 namespace lt {
 namespace net {
@@ -23,28 +24,30 @@ RefClientChannel CreateClientChannel(ClientChannel::Delegate* delegate,
 ClientChannel::ClientChannel(Delegate* d, const RefProtoService& service)
 		: delegate_(d),
 		  protocol_service_(service) {
+  protocol_service_->SetDelegate(this);
 }
 
 ClientChannel::~ClientChannel() {
   protocol_service_->SetDelegate(NULL);
 }
 
-void ClientChannel::StartClient() {
-  protocol_service_->SetDelegate(this);
-  protocol_service_->Initialize();
+void ClientChannel::StartClientChannel() {
+  protocol_service_->StartProtocolService();
 }
 
-void ClientChannel::Close() {
+void ClientChannel::CloseClientChannel() {
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << " going to close:" << ConnectionInfo();
+
+  state_ = kClosing;
+
 	base::MessageLoop* io = IOLoop();
   CHECK(io->IsInLoopThread());
-  state_ = kClosing;
-  VLOG(GLOG_VTRACE) << " close client channel";
-  //notify impl to close all in progress request
+
   BeforeCloseChannel();
 
   delegate_ = NULL;
   if (heartbeat_timer_) {
-    IOLoop()->Pump()->RemoveTimeoutEvent(heartbeat_timer_);
+    io->Pump()->RemoveTimeoutEvent(heartbeat_timer_);
     delete heartbeat_timer_;
     heartbeat_timer_ = NULL;
   }
@@ -53,6 +56,14 @@ void ClientChannel::Close() {
 
 void ClientChannel::ResetDelegate() {
   delegate_ = NULL;
+}
+
+std::string ClientChannel::ConnectionInfo() const {
+  const url::RemoteInfo* remote_info = GetRemoteInfo();
+  if (remote_info) {
+    return remote_info->HostIpPort();
+  }
+  return std::string("unknown connection");
 }
 
 //override
@@ -84,13 +95,15 @@ bool ClientChannel::HandleResponse(const RefProtocolMessage& req,
     delegate_->OnRequestGetResponse(req, res);
     return true;
   }
+
   return false;
 }
 
 //override
 void ClientChannel::OnProtocolServiceGone(const RefProtoService& service) {
+  base::MessageLoop* loop = IOLoop();
   if (heartbeat_timer_) {
-    IOLoop()->Pump()->RemoveTimeoutEvent(heartbeat_timer_);
+    loop->Pump()->RemoveTimeoutEvent(heartbeat_timer_);
     delete heartbeat_timer_;
     heartbeat_timer_ = NULL;
   }
@@ -100,10 +113,12 @@ void ClientChannel::OnProtocolServiceGone(const RefProtoService& service) {
 void ClientChannel::OnProtocolServiceReady(const RefProtoService& service) {
   state_ = kReady;
   uint32_t heartbeat_ms = 0;
+
   if (delegate_) {
     delegate_->OnClientChannelInited(this);
     heartbeat_ms = delegate_->GetClientConfig().heartbeat_ms;
   }
+
   if (protocol_service_->KeepHeartBeat() && heartbeat_ms > 50) {
     heartbeat_timer_ = new base::TimeoutEvent(heartbeat_ms, true);
 

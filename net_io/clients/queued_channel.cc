@@ -17,9 +17,10 @@ QueuedChannel::QueuedChannel(Delegate* d, const RefProtoService& service)
 QueuedChannel::~QueuedChannel() {
 }
 
-void QueuedChannel::StartClient() {
-  //common part
-  ClientChannel::StartClient();
+void QueuedChannel::StartClientChannel() {
+  ClientChannel::StartClientChannel();
+
+  // Do other thing for initialize
 }
 
 void QueuedChannel::SendRequest(RefProtocolMessage request)  {
@@ -40,7 +41,7 @@ bool QueuedChannel::TrySendNext() {
   while(!success && waiting_list_.size()) {
 
     RefProtocolMessage& next = waiting_list_.front();
-    success = protocol_service_->SendRequestMessage(next.get());
+    success = protocol_service_->EncodeToChannel(next.get());
     waiting_list_.pop_front();
     if (success) {
       ing_request_ = next;

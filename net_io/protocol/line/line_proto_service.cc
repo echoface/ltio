@@ -1,3 +1,4 @@
+#include "base/message_loop/message_loop.h"
 #include "line_message.h"
 #include "line_proto_service.h"
 
@@ -8,8 +9,8 @@
 namespace lt {
 namespace net {
 
-LineProtoService::LineProtoService()
-  : ProtoService() {
+LineProtoService::LineProtoService(base::MessageLoop* loop)
+  : ProtoService(loop) {
 }
 
 LineProtoService::~LineProtoService() {
@@ -23,6 +24,7 @@ void LineProtoService::OnDataFinishSend(const SocketChannel* channel) {
 }
 
 void LineProtoService::OnDataReceived(const SocketChannel*, IOBuffer *buf) {
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << " enter";
   const char* line_crlf =  buf->FindCRLF();
   if (!line_crlf) {
     return;
@@ -46,7 +48,7 @@ void LineProtoService::OnDataReceived(const SocketChannel*, IOBuffer *buf) {
   }
 }
 
-bool LineProtoService::SendRequestMessage(ProtocolMessage* message) {
+bool LineProtoService::EncodeToChannel(ProtocolMessage* message) {
   static const std::string kCRCN("\r\n");
   const LineMessage* line_msg = static_cast<const LineMessage*>(message);
   int ret = channel_->Send(line_msg->Body().data(), line_msg->Body().size());
@@ -57,8 +59,8 @@ bool LineProtoService::SendRequestMessage(ProtocolMessage* message) {
   return ret >= 0;
 }
 
-bool LineProtoService::SendResponseMessage(const ProtocolMessage* req, ProtocolMessage* res) {
-  return SendRequestMessage(res);
+bool LineProtoService::EncodeResponseToChannel(const ProtocolMessage* req, ProtocolMessage* res) {
+  return EncodeToChannel(res);
 };
 
 }}//end of file

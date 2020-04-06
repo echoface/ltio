@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <string>
+#include "base/message_loop/message_loop.h"
 #include "parser_context.h"
 
 #include "net_io/net_callback.h"
@@ -17,7 +18,7 @@ typedef std::shared_ptr<HttpProtoService> RefHttpProtoService;
 
 class HttpProtoService : public ProtoService {
 public:
-  HttpProtoService();
+  HttpProtoService(base::MessageLoop* loop);
   ~HttpProtoService();
 
   // override from ProtoService
@@ -29,10 +30,10 @@ public:
   static bool ResponseToBuffer(const HttpResponse*, IOBuffer*);
 
   void BeforeSendRequest(HttpRequest*);
-  bool SendRequestMessage(ProtocolMessage* message) override;
+  bool EncodeToChannel(ProtocolMessage* message) override;
 
   bool BeforeSendResponseMessage(const HttpRequest*, HttpResponse*);
-  bool SendResponseMessage(const ProtocolMessage* req, ProtocolMessage* res) override;
+  bool EncodeResponseToChannel(const ProtocolMessage* req, ProtocolMessage* res) override;
 
   const RefProtocolMessage NewResponse(const ProtocolMessage*) override;
 private:

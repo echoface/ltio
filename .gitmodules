@@ -2,3 +2,7 @@
   shallow = true
 	path = thirdparty/hat-trie
 	url = https://github.com/Tessil/hat-trie.git
+[submodule "thirdparty/cameron_queue"]
+  shallow = true
+	path = thirdparty/cameron_queue
+	url = https://gitee.com/ltecho/concurrentqueue.git

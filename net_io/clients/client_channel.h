@@ -13,7 +13,8 @@ namespace net {
 
 class ClientChannel;
 
-typedef std::shared_ptr<ClientChannel> RefClientChannel;
+REF_TYPEDEFINE(ClientChannel);
+
 class ClientChannel : public ProtoServiceDelegate {
 public:
   class Delegate {
@@ -36,11 +37,12 @@ public:
   ClientChannel(Delegate* d, const RefProtoService& service);
   virtual ~ClientChannel();
 
-  virtual void StartClient();
-  virtual void SendRequest(RefProtocolMessage request) = 0;
-
-  void Close();
   void ResetDelegate();
+  virtual void StartClientChannel();
+  virtual void CloseClientChannel();
+  // a change for close all inprogress request
+  virtual void BeforeCloseChannel() = 0;
+  virtual void SendRequest(RefProtocolMessage request) = 0;
 
   bool Ready() const {return state_ == kReady;}
   bool Closing() const {return state_ == kClosing;}
@@ -49,18 +51,18 @@ public:
   void SetRequestTimeout(uint32_t ms) {request_timeout_ = ms;};
   base::MessageLoop* IOLoop() {return protocol_service_->IOLoop();};
 
-
-  // a change for close all inprogress request
-  virtual void BeforeCloseChannel() = 0;
   //override from ProtoServiceDelegate
-  const url::RemoteInfo* GetRemoteInfo() const;
+  const url::RemoteInfo* GetRemoteInfo() const override;
   void OnProtocolServiceGone(const RefProtoService& service) override;
   void OnProtocolServiceReady(const RefProtoService& service) override;
 protected:
   void OnHearbeatTimerInvoke();
+  std::string ConnectionInfo() const;
+
   // return true when message be handled, otherwise return false
   bool HandleResponse(const RefProtocolMessage& req,
                       const RefProtocolMessage& res);
+protected:
   Delegate* delegate_;
   State state_ = kInitialing;
   RefProtoService protocol_service_;
@@ -70,7 +72,6 @@ protected:
 };
 
 RefClientChannel CreateClientChannel(ClientChannel::Delegate*, const RefProtoService&);
-
 
 }}//end namespace
 #endif

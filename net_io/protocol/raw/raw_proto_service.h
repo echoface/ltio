@@ -1,6 +1,7 @@
 #ifndef NET_RAW_PROTO_SERVICE_H
 #define NET_RAW_PROTO_SERVICE_H
 
+#include "base/message_loop/message_loop.h"
 #include "raw_message.h"
 
 #include <net_io/protocol/proto_service.h>
@@ -15,12 +16,15 @@ class RawProtoService : public ProtoService {
   typedef T RawMessageType;
   typedef std::shared_ptr<T> RawMessageTypePtr;
 
-  RawProtoService() : ProtoService() {}
+  RawProtoService(base::MessageLoop* loop)
+    : ProtoService(loop) {
+  }
   ~RawProtoService(){};
 
   void AfterChannelClosed() override { ; }
   // override from ProtoService
   void OnDataReceived(const SocketChannel*, IOBuffer* buffer) override {
+    VLOG(GLOG_VTRACE) << __FUNCTION__ << " enter";
     do {
       RawMessageTypePtr message = RawMessageType::Decode(buffer, IsServerSide());
       if (!message) {
@@ -33,7 +37,7 @@ class RawProtoService : public ProtoService {
         auto response = NewHeartbeat();
         response->SetAsyncId(message->AsyncId());
         if (response) {
-          SendResponseMessage(message.get(), response.get());
+          EncodeResponseToChannel(message.get(), response.get());
         }
       } else if (delegate_) {
         delegate_->OnProtocolMessage(RefCast(ProtocolMessage, message));
@@ -58,7 +62,7 @@ class RawProtoService : public ProtoService {
   bool KeepSequence() override { return RawMessageType::KeepQueue();};
   bool KeepHeartBeat() override {return RawMessageType::WithHeartbeat();}
 
-  bool SendRequestMessage(ProtocolMessage* message) override {
+  bool EncodeToChannel(ProtocolMessage* message) override {
     RawMessageType* request = static_cast<RawMessageType*>(message);
     CHECK(request->GetMessageType() == MessageType::kRequest);
 
@@ -66,7 +70,7 @@ class RawProtoService : public ProtoService {
     return request->EncodeTo(channel_.get());
   };
 
-  bool SendResponseMessage(const ProtocolMessage* req, ProtocolMessage* res) override {
+  bool EncodeResponseToChannel(const ProtocolMessage* req, ProtocolMessage* res) override {
     auto raw_response = static_cast<RawMessageType*>(res);
     auto raw_request = static_cast<const RawMessageType*>(req);
     CHECK(raw_request->AsyncId() == raw_response->AsyncId());

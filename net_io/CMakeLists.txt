@@ -1,10 +1,6 @@
 ADD_DEFINITIONS(-std=c++11)
 SET(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-include_directories(
-  ./client/
-)
-
 set(LTNET_SOURCE
   #server.cc
   address.cc
@@ -15,6 +11,7 @@ set(LTNET_SOURCE
   socket_utils.cc
   socket_acceptor.cc
   url_utils.cc
+
   #protocol
   protocol/proto_message.cc
   protocol/proto_service.cc
@@ -40,12 +37,13 @@ set(LTNET_SOURCE
   server/http_server/http_context.cc
 
   #clients source
+  clients/client.cc
   clients/client_channel.cc
   clients/async_channel.cc
   clients/queued_channel.cc
   clients/client_connector.cc
-  clients/client.cc
-  clients/router/client_router.cc
+
+  # client rounter
   clients/router/maglev.cc
   clients/router/hash_router.h
   clients/router/maglev_router.cc
@@ -56,69 +54,141 @@ set(LTNET_SOURCE
   #clients/initializer/redis_initializer.cc
 )
 
-SET(LTNETEXECUTE_LINKLIBS
-  gflags
-  ${Tcmalloc_LIBRARIES}
-  ${GFLAG_LIBRARY}
-  ${GLOG_LIBRARY}
-  ${ZLIB_LIBRARIES}
-  ltnet
-  ltbase
-  3rd
-  coro
-  pthread
-)
-
-SET(LTNET_DEPENDENCY ltbase)
-
 ADD_LIBRARY(ltnet STATIC ${LTNET_SOURCE})
+ltio_default_properties(ltnet)
+
+if (LTIO_BUILD_SHARED_LIBS)
 ADD_LIBRARY(ltnet_shared SHARED ${LTNET_SOURCE})
+ltio_default_properties(ltnet_shared)
 
 set_target_properties(ltnet_shared PROPERTIES OUTPUT_NAME "ltnet")
 set_target_properties(ltnet PROPERTIES CLEAN_DIRECT_OUTPUT 1)
 set_target_properties(ltnet_shared PROPERTIES CLEAN_DIRECT_OUTPUT 1)
+endif(LTIO_BUILD_SHARED_LIBS)
 
 add_dependencies(ltnet
-  ${LTNET_DEPENDENCY}
-)
-
-link_libraries(
-  ${LTNETEXECUTE_LINKLIBS}
-)
-
-ADD_SUBDIRECTORY(unittests)
+  ltbase
+  )
 
 ADD_EXECUTABLE(rapid_bench_client
   test/rapid_bench_client.cc
-)
+  )
+target_link_libraries(rapid_bench_client
+  PUBLIC ltnet
+  PUBLIC ltbase
+  PUBLIC 3rd
+  PUBLIC coro
+  PUBLIC ${GLOG_LIBRARIES}
+  ${LtIO_LINKER_LIBS}
+  PUBLIC ${GFLAGS_LIBRARIES}
+  PUBLIC ${LIBUNWIND_LIBRARIES}
+  )
 
 ADD_EXECUTABLE(reuseport_test
   test/reuseport_test.cc
-)
+  )
+target_link_libraries(reuseport_test
+  PUBLIC ltnet
+  PUBLIC ltbase
+  PUBLIC 3rd
+  PUBLIC ${GLOG_LIBRARIES}
+  ${LtIO_LINKER_LIBS}
+  PUBLIC ${GFLAGS_LIBRARIES}
+  PUBLIC ${LIBUNWIND_LIBRARIES}
+  )
+
 ADD_EXECUTABLE(acceptor_test
   test/acceptor_test.cc
-)
+  )
+target_link_libraries(acceptor_test
+  PUBLIC ltnet
+  PUBLIC ltbase
+  PUBLIC 3rd
+  PUBLIC ${GLOG_LIBRARIES}
+  ${LtIO_LINKER_LIBS}
+  PUBLIC ${GFLAGS_LIBRARIES}
+  PUBLIC ${LIBUNWIND_LIBRARIES}
+  )
+
 ADD_EXECUTABLE(ioservice_test
   test/io_service_test.cc
-)
+  )
+target_link_libraries(ioservice_test
+  PUBLIC ltnet
+  PUBLIC ltbase
+  PUBLIC 3rd
+  PUBLIC ${GLOG_LIBRARIES}
+  ${LtIO_LINKER_LIBS}
+  PUBLIC ${GFLAGS_LIBRARIES}
+  PUBLIC ${LIBUNWIND_LIBRARIES}
+  )
+
 ADD_EXECUTABLE(client_test
   test/client_test.cc
-)
+  )
+target_link_libraries(client_test
+  PUBLIC ltnet
+  PUBLIC ltbase
+  PUBLIC 3rd
+  PUBLIC coro
+  PUBLIC ${GLOG_LIBRARIES}
+  ${LtIO_LINKER_LIBS}
+  PUBLIC ${GFLAGS_LIBRARIES}
+  PUBLIC ${LIBUNWIND_LIBRARIES}
+  )
+
 ADD_EXECUTABLE(fw_rapid_server
   test/fw_rapid_server.cc
-)
+  )
+target_link_libraries(fw_rapid_server
+  PUBLIC ltnet
+  PUBLIC ltbase
+  PUBLIC 3rd
+  PUBLIC coro
+  PUBLIC ${GLOG_LIBRARIES}
+  ${LtIO_LINKER_LIBS}
+  PUBLIC ${GFLAGS_LIBRARIES}
+  PUBLIC ${LIBUNWIND_LIBRARIES}
+  )
+
 ADD_EXECUTABLE(new_server_model
   test/new_server_model.cc
-)
+  )
 target_link_libraries(new_server_model
-  glog
-  gflags
-  ${LTNETEXECUTE_LINKLIBS}
-)
+  PUBLIC ltnet
+  PUBLIC ltbase
+  PUBLIC 3rd
+  PUBLIC coro
+  PUBLIC ${GLOG_LIBRARIES}
+  ${LtIO_LINKER_LIBS}
+  PUBLIC ${GFLAGS_LIBRARIES}
+  PUBLIC ${LIBUNWIND_LIBRARIES}
+  )
 
 ADD_EXECUTABLE(raw_client
   test/raw_client.cc
-)
+  )
+target_link_libraries(raw_client
+  PUBLIC ltnet
+  PUBLIC ltbase
+  PUBLIC 3rd
+  PUBLIC coro
+  PUBLIC ${GLOG_LIBRARIES}
+  ${LtIO_LINKER_LIBS}
+  PUBLIC ${GFLAGS_LIBRARIES}
+  PUBLIC ${LIBUNWIND_LIBRARIES}
+  )
+
 ADD_EXECUTABLE(rapid_client
   test/fw_rapid_client.cc
-)
+  )
+target_link_libraries(rapid_client
+  PUBLIC ltnet
+  PUBLIC ltbase
+  PUBLIC 3rd
+  PUBLIC coro
+  PUBLIC ${GLOG_LIBRARIES}
+  ${LtIO_LINKER_LIBS}
+  PUBLIC ${GFLAGS_LIBRARIES}
+  PUBLIC ${LIBUNWIND_LIBRARIES}
+  )

@@ -16,9 +16,9 @@ AsyncChannel::AsyncChannel(Delegate* d, const RefProtoService& s)
 AsyncChannel::~AsyncChannel() {
 }
 
-void AsyncChannel::StartClient() {
+void AsyncChannel::StartClientChannel() {
   //common part
-  ClientChannel::StartClient();
+  ClientChannel::StartClientChannel();
 }
 
 void AsyncChannel::SendRequest(RefProtocolMessage request)  {
@@ -27,7 +27,7 @@ void AsyncChannel::SendRequest(RefProtocolMessage request)  {
   // A -> b -> c -> call something it delete this Channel --> Back to A
   request->SetIOCtx(protocol_service_);
 
-  bool success = protocol_service_->SendRequestMessage(request.get());
+  bool success = protocol_service_->EncodeToChannel(request.get());
   if (!success) {
     request->SetFailCode(MessageCode::kConnBroken);
     HandleResponse(request, ProtocolMessage::kNullMessage);

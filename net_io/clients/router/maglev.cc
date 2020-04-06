@@ -25,7 +25,8 @@ void MaglevHelper::genMaglevPermuation(IdList& permutation,
   permutation[2 * pos + 1] = skip;
 }
 
-LookupTable MaglevHelper::GenerateMaglevHash(NodeList endpoints, const uint32_t ring_size) {
+LookupTable MaglevHelper::GenerateMaglevHash(NodeList endpoints,
+                                             const uint32_t ring_size) {
   LookupTable result(ring_size, -1);
 
   switch(endpoints.size()) {
