@@ -14,21 +14,12 @@ option(LTIO_BUILD_SHARED_LIBS "Build shared libraries" ON)
 
 include(ExternalProject)
 include(GNUInstallDirs)
-
 include(${CMAKE_CONFIG_DIR}/common.cmake)
-MESSAGE(STATUS "BEFORE CMAKE_BUILD_TYPE:" ${CMAKE_BUILD_TYPE})
 include(${CMAKE_CONFIG_DIR}/dependency.cmake)
+
 include(${CMAKE_CONFIG_DIR}/include.cmake)
 #include(${CMAKE_CONFIG_DIR}/googletest.cmake)
+include(${CMAKE_CONFIG_DIR}/targets.cmake)
 
-ADD_SUBDIRECTORY(thirdparty)
-ADD_SUBDIRECTORY(base)
-ADD_SUBDIRECTORY(net_io)
-ADD_SUBDIRECTORY(components)
-ADD_SUBDIRECTORY(integration)
-ADD_SUBDIRECTORY(unittests)
 
-MESSAGE(STATUS "SOURCE DIR: " ${LightingIO_SOURCE_DIR})
-MESSAGE(STATUS "BINARY DIR: " ${LightingIO_BINARY_DIR})
-MESSAGE(STATUS "OUTPUT lib DIR: " ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
-MESSAGE(STATUS "OUTPUT bin DIR: " ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+

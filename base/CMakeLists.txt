@@ -1,5 +1,4 @@
 ADD_DEFINITIONS(-std=c++11)
-SET(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 SET(BASE_SOURCES
   time/timestamp.cc
@@ -33,40 +32,13 @@ SET(BASE_SOURCES
   closure/location.cc
 )
 
-ADD_LIBRARY(ltbase STATIC ${BASE_SOURCES})
+add_library(ltbase_objs OBJECT ${BASE_SOURCES})
+
+add_library(ltbase STATIC ${BASE_SOURCES})
 ltio_default_properties(ltbase)
-
-if (LTIO_BUILD_SHARED_LIBS)
-  ADD_LIBRARY(ltbase_shared SHARED ${BASE_SOURCES})
-  ltio_default_properties(ltbase_shared)
-  set_target_properties(ltbase_shared PROPERTIES OUTPUT_NAME "ltbase")
-  # make shared library and static lib exist same time
-  set_target_properties(ltbase PROPERTIES CLEAN_DIRECT_OUTPUT 1)
-  set_target_properties(ltbase_shared PROPERTIES CLEAN_DIRECT_OUTPUT 1)
-endif(LTIO_BUILD_SHARED_LIBS)
-
-ADD_EXECUTABLE(eventloop_test
-  message_loop/test/run_loop_test.cc
-)
-TARGET_LINK_LIBRARIES(eventloop_test
-  PUBLIC ltbase
-  PUBLIC 3rd
-  PUBLIC coro
-  PUBLIC ${GLOG_LIBRARIES}
-  ${LtIO_LINKER_LIBS}
-  PUBLIC ${GFLAGS_LIBRARIES}
-  PUBLIC ${LIBUNWIND_LIBRARIES}
-)
-
-ADD_EXECUTABLE(eventloop_benchmark
-  message_loop/test/benchmark.cc
-)
-TARGET_LINK_LIBRARIES(eventloop_benchmark
-  PUBLIC ltbase
-  PUBLIC 3rd
-  PUBLIC coro
-  PUBLIC ${GLOG_LIBRARIES}
-  ${LtIO_LINKER_LIBS}
-  PUBLIC ${GFLAGS_LIBRARIES}
-  PUBLIC ${LIBUNWIND_LIBRARIES}
-)
+MESSAGE(STATUS " base CMakeList.txt LtIO_INCLUDE_DIRS:" ${LtIO_INCLUDE_DIRS})
+target_include_directories(ltbase PUBLIC
+  ${LtIO_INCLUDE_DIRS}
+  ${PROJECT_SOURCE_DIR}
+  ${PROJECT_SOURCE_DIR}/thirdparty
+  )

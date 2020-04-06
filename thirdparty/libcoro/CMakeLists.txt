@@ -7,14 +7,17 @@ include (CheckSymbolExists)
 
 project (libcoro VERSION 0.2.1 LANGUAGES C CXX)
 
-add_executable(coro_test test.c)
-add_library(coro coro.c coro.h)
-set_target_properties(coro PROPERTIES COMPILE_DEFINITIONS "CORO_ASM=1")
 
+add_library(coro coro.c coro.h)
+set_target_properties(coro
+  PROPERTIES COMPILE_DEFINITIONS "CORO_ASM=1"
+  )
+
+add_executable(coro_test test.c)
 target_link_libraries (coro_test coro)
 
-check_include_files (ucontext.h HAVE_UCONTEXT_H)
 check_include_files (setjmp.h HAVE_SETJMP_H)
+check_include_files (ucontext.h HAVE_UCONTEXT_H)
 check_symbol_exists (sigaltstack "signal.h" HAVE_SIGALTSTACK)
 
 configure_file(config.h.in ${PROJECT_SOURCE_DIR}/config.h)

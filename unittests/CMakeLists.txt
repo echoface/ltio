@@ -1,9 +1,8 @@
 cmake_minimum_required(VERSION 3.5)
 
 SET(UNITTESTS_BINARY_DEPS
-  ltnet
-  ltbase
-  3rd
+  ltio
+  lt3rd
   coro
   ${LtIO_LINKER_LIBS}
   )
