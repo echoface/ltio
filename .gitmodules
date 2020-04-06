@@ -1,4 +1,4 @@
 [submodule "thirdparty/hat-trie"]
-    shallow = true
+  shallow = true
 	path = thirdparty/hat-trie
 	url = https://github.com/Tessil/hat-trie.git
