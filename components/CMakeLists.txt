@@ -38,4 +38,4 @@ include_directories(
   )
 
 add_library(ltcomponent_objs OBJECT ${COMPONENT_SOURCES})
-
+ltio_default_properties(ltcomponent_objs)

@@ -1,26 +1,22 @@
 
 ADD_EXECUTABLE(eventloop_test
-  message_loop/test/run_loop_test.cc
+  base/run_loop_test.cc
 )
 TARGET_LINK_LIBRARIES(eventloop_test
   PUBLIC ltbase
-  PUBLIC 3rd
+  PUBLIC lt3rd
   PUBLIC coro
-  PUBLIC ${GLOG_LIBRARIES}
-  ${LtIO_LINKER_LIBS}
-  PUBLIC ${GFLAGS_LIBRARIES}
+  PUBLIC ${LtIO_LINKER_LIBS}
   PUBLIC ${LIBUNWIND_LIBRARIES}
 )
 
-ADD_EXECUTABLE(eventloop_benchmark
-  message_loop/test/benchmark.cc
+ADD_EXECUTABLE(loop_benchmark
+  base/loop_benchmark.cc
 )
-TARGET_LINK_LIBRARIES(eventloop_benchmark
+TARGET_LINK_LIBRARIES(loop_benchmark
   PUBLIC ltbase
-  PUBLIC 3rd
+  PUBLIC lt3rd
   PUBLIC coro
-  PUBLIC ${GLOG_LIBRARIES}
   ${LtIO_LINKER_LIBS}
-  PUBLIC ${GFLAGS_LIBRARIES}
   PUBLIC ${LIBUNWIND_LIBRARIES}
 )

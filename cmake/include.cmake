@@ -19,3 +19,4 @@ ADD_SUBDIRECTORY(thirdparty)
 
 ADD_SUBDIRECTORY(unittests)
 
+ADD_SUBDIRECTORY(examples)

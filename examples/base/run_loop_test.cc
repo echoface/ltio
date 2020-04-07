@@ -6,11 +6,11 @@
 #include <atomic>
 #include <memory>
 
-#include "../fd_event.h"
-#include "../event_pump.h"
-#include "../timer_event.h"
-#include "../message_loop.h"
-#include "../linux_signal.h"
+#include "base/message_loop/fd_event.h"
+#include "base/message_loop/event_pump.h"
+#include "base/message_loop/timer_event.h"
+#include "base/message_loop/message_loop.h"
+#include "base/message_loop/linux_signal.h"
 #include "base/coroutine/coroutine.h"
 #include "base/coroutine/coroutine_runner.h"
 
