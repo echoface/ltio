@@ -12,6 +12,8 @@ option(LTIO_BUILD_EXAMPLES "Build UNITTEST" ON)
 option(LTIO_BUILD_UNITTESTS "Build UNITTEST" ON)
 option(LTIO_BUILD_SHARED_LIBS "Build shared libraries" ON)
 
+#include(external/CMakeLists.txt)
+
 include(ExternalProject)
 include(GNUInstallDirs)
 include(${CMAKE_CONFIG_DIR}/common.cmake)

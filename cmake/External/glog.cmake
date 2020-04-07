@@ -57,6 +57,13 @@ if (NOT __GLOG_INCLUDED)
     list(APPEND external_project_dependencies glog)
   endif()
 endif()
+
+add_library(glog::glog SHARED IMPORTED GLOBAL)
+set_property(TARGET glog::glog
+    PROPERTY
+    IMPORTED_LOCATION ${GLOG_LIBRARY}
+    )
+
 #
 #GLOG_LIBRARIESif(GLOG_FOUND AND NOT TARGET glog::glog)
 #  add_library(glog::glog SHARED IMPORTED)

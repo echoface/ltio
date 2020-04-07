@@ -6,6 +6,7 @@
 #  MYSQL_LIBRARIES   - List of libraries when using MySQL.
 #  MYSQL_INCLUDE_DIR - where to find mysql.h, etc.
 
+include(FindPackageHandleStandardArgs)
 if(NOT WIN32)
   find_program(MYSQL_CONFIG_EXECUTABLE mysql_config
     /usr/bin/

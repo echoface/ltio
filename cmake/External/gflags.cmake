@@ -58,9 +58,10 @@ if (NOT __GFLAGS_INCLUDED) # guard against multiple includes
 
 endif()
 
-#if(GLOG_FOUND AND NOT TARGET gflags::gflags)
-#  add_library(gflags::gflags SHARED IMPORTED)
-#  set_target_properties(gflags::gflags PROPERTIES IMPORTED_LOCATION ${GFLAGS_LIBRARY})
-#  #set_property(TARGET gflags::gflags PROPERTY INTERFACE_LINK_LIBRARIES ${GFLAGS_LIBRARIES})
-#  set_property(TARGET gflags::gflags PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${GFLAGS_INCLUDE_DIRS})
-#endif()
+
+if(GFLAGS_FOUND AND NOT TARGET gflags::gflags)
+  add_library(gflags::gflags SHARED IMPORTED GLOBAL)
+  set_target_properties(gflags::gflags PROPERTIES IMPORTED_LOCATION ${GFLAGS_LIBRARY})
+  #set_property(TARGET gflags::gflags PROPERTY INTERFACE_LINK_LIBRARIES ${GFLAGS_LIBRARIES})
+  set_property(TARGET gflags::gflags PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${GFLAGS_INCLUDE_DIRS})
+endif()
