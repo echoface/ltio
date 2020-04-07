@@ -35,8 +35,8 @@ SET(BASE_SOURCES
 add_library(ltbase_objs OBJECT ${BASE_SOURCES})
 
 add_library(ltbase STATIC ${BASE_SOURCES})
+
 ltio_default_properties(ltbase)
-MESSAGE(STATUS " base CMakeList.txt LtIO_INCLUDE_DIRS:" ${LtIO_INCLUDE_DIRS})
 target_include_directories(ltbase PUBLIC
   ${LtIO_INCLUDE_DIRS}
   ${PROJECT_SOURCE_DIR}

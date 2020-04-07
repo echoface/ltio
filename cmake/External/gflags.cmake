@@ -48,6 +48,7 @@ if (NOT __GFLAGS_INCLUDED) # guard against multiple includes
 
     set(GFLAGS_FOUND TRUE)
     set(GFLAGS_INCLUDE_DIRS ${gflags_INSTALL}/include)
+    set(GFLAGS_LIBRARY ${gflags_INSTALL}/lib/libgflags.so)
     set(GFLAGS_LIBRARIES ${gflags_INSTALL}/lib/libgflags.so ${CMAKE_THREAD_LIBS_INIT})
     set(GFLAGS_LIBRARY_DIRS ${gflags_INSTALL}/lib)
     set(GFLAGS_EXTERNAL TRUE)
@@ -55,4 +56,11 @@ if (NOT __GFLAGS_INCLUDED) # guard against multiple includes
     list(APPEND external_project_dependencies gflags)
   endif()
 
+endif()
+
+if(GLOG_FOUND AND NOT TARGET gflags::gflags)
+  add_library(gflags::gflags SHARED IMPORTED)
+  set_target_properties(gflags::gflags PROPERTIES IMPORTED_LOCATION ${GFLAGS_LIBRARY})
+  #set_property(TARGET gflags::gflags PROPERTY INTERFACE_LINK_LIBRARIES ${GFLAGS_LIBRARIES})
+  set_property(TARGET gflags::gflags PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${GFLAGS_INCLUDE_DIRS})
 endif()

@@ -57,3 +57,11 @@ if (NOT __GLOG_INCLUDED)
     list(APPEND external_project_dependencies glog)
   endif()
 endif()
+
+if(GLOG_FOUND AND NOT TARGET glog::glog)
+  add_library(glog::glog SHARED IMPORTED)
+  set_target_properties(glog::glog PROPERTIES IMPORTED_LOCATION ${GLOG_LIBRARY})
+  set_property(TARGET glog::glog PROPERTY INTERFACE_LINK_LIBRARIES ${GFLAGS_LIBRARIES})
+  set_property(TARGET glog::glog PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${GLOG_INCLUDE_DIRS})
+endif()
+
