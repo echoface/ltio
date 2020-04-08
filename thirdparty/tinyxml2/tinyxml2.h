@@ -1823,13 +1823,13 @@ public:
     XMLError  ErrorID() const {
         return _errorID;
     }
-	const char* ErrorName() const;
+    const char* ErrorName() const;
     static const char* ErrorIDToName(XMLError errorID);
 
     /** Returns a "long form" error description. A hopefully helpful
         diagnostic with location, line number, and/or additional info.
     */
-	const char* ErrorStr() const;
+    const char* ErrorStr() const;
 
     /// A (trivial) utility function that prints the ErrorStr() to stdout.
     void PrintError() const;

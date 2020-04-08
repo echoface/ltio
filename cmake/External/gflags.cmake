@@ -23,7 +23,6 @@ if (NOT __GFLAGS_INCLUDED) # guard against multiple includes
     set(GFLAGS_CXX_FLAGS ${CMAKE_CXX_FLAGS} ${GFLAGS_EXTRA_COMPILER_FLAGS})
     set(GFLAGS_C_FLAGS ${CMAKE_C_FLAGS} ${GFLAGS_EXTRA_COMPILER_FLAGS})
 
-    MESSAGE(STATUS "CMAKE_BUILD_TYPE: ${DCMAKE_BUILD_TYPE}")
     ExternalProject_Add(gflags
       PREFIX ${gflags_PREFIX}
       GIT_REPOSITORY "https://gitee.com/ltecho/gflags.git"
