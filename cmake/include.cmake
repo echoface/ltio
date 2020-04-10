@@ -19,4 +19,6 @@ ADD_SUBDIRECTORY(thirdparty)
 
 ADD_SUBDIRECTORY(unittests)
 
-ADD_SUBDIRECTORY(examples)
+if (LTIO_BUILD_EXAMPLES)
+  ADD_SUBDIRECTORY(examples)
+endif()

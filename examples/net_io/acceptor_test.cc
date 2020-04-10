@@ -2,9 +2,9 @@
 #include <functional>
 #include <glog/logging.h>
 
-#include "../tcp_channel.h"
-#include "../socket_utils.h"
-#include "../socket_acceptor.h"
+#include "net_io/tcp_channel.h"
+#include "net_io/socket_utils.h"
+#include "net_io/socket_acceptor.h"
 
 using namespace lt;
 
@@ -62,7 +62,7 @@ int main(int argc, char** argv) {
     net::SocketAddr addr(5005);
     acceptor = new net::SocketAcceptor(loop.Pump(), addr);
     acceptor->SetNewConnectionCallback(std::bind(on_new_connection, std::placeholders::_1, std::placeholders::_2));
-    //CHECK(acceptor->StartListen());
+    CHECK(acceptor->StartListen());
   }));
 
   loop.WaitLoopEnd();

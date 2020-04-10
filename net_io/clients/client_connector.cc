@@ -28,6 +28,7 @@ bool Connector::Launch(const net::SocketAddr &address) {
 
   int error = 0;
   int ret = socketutils::SocketConnect(sock_fd, sock_addr, &error);
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << " ret:" << ret << " error:" << error;
   if (ret == 0 && error == 0) {
     net::SocketAddr remote_addr(net::socketutils::GetPeerAddrIn(sock_fd));
     net::SocketAddr local_addr(net::socketutils::GetLocalAddrIn(sock_fd));
@@ -40,6 +41,7 @@ bool Connector::Launch(const net::SocketAddr &address) {
     return true;
   }
 
+  VLOG(GLOG_VINFO) << __FUNCTION__ << " launch connection err:" << base::StrError(error);
   switch(error) {
     case EINTR:
     case EISCONN:
@@ -52,11 +54,12 @@ bool Connector::Launch(const net::SocketAddr &address) {
       fd_event->SetErrorCallback(std::bind(&Connector::OnError, this, weak_fd_event));
       fd_event->SetCloseCallback(std::bind(&Connector::OnError, this, weak_fd_event));
 
-      fd_event->EnableWriting();
       pump_->InstallFdEvent(fd_event.get());
-      connecting_sockets_.insert(fd_event);
 
-      VLOG(GLOG_VTRACE) << __FUNCTION__ << " " << address.IpPort() << " connecting";
+      fd_event->EnableWriting();
+
+      connecting_sockets_.insert(fd_event);
+      VLOG(GLOG_VTRACE) << __FUNCTION__ << " " << address.IpPort() << " connecting, fd:" << fd_event->fd();
     } break;
     default: {
       success = false;
@@ -80,13 +83,16 @@ void Connector::OnWrite(WeakPtrFdEvent weak_fdevent) {
   if (!fd_event && delegate_) {
     delegate_->OnClientConnectFailed();
     LOG(ERROR) << __FUNCTION__ << " FdEvent Has Gone Before Connection Setup";
+    VLOG(GLOG_VINFO) << __FUNCTION__ << " FdEvent Has Gone Before Connection Setup";
     return;
   }
 
   int socket_fd = fd_event->fd();
+  VLOG(GLOG_VINFO) << __FUNCTION__ << " connection back:" << socket_fd;
 
   if (net::socketutils::IsSelfConnect(socket_fd)) {
     CleanUpBadChannel(fd_event);
+    LOG(ERROR) << __FUNCTION__ << " IsSelfConnect, clean...";
     if (delegate_) {
       delegate_->OnClientConnectFailed();
     }
@@ -101,6 +107,7 @@ void Connector::OnWrite(WeakPtrFdEvent weak_fdevent) {
     net::SocketAddr local_addr(net::socketutils::GetLocalAddrIn(socket_fd));
     delegate_->OnNewClientConnected(socket_fd, local_addr, remote_addr);
   }
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << " client finish connected, fd:" << socket_fd;
 }
 
 void Connector::OnError(WeakPtrFdEvent weak_fdevent) {

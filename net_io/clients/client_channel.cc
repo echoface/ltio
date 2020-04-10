@@ -76,7 +76,7 @@ const url::RemoteInfo* ClientChannel::GetRemoteInfo() const {
 
 void ClientChannel::OnHearbeatTimerInvoke() {
   if (heartbeat_message_) {
-    LOG(ERROR) << __FUNCTION__ << " heartbeat snowball, timeout_ms > heartbeat_ms?"; 
+    LOG(ERROR) << __FUNCTION__ << " heartbeat snowball, timeout_ms > heartbeat_ms?";
     return;
   }
   heartbeat_message_ = protocol_service_->NewHeartbeat();
@@ -113,7 +113,7 @@ void ClientChannel::OnProtocolServiceGone(const RefProtoService& service) {
 void ClientChannel::OnProtocolServiceReady(const RefProtoService& service) {
   state_ = kReady;
   uint32_t heartbeat_ms = 0;
-
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << ConnectionInfo();
   if (delegate_) {
     delegate_->OnClientChannelInited(this);
     heartbeat_ms = delegate_->GetClientConfig().heartbeat_ms;

@@ -95,7 +95,7 @@ void HttpResponse::SetResponseCode(uint16_t code) {
 }
 
 std::string HttpResponse::StatusCodeInfo() const {
-  const char* desc = http_status_desc(status_code_);
+  const char* desc = http_status_str(http_status(status_code_));
   return desc;
 }
 

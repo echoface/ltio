@@ -1,9 +1,10 @@
-#include "../metrics_stash.h"
 #include <random>
 #include <unistd.h>
 #include <thread>
 #include <functional>
 #include <iostream>
+
+#include "components/log_metrics/metrics_stash.h"
 
 using namespace component;
 

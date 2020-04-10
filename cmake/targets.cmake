@@ -14,6 +14,7 @@ target_include_directories(ltio PUBLIC
   ${LtIO_INCLUDE_DIRS}
   ${PROJECT_SOURCE_DIR}
   ${PROJECT_SOURCE_DIR}/thirdparty
+    ${PROJECT_SOURCE_DIR}/integration
   )
 
 if (LTIO_BUILD_SHARED_LIBS)
@@ -27,6 +28,7 @@ if (LTIO_BUILD_SHARED_LIBS)
     ${LtIO_INCLUDE_DIRS}
     ${PROJECT_SOURCE_DIR}
     ${PROJECT_SOURCE_DIR}/thirdparty
+    ${PROJECT_SOURCE_DIR}/integration
     )
 
   set_target_properties(ltio PROPERTIES CLEAN_DIRECT_OUTPUT 1)

@@ -1,6 +1,6 @@
 #include <iostream>
-#include "../mysql_async_con.h"
-#include "../mysql_client_impl.h"
+#include "async_mysql/mysql_async_con.h"
+#include "async_mysql/mysql_client_impl.h"
 
 using namespace lt;
 

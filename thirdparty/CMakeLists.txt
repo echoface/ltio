@@ -1,9 +1,8 @@
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-sign-compare")
 
-set(BUILD_TESTING OFF CACHE BOOL "enable glog uinittest functionality" FORCE)
-
 ADD_SUBDIRECTORY(resp)
 ADD_SUBDIRECTORY(libcoro)
+ADD_SUBDIRECTORY(hat-trie)
 
 SET(LT_3RD_SRSC
   #hash
@@ -24,8 +23,3 @@ ADD_LIBRARY(lt3rd STATIC
   ${LT_3RD_SRSC}
 )
 ltio_default_properties(lt3rd)
-
-# NOTE: archive all thirdparty static library to lib3rd
-#target_link_libraries(3rd
-#  coro
-#  )

@@ -26,8 +26,8 @@ extern "C" {
 
 /* Also update SONAME in the Makefile whenever you change these. */
 #define HTTP_PARSER_VERSION_MAJOR 2
-#define HTTP_PARSER_VERSION_MINOR 7
-#define HTTP_PARSER_VERSION_PATCH 1
+#define HTTP_PARSER_VERSION_MINOR 9
+#define HTTP_PARSER_VERSION_PATCH 4
 
 #include <stddef.h>
 #if defined(_WIN32) && !defined(__MINGW32__) && \
@@ -201,6 +201,8 @@ enum http_status
   /* RFC-2068, section 19.6.1.2 */  \
   XX(31, LINK,        LINK)         \
   XX(32, UNLINK,      UNLINK)       \
+  /* icecast */                     \
+  XX(33, SOURCE,      SOURCE)       \
 
 enum http_method
   {
@@ -223,6 +225,7 @@ enum flags
   , F_UPGRADE               = 1 << 5
   , F_SKIPBODY              = 1 << 6
   , F_CONTENTLENGTH         = 1 << 7
+  , F_TRANSFER_ENCODING     = 1 << 8  /* Never set in http_parser.flags */
   };
 
 
@@ -273,7 +276,9 @@ enum flags
   XX(INVALID_INTERNAL_STATE, "encountered unexpected internal state")\
   XX(STRICT, "strict mode assertion failed")                         \
   XX(PAUSED, "parser is paused")                                     \
-  XX(UNKNOWN, "an unknown error occurred")
+  XX(UNKNOWN, "an unknown error occurred")                           \
+  XX(INVALID_TRANSFER_ENCODING,                                      \
+     "request has invalid transfer-encoding")                        \
 
 
 /* Define HPE_* values for each errno value above */
@@ -291,10 +296,11 @@ enum http_errno {
 struct http_parser {
   /** PRIVATE **/
   unsigned int type : 2;         /* enum http_parser_type */
-  unsigned int flags : 8;        /* F_* values from 'flags' enum; semi-public */
+  unsigned int flags : 8;       /* F_* values from 'flags' enum; semi-public */
   unsigned int state : 7;        /* enum state from http_parser.c */
   unsigned int header_state : 7; /* enum header_state from http_parser.c */
-  unsigned int index : 7;        /* index into current matcher */
+  unsigned int index : 5;        /* index into current matcher */
+  unsigned int extra_flags : 2;
   unsigned int lenient_http_headers : 1;
 
   uint32_t nread;          /* # bytes read in various scenarios */
@@ -405,7 +411,8 @@ int http_should_keep_alive(const http_parser *parser);
 /* Returns a string version of the HTTP method. */
 const char *http_method_str(enum http_method m);
 
-const char *http_status_desc(uint16_t code);
+/* Returns a string version of the HTTP status code. */
+const char *http_status_str(enum http_status s);
 
 /* Return a string name of the given error */
 const char *http_errno_name(enum http_errno err);
@@ -426,6 +433,9 @@ void http_parser_pause(http_parser *parser, int paused);
 
 /* Checks if this is the final chunk of the body. */
 int http_body_is_final(const http_parser *parser);
+
+/* Change the maximum header size provided at compile time. */
+void http_parser_set_max_header_size(uint32_t size);
 
 #ifdef __cplusplus
 }

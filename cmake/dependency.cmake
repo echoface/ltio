@@ -1,7 +1,6 @@
 # These lists are later turned into target properties on main LtIO library target
 set(LtIO_LINKER_LIBS "")
 set(LtIO_INCLUDE_DIRS "")
-set(LtIO_DEFINITIONS "")
 set(LtIO_COMPILE_OPTIONS "")
 
 find_package(Tcmalloc REQUIRED)
@@ -22,12 +21,12 @@ list(APPEND LtIO_LINKER_LIBS PUBLIC ${GFLAGS_LIBRARIES})
 #  find_package(LevelDB REQUIRED)
 #  list(APPEND LtIO_INCLUDE_DIRS PUBLIC ${LevelDB_INCLUDES})
 #  list(APPEND LtIO_LINKER_LIBS PUBLIC ${LevelDB_LIBRARIES})
-#  list(APPEND LtIO_DEFINITIONS PUBLIC -DUSE_LEVELDB)
 #endif()
 
-find_package(MYSQL  REQUIRED)
-list(APPEND LtIO_LINKER_LIBS PUBLIC ${MYSQL_LIBRARIES})
-
+if (NOT LTIO_DISABLE_ASYNCMYSQL)
+  find_package(MYSQL  REQUIRED)
+  list(APPEND LtIO_LINKER_LIBS PUBLIC ${MYSQL_LIBRARIES})
+endif()
 
 find_package(Unwind REQUIRED)
 list(APPEND LtIO_LINKER_LIBS PUBLIC ${LIBUNWIND_LIBRARIES})

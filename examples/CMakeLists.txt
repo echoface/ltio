@@ -20,3 +20,7 @@ TARGET_LINK_LIBRARIES(loop_benchmark
   ${LtIO_LINKER_LIBS}
   PUBLIC ${LIBUNWIND_LIBRARIES}
 )
+
+include(net_io/build_targets.cmake)
+
+include(component/build_targets.cmake)

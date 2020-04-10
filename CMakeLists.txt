@@ -11,6 +11,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CONFIG_DIR}/Modules)
 option(LTIO_BUILD_EXAMPLES "Build UNITTEST" ON)
 option(LTIO_BUILD_UNITTESTS "Build UNITTEST" ON)
 option(LTIO_BUILD_SHARED_LIBS "Build shared libraries" ON)
+option(LTIO_DISABLE_ASYNCMYSQL "enabel ltasyncmysql integration" OFF)
 
 #include(external/CMakeLists.txt)
 
