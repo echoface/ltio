@@ -2,15 +2,14 @@ cmake_minimum_required(VERSION 2.8)
 
 ADD_DEFINITIONS(-std=c++11)
 
-aux_source_directory(log_metrics LOGMETRICS_SOURCES)
-aux_source_directory(bloomfilter BLOOMFILTER_SOURCES)
-aux_source_directory(count_min_sketch COUNTMINSKETCH_SOURCES)
-aux_source_directory(source_loader SOURCELOADER_SOURCES)
-
 SET(COMPONENT_SOURCES
-  ${LOGMETRICS_SOURCES}
-  ${BLOOMFILTER_SOURCES}
-  ${COUNTMINSKETCH_SOURCES}
+  ./log_metrics/metrics_item.cc
+  ./log_metrics/metrics_stash.cc
+  ./log_metrics/metrics_container.cc
+
+  ./count_min_sketch/count_min_sketch.cc
+
+  ./bloomfilter/bloom_filter.cc
 
   ./source_loader/source.cc
   ./source_loader/parser/parser.cc

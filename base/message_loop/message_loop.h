@@ -7,6 +7,7 @@
 #include <mutex>
 #include <condition_variable>
 
+#include "base/closure/location.h"
 #include "fd_event.h"
 #include "event_pump.h"
 
@@ -42,6 +43,12 @@ class MessageLoop : public PumpDelegate {
     bool PostTask(TaskBasePtr);
 
     bool PostDelayTask(TaskBasePtr, uint32_t milliseconds);
+
+    template <typename Functor, typename... Args>
+    bool PostTask(const Location&, Functor&& functor, Args&&... args) {
+      return true;
+    }
+
     /* Task will run in target loop thread,
      * reply will run in Current() loop if it exist,
      * otherwise the reply task will run in target messageloop thread too*/

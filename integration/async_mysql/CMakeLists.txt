@@ -1,7 +1,7 @@
 
 ADD_DEFINITIONS(-std=c++11)
 
-add_library(ltasyncmysql STATIC 
+add_library(ltasyncmysql STATIC
   query_session.cc
   mysql_async_con.cc
   mysql_client_impl.cc
