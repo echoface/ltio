@@ -2,18 +2,22 @@
 #define _BASE_MSG_EVENT_LOOP_H_H
 
 #include <atomic>
+#include <functional>
 #include <thread>
 #include <queue>
+#include <list>
 #include <mutex>
 #include <condition_variable>
+#include <utility>
 
+#include "base/closure/closure_task.h"
 #include "base/closure/location.h"
 #include "fd_event.h"
 #include "event_pump.h"
 
 #include "glog/logging.h"
 #include "base/base_constants.h"
-#include "base/closure/task_queue.h"
+#include "base/queue/task_queue.h"
 #include "base/memory/spin_lock.h"
 #include "base/memory/scoped_ref_ptr.h"
 #include "base/memory/refcountedobject.h"
@@ -44,9 +48,15 @@ class MessageLoop : public PumpDelegate {
 
     bool PostDelayTask(TaskBasePtr, uint32_t milliseconds);
 
+    template<class Functor>
+    bool PostTask(const Location& location, const Functor& closure) {
+      return PostTask(TaskBasePtr(location, closure));
+    }
+
     template <typename Functor, typename... Args>
-    bool PostTask(const Location&, Functor&& functor, Args&&... args) {
-      return true;
+    bool PostTask(const Location& location, Functor&& functor, Args&&... args) {
+      return PostTask(
+        base::CreateClosure(location, std::bind(std::forward(functor), std::forward(args...))));
     }
 
     /* Task will run in target loop thread,
@@ -68,7 +78,7 @@ class MessageLoop : public PumpDelegate {
         return PostTask(CreateTaskWithCallback(location, task, reply));
       }
       auto wrap_reply = [=]() ->void {
-        reply_loop->PostTask(NewClosureAlias(location, reply));
+        reply_loop->PostTask(base::CreateClosure(location, reply));
       };
       return PostTask(CreateTaskWithCallback(location, task, wrap_reply));
     }

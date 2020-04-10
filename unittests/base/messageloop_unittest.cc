@@ -1,3 +1,5 @@
+#include "base/closure/closure_task.h"
+#include "glog/logging.h"
 #include <thirdparty/catch/catch.hpp>
 
 #include <iostream>
@@ -7,6 +9,39 @@
 void FailureDump(const char* s, int sz) {
   std::string failure_info(s, sz);
   LOG(INFO) << " ERROR: " << failure_info;
+}
+
+void cfunc() {
+  LOG(INFO) << __func__ << " c function run";
+}
+
+class TaskMock {
+  public:
+    void member_fun() {
+      LOG(INFO) << __func__ << " run";
+    }
+    void member_fun_args(int v) {
+      LOG(INFO) << __func__ << " run, arg:" <<  v;
+    }
+    static void static_member_fun() {
+      LOG(INFO) << __func__ << " run, arg:";
+    }
+};
+
+TEST_CASE("base.task", "[test event pump timer]") {
+  auto f = NewClosure(&cfunc);
+  f->Run();
+  auto lambda_task = NewClosure([](){
+    ;
+  });
+  lambda_task->Run();
+
+  TaskMock mock;
+  auto static_member_fun_task = NewClosure(&TaskMock::static_member_fun);
+  static_member_fun_task->Run();
+
+  auto member_fun_task = NewClosure(std::bind(&TaskMock::member_fun, &mock));
+  member_fun_task->Run();
 }
 
 TEST_CASE("event_pump.timer", "[test event pump timer]") {

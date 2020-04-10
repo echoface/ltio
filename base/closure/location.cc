@@ -28,9 +28,4 @@ std::string Location::ToString() const {
 #define RETURN_ADDRESS() nullptr
 #endif
 
-Location Location::CreateFromHere(const char* function_name, const char* file_name, int line_number) {
-  return Location(function_name, file_name, line_number);
-  //return Location(function_name, file_name, line_number, RETURN_ADDRESS());
-}
-
 }  // namespace base

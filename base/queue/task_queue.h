@@ -1,7 +1,8 @@
 #ifndef BASE_CLOSURE_TASK_QUEUE_H_H
 #define BASE_CLOSURE_TASK_QUEUE_H_H
 
-#include "closure_task.h"
+#include "base/closure/closure_task.h"
+#include <thirdparty/cameron_queue/concurrentqueue.h>
 
 namespace base {
 

@@ -1,15 +1,11 @@
 #ifndef BASE_CLOSURE_TASK_H_H
 #define BASE_CLOSURE_TASK_H_H
 
-#include <list>
 #include <memory>
-#include <queue>
-#include <atomic>
 #include <assert.h>
 #include <functional>
 #include <glog/logging.h>
 #include <base/base_micro.h>
-#include <thirdparty/cameron_queue/concurrentqueue.h>
 
 #include "location.h"
 
@@ -95,11 +91,8 @@ static TaskBasePtr CreateTaskWithCallback(const Location& location,
 
 }// end base namespace
 
-#define NewClosureAlias(Location, Functor) base::CreateClosure(Location, Functor)
-#define NewClosureWithCallbackAlias(Location, Functor, Cleanup) base::CreateClosureWithCallback(Location, Functor, Cleanup)
-
-#define NewClosure(Functor) NewClosureAlias(FROM_HERE, Functor)
-#define NewClosureWithCleanup(Functor, Cleanup) NewClosureWithCallbackAlias(Location, Functor, Cleanup)
+#define NewClosure(Functor) ::base::CreateClosure(FROM_HERE, Functor)
+#define NewClosureWithCleanup(Functor, Cleanup) ::base::CreateClosureWithCallback(Location, Functor, Cleanup)
 
 
 #endif

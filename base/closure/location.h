@@ -35,7 +35,6 @@ public:
   // are not available, this will return "pc:<hex address>".
   std::string ToString() const;
 
-  static Location CreateFromHere(const char* function_name, const char* file_name, int line_number);
 private:
   int line_number_ = -1;
   const char* file_name_ = nullptr;
@@ -43,8 +42,7 @@ private:
   //const void* program_counter_ = nullptr;
 };
 
-#define FROM_HERE FROM_HERE_WITH_EXPLICIT_FUNCTION(__FUNCTION__)
-#define FROM_HERE_WITH_EXPLICIT_FUNCTION(function_name) base::Location::CreateFromHere(function_name, __FILE__, __LINE__)
+#define FROM_HERE ::base::Location(__func__, __FILE__, __LINE__)
 
 } //end namesapce base
 
