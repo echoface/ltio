@@ -1,15 +1,15 @@
 #include "async_channel.h"
 #include <base/base_constants.h>
-#include <net_io/protocol/proto_service.h>
+#include <net_io/codec/codec_service.h>
 
 namespace lt {
 namespace net {
 
-RefAsyncChannel AsyncChannel::Create(Delegate* d, const RefProtoService& s) {
+RefAsyncChannel AsyncChannel::Create(Delegate* d, const RefCodecService& s) {
   return RefAsyncChannel(new AsyncChannel(d, s));
 }
 
-AsyncChannel::AsyncChannel(Delegate* d, const RefProtoService& s)
+AsyncChannel::AsyncChannel(Delegate* d, const RefCodecService& s)
   : ClientChannel(d, s) {
 }
 
@@ -21,20 +21,20 @@ void AsyncChannel::StartClientChannel() {
   ClientChannel::StartClientChannel();
 }
 
-void AsyncChannel::SendRequest(RefProtocolMessage request)  {
+void AsyncChannel::SendRequest(RefCodecMessage request)  {
   CHECK(IOLoop()->IsInLoopThread());
   // guard herer ?
   // A -> b -> c -> call something it delete this Channel --> Back to A
-  request->SetIOCtx(protocol_service_);
+  request->SetIOCtx(codec_);
 
-  bool success = protocol_service_->EncodeToChannel(request.get());
+  bool success = codec_->EncodeToChannel(request.get());
   if (!success) {
     request->SetFailCode(MessageCode::kConnBroken);
-    HandleResponse(request, ProtocolMessage::kNullMessage);
+    HandleResponse(request, CodecMessage::kNullMessage);
     return;
   }
 
-  WeakProtocolMessage weak(request); // weak ptr must init outside, Take Care of weakptr
+  WeakCodecMessage weak(request); // weak ptr must init outside, Take Care of weakptr
   auto functor = std::bind(&AsyncChannel::OnRequestTimeout, shared_from_this(), weak);
   IOLoop()->PostDelayTask(NewClosure(functor), request_timeout_);
 
@@ -42,8 +42,8 @@ void AsyncChannel::SendRequest(RefProtocolMessage request)  {
   in_progress_.insert(std::make_pair(message_identify, std::move(request)));
 }
 
-void AsyncChannel::OnRequestTimeout(WeakProtocolMessage weak) {
-  RefProtocolMessage request = weak.lock();
+void AsyncChannel::OnRequestTimeout(WeakCodecMessage weak) {
+  RefCodecMessage request = weak.lock();
   if (!request || request->IsResponded()) {
     return;
   }
@@ -54,7 +54,7 @@ void AsyncChannel::OnRequestTimeout(WeakProtocolMessage weak) {
   CHECK(numbers == 1);
 
   request->SetFailCode(MessageCode::kTimeOut);
-  HandleResponse(request, ProtocolMessage::kNullMessage);
+  HandleResponse(request, CodecMessage::kNullMessage);
 }
 
 void AsyncChannel::BeforeCloseChannel() {
@@ -62,12 +62,12 @@ void AsyncChannel::BeforeCloseChannel() {
 
   for (auto kv : in_progress_) {
     kv.second->SetFailCode(MessageCode::kConnBroken);
-    HandleResponse(kv.second, ProtocolMessage::kNullMessage);
+    HandleResponse(kv.second, CodecMessage::kNullMessage);
   }
   in_progress_.clear();
 }
 
-void AsyncChannel::OnProtocolMessage(const RefProtocolMessage& res) {
+void AsyncChannel::OnCodecMessage(const RefCodecMessage& res) {
   DCHECK(IOLoop()->IsInLoopThread());
 
   uint64_t identify = res->AsyncId();
@@ -83,13 +83,13 @@ void AsyncChannel::OnProtocolMessage(const RefProtocolMessage& res) {
   HandleResponse(request, res);
 }
 
-void AsyncChannel::OnProtocolServiceGone(const RefProtoService& service) {
+void AsyncChannel::OnProtocolServiceGone(const RefCodecService& service) {
 	DCHECK(IOLoop()->IsInLoopThread());
   ClientChannel::OnProtocolServiceGone(service);
 
   for (auto kv : in_progress_) {
     kv.second->SetFailCode(MessageCode::kConnBroken);
-    HandleResponse(kv.second, ProtocolMessage::kNullMessage);
+    HandleResponse(kv.second, CodecMessage::kNullMessage);
   }
   in_progress_.clear();
   if (delegate_) {

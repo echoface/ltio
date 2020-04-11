@@ -7,14 +7,14 @@ namespace lt {
 namespace net {
 
 class Client;
-class ProtocolMessage;
+class CodecMessage;
 
 class Interceptor {
 public:
   Interceptor() {};
   virtual ~Interceptor() {};
-  virtual ProtocolMessage*
-    Intercept(const Client* c, const ProtocolMessage* req) = 0;
+  virtual CodecMessage*
+    Intercept(const Client* c, const CodecMessage* req) = 0;
 };
 typedef std::initializer_list<Interceptor*> InterceptArgList;
 

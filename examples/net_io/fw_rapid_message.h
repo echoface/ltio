@@ -2,7 +2,7 @@
 #define _LT_FW_RAPID_MESSAGE_H_
 
 #include <string>
-#include <net_io/protocol/proto_message.h>
+#include <net_io/codec/codec_message.h>
 
 using namespace lt;
 
@@ -15,7 +15,7 @@ typedef struct RapidHeader {
   uint32_t extra;
 }RapidHeader;
 
-class FwRapidMessage : public lt::net::ProtocolMessage {
+class FwRapidMessage : public lt::net::CodecMessage {
   public:
     typedef FwRapidMessage ResponseType;
     typedef std::shared_ptr<FwRapidMessage> RefFwRapidMessage;
@@ -66,7 +66,7 @@ class FwRapidMessage : public lt::net::ProtocolMessage {
       return message;
     }
 
-    FwRapidMessage(net::MessageType t) : ProtocolMessage(t) {}
+    FwRapidMessage(net::MessageType t) : CodecMessage(t) {}
     ~FwRapidMessage() {};
 
     uint8_t Type() const {return header_.type;}

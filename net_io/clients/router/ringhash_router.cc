@@ -14,7 +14,7 @@ void RingHashRouter::AddClient(RefClient&& client) {
   all_clients_.push_back(std::move(client));
 }
 
-RefClient RingHashRouter::GetNextClient(const std::string& key, ProtocolMessage* request) {
+RefClient RingHashRouter::GetNextClient(const std::string& key, CodecMessage* request) {
   //uint32_t hash_value = ::crc32(0x80000000, (const unsigned char*)key.data(), key.size());
   uint32_t hash_value = 0;
   MurmurHash3_x86_32(key.data(),

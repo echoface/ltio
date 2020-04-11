@@ -5,8 +5,8 @@
 #include <gflags/gflags.h>
 #include "base/message_loop/message_loop.h"
 #include "net_io/clients/client.h"
-#include "net_io/protocol/raw/raw_proto_service.h"
-#include "net_io/protocol/proto_service_factory.h"
+#include "net_io/codec/raw/raw_codec_service.h"
+#include "net_io/codec/codec_factory.h"
 
 #include "base/coroutine/wait_group.h"
 #include "base/coroutine/coroutine_runner.h"
@@ -33,10 +33,10 @@ static std::atomic_int io_round_count;
 class SampleApp: public net::ClientDelegate{
   public:
     SampleApp() {
-      net::ProtoServiceFactory::RegisterCreator(
-        "rapid", [](base::MessageLoop* loop) -> net::RefProtoService {
-        auto service = std::make_shared<net::RawProtoService<FwRapidMessage>>(loop);
-        return std::static_pointer_cast<net::ProtoService>(service);
+      net::CodecFactory::RegisterCreator(
+        "rapid", [](base::MessageLoop* loop) -> net::RefCodecService {
+        auto service = std::make_shared<net::RawCodecService<FwRapidMessage>>(loop);
+        return std::static_pointer_cast<net::CodecService>(service);
       });
     }
 

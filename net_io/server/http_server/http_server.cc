@@ -3,8 +3,8 @@
 #include "net_io/address.h"
 #include "net_io/tcp_channel.h"
 #include "net_io/url_utils.h"
-#include "net_io/protocol/proto_service.h"
-#include "net_io/protocol/proto_service_factory.h"
+#include "net_io/codec/codec_service.h"
+#include "net_io/codec/codec_factory.h"
 #include "base/message_loop/linux_signal.h"
 #include "base/coroutine/coroutine_runner.h"
 
@@ -53,8 +53,8 @@ void HttpServer::ServeAddress(const std::string address, HttpMessageHandler hand
     LOG(ERROR) << "address format error,eg [http://xx.xx.xx.xx:port]";
     CHECK(false);
   }
-  if (!ProtoServiceFactory::HasCreator(sch_ip_port.protocol)) {
-    LOG(ERROR) << "No ProtoServiceCreator Find for protocol scheme:" << sch_ip_port.protocol;
+  if (!CodecFactory::HasCreator(sch_ip_port.protocol)) {
+    LOG(ERROR) << "No CodecServiceCreator Find for protocol scheme:" << sch_ip_port.protocol;
     CHECK(false);
   }
   LOG_IF(ERROR, io_loops_.empty()) << __FUNCTION__ << " No loop handle socket io";
@@ -84,7 +84,7 @@ void HttpServer::ServeAddress(const std::string address, HttpMessageHandler hand
 
 }
 
-void HttpServer::OnRequestMessage(const RefProtocolMessage& request) {
+void HttpServer::OnRequestMessage(const RefCodecMessage& request) {
   VLOG(GLOG_VTRACE) << __FUNCTION__ << "a http request message come";
 
   HttpContext* context = new HttpContext(RefCast(HttpRequest, request));

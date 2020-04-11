@@ -1,6 +1,6 @@
 
 #include <glog/logging.h>
-#include "net_io/protocol/proto_service.h"
+#include "net_io/codec/codec_service.h"
 
 #include "http_context.h"
 
@@ -48,7 +48,7 @@ void HttpContext::ReplyString(const std::string& content, uint16_t code) {
 void HttpContext::DoReplyResponse(RefHttpResponse& response) {
   did_reply_ = true;
 
-  auto service = request_->GetIOCtx().protocol_service.lock();
+  auto service = request_->GetIOCtx().codec.lock();
   if (!service) {
     LOG(ERROR) << __FUNCTION__ << " Connection Has Broken";
     return;

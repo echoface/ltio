@@ -15,7 +15,7 @@ public:
   void TransferAndYield(base::MessageLoop* ioloop, base::StlClosure);
 
   bool Dispatch(base::StlClosure& clourse) override;
-  bool SetWorkContext(ProtocolMessage* message) override;
+  bool SetWorkContext(CodecMessage* message) override;
 };
 
 }}

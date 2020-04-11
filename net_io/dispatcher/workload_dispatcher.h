@@ -4,7 +4,7 @@
 #include <atomic>
 #include <cinttypes>
 #include <net_io/net_callback.h>
-#include <net_io/protocol/proto_message.h>
+#include <net_io/codec/codec_message.h>
 #include <base/message_loop/message_loop.h>
 
 namespace lt {
@@ -22,7 +22,7 @@ public:
 
   // must call at Worker Loop, may ioworker
   // or woker according to HandleWorkInIOLoop
-  virtual bool SetWorkContext(ProtocolMessage* message);
+  virtual bool SetWorkContext(CodecMessage* message);
   // transmit task from IO TO worker loop
   virtual bool Dispatch(base::StlClosure& closuse);
 protected:

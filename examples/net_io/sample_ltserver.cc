@@ -2,7 +2,7 @@
 #include "gflags/gflags.h"
 #include "net_io/clients/client.h"
 #include "net_io/clients/client_connector.h"
-#include "net_io/protocol/redis/redis_request.h"
+#include "net_io/codec/redis/redis_request.h"
 #include "net_io/server/raw_server/raw_server.h"
 #include "net_io/server/http_server/http_server.h"
 #include "net_io/dispatcher/coro_dispatcher.h"

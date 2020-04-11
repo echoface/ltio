@@ -32,7 +32,7 @@ void MaglevRouter::StartRouter() {
 }
 
 RefClient MaglevRouter::GetNextClient(const std::string& hash_key,
-                                      ProtocolMessage* request) {
+                                      CodecMessage* request) {
   if (nodes_.empty()) {
     return nullptr;
   }

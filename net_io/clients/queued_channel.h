@@ -5,8 +5,8 @@
 #include "client_channel.h"
 #include <net_io/tcp_channel.h>
 #include <net_io/net_callback.h>
-#include <net_io/protocol/proto_message.h>
-#include <net_io/protocol/proto_service.h>
+#include <net_io/codec/codec_message.h>
+#include <net_io/codec/codec_service.h>
 
 namespace lt {
 namespace net {
@@ -17,24 +17,24 @@ typedef std::shared_ptr<QueuedChannel> RefQueuedChannel;
 class QueuedChannel : public ClientChannel,
                       public EnableShared(QueuedChannel) {
 public:
-	static RefQueuedChannel Create(Delegate*, const RefProtoService&);
+	static RefQueuedChannel Create(Delegate*, const RefCodecService&);
   ~QueuedChannel();
 
   void StartClientChannel() override;
-  void SendRequest(RefProtocolMessage request) override;
+  void SendRequest(RefCodecMessage request) override;
 private:
-	QueuedChannel(Delegate*, const RefProtoService&);
+	QueuedChannel(Delegate*, const RefCodecService&);
 
   bool TrySendNext();
-  void OnRequestTimeout(WeakProtocolMessage request);
+  void OnRequestTimeout(WeakCodecMessage request);
 
   // override form ProtocolServiceDelegate
   void BeforeCloseChannel() override;
-  void OnProtocolMessage(const RefProtocolMessage& res) override;
-  void OnProtocolServiceGone(const RefProtoService& service) override;
+  void OnCodecMessage(const RefCodecMessage& res) override;
+  void OnProtocolServiceGone(const RefCodecService& service) override;
 private:
-  RefProtocolMessage ing_request_;
-  std::list<RefProtocolMessage> waiting_list_;
+  RefCodecMessage ing_request_;
+  std::list<RefCodecMessage> waiting_list_;
 };
 
 }}//end namespace

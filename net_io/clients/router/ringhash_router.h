@@ -47,7 +47,7 @@ class RingHashRouter : public ClientRouter {
 
     void AddClient(RefClient&& client) override;
     RefClient GetNextClient(const std::string& key,
-                            ProtocolMessage* request = NULL) override;
+                            CodecMessage* request = NULL) override;
   private:
     NodeContainer clients_;
     std::list<RefClient> all_clients_;

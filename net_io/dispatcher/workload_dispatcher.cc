@@ -2,7 +2,7 @@
 #include "workload_dispatcher.h"
 
 #include "glog/logging.h"
-#include <net_io/protocol/proto_message.h>
+#include <net_io/codec/codec_message.h>
 
 namespace lt {
 namespace net {
@@ -20,7 +20,7 @@ base::MessageLoop* Dispatcher::NextWorker() {
   return workers_[index];
 }
 
-bool Dispatcher::SetWorkContext(ProtocolMessage* message) {
+bool Dispatcher::SetWorkContext(CodecMessage* message) {
   auto loop = base::MessageLoop::Current();
   message->SetWorkerCtx(loop);
   return loop != NULL;

@@ -13,7 +13,7 @@ class RoundRobinRouter : public ClientRouter {
 
     void AddClient(RefClient&& client) override;
     RefClient GetNextClient(const std::string& key,
-                            ProtocolMessage* request = NULL) override;
+                            CodecMessage* request = NULL) override;
   private:
     std::vector<RefClient> clients_;
     std::atomic_uint32_t round_index_;

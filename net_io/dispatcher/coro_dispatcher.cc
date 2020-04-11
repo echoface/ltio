@@ -6,8 +6,8 @@
 #include <base/coroutine/coroutine_runner.h>
 
 #include <net_io/tcp_channel.h>
-#include <net_io/protocol/proto_service.h>
-#include <net_io/protocol/proto_message.h>
+#include <net_io/codec/codec_service.h>
+#include <net_io/codec/codec_message.h>
 
 namespace lt {
 namespace net {
@@ -25,7 +25,7 @@ void CoroDispatcher::TransferAndYield(base::MessageLoop* ioloop, base::StlClosur
   co_yield;
 }
 
-bool CoroDispatcher::SetWorkContext(ProtocolMessage* message) {
+bool CoroDispatcher::SetWorkContext(CodecMessage* message) {
   //base::CoroRunner::CurrentCoroResumeCtx();
   message->SetWorkerCtx(base::MessageLoop::Current(), co_resumer);
   return base::MessageLoop::Current() && base::CoroRunner::CanYield();

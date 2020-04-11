@@ -11,7 +11,7 @@
 #include "base/base_micro.h"
 #include "base/message_loop/message_loop.h"
 #include "io_service.h"
-#include "protocol/proto_message.h"
+#include "codec/codec_message.h"
 
 namespace lt {
 namespace net {
@@ -37,7 +37,7 @@ class ServerBase : public IOServiceDelegate {
    bool BeforeIOServiceStart(IOService* ioservice) override;
    void IOServiceStarted(const IOService* ioservice) override;
    void IOServiceStoped(const IOService* ioservice) override;
-   void OnRequestMessage(const RefProtocolMessage&) override;
+   void OnRequestMessage(const RefCodecMessage&) override;
 
    std::mutex mtx_;
    std::condition_variable cv_;

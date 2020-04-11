@@ -18,19 +18,19 @@
 #include "net_io/tcp_channel.h"
 #include "net_io/socket_utils.h"
 #include "net_io/socket_acceptor.h"
-#include "net_io/protocol/proto_service.h"
-#include "net_io/protocol/line/line_message.h"
-#include "net_io/protocol/http/http_request.h"
-#include "net_io/protocol/http/http_response.h"
-#include "net_io/protocol/proto_service_factory.h"
+#include "net_io/codec/codec_service.h"
+#include "net_io/codec/line/line_message.h"
+#include "net_io/codec/http/http_request.h"
+#include "net_io/codec/http/http_response.h"
+#include "net_io/codec/codec_factory.h"
 #include "net_io/dispatcher/coro_dispatcher.h"
 #include "net_io/dispatcher/coro_dispatcher.h"
-#include "net_io/protocol/raw/raw_message.h"
-#include "net_io/protocol/proto_message.h"
-#include "net_io/protocol/raw/raw_proto_service.h"
-#include "net_io/protocol/redis/resp_service.h"
-#include "net_io/protocol/redis/redis_request.h"
-#include "net_io/protocol/redis/redis_response.h"
+#include "net_io/codec/raw/raw_message.h"
+#include "net_io/codec/codec_message.h"
+#include "net_io/codec/raw/raw_codec_service.h"
+#include "net_io/codec/redis/resp_codec_service.h"
+#include "net_io/codec/redis/redis_request.h"
+#include "net_io/codec/redis/redis_response.h"
 
 #include "net_io/clients/client.h"
 #include "net_io/clients/client_connector.h"
@@ -123,7 +123,7 @@ TEST_CASE("client.async", "[http client]") {
 
   http_client.Initialize(config);
 
-  net::AsyncCallBack callback = [&](net::ProtocolMessage* response) {
+  net::AsyncCallBack callback = [&](net::CodecMessage* response) {
     LOG(INFO) << __FUNCTION__ << " request back";
     LOG_IF(INFO, response) << "response:" << response->Dump();
 
@@ -143,7 +143,7 @@ TEST_CASE("client.async", "[http client]") {
     request->InsertHeader("Accept", "*/*");
     request->InsertHeader("Host", "127.0.0.1");
     request->InsertHeader("User-Agent", "curl/7.58.0");
-    auto message = std::static_pointer_cast<net::ProtocolMessage>(request);
+    auto message = std::static_pointer_cast<net::CodecMessage>(request);
     http_client.AsyncDoRequest(message, callback);
 
   }), 500);

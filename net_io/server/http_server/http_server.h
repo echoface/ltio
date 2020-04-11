@@ -12,9 +12,9 @@
 #include "base/base_micro.h"
 #include "base/message_loop/message_loop.h"
 #include "net_io/io_service.h"
-#include "net_io/protocol/proto_message.h"
-#include "net_io/protocol/http/http_request.h"
-#include "net_io/protocol/http/http_response.h"
+#include "net_io/codec/codec_message.h"
+#include "net_io/codec/http/http_request.h"
+#include "net_io/codec/http/http_response.h"
 
 namespace lt {
 namespace net {
@@ -43,7 +43,7 @@ protected:
   bool BeforeIOServiceStart(IOService* ioservice) override;
   void IOServiceStarted(const IOService* ioservice) override;
   void IOServiceStoped(const IOService* ioservice) override;
-  void OnRequestMessage(const RefProtocolMessage& request) override;
+  void OnRequestMessage(const RefCodecMessage& request) override;
 
   // handle http request in target loop
   void HandleHttpRequest(HttpContext* context);

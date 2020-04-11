@@ -5,8 +5,8 @@
 #include <gflags/gflags.h>
 #include "net_io/clients/client.h"
 #include "base/coroutine/coroutine_runner.h"
-#include "net_io/protocol/raw/raw_message.h"
-#include "net_io/protocol/raw/raw_proto_service.h"
+#include "net_io/codec/raw/raw_message.h"
+#include "net_io/codec/raw/raw_codec_service.h"
 
 #include "fw_rapid_message.h"
 
@@ -43,10 +43,10 @@ void DoFwRapidRequest(std::string content) {
 DEFINE_string(remote, "", "scheme://host:port remote address");
 
 void CodecInitialize() {
-  net::ProtoServiceFactory::RegisterCreator(
-    "rapid", [](base::MessageLoop* loop) -> net::RefProtoService {
-      auto service = std::make_shared<net::RawProtoService<FwRapidMessage>>(loop);
-      return std::static_pointer_cast<net::ProtoService>(service);
+  net::CodecFactory::RegisterCreator(
+    "rapid", [](base::MessageLoop* loop) -> net::RefCodecService {
+      auto service = std::make_shared<net::RawCodecService<FwRapidMessage>>(loop);
+      return std::static_pointer_cast<net::CodecService>(service);
     });
 }
 

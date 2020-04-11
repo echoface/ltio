@@ -19,9 +19,9 @@
 #include "net_io/tcp_channel.h"
 #include "net_io/socket_utils.h"
 #include "net_io/socket_acceptor.h"
-#include "net_io/protocol/proto_service.h"
-#include "net_io/protocol/proto_message.h"
-#include "net_io/protocol/proto_service_factory.h"
+#include "net_io/codec/codec_service.h"
+#include "net_io/codec/codec_message.h"
+#include "net_io/codec/codec_factory.h"
 
 namespace lt {
 namespace net {
@@ -40,7 +40,7 @@ namespace net {
 
 class Client;
 typedef std::shared_ptr<Client> RefClient;
-typedef std::function<void(ProtocolMessage*)> AsyncCallBack;
+typedef std::function<void(CodecMessage*)> AsyncCallBack;
 
 class ClientDelegate {
 public:
@@ -69,12 +69,12 @@ public:
 
   template<class T>
   typename T::element_type::ResponseType* SendRecieve(T& m) {
-    RefProtocolMessage message = std::static_pointer_cast<ProtocolMessage>(m);
+    RefCodecMessage message = std::static_pointer_cast<CodecMessage>(m);
     return (typename T::element_type::ResponseType*)(DoRequest(message));
   }
-  ProtocolMessage* DoRequest(RefProtocolMessage& message);
+  CodecMessage* DoRequest(RefCodecMessage& message);
 
-  bool AsyncDoRequest(RefProtocolMessage& req, AsyncCallBack);
+  bool AsyncDoRequest(RefCodecMessage& req, AsyncCallBack);
 
   // notified from connector
   void OnClientConnectFailed() override;
@@ -87,7 +87,7 @@ public:
   void OnClientChannelInited(const ClientChannel* channel) override;
   //only called when passive close, active close won't be notified for thread-safe reason
   void OnClientChannelClosed(const RefClientChannel& channel) override;
-  void OnRequestGetResponse(const RefProtocolMessage&, const RefProtocolMessage&) override;
+  void OnRequestGetResponse(const RefCodecMessage&, const RefCodecMessage&) override;
 
   uint64_t ConnectedCount() const;
   std::string ClientInfo() const;

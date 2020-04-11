@@ -104,11 +104,11 @@ void Client::OnNewClientConnected(int socket_fd, SocketAddr& local, SocketAddr& 
 
   base::MessageLoop* io_loop = next_client_io_loop();
 
-  auto proto_service =
-    ProtoServiceFactory::NewClientService(remote_info_.protocol, io_loop);
-  proto_service->BindToSocket(socket_fd, local, remote);
+  auto codec_service =
+    CodecFactory::NewClientService(remote_info_.protocol, io_loop);
+  codec_service->BindToSocket(socket_fd, local, remote);
 
-  auto client_channel = CreateClientChannel(this, proto_service);
+  auto client_channel = CreateClientChannel(this, codec_service);
   client_channel->SetRequestTimeout(config_.message_timeout);
 
   in_use_channels_->push_back(client_channel);
@@ -174,13 +174,13 @@ void Client::OnClientChannelClosed(const RefClientChannel& channel) {
   VLOG(GLOG_VINFO) << __FUNCTION__ << ClientInfo() << " a client connection gone";
 }
 
-void Client::OnRequestGetResponse(const RefProtocolMessage& request,
-                                  const RefProtocolMessage& response) {
+void Client::OnRequestGetResponse(const RefCodecMessage& request,
+                                  const RefCodecMessage& response) {
   request->SetResponse(response);
   request->GetWorkCtx().resumer_fn();
 }
 
-bool Client::AsyncDoRequest(RefProtocolMessage& req, AsyncCallBack callback) {
+bool Client::AsyncDoRequest(RefCodecMessage& req, AsyncCallBack callback) {
   base::MessageLoop* worker = base::MessageLoop::Current();
   if (!worker) {
     LOG(ERROR) << __FUNCTION__ << " Only Work IN MessageLoop";
@@ -188,7 +188,7 @@ bool Client::AsyncDoRequest(RefProtocolMessage& req, AsyncCallBack callback) {
   }
 
   //IMPORTANT: avoid self holder for capture list
-  ProtocolMessage* request = req.get();
+  CodecMessage* request = req.get();
   base::StlClosure resumer = [=]() {
     if (worker->IsInLoopThread()) {
       callback(request->RawResponse());
@@ -211,7 +211,7 @@ bool Client::AsyncDoRequest(RefProtocolMessage& req, AsyncCallBack callback) {
     NewClosure(std::bind(&ClientChannel::SendRequest, client, req)));
 }
 
-ProtocolMessage* Client::DoRequest(RefProtocolMessage& message) {
+CodecMessage* Client::DoRequest(RefCodecMessage& message) {
   if (!base::MessageLoop::Current() || !base::CoroRunner::CanYield()) {
     LOG(ERROR) << __FUNCTION__ << " must call on coroutine task";
     return NULL;

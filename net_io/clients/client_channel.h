@@ -3,8 +3,8 @@
 
 #include "net_io/url_utils.h"
 #include "net_io/net_callback.h"
-#include "net_io/protocol/proto_message.h"
-#include "net_io/protocol/proto_service.h"
+#include "net_io/codec/codec_message.h"
+#include "net_io/codec/codec_service.h"
 
 #include "client_base.h"
 
@@ -15,7 +15,7 @@ class ClientChannel;
 
 REF_TYPEDEFINE(ClientChannel);
 
-class ClientChannel : public ProtoServiceDelegate {
+class ClientChannel : public CodecService::Delegate {
 public:
   class Delegate {
   public:
@@ -24,7 +24,7 @@ public:
 
     virtual void OnClientChannelInited(const ClientChannel* channel) = 0;
     virtual void OnClientChannelClosed(const RefClientChannel& channel) = 0;
-    virtual void OnRequestGetResponse(const RefProtocolMessage&, const RefProtocolMessage&) = 0;
+    virtual void OnRequestGetResponse(const RefCodecMessage&, const RefCodecMessage&) = 0;
   };
 
   enum State {
@@ -34,7 +34,7 @@ public:
     kDisconnected = 3
   };
 
-  ClientChannel(Delegate* d, const RefProtoService& service);
+  ClientChannel(Delegate* d, const RefCodecService& service);
   virtual ~ClientChannel();
 
   void ResetDelegate();
@@ -42,36 +42,36 @@ public:
   virtual void CloseClientChannel();
   // a change for close all inprogress request
   virtual void BeforeCloseChannel() = 0;
-  virtual void SendRequest(RefProtocolMessage request) = 0;
+  virtual void SendRequest(RefCodecMessage request) = 0;
 
   bool Ready() const {return state_ == kReady;}
   bool Closing() const {return state_ == kClosing;}
   bool Initializing() const {return state_ == kInitialing;}
 
   void SetRequestTimeout(uint32_t ms) {request_timeout_ = ms;};
-  base::MessageLoop* IOLoop() {return protocol_service_->IOLoop();};
+  base::MessageLoop* IOLoop() {return codec_->IOLoop();};
 
-  //override from ProtoServiceDelegate
+  //override from CodecService::Delegate
   const url::RemoteInfo* GetRemoteInfo() const override;
-  void OnProtocolServiceGone(const RefProtoService& service) override;
-  void OnProtocolServiceReady(const RefProtoService& service) override;
+  void OnProtocolServiceGone(const RefCodecService& service) override;
+  void OnProtocolServiceReady(const RefCodecService& service) override;
 protected:
   void OnHearbeatTimerInvoke();
   std::string ConnectionInfo() const;
 
   // return true when message be handled, otherwise return false
-  bool HandleResponse(const RefProtocolMessage& req,
-                      const RefProtocolMessage& res);
+  bool HandleResponse(const RefCodecMessage& req,
+                      const RefCodecMessage& res);
 protected:
   Delegate* delegate_;
   State state_ = kInitialing;
-  RefProtoService protocol_service_;
+  RefCodecService codec_;
   uint32_t request_timeout_ = 5000; //5s
   base::TimeoutEvent* heartbeat_timer_ = NULL;
-  RefProtocolMessage heartbeat_message_;
+  RefCodecMessage heartbeat_message_;
 };
 
-RefClientChannel CreateClientChannel(ClientChannel::Delegate*, const RefProtoService&);
+RefClientChannel CreateClientChannel(ClientChannel::Delegate*, const RefCodecService&);
 
 }}//end namespace
 #endif

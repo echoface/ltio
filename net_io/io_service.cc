@@ -5,9 +5,9 @@
 
 #include "io_service.h"
 #include "tcp_channel.h"
-#include "protocol/proto_service.h"
-#include "protocol/proto_message.h"
-#include "protocol/proto_service_factory.h"
+#include "codec/codec_service.h"
+#include "codec/codec_message.h"
+#include "codec/codec_factory.h"
 
 namespace lt {
 namespace net {
@@ -63,12 +63,12 @@ void IOService::StopIOService() {
   is_stopping_ = true;
 
   //async
-  for (auto& proto_service : protocol_services) {
-    base::MessageLoop* loop = proto_service->IOLoop();
-    loop->PostTask(NewClosure(std::bind(&ProtoService::CloseService, proto_service)));
+  for (auto& codec_service : codecs) {
+    base::MessageLoop* loop = codec_service->IOLoop();
+    loop->PostTask(NewClosure(std::bind(&CodecService::CloseService, codec_service)));
   }
 
-  if (protocol_services.empty()) {
+  if (codecs.empty()) {
     delegate_->IOServiceStoped(this);
   }
 }
@@ -81,7 +81,7 @@ void IOService::OnNewConnection(int fd, const SocketAddr& peer_addr) {
   //check connection limit and others
   if (!delegate_->CanCreateNewChannel()) {
     LOG(INFO) << __FUNCTION__ << " Stop accept new connection"
-      << ", current has:[" << protocol_services.size() << "]";
+      << ", current has:[" << codecs.size() << "]";
     return socketutils::CloseSocket(fd);
   }
 
@@ -91,55 +91,55 @@ void IOService::OnNewConnection(int fd, const SocketAddr& peer_addr) {
     return socketutils::CloseSocket(fd);
   }
 
-  RefProtoService proto_service =
-    ProtoServiceFactory::NewServerService(protocol_, io_loop);
+  RefCodecService codec_service =
+    CodecFactory::NewServerService(protocol_, io_loop);
 
-  if (!proto_service) {
+  if (!codec_service) {
     LOG(ERROR) << __FUNCTION__ << " scheme:" << protocol_ << " NOT-FOUND";
     return socketutils::CloseSocket(fd);
   }
 
   SocketAddr local_addr(socketutils::GetLocalAddrIn(fd));
 
-  proto_service->SetDelegate(this);
-  proto_service->BindToSocket(fd, local_addr, peer_addr);
+  codec_service->SetDelegate(this);
+  codec_service->BindToSocket(fd, local_addr, peer_addr);
 
   if (io_loop->IsInLoopThread()) {
-    proto_service->StartProtocolService();
+    codec_service->StartProtocolService();
   } else {
     io_loop->PostTask(NewClosure(
-        std::bind(&ProtoService::StartProtocolService, proto_service)));
+        std::bind(&CodecService::StartProtocolService, codec_service)));
   }
-  StoreProtocolService(proto_service);
+  StoreProtocolService(codec_service);
 
   VLOG(GLOG_VTRACE) << __FUNCTION__
     << " Connection from:" << peer_addr.IpPort() << " establisted";
 }
 
-void IOService::OnProtocolMessage(const RefProtocolMessage& message) {
+void IOService::OnCodecMessage(const RefCodecMessage& message) {
   delegate_->OnRequestMessage(message);
 }
 
-void IOService::OnProtocolServiceGone(const net::RefProtoService &service) {
+void IOService::OnProtocolServiceGone(const net::RefCodecService &service) {
   // use another task remove a service is a more safe way delete channel& protocol things
   // avoid somewhere->B(do close a channel) ->  ~A  -> use A again in somewhere
   auto functor = std::bind(&IOService::RemoveProtocolService, this, service);
   accept_loop_->PostTask(NewClosure(std::move(functor)));
 }
 
-void IOService::StoreProtocolService(const RefProtoService service) {
+void IOService::StoreProtocolService(const RefCodecService service) {
   CHECK(accept_loop_->IsInLoopThread());
 
-  protocol_services.insert(service);
+  codecs.insert(service);
   delegate_->IncreaseChannelCount();
 }
 
-void IOService::RemoveProtocolService(const RefProtoService service) {
+void IOService::RemoveProtocolService(const RefCodecService service) {
   CHECK(accept_loop_->IsInLoopThread());
-  protocol_services.erase(service);
+  codecs.erase(service);
 
   delegate_->DecreaseChannelCount();
-  if (is_stopping_ && protocol_services.size() == 0) {
+  if (is_stopping_ && codecs.size() == 0) {
     delegate_->IOServiceStoped(this);
   }
 }

@@ -34,7 +34,7 @@ class MaglevRouter : ClientRouter {
     void StartRouter() override;
 
     RefClient GetNextClient(const std::string& key,
-                            ProtocolMessage* request = NULL) override;
+                            CodecMessage* request = NULL) override;
 
   private:
     LookupTable lookup_table_;

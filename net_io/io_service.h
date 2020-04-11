@@ -6,8 +6,8 @@
 #include <unordered_map>
 #include "net_callback.h"
 #include "socket_acceptor.h"
-#include "protocol/proto_message.h"
-#include "protocol/proto_service.h"
+#include "codec/codec_message.h"
+#include "codec/codec_service.h"
 #include "dispatcher/workload_dispatcher.h"
 #include "base/message_loop/message_loop.h"
 
@@ -33,13 +33,13 @@ public:
   virtual void IOServiceStarted(const IOService* ioservice) {};
   virtual void IOServiceStoped(const IOService* ioservice) {};
 
-  virtual void OnRequestMessage(const RefProtocolMessage& request) = 0;
+  virtual void OnRequestMessage(const RefCodecMessage& request) = 0;
 };
 
 /* Every IOService own a acceptor and listing on a adress,
  * handle incomming connection from acceptor and manager
  * them on working-messageloop */
-class IOService : public ProtoServiceDelegate {
+class IOService : public CodecService::Delegate {
 public:
   /* Must Construct in ownerloop, why? bz we want all io level is clear and tiny
    * it only handle io relative things, it's easy! just post a task IOMain at everything
@@ -62,16 +62,16 @@ public:
   bool IsRunning() {return acceptor_ && acceptor_->IsListening();}
 
 private:
-  //void HandleProtoMessage(RefProtocolMessage message);
+  //void HandleProtoMessage(RefCodecMessage message);
   /* create a new connection channel */
   void OnNewConnection(int, const SocketAddr&);
 
-  // override from ProtoServiceDelegate to manager[remove] from managed list
-  void OnProtocolMessage(const RefProtocolMessage& message) override;
-  void OnProtocolServiceGone(const RefProtoService& service) override;
+  // override from CodecService::Delegate to manager[remove] from managed list
+  void OnCodecMessage(const RefCodecMessage& message) override;
+  void OnProtocolServiceGone(const RefCodecService& service) override;
 
-  void StoreProtocolService(const RefProtoService);
-  void RemoveProtocolService(const RefProtoService);
+  void StoreProtocolService(const RefCodecService);
+  void RemoveProtocolService(const RefCodecService);
 
   //bool as_dispatcher_;
   std::string protocol_;
@@ -81,12 +81,11 @@ private:
 
   /* interface to owner and handler */
   IOServiceDelegate* delegate_;
-  //RefProtoService proto_service_;
   bool is_stopping_ = false;
 
   uint64_t channel_count_;
   std::string service_name_;
-  std::unordered_set<RefProtoService> protocol_services;
+  std::unordered_set<RefCodecService> codecs;
 };
 
 }}

@@ -10,21 +10,25 @@ set(LTNET_SOURCE
   socket_acceptor.cc
   url_utils.cc
 
-  #protocol
-  protocol/proto_message.cc
-  protocol/proto_service.cc
-  protocol/proto_service_factory.cc
-  protocol/line/line_message.cc
-  protocol/line/line_proto_service.cc
-  protocol/http/http_request.cc
-  protocol/http/http_response.cc
-  protocol/http/http_constants.cc
-  protocol/http/parser_context.cc
-  protocol/http/http_proto_service.cc
-  protocol/raw/raw_message.cc
-  protocol/redis/redis_request.cc
-  protocol/redis/redis_response.cc
-  protocol/redis/resp_service.cc
+  #protocol codec
+  codec/codec_message.cc
+  codec/codec_service.cc
+  codec/codec_factory.cc
+
+  codec/line/line_message.cc
+  codec/line/line_codec_service.cc
+
+  codec/http/http_request.cc
+  codec/http/http_response.cc
+  codec/http/http_constants.cc
+  codec/http/parser_context.cc
+  codec/http/http_codec_service.cc
+
+  codec/raw/raw_message.cc
+
+  codec/redis/redis_request.cc
+  codec/redis/redis_response.cc
+  codec/redis/resp_codec_service.cc
   #dispatcher
   dispatcher/coro_dispatcher.cc
   dispatcher/workload_dispatcher.cc

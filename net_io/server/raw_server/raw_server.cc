@@ -3,23 +3,23 @@
 #include "net_io/tcp_channel.h"
 #include "net_io/url_utils.h"
 #include "net_io/io_service.h"
-#include "net_io/protocol/proto_service.h"
+#include "net_io/codec/codec_service.h"
 #include "base/message_loop/linux_signal.h"
-#include "net_io/protocol/proto_service_factory.h"
+#include "net_io/codec/codec_factory.h"
 
 #include "raw_server.h"
 
 namespace lt {
 namespace net {
 
-void RawServerContext::SendResponse(const RefProtocolMessage& response) {
+void RawServerContext::SendResponse(const RefCodecMessage& response) {
   if (did_reply_) return;
   return do_response(response);
 }
 
-void RawServerContext::do_response(const RefProtocolMessage& response) {
+void RawServerContext::do_response(const RefCodecMessage& response) {
   did_reply_ = true;
-  auto service = request_->GetIOCtx().protocol_service.lock();
+  auto service = request_->GetIOCtx().codec.lock();
   if (!service) {
     LOG(ERROR) << __FUNCTION__ << " this connections has broken";
     return;
@@ -86,8 +86,8 @@ void RawServer::ServeAddress(const std::string address, RawMessageHandler handle
     LOG(ERROR) << "address format error,eg [raw://xx.xx.xx.xx:port]";
     CHECK(false);
   }
-  if (!ProtoServiceFactory::HasCreator(sch_ip_port.protocol)) {
-    LOG(ERROR) << "No ProtoServiceCreator Find for protocol scheme:" << sch_ip_port.protocol;
+  if (!CodecFactory::HasCreator(sch_ip_port.protocol)) {
+    LOG(ERROR) << "No CodecServiceCreator Find for protocol scheme:" << sch_ip_port.protocol;
     CHECK(false);
   }
 
@@ -113,7 +113,7 @@ void RawServer::ServeAddress(const std::string address, RawMessageHandler handle
   }
 }
 
-void RawServer::OnRequestMessage(const RefProtocolMessage& request) {
+void RawServer::OnRequestMessage(const RefCodecMessage& request) {
   VLOG(GLOG_VTRACE) << "IOService::HandleRequest handle a request";
 
   if (!dispatcher_) {
@@ -124,17 +124,17 @@ void RawServer::OnRequestMessage(const RefProtocolMessage& request) {
   base::StlClosure functor = std::bind(&RawServer::HandleRawRequest, this, request);
   if (false == dispatcher_->Dispatch(functor)) {
     LOG(ERROR) << __FUNCTION__ << " dispatcher_->Dispatch failed";
-    auto proto_service = request->GetIOCtx().protocol_service.lock();
-    if (proto_service) {
-      proto_service->CloseService();
+    auto codec_service = request->GetIOCtx().codec.lock();
+    if (codec_service) {
+      codec_service->CloseService();
     }
   }
 }
 
 //run on loop handle request
-void RawServer::HandleRawRequest(const RefProtocolMessage request) {
+void RawServer::HandleRawRequest(const RefCodecMessage request) {
 
-  auto service = request->GetIOCtx().protocol_service.lock();
+  auto service = request->GetIOCtx().codec.lock();
   if (!service) {
     VLOG(GLOG_VERROR) << __FUNCTION__ << " Channel Has Broken After Handle Request Message";
     return;

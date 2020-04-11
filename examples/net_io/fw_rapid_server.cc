@@ -7,7 +7,7 @@
 #include "net_io/server/raw_server/raw_server.h"
 #include "net_io/dispatcher/coro_dispatcher.h"
 #include "net_io/dispatcher/workload_dispatcher.h"
-#include "net_io/protocol/raw/raw_proto_service.h"
+#include "net_io/codec/raw/raw_codec_service.h"
 
 #include "fw_rapid_message.h"
 
@@ -83,10 +83,10 @@ int main(int argc, char* argv[]) {
   main_loop.SetLoopName("main");
   main_loop.Start();
 
-  net::ProtoServiceFactory::RegisterCreator(
-    "rapid", [](base::MessageLoop* loop) -> net::RefProtoService {
-      auto service = std::make_shared<RawProtoService<FwRapidMessage>>(loop);
-      return std::static_pointer_cast<ProtoService>(service);
+  net::CodecFactory::RegisterCreator(
+    "rapid", [](base::MessageLoop* loop) -> net::RefCodecService {
+      auto service = std::make_shared<RawCodecService<FwRapidMessage>>(loop);
+      return std::static_pointer_cast<CodecService>(service);
     });
 
   net::RawServer raw_server;

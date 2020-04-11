@@ -1,7 +1,7 @@
 #ifndef _NET_HTTP_SERVER_CONTEXT_H_H
 #define _NET_HTTP_SERVER_CONTEXT_H_H
 
-#include "net_io/protocol/http/http_proto_service.h"
+#include "net_io/codec/http/http_codec_service.h"
 
 namespace lt {
 namespace net {

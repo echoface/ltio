@@ -13,8 +13,8 @@ class SocketAddr;
 class SocketAcceptor;
 class TcpChannel;
 class IOService;
-class ProtoService;
-class ProtocolMessage;
+class CodecService;
+class CodecMessage;
 
 
 /* ============ connection channel relative =========*/
@@ -33,9 +33,9 @@ typedef std::unique_ptr<SocketAcceptor> SocketAcceptorPtr;
 typedef std::function<void(int/*socket_fd*/, const SocketAddr&)> NewConnectionCallback;
 
 /* protoservice handle tcpmessage to different type protocol request and message */
-typedef std::unique_ptr<ProtoService> ProtoServicePtr;
-typedef std::shared_ptr<ProtoService> RefProtoService;
-typedef std::weak_ptr<ProtoService> WeakProtoService;
+typedef std::unique_ptr<CodecService> CodecServicePtr;
+typedef std::shared_ptr<CodecService> RefCodecService;
+typedef std::weak_ptr<CodecService> WeakCodecService;
 
 /* ============== io service ====== */
 typedef std::shared_ptr<IOService> RefIOService;

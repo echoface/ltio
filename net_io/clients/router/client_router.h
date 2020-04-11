@@ -5,7 +5,7 @@
 #include <vector>
 #include <atomic>
 #include <net_io/clients/client.h>
-#include <net_io/protocol/proto_message.h>
+#include <net_io/codec/codec_message.h>
 
 
 namespace lt {
@@ -29,7 +29,7 @@ public:
   virtual void StartRouter() {};
   virtual void AddClient(RefClient&& client) = 0;
   virtual RefClient GetNextClient(const std::string& hash_key,
-                                  ProtocolMessage* hint_message = NULL) = 0;
+                                  CodecMessage* hint_message = NULL) = 0;
 };
 
 }}//lt::net

@@ -1,16 +1,16 @@
 #include "async_channel.h"
 #include "queued_channel.h"
 #include <base/base_constants.h>
-#include <net_io/protocol/proto_service.h>
+#include <net_io/codec/codec_service.h>
 
 namespace lt {
 namespace net {
 
-RefQueuedChannel QueuedChannel::Create(Delegate* d, const RefProtoService& s) {
+RefQueuedChannel QueuedChannel::Create(Delegate* d, const RefCodecService& s) {
   return RefQueuedChannel(new QueuedChannel(d, s));
 }
 
-QueuedChannel::QueuedChannel(Delegate* d, const RefProtoService& service)
+QueuedChannel::QueuedChannel(Delegate* d, const RefCodecService& service)
   : ClientChannel(d, service) {
 }
 
@@ -23,10 +23,10 @@ void QueuedChannel::StartClientChannel() {
   // Do other thing for initialize
 }
 
-void QueuedChannel::SendRequest(RefProtocolMessage request)  {
+void QueuedChannel::SendRequest(RefCodecMessage request)  {
   CHECK(IOLoop()->IsInLoopThread());
 
-  request->SetIOCtx(protocol_service_);
+  request->SetIOCtx(codec_);
   waiting_list_.push_back(std::move(request));
 
   TrySendNext();
@@ -40,20 +40,20 @@ bool QueuedChannel::TrySendNext() {
   bool success = false;
   while(!success && waiting_list_.size()) {
 
-    RefProtocolMessage& next = waiting_list_.front();
-    success = protocol_service_->EncodeToChannel(next.get());
+    RefCodecMessage& next = waiting_list_.front();
+    success = codec_->EncodeToChannel(next.get());
     waiting_list_.pop_front();
     if (success) {
       ing_request_ = next;
     } else {
       next->SetFailCode(MessageCode::kConnBroken);
-      HandleResponse(next, ProtocolMessage::kNullMessage);
+      HandleResponse(next, CodecMessage::kNullMessage);
     }
   }
 
   if (success) {
     DCHECK(ing_request_);
-    WeakProtocolMessage weak(ing_request_);   // weak ptr must init outside, Take Care of weakptr
+    WeakCodecMessage weak(ing_request_);   // weak ptr must init outside, Take Care of weakptr
     auto functor = std::bind(&QueuedChannel::OnRequestTimeout, shared_from_this(), weak);
     IOLoop()->PostDelayTask(NewClosure(functor), request_timeout_);
   }
@@ -63,48 +63,48 @@ bool QueuedChannel::TrySendNext() {
 void QueuedChannel::BeforeCloseChannel() {
   if (ing_request_) {
     ing_request_->SetFailCode(MessageCode::kConnBroken);
-    HandleResponse(ing_request_, ProtocolMessage::kNullMessage);
+    HandleResponse(ing_request_, CodecMessage::kNullMessage);
     ing_request_.reset();
   }
 
   while(waiting_list_.size()) {
-    RefProtocolMessage& request = waiting_list_.front();
+    RefCodecMessage& request = waiting_list_.front();
     request->SetFailCode(MessageCode::kConnBroken);
-    HandleResponse(request, ProtocolMessage::kNullMessage);
+    HandleResponse(request, CodecMessage::kNullMessage);
     waiting_list_.pop_front();
   }
 }
 
-void QueuedChannel::OnRequestTimeout(WeakProtocolMessage weak) {
+void QueuedChannel::OnRequestTimeout(WeakCodecMessage weak) {
 
-  RefProtocolMessage request = weak.lock();
+  RefCodecMessage request = weak.lock();
   if (!request) return;
 
   if (request.get() != ing_request_.get()) {
     return;
   }
 
-  VLOG(GLOG_VINFO) << __FUNCTION__ << protocol_service_->Channel()->ChannelInfo() << " timeout reached";
+  VLOG(GLOG_VINFO) << __FUNCTION__ << codec_->Channel()->ChannelInfo() << " timeout reached";
 
   request->SetFailCode(MessageCode::kTimeOut);
-  HandleResponse(request, ProtocolMessage::kNullMessage);
+  HandleResponse(request, CodecMessage::kNullMessage);
   ing_request_.reset();
 
-  if (protocol_service_->IsConnected()) {
-  	protocol_service_->CloseService();
+  if (codec_->IsConnected()) {
+  	codec_->CloseService();
   } else {
-  	OnProtocolServiceGone(protocol_service_);
+  	OnProtocolServiceGone(codec_);
   }
 }
 
-void QueuedChannel::OnProtocolMessage(const RefProtocolMessage& res) {
+void QueuedChannel::OnCodecMessage(const RefCodecMessage& res) {
   DCHECK(IOLoop()->IsInLoopThread());
 
   if (!ing_request_) {
     return ;
   }
 
-  const RefProtocolMessage guard_req(ing_request_);
+  const RefCodecMessage guard_req(ing_request_);
   ing_request_.reset();
 
   HandleResponse(guard_req, res);
@@ -112,20 +112,20 @@ void QueuedChannel::OnProtocolMessage(const RefProtocolMessage& res) {
   TrySendNext();
 }
 
-void QueuedChannel::OnProtocolServiceGone(const RefProtoService& service) {
+void QueuedChannel::OnProtocolServiceGone(const RefCodecService& service) {
   VLOG(GLOG_VTRACE) << __FUNCTION__ << service->Channel()->ChannelInfo() << " protocol service closed";
   ClientChannel::OnProtocolServiceGone(service);
 
   if (ing_request_) {
     ing_request_->SetFailCode(MessageCode::kConnBroken);
-    HandleResponse(ing_request_, ProtocolMessage::kNullMessage);
+    HandleResponse(ing_request_, CodecMessage::kNullMessage);
     ing_request_.reset();
   }
 
   while(waiting_list_.size()) {
-    RefProtocolMessage& request = waiting_list_.front();
+    RefCodecMessage& request = waiting_list_.front();
     request->SetFailCode(MessageCode::kConnBroken);
-    HandleResponse(request, ProtocolMessage::kNullMessage);
+    HandleResponse(request, CodecMessage::kNullMessage);
     waiting_list_.pop_front();
   }
 

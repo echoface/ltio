@@ -2,24 +2,24 @@
 #include "glog/logging.h"
 #include "net_io/tcp_channel.h"
 #include "net_io/io_service.h"
-#include "net_io/protocol/proto_service.h"
-#include "net_io/protocol/proto_service_factory.h"
+#include "net_io/codec/codec_service.h"
+#include "net_io/codec/codec_factory.h"
 #include "base/message_loop/linux_signal.h"
 
 namespace lt {
 namespace net {
 
-class TcpProtoService : public ProtoService {
+class TcpCodecService : public CodecService {
 public:
-  TcpProtoService() :
-    ProtoService(nullptr) {
+  TcpCodecService() :
+    CodecService(nullptr) {
   }
-  ~TcpProtoService() {
+  ~TcpCodecService() {
   }
-  bool EncodeToChannel(ProtocolMessage* message) override {
+  bool EncodeToChannel(CodecMessage* message) override {
     return true;
   };
-  bool EncodeResponseToChannel(const ProtocolMessage* req, ProtocolMessage* res) override {
+  bool EncodeResponseToChannel(const CodecMessage* req, CodecMessage* res) override {
     return true;
   };
 
@@ -44,7 +44,7 @@ public:
 class Srv : public IOServiceDelegate {
 public:
   Srv() {
-    tcp_protoservice_.reset(new TcpProtoService);
+    tcp_protoservice_.reset(new TcpCodecService);
     InitWorkLoop();
 
     net::SocketAddr addr("127.0.0.1", 5005);
@@ -64,9 +64,9 @@ public:
   void Start() {
     RegisterExitSignal();
 
-    ProtoServiceFactory::RegisterCreator(
-      "tcp", [](base::MessageLoop*)->ProtoServicePtr {
-      return ProtoServicePtr(new TcpProtoService);
+    CodecFactory::RegisterCreator(
+      "tcp", [](base::MessageLoop*)->CodecServicePtr {
+      return CodecServicePtr(new TcpCodecService);
     });
 
     ioservice_->StartIOService();
@@ -94,10 +94,10 @@ public:
   bool CanCreateNewChannel() {
     return true;
   }
-  ProtoService* GetProtocolService(const std::string protocol) {
+  CodecService* GetProtocolService(const std::string protocol) {
     return tcp_protoservice_.get();
   }
-  void OnRequestMessage(const RefProtocolMessage& request) {
+  void OnRequestMessage(const RefCodecMessage& request) {
 
   };
 private:
@@ -114,7 +114,7 @@ private:
   base::MessageLoop acceptor_loop_;
 
   IOServicePtr ioservice_;
-  ProtoServicePtr tcp_protoservice_;
+  CodecServicePtr tcp_protoservice_;
 };
 
 }}

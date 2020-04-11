@@ -5,7 +5,7 @@
 #include <vector>
 #include "client_router.h"
 #include <net_io/clients/client.h>
-#include <net_io/protocol/proto_message.h>
+#include <net_io/codec/codec_message.h>
 
 namespace lt {
 namespace net {
@@ -23,7 +23,7 @@ public:
   };
 
   RefClient GetNextClient(const std::string& hash_key,
-                          ProtocolMessage* hint_message = NULL) override {
+                          CodecMessage* hint_message = NULL) override {
 
     uint64_t value = hasher_(hash_key);
     RefClient client = clients_[value % clients_.size()];

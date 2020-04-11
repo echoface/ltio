@@ -6,11 +6,11 @@
 #include "../tcp_channel.h"
 #include "../socket_utils.h"
 #include "../socket_acceptor.h"
-#include "../protocol/proto_service.h"
-#include "../protocol/line/line_message.h"
-#include "../protocol/http/http_request.h"
-#include "../protocol/http/http_response.h"
-#include "../protocol/proto_service_factory.h"
+#include "../codec/codec_service.h"
+#include "../codec/line/line_message.h"
+#include "../codec/http/http_request.h"
+#include "../codec/http/http_response.h"
+#include "../codec/codec_factory.h"
 
 namespace lt {
 namespace net {
