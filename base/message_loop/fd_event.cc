@@ -85,7 +85,7 @@ void FdEvent::notify_watcher() {
   if (watcher_) {
     watcher_->OnEventChanged(this);
   }
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << EventInfo() << " notify_watcherd";
+  VLOG_IF(GLOG_VTRACE, watcher_ == NULL) << " no watcher monitor this event";
 }
 
 void FdEvent::SetCloseCallback(const EventCallback &cb) {

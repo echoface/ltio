@@ -9,11 +9,16 @@
 #include "net_io/codec/raw/raw_codec_service.h"
 
 #include "fw_rapid_message.h"
+#include <thirdparty/cameron_queue/blockingconcurrentqueue.h>
 
 using namespace lt;
+typedef moodycamel::BlockingConcurrentQueue<std::string> BlockMessageQueue;
+using base::MessageLoop;
 
 typedef std::unique_ptr<net::Client> ClientPtr;
 ClientPtr raw_router;
+
+BlockMessageQueue message_queue;
 
 void DoLtRawRequest(const std::string& content) {
   auto raw_request = net::LtRawMessage::Create(true);
@@ -22,6 +27,7 @@ void DoLtRawRequest(const std::string& content) {
   net::LtRawMessage* response = raw_router->SendRecieve(raw_request);
   if (response) {
     std::cout << "res:" << response->Dump() << std::endl;
+    message_queue.enqueue(response->Content());
   } else {
     std::cout << "err:" << raw_request->FailCode() << std::endl;
   }
@@ -34,6 +40,7 @@ void DoFwRapidRequest(std::string content) {
   FwRapidMessage* response = raw_router->SendRecieve(raw_request);
   if (response) {
     std::cout << "res:" << response->Content()  << std::endl;
+    message_queue.enqueue(response->Content());
   } else {
     std::cout << "err:" << raw_request->FailCode() << std::endl;
   }
@@ -79,27 +86,29 @@ int main(int argc, char** argv) {
   config.connections = 4;
   config.recon_interval = 1000;
   config.message_timeout = 5000;
-
   raw_router->Initialize(config);
-  bool running_ = true;
-  co_go &mainloop << [&]() {
-    while (running_) {
-      std::string content;
-      std::cout << "send:";
-      std::flush(std::cout);
-      std::getline(std::cin, content);
-      running_ = content != "quit";
-      if (!running_) {
-        continue;
-      }
-      if (server_info.protocol == "raw") {
-        DoLtRawRequest(content);
-      } else {
-        DoFwRapidRequest(content);
-      }
-    };
-    raw_router->Finalize();
-    mainloop.QuitLoop();
+
+  while (true) {
+    std::string content;
+    std::cout << "send:";
+    std::flush(std::cout);
+    std::getline(std::cin, content);
+    if (content == "quit") {
+      raw_router->Finalize();
+      break;
+    }
+
+    if (server_info.protocol == "raw") {
+      co_go &mainloop << std::bind(&DoLtRawRequest, content);
+    } else {
+      co_go &mainloop << std::bind(&DoFwRapidRequest, content);
+    }
+
+    std::string response;
+    if (!message_queue.wait_dequeue_timed(response, 1000 * 1000)) {
+      LOG(INFO) << "request timeout";
+    } else {
+      LOG(INFO) << "<<" << response;
+    }
   };
-  mainloop.WaitLoopEnd();
 }

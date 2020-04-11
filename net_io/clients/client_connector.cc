@@ -47,7 +47,8 @@ bool Connector::Launch(const net::SocketAddr &address) {
     case EISCONN:
     case EINPROGRESS: {
       success = true;
-      base::RefFdEvent fd_event = base::FdEvent::Create(sock_fd, base::LtEv::LT_EVENT_NONE);
+      base::RefFdEvent fd_event =
+        base::FdEvent::Create(sock_fd, base::LtEv::LT_EVENT_WRITE);
 
       WeakPtrFdEvent weak_fd_event(fd_event);
       fd_event->SetWriteCallback(std::bind(&Connector::OnWrite, this, weak_fd_event));
@@ -82,42 +83,34 @@ void Connector::OnWrite(WeakPtrFdEvent weak_fdevent) {
 
   if (!fd_event && delegate_) {
     delegate_->OnClientConnectFailed();
-    LOG(ERROR) << __FUNCTION__ << " FdEvent Has Gone Before Connection Setup";
-    VLOG(GLOG_VINFO) << __FUNCTION__ << " FdEvent Has Gone Before Connection Setup";
+    LOG(ERROR) << __func__ << " FdEvent Has Gone Before Connection Setup";
     return;
   }
 
   int socket_fd = fd_event->fd();
-  VLOG(GLOG_VINFO) << __FUNCTION__ << " connection back:" << socket_fd;
 
   if (net::socketutils::IsSelfConnect(socket_fd)) {
     CleanUpBadChannel(fd_event);
-    LOG(ERROR) << __FUNCTION__ << " IsSelfConnect, clean...";
-    if (delegate_) {
-      delegate_->OnClientConnectFailed();
-    }
+    delegate_->OnClientConnectFailed();
+    LOG(ERROR) << __func__ << " IsSelfConnect, clean...";
     return;
   }
 
   pump_->RemoveFdEvent(fd_event.get());
   connecting_sockets_.erase(fd_event);
-  if (delegate_) {
-    fd_event->GiveupOwnerFd();
-    net::SocketAddr remote_addr(net::socketutils::GetPeerAddrIn(socket_fd));
-    net::SocketAddr local_addr(net::socketutils::GetLocalAddrIn(socket_fd));
-    delegate_->OnNewClientConnected(socket_fd, local_addr, remote_addr);
-  }
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << " client finish connected, fd:" << socket_fd;
+
+  fd_event->GiveupOwnerFd();
+  net::SocketAddr remote_addr(net::socketutils::GetPeerAddrIn(socket_fd));
+  net::SocketAddr local_addr(net::socketutils::GetLocalAddrIn(socket_fd));
+
+  delegate_->OnNewClientConnected(socket_fd, local_addr, remote_addr);
 }
 
 void Connector::OnError(WeakPtrFdEvent weak_fdevent) {
   base::RefFdEvent event = weak_fdevent.lock();
-  if (!event && delegate_) {
-    delegate_->OnClientConnectFailed();
-    return;
+  if (event) {
+    CleanUpBadChannel(event);
   }
-
-  CleanUpBadChannel(event);
   if (delegate_) {
     delegate_->OnClientConnectFailed();
   }
@@ -128,8 +121,10 @@ void Connector::Stop() {
 
   delegate_ = NULL;
   for (auto& event : connecting_sockets_) {
-    int socket_fd = event->fd();
+    event->GiveupOwnerFd();
     pump_->RemoveFdEvent(event.get());
+
+    int socket_fd = event->fd();
     net::socketutils::CloseSocket(socket_fd);
   }
   connecting_sockets_.clear();
