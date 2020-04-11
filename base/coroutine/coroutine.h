@@ -28,18 +28,21 @@ int64_t SystemCoroutineCount();
 typedef void (*CoroEntry)(void* arg);
 
 class Coroutine : public coro_context,
-                  public std::enable_shared_from_this<Coroutine> {
+                  public EnableShared(Coroutine) {
 public:
   friend class CoroRunner;
 
   static RefCoroutine Create(CoroEntry entry, bool main = false);
   ~Coroutine();
 
-  std::string StateToString() const;
   CoroState Status() const {return state_;}
+  uint64_t Identify() const {return identify_;}
+
   inline bool IsPaused() const {return state_ == kPaused;}
   inline bool IsRunning() const {return state_ == kRunning;}
-  uint64_t Identify() const {return identify_;}
+
+
+  std::string StateToString() const;
 private:
   Coroutine(CoroEntry entry, bool main);
 

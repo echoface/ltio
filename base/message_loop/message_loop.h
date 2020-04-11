@@ -20,7 +20,6 @@
 #include "base/queue/task_queue.h"
 #include "base/memory/spin_lock.h"
 #include "base/memory/scoped_ref_ptr.h"
-#include "base/memory/refcountedobject.h"
 
 namespace base {
 

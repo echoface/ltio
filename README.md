@@ -101,12 +101,12 @@ void coro_fun(std::string tag);
     loop.PostTaskWithReply(NewClosure([]() {
       // some thing especial need big stack
     }),
-    NewClosure(co_resumer));
+    NewClosure(co_resumer()));
 
     //or another function in coroutine with current corotine's resume_closure
-    co_go std::bind(AnotherCoroutineWithResume, co_resumer);
+    co_go std::bind(AnotherCoroutineWithResume, co_resumer());
 
-    co_yield; // paused here, util co_resumer be called in any where;
+    co_pause; // paused here, util co_resumer() be called in any where;
 
     //  do other things
   }

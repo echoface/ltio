@@ -217,7 +217,7 @@ CodecMessage* Client::DoRequest(RefCodecMessage& message) {
     return NULL;
   }
   message->SetRemoteHost(remote_info_.host);
-  message->SetWorkerCtx(base::MessageLoop::Current(), co_resumer);
+  message->SetWorkerCtx(base::MessageLoop::Current(), co_resumer());
 
   auto channel = get_ready_channel();
   if (!channel) {
@@ -236,7 +236,7 @@ CodecMessage* Client::DoRequest(RefCodecMessage& message) {
     return NULL;
   }
 
-  co_yield;
+  co_pause;
 
   return message->RawResponse();
 }

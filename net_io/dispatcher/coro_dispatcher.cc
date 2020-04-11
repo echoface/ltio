@@ -22,12 +22,12 @@ CoroDispatcher::~CoroDispatcher() {
 void CoroDispatcher::TransferAndYield(base::MessageLoop* ioloop, base::StlClosure clourse) {
   CHECK(ioloop);
   ioloop->PostTask(NewClosure(std::move(clourse)));
-  co_yield;
+  co_pause;
 }
 
 bool CoroDispatcher::SetWorkContext(CodecMessage* message) {
   //base::CoroRunner::CurrentCoroResumeCtx();
-  message->SetWorkerCtx(base::MessageLoop::Current(), co_resumer);
+  message->SetWorkerCtx(base::MessageLoop::Current(), co_resumer());
   return base::MessageLoop::Current() && base::CoroRunner::CanYield();
 }
 

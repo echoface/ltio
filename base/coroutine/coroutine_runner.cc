@@ -108,7 +108,7 @@ intptr_t CoroRunner::CurrentCoroutineId() const {
 }
 
 void CoroRunner::SleepMillsecond(uint64_t ms) {
-  bind_loop_->PostDelayTask(NewClosure(co_resumer), ms);
+  bind_loop_->PostDelayTask(NewClosure(co_resumer()), ms);
   YieldCurrent();
 }
 

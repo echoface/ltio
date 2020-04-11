@@ -16,9 +16,15 @@ typedef std::function<void()> CoroResumer;
 
 class CoroRunner {
 public:
-  typedef struct __go {
-    __go(const char* func, const char* file, int line)
-      : location_(func, file, line) {
+  typedef struct _go {
+    _go(const char* func, const char* file, int line)
+      : location_(func, file, line),
+        target_loop_(MessageLoop::Current()) {
+    }
+
+    inline _go& operator-(base::MessageLoop* loop) {
+      target_loop_ = loop;
+      return *this;
     }
 
     template <typename Functor>
@@ -30,10 +36,7 @@ public:
         target_loop_->PostTask(NewClosure(std::bind(&CoroRunner::InvokeCoroutineTasks, &runner)));
       }
     }
-    inline __go& operator-(base::MessageLoop* loop) {
-      target_loop_ = loop;
-      return *this;
-    }
+
     // here must make sure all things wraper(copy) into closue,
     // becuase __go object will destruction before task closure run
     template <typename Functor>
@@ -48,8 +51,8 @@ public:
       target_loop_->PostTask(NewClosure(std::bind(func, target_loop_, location_)));
     }
     Location location_;
-    base::MessageLoop* target_loop_ = MessageLoop::Current();
-  }__go;
+    base::MessageLoop* target_loop_;
+  }_go;
 
 public:
   static bool CanYield();
@@ -108,10 +111,12 @@ private:
   DISALLOW_COPY_AND_ASSIGN(CoroRunner);
 };
 
-#define co_go        base::CoroRunner::__go(__FUNCTION__, __FILE__, __LINE__)-
-#define co_yield     base::CoroRunner::YieldCurrent()
-#define co_resumer   base::CoroRunner::CurrentCoroResumeCtx()
-#define co_sleep(ms) base::CoroRunner::Runner().SleepMillsecond(ms)
-
 }// end base
+
+//NOTE: co_yield has bee a private key words for c++20, so cry to name co_pause....
+#define co_go        ::base::CoroRunner::_go(__FUNCTION__, __FILE__, __LINE__)-
+#define co_pause     ::base::CoroRunner::YieldCurrent()
+#define co_resumer() ::base::CoroRunner::CurrentCoroResumeCtx()
+#define co_sleep(ms) ::base::CoroRunner::Runner().SleepMillsecond(ms)
+
 #endif
