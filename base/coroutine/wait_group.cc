@@ -27,7 +27,7 @@ void WaitGroup::Add(int64_t count) {
 }
 
 void WaitGroup::Wait(int64_t timeout_ms) {
-  if (flag_.test_and_set()) {
+  if (flag_.test_and_set() || wait_count_ == 0) {
     return;
   }
 
