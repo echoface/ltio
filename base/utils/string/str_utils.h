@@ -15,12 +15,19 @@ namespace base {
 class StrUtil {
     class __detail__ {
       public:
+        struct CaseInsensitiveCmp {
+          bool operator()(int c1, int c2) const {
+            return std::toupper(c1) == std::toupper(c2);
+          }
+        };
+
         static void ConcatImpl(std::ostream&) { /* do nothing */ }
         template<typename T, typename ...Args>
           static void ConcatImpl(std::ostream& os, const T& t, Args&&... args) {
             os << t;
             ConcatImpl(os, std::forward<Args>(args)...);
           }
+
     };
 
   public:
@@ -36,15 +43,17 @@ class StrUtil {
     static bool EndsWith(const std::string &s, const std::string &suffix);
     static bool StartsWith(const std::string &s, const std::string &prefix);
 
-    static void TrimLeft(std::string &s);
-    static void TrimRight(std::string &s);
-    static void Trim(std::string &s) {TrimLeft(s); TrimRight(s);}
+    static std::string& TrimLeft(std::string& str, const std::string& chars = "\t\n\v\f\r ");
+    static std::string& TrimRight(std::string& str, const std::string& chars = "\t\n\v\f\r ");
+    static std::string& Trim(std::string& str, const std::string& chars = "\t\n\v\f\r ");
 
     static std::vector<std::string> Split(const std::string &s,
                                           const char delim);
     static std::vector<std::string> Split(const std::string &text,
                                           const std::string &delims,
                                           bool ignore_empty = false);
+
+    bool IgnoreCaseEquals(const std::string& str1, const std::string& str2);
 
 
     template <typename T, typename Token>

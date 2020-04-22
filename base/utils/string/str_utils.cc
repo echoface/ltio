@@ -15,6 +15,13 @@ void StrUtil::ToLower(std::string &str) {
   for (size_t i = 0; str[i]; i++) str[i] = tolower(str[i]);
 }
 
+bool StrUtil::IgnoreCaseEquals(const std::string& str1, const std::string& str2) {
+  return std::equal(str1.begin(),
+                    str1.end(),
+                    str2.begin(),
+                    __detail__::CaseInsensitiveCmp());
+}
+
 bool StrUtil::Replace(std::string &str, const std::string &from, const std::string &to) {
   size_t start_pos = str.find(from);
   if (start_pos == std::string::npos) return false;
@@ -46,17 +53,19 @@ bool StrUtil::EndsWith(const std::string &str, const std::string &suffix) {
     str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
 }
 
-void StrUtil::TrimLeft(std::string &s) {
-  s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](int ch) {
-    return !std::isspace(ch);
-  }));
+std::string& StrUtil::TrimLeft(std::string& str, const std::string& chars) {
+  str.erase(0, str.find_first_not_of(chars));
+  return str;
 }
 
-void StrUtil::TrimRight(std::string &s) {
-  s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) {
-    return !std::isspace(ch);
-  }).base(), s.end());
+std::string& StrUtil::TrimRight(std::string& str, const std::string& chars) {
+  str.erase(str.find_last_not_of(chars) + 1);
+  return str;
 }
+std::string& StrUtil::Trim(std::string& str, const std::string& chars) {
+  return TrimLeft(TrimRight(str, chars), chars);
+}
+
 
 std::vector<std::string> StrUtil::Split(const std::string &str,
                                         const char delim) {
