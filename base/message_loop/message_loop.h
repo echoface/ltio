@@ -2,6 +2,7 @@
 #define _BASE_MSG_EVENT_LOOP_H_H
 
 #include <atomic>
+#include <bits/stdint-uintn.h>
 #include <functional>
 #include <thread>
 #include <queue>
@@ -88,6 +89,7 @@ class MessageLoop : public PumpDelegate {
     //t: millsecond for giveup cpu for waiting
     void WaitLoopEnd(int32_t t = 1);
     void SetLoopName(std::string name);
+    void SetMinPumpTimeout(uint64_t ms);
     const std::string& LoopName() const {return loop_name_;}
 
     void QuitLoop();
@@ -95,6 +97,7 @@ class MessageLoop : public PumpDelegate {
 
     void PumpStarted() override;
     void PumpStopped() override;
+    uint64_t PumpTimeout() override;
   private:
     void ThreadMain();
     void SetThreadNativeName();
@@ -133,6 +136,7 @@ class MessageLoop : public PumpDelegate {
     RefFdEvent wakeup_event_;
 
     EventPump event_pump_;
+    uint64_t pump_timeout_ = 2000;
 };
 
 } //end namespace

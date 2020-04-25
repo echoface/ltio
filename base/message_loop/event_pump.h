@@ -1,6 +1,7 @@
 #ifndef BASE_EVENT_PUMP_H_
 #define BASE_EVENT_PUMP_H_
 
+#include <bits/stdint-uintn.h>
 #include <vector>
 #include <memory>
 #include <map>
@@ -26,8 +27,8 @@ class PumpDelegate {
 public:
   virtual void PumpStarted() {};
   virtual void PumpStopped() {};
-
   virtual void RunNestedTask() {};
+  virtual uint64_t PumpTimeout() {return 2000;}; // ms
   virtual void RunTimerClosure(const TimerEventList&) {};
 };
 
@@ -60,10 +61,10 @@ protected:
    * timeoutevent will be invoke and re shedule if was repeated*/
   void ProcessTimerEvent();
 
-  /* return the possible minimal wait-time for next timer
+  /* return the minimal timeout for next poll
    * return 0 when has event expired,
-   * return default_timeout when no timer*/
-  timeout_t NextTimerTimeout(timeout_t default_timeout);
+   * return default_timeout when no other timeout provided*/
+  timeout_t NextTimeout(timeout_t default_timeout);
 
   /* finalize TimeoutWheel and delete Life-Ownered timeoutEvent*/
   void InitializeTimeWheel();
@@ -76,7 +77,7 @@ private:
   PumpDelegate* delegate_;
   bool running_;
 
-  std::unique_ptr<IOMux> multiplexer_;
+  std::unique_ptr<IOMux> io_mux_;
 
 #if 0
   // replace by new timeout_wheel for more effective perfomance [ O(1) ]

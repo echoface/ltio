@@ -66,7 +66,7 @@ private:
 };
 
 MessageLoop::MessageLoop()
-  : running_(ATOMIC_FLAG_INIT),
+  : running_(0),
     wakeup_pipe_in_(0),
     wakeup_pipe_out_(0),
     event_pump_(this) {
@@ -109,6 +109,12 @@ MessageLoop::~MessageLoop() {
 
 void MessageLoop::SetLoopName(std::string name) {
   loop_name_ = name;
+}
+
+void MessageLoop::SetMinPumpTimeout(uint64_t ms) {
+  if (ms < pump_timeout_) {
+    pump_timeout_ = ms;
+  }
 }
 
 bool MessageLoop::IsInLoopThread() const {
@@ -157,6 +163,11 @@ void MessageLoop::PumpStopped() {
   cv_.notify_all();
 }
 
+uint64_t MessageLoop::PumpTimeout() {
+  return pump_timeout_;
+};
+
+
 void MessageLoop::ThreadMain() {
   threadlocal_current_ = this;
   SetThreadNativeName();
@@ -165,7 +176,6 @@ void MessageLoop::ThreadMain() {
   event_pump_.InstallFdEvent(task_event_.get());
   event_pump_.InstallFdEvent(wakeup_event_.get());
 
-  //LOG(INFO) << "MessageLoop: [" << loop_name_ << "] Start Running";
   VLOG(GLOG_VINFO) << "MessageLoop: [" << loop_name_ << "] Start Running";
 
   //delegate_->BeforeLoopRun();
@@ -177,7 +187,6 @@ void MessageLoop::ThreadMain() {
 
   threadlocal_current_ = NULL;
   LOG(INFO) << "MessageLoop: [" << loop_name_ << "] Stop Running";
-
 }
 
 bool MessageLoop::PostDelayTask(TaskBasePtr task, uint32_t ms) {

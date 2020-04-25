@@ -4,6 +4,7 @@
 #include "event_pump.h"
 #include "io_mux_epoll.h"
 #include "linux_signal.h"
+#include <algorithm>
 
 namespace base {
 
@@ -12,7 +13,7 @@ EventPump::EventPump() :
   running_(false) {
 
   InitializeTimeWheel();
-  multiplexer_.reset(new base::IOMuxEpoll());
+  io_mux_.reset(new base::IOMuxEpoll());
 }
 
 EventPump::EventPump(PumpDelegate *d) :
@@ -20,11 +21,11 @@ EventPump::EventPump(PumpDelegate *d) :
   running_(false) {
 
   InitializeTimeWheel();
-  multiplexer_.reset(new base::IOMuxEpoll());
+  io_mux_.reset(new base::IOMuxEpoll());
 }
 
 EventPump::~EventPump() {
-  multiplexer_.reset();
+  io_mux_.reset();
   if (timeout_wheel_) {
     FinalizeTimeWheel();
   }
@@ -45,9 +46,8 @@ void EventPump::Run() {
   while (running_) {
     active_events.clear();
 
-    perfect_timeout_ms = NextTimerTimeout(default_timeout_ms);
+    io_mux_->WaitingIO(active_events, NextTimeout(default_timeout_ms));
 
-    multiplexer_->WaitingIO(active_events, perfect_timeout_ms);
     ProcessTimerEvent();
 
     for (auto &fd_event : active_events) {
@@ -79,7 +79,7 @@ bool EventPump::InstallFdEvent(FdEvent *fd_event) {
   }
 
   fd_event->SetFdWatcher(AsFdWatcher());
-  multiplexer_->AddFdEvent(fd_event);
+  io_mux_->AddFdEvent(fd_event);
   return true;
 }
 
@@ -91,13 +91,13 @@ bool EventPump::RemoveFdEvent(FdEvent *fd_event) {
   }
   fd_event->SetFdWatcher(nullptr);
 
-  multiplexer_->DelFdEvent(fd_event);
+  io_mux_->DelFdEvent(fd_event);
   return true;
 }
 
 void EventPump::OnEventChanged(FdEvent *fd_event) {
   CHECK(IsInLoopThread() && fd_event->EventWatcher());
-  multiplexer_->UpdateFdEvent(fd_event);
+  io_mux_->UpdateFdEvent(fd_event);
 }
 
 void EventPump::AddTimeoutEvent(TimeoutEvent *timeout_ev) {
@@ -142,15 +142,20 @@ void EventPump::ProcessTimerEvent() {
   }
 }
 
-timeout_t EventPump::NextTimerTimeout(timeout_t default_timeout) {
+timeout_t EventPump::NextTimeout(timeout_t hint) {
   ::timeouts_update(timeout_wheel_, time_ms());
   if (::timeouts_expired(timeout_wheel_)) {
     return 0;
   }
+
   if (::timeouts_pending(timeout_wheel_)) {
-    return ::timeouts_timeout(timeout_wheel_);
+    hint = ::timeouts_timeout(timeout_wheel_);
   }
-  return default_timeout;
+
+  if (!delegate_) {
+    return hint;
+  }
+  return std::min(hint, delegate_->PumpTimeout());
 }
 
 void EventPump::InitializeTimeWheel() {
