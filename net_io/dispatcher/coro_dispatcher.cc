@@ -26,9 +26,8 @@ void CoroDispatcher::TransferAndYield(base::MessageLoop* ioloop, base::StlClosur
 }
 
 bool CoroDispatcher::SetWorkContext(CodecMessage* message) {
-  //base::CoroRunner::CurrentCoroResumeCtx();
   message->SetWorkerCtx(base::MessageLoop::Current(), co_resumer());
-  return base::MessageLoop::Current() && base::CoroRunner::CanYield();
+  return base::MessageLoop::Current();
 }
 
 bool CoroDispatcher::Dispatch(base::StlClosure& closure) {

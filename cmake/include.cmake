@@ -6,7 +6,6 @@ include_directories(
   ${PROJECT_SOURCE_DIR}/
   ${PROJECT_SOURCE_DIR}/thirdparty
 )
-
 ADD_SUBDIRECTORY(base)
 
 ADD_SUBDIRECTORY(net_io)
@@ -22,3 +21,4 @@ ADD_SUBDIRECTORY(unittests)
 if (LTIO_BUILD_EXAMPLES)
   ADD_SUBDIRECTORY(examples)
 endif()
+

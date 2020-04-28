@@ -7,7 +7,6 @@ SET(BASE_SOURCES
   utils/ns_convertor.cc
   utils/string/str_utils.cc
   #coroutine
-  coroutine/coroutine.cc
   coroutine/wait_group.cc
   coroutine/coroutine_runner.cc
   #new eventloop
@@ -32,13 +31,20 @@ SET(BASE_SOURCES
   closure/location.cc
 )
 
-add_library(ltbase_objs OBJECT ${BASE_SOURCES})
+if (LTIO_USE_ACO_CORO_IMPL)
+  ADD_DEFINITIONS(-DUSE_LIBACO_CORO_IMPL)
+  list(APPEND BASE_SOURCES coroutine/aco_coroutine.cc)
+else()
+  list(APPEND BASE_SOURCES coroutine/coroutine.cc)
+endif()
 
 add_library(ltbase STATIC ${BASE_SOURCES})
-
 ltio_default_properties(ltbase)
 target_include_directories(ltbase PUBLIC
   ${LtIO_INCLUDE_DIRS}
   ${PROJECT_SOURCE_DIR}
   ${PROJECT_SOURCE_DIR}/thirdparty
-  )
+)
+
+add_library(ltbase_objs OBJECT ${BASE_SOURCES})
+

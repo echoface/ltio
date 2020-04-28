@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 3.5)
 
 SET(UNITTESTS_BINARY_DEPS
-  ltio
-  lt3rd
-  coro
+  PUBLIC ltio
+  PUBLIC lt3rd
+  PUBLIC ${CORO_LIBRARY}
   ${LtIO_LINKER_LIBS}
-  )
+)
 
 if (LTIO_BUILD_UNITTESTS)
   ADD_SUBDIRECTORY(base)

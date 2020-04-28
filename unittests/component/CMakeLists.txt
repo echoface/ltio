@@ -5,5 +5,5 @@ ADD_EXECUTABLE(component_unittest ${COMPONENT_UT_SOURCES})
 ltio_default_properties(component_unittest)
 
 TARGET_LINK_LIBRARIES(component_unittest
-  PUBLIC ${UNITTESTS_BINARY_DEPS}
-  )
+  ${UNITTESTS_BINARY_DEPS}
+)

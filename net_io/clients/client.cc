@@ -212,10 +212,11 @@ bool Client::AsyncDoRequest(RefCodecMessage& req, AsyncCallBack callback) {
 }
 
 CodecMessage* Client::DoRequest(RefCodecMessage& message) {
-  if (!base::MessageLoop::Current() || !base::CoroRunner::CanYield()) {
+  if (!base::MessageLoop::Current()) {
     LOG(ERROR) << __FUNCTION__ << " must call on coroutine task";
     return NULL;
   }
+
   message->SetRemoteHost(remote_info_.host);
   message->SetWorkerCtx(base::MessageLoop::Current(), co_resumer());
 

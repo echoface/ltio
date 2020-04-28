@@ -6,10 +6,9 @@ ADD_EXECUTABLE(log_metrics_test
 
 TARGET_LINK_LIBRARIES(log_metrics_test
   PUBLIC ltio
-  PUBLIC lt3rd
-  PUBLIC coro
+  ${LINK_DEP_LIBS}
   ${LtIO_LINKER_LIBS}
-  PUBLIC ${LIBUNWIND_LIBRARIES}
+  ${LIBUNWIND_LIBRARIES}
 )
 
 if (NOT LTIO_DISABLE_ASYNCMYSQL)
@@ -18,10 +17,8 @@ if (NOT LTIO_DISABLE_ASYNCMYSQL)
     )
   TARGET_LINK_LIBRARIES(asyncmysql_test
     PUBLIC ltasyncmysql
-    PUBLIC ltbase
-    PUBLIC lt3rd
-    PUBLIC coro
+    ${LINK_DEP_LIBS}
     ${LtIO_LINKER_LIBS}
-    PUBLIC ${LIBUNWIND_LIBRARIES}
+    ${LIBUNWIND_LIBRARIES}
     )
 endif()

@@ -7,5 +7,5 @@ ADD_EXECUTABLE(base_unittest
 ltio_default_properties(base_unittest)
 
 TARGET_LINK_LIBRARIES(base_unittest
-  PUBLIC ${UNITTESTS_BINARY_DEPS}
+  ${UNITTESTS_BINARY_DEPS}
 )
