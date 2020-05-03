@@ -132,29 +132,32 @@ TEST_CASE("messageloop.replytask", "[task with reply function]") {
   bool inloop_reply_run = false;
   bool outloop_reply_run = false;
 
-  loop.PostTaskAndReply([&]() {
-    LOG(INFO) << " task bind reply in loop run";
-  }, [&]() {
-    inloop_reply_run = true;
-    REQUIRE(base::MessageLoop::Current() == &loop);
-    inloop_reply_run = false;
-  }, FROM_HERE);
+  loop.PostTaskAndReply(FROM_HERE,
+                        [&]() {
+                          LOG(INFO) << " task bind reply in loop run";
+                        }, [&]() {
+                          inloop_reply_run = true;
+                          REQUIRE(base::MessageLoop::Current() == &loop);
+                          inloop_reply_run = false;
+                        });
 
-  loop.PostTaskAndReply([&]() {
-    LOG(INFO) << " task bind stlclosure reply in loop run";
-  }, [&]() {
-    inloop_reply_run = true;
-    REQUIRE(base::MessageLoop::Current() == &loop);
-    inloop_reply_run = false;
-  }, FROM_HERE);
+  loop.PostTaskAndReply(FROM_HERE,
+                        [&]() {
+                          LOG(INFO) << " task bind stlclosure reply in loop run";
+                        }, [&]() {
+                          inloop_reply_run = true;
+                          REQUIRE(base::MessageLoop::Current() == &loop);
+                          inloop_reply_run = false;
+                        });
 
-  loop.PostTaskAndReply([&]() {
-    LOG(INFO) << " task bind reply use another loop run";
-  }, [&]() {
-    outloop_reply_run = true;
-    REQUIRE(base::MessageLoop::Current() == &replyloop);
-    outloop_reply_run = false;
-  }, &replyloop, FROM_HERE);
+  loop.PostTaskAndReply(FROM_HERE,
+                        [&]() {
+                          LOG(INFO) << " task bind reply use another loop run";
+                        }, [&]() {
+                          outloop_reply_run = true;
+                          REQUIRE(base::MessageLoop::Current() == &replyloop);
+                          outloop_reply_run = false;
+                        }, &replyloop);
 
 
   loop.PostDelayTask(NewClosure([&](){

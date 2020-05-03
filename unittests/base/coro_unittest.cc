@@ -64,7 +64,7 @@ TEST_CASE("coro.co_resumer()", "[coroutine resumer with loop reply task]") {
   // big stack function;
   co_go &loop << [&]() {
     LOG(INFO) << " coroutine enter ..";
-    loop.PostTaskAndReply(stack_sensitive_fn, co_resumer(), NULL, FROM_HERE);
+    loop.PostTaskAndReply(FROM_HERE, stack_sensitive_fn, co_resumer());
     LOG(INFO) << " coroutine pasued..";
     co_pause;
     LOG(INFO) << " coroutine resumed..";
@@ -135,4 +135,28 @@ TEST_CASE("coro.waitGroup", "[coroutine resumer with loop reply task]") {
   };
   loop.WaitLoopEnd();
 }
+
+TEST_CASE("coro.multi_resume", "[coroutine resume twice]") {
+  base::MessageLoop loop; loop.Start();
+
+  auto stack_sensitive_fn = []() {
+    LOG(INFO) << "normal task start...";
+    sleep(1);
+    LOG(INFO) << "normal task end...";
+  };
+
+  co_go &loop << [&]() { //main
+    LOG(INFO) << "coro run start...";
+
+    loop.PostDelayTask(NewClosure(co_resumer()), 201);
+    loop.PostDelayTask(NewClosure(co_resumer()), 200);
+    loop.PostTaskAndReply(FROM_HERE, stack_sensitive_fn, co_resumer());
+
+    LOG(INFO) << "coro run resumed...";
+
+    loop.QuitLoop();
+  };
+  loop.WaitLoopEnd();
+}
+
 

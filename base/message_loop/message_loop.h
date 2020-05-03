@@ -62,18 +62,18 @@ class MessageLoop : public PumpDelegate {
     /* Task will run in target loop thread,
      * reply will run in Current() loop if it exist,
      * otherwise the reply task will run in target messageloop thread too*/
-    template<class T, class Reply>
-    bool PostTaskAndReply(const T& task,
-                          const Reply& reply,
-                          const Location& location) {
-      return PostTaskAndReply(task, reply, this, location);
+    template<class T, class R>
+    bool PostTaskAndReply(const Location& location,
+                          const T& task,
+                          const R& reply) {
+      return PostTaskAndReply(location, task, reply, this);
     }
 
-    template<class T, class Reply>
-    bool PostTaskAndReply(const T& task,
-                          const Reply& reply,
-                          MessageLoop* reply_loop,
-                          const Location& location) {
+    template<class T, class R>
+    bool PostTaskAndReply(const Location& location,
+                          const T& task,
+                          const R& reply,
+                          MessageLoop* reply_loop) {
       if (reply_loop == nullptr) {
         return PostTask(CreateTaskWithCallback(location, task, reply));
       }
