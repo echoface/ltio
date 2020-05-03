@@ -85,6 +85,11 @@ public:
   StlClosure Resumer();
 
   std::string RunnerInfo() const;
+
+  /* judge wheather running in a main coroutine with thread*/
+  bool InMainCoroutine() const { return (main_coro_ == current_);}
+  
+  bool CanYieldHere() const {return !InMainCoroutine();}
 protected:
   CoroRunner();
   ~CoroRunner();
@@ -93,13 +98,6 @@ protected:
 
   /* release the coroutine memory */
   void DestroyCroutine();
-
-  /* case 1: scheduled_task exsist, set task and run again
-   * case 2: scheduled_task empty, recall to freelist or gc it */
-  void StashIfNeeded();
-
-  /* judge wheather running in a main coroutine with thread*/
-  bool InMainCoroutine() const { return (main_coro_ == current_);}
 
   /* install coroutine to P(CoroRunner, binded to a native thread)*/
   void RunCoroutine();
@@ -147,10 +145,13 @@ private:
 
 }// end base
 
-//NOTE: co_yield has bee a private key words for c++20, so cry to name co_pause....
+//NOTE: co_yield,co_await,co_resume has bee a private key words for c++20,
+//so cry to re-name aco_xxx....
 #define co_go        ::base::CoroRunner::_go(__FUNCTION__, __FILE__, __LINE__)-
 #define co_pause     ::base::CoroRunner::Runner().Yield()
 #define co_resumer() ::base::CoroRunner::Runner().Resumer()
 #define co_sleep(ms) ::base::CoroRunner::Runner().Sleep(ms)
+#define co_can_yield \
+  (base::MessageLoop::Current() && ::base::CoroRunner::Runner().CanYieldHere())
 
 #endif

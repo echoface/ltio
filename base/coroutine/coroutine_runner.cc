@@ -166,6 +166,8 @@ void CoroRunner::RunCoroutine() {
   while (coro_tasks_.size() > 0) {
     //M
     Coroutine* coro = RetrieveCoroutine();
+    CHECK(coro);
+
     // 只有当这个corotine 在task运行的过程中换出(paused)，那么才会重新回到这里,否则是在task运行完成之后
     // 会调用RecallCoroutine，在依旧有task需要运行的时候，可以设置task， 让这个coro继续
     // 执行task，而不需要切换task，如果没有task， 则将coro回收或者标记成gc状态，等待gc回收
@@ -174,8 +176,7 @@ void CoroRunner::RunCoroutine() {
     // coro运行task，结束循环回到messageloop循环，等待后后续的Task
     //
     // 当yield的之后的task重新被标记成可运行，那么做coro的切换就无法避免了，直接使用Resume
-    // 切换调度, 此时调度结束后调用StashIfNeeded，task队列中应该会是空的
-    CHECK(coro);
+    // 切换调度, 此时调度结束后调用GcCorotuine，task队列中应该会是空的
     SwapCurrentAndTransferTo(coro);
   }
   invoke_coro_shceduled_ = false;
