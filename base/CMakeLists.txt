@@ -1,5 +1,3 @@
-ADD_DEFINITIONS(-std=c++11)
-
 SET(BASE_SOURCES
   time/timestamp.cc
   time/time_utils.cc
@@ -29,22 +27,12 @@ SET(BASE_SOURCES
   utils/gzip/gzip_utils.cc
   # closure
   closure/location.cc
-)
+  )
 
 if (LTIO_USE_ACO_CORO_IMPL)
-  ADD_DEFINITIONS(-DUSE_LIBACO_CORO_IMPL)
   list(APPEND BASE_SOURCES coroutine/aco_coroutine.cc)
 else()
   list(APPEND BASE_SOURCES coroutine/coroutine.cc)
 endif()
 
-add_library(ltbase STATIC ${BASE_SOURCES})
-ltio_default_properties(ltbase)
-target_include_directories(ltbase PUBLIC
-  ${LtIO_INCLUDE_DIRS}
-  ${PROJECT_SOURCE_DIR}
-  ${PROJECT_SOURCE_DIR}/thirdparty
-)
-
 add_library(ltbase_objs OBJECT ${BASE_SOURCES})
-

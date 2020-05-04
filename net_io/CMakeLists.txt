@@ -53,5 +53,4 @@ set(LTNET_SOURCE
   clients/router/roundrobin_router.cc
 )
 
-ADD_LIBRARY(ltnet_objs OBJECT ${LTNET_SOURCE})
-ltio_default_properties(ltnet_objs)
+add_library(ltnet_objs OBJECT ${LTNET_SOURCE})

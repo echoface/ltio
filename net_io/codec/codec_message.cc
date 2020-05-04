@@ -2,7 +2,7 @@
 
 #include "codec_message.h"
 #include "codec_service.h"
-#include <base/coroutine/coroutine.h>
+#include <base/coroutine/coroutine_runner.h>
 #include <base/message_loop/message_loop.h>
 
 namespace lt {

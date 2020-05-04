@@ -1,7 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
 
-ADD_DEFINITIONS(-std=c++11)
-
 SET(COMPONENT_SOURCES
   ./log_metrics/metrics_item.cc
   ./log_metrics/metrics_stash.cc
@@ -29,11 +27,18 @@ SET(COMPONENT_SOURCES
   ./inverted_indexer/posting_field/posting_list_manager.cc
 )
 
-include_directories(
-  ${LtIO_INCLUDE_DIRS}
-  ${PROJECT_SOURCE_DIR}/
-  ${PROJECT_SOURCE_DIR}/thirdparty
-  )
-
 add_library(ltcomponent_objs OBJECT ${COMPONENT_SOURCES})
-ltio_default_properties(ltcomponent_objs)
+
+#add_library(ltcomponent STATIC ${COMPONENT_SOURCES})
+#ltio_default_properties(ltcomponent)
+#target_link_libraries(ltcomponent
+#  PUBLIC ${CORO_LIBRARY}
+#  )
+#target_compile_definitions(ltcomponent
+#  PUBLIC ${CORO_LIB_COMPILE_DEFINE}
+#)
+#target_include_directories(ltcomponent PUBLIC
+#  ${LtIO_INCLUDE_DIRS}
+#  ${PROJECT_SOURCE_DIR}
+#  ${PROJECT_SOURCE_DIR}/thirdparty
+#)

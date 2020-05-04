@@ -1,7 +1,3 @@
-# These lists are later turned into target properties on main LtIO library target
-set(LtIO_LINKER_LIBS "")
-set(LtIO_INCLUDE_DIRS "")
-set(LtIO_COMPILE_OPTIONS "")
 
 find_package(Tcmalloc REQUIRED)
 list(APPEND LtIO_LINKER_LIBS PUBLIC ${Tcmalloc_LIBRARY})

@@ -88,7 +88,7 @@ public:
 
   /* judge wheather running in a main coroutine with thread*/
   bool InMainCoroutine() const { return (main_coro_ == current_);}
-  
+
   bool CanYieldHere() const {return !InMainCoroutine();}
 protected:
   CoroRunner();
