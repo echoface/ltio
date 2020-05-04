@@ -7,7 +7,7 @@
 #include <base/memory/spin_lock.h>
 
 #include "config.h"
-#include "coroutine.h"
+#include "coro_impl.h"
 
 namespace base {
 
@@ -20,46 +20,53 @@ int64_t SystemCoroutineCount() {
 }
 
 //static
-RefCoroutine Coroutine::Create(CoroEntry entry, Coroutine* main_co) {
-  return RefCoroutine(new Coroutine(entry, main_co));
-}
-
 RefCoroutine Coroutine::CreateMain() {
   return RefCoroutine(new Coroutine());
+}
+
+RefCoroutine Coroutine::Create(LibCoroEntry entry) {
+  return RefCoroutine(new Coroutine(entry));
 }
 
 Coroutine::Coroutine()
   : resume_cnt_(0) {
 
-    aco_thread_init(NULL);
-    state_ = CoroState::kRunning;
-    coro_ = aco_create(NULL, NULL, 0, NULL, NULL);
+  stack_.ssze = 0;
+  stack_.sptr = nullptr;
+  state_ = CoroState::kRunning;
+  {
+    base::SpinLockGuard guard(g_coro_lock);
+    coro_create(this, NULL, NULL, NULL, 0);
+  }
 }
 
-Coroutine::Coroutine(CoroEntry entry, Coroutine* main_co)
+Coroutine::Coroutine(LibCoroEntry entry)
   : resume_cnt_(0) {
 
+  stack_.ssze = 0;
+  stack_.sptr = nullptr;
   state_ = CoroState::kInit;
-  sstk_ = aco_share_stack_new(COROUTINE_STACK_SIZE);
-  coro_ = aco_create(main_co->coro_, sstk_, 0, entry, this);
 
+  int r = coro_stack_alloc(&stack_, COROUTINE_STACK_SIZE);
+  LOG_IF(ERROR, r == 0) << "Failed Allocate Coroutine Stack";
+  CHECK(r == 1);
+
+  memset((coro_context*)this, 0, sizeof(coro_context));
+  {
+    base::SpinLockGuard guard(g_coro_lock);
+    coro_create(this, entry, this, stack_.sptr, stack_.ssze);
+  }
   g_counter.fetch_add(1);
-
   VLOG(GLOG_VTRACE) << "coroutine born! count:" << g_counter.load()
     << " st:" << StateToString()
     << " main:" << (is_main() ? "True" : "False");
 }
 
 Coroutine::~Coroutine() {
-
-  aco_destroy(coro_);
-
-  if (sstk_) {
-    CHECK(!IsRunning());
-
+  if (stack_.ssze != 0) { //none main coroutine
+    coro_stack_free(&stack_);
     g_counter.fetch_sub(1);
-    aco_share_stack_destroy(sstk_);
-    sstk_ = nullptr;
+    CHECK(!IsRunning());
   }
 
   VLOG(GLOG_VTRACE) << "coroutine gone! count:" << g_counter.load()
@@ -70,6 +77,21 @@ Coroutine::~Coroutine() {
 void Coroutine::SelfHolder(RefCoroutine& self) {
   CHECK(self.get() == this);
   self_holder_ = self;
+}
+
+bool Coroutine::CanResume(int64_t resume_id) {
+  return IsPaused() && resume_cnt_ == resume_id;
+}
+
+void Coroutine::TransferTo(Coroutine* next) {
+  CHECK(this != next);
+  if (state_ == CoroState::kRunning) {
+    SetCoroState(CoroState::kPaused);
+  }
+  next->resume_cnt_++;
+  next->SetCoroState(CoroState::kRunning);
+
+  coro_transfer(this, next);
 }
 
 std::string Coroutine::StateToString() const {
@@ -88,28 +110,5 @@ std::string Coroutine::StateToString() const {
   return "Unknown";
 }
 
-bool Coroutine::CanResume(int64_t resume_id) {
-  return IsPaused() && resume_cnt_ == resume_id;
-}
-
-void Coroutine::Exit() {
-  CHECK(!is_main());
-  SetCoroState(CoroState::kDone);
-  aco_exit();
-}
-
-void Coroutine::TransferTo(Coroutine* next) {
-  CHECK(this != next);
-
-  this->SetCoroState(CoroState::kPaused);
-
-  next->resume_cnt_++;
-  next->SetCoroState(CoroState::kRunning);
-  if (!is_main()) {
-    aco_yield();
-  } else {
-    aco_resume(next->coro_);
-  }
-}
 
 }//end base

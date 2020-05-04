@@ -8,7 +8,11 @@
 #include <base/base_micro.h>
 #include <base/message_loop/message_loop.h>
 
-#include "coroutine.h"
+#ifdef USE_LIBACO_CORO_IMPL
+#include "aco_impl.h"
+#else
+#include "coro_impl.h"
+#endif
 
 namespace base {
 

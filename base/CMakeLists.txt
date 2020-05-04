@@ -1,5 +1,3 @@
-add_subdirectory(coroutine)
-
 SET(BASE_SOURCES
   time/timestamp.cc
   time/time_utils.cc
@@ -8,7 +6,6 @@ SET(BASE_SOURCES
   utils/string/str_utils.cc
   #coroutine
   coroutine/wait_group.cc
-  coroutine/coroutine.cc
   coroutine/coroutine_runner.cc
   #new eventloop
   message_loop/event.cc
@@ -31,6 +28,12 @@ SET(BASE_SOURCES
   # closure
   closure/location.cc
   )
+
+if (LTIO_USE_ACO_CORO_IMPL)
+  list(APPEND BASE_SOURCES coroutine/aco_impl.cc)
+else()
+  list(APPEND BASE_SOURCES coroutine/coro_impl.cc)
+endif()
 
 add_library(ltbase_objs OBJECT ${BASE_SOURCES})
 ltio_default_properties(ltbase_objs)

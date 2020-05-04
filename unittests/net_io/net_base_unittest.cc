@@ -10,7 +10,6 @@
 #include "glog/logging.h"
 #include <base/time/time_utils.h>
 #include "base/closure/closure_task.h"
-#include <base/coroutine/coroutine.h>
 #include <base/message_loop/message_loop.h>
 #include <base/coroutine/coroutine_runner.h>
 #include "net_io/tcp_channel.h"

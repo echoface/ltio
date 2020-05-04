@@ -16,7 +16,6 @@ static thread_local __detail::_T tls_runner_impl;
 static thread_local CoroRunner* tls_runner = NULL;
 
 //IMPORTANT NOTE: NO HEAP MEMORY HERE!!!
-
 #ifdef USE_LIBACO_CORO_IMPL
 void CoroRunner::CoroutineMain() {
   Coroutine* coroutine = static_cast<Coroutine*>(aco_get_arg());
