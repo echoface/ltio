@@ -23,7 +23,7 @@ void WaitGroup::Done() {
 
 void WaitGroup::Add(int64_t count) {
   CHECK(count > 0);
-  wait_count_ += count;
+  wait_count_.fetch_add(count);
 }
 
 void WaitGroup::Wait(int64_t timeout_ms) {
