@@ -61,7 +61,7 @@ endif()
 add_library(glog::glog SHARED IMPORTED GLOBAL)
 set_property(TARGET glog::glog
     PROPERTY
-    IMPORTED_LOCATION ${GLOG_LIBRARY}
+    IMPORTED_LOCATION ${GLOG_LIBRARIES}
     )
 
 #
