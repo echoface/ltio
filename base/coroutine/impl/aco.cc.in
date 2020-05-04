@@ -7,7 +7,7 @@
 #include <base/memory/spin_lock.h>
 
 #include "config.h"
-#include "aco_coroutine.h"
+#include "coroutine.h"
 
 namespace base {
 
@@ -39,7 +39,7 @@ Coroutine::Coroutine()
 Coroutine::Coroutine(CoroEntry entry, Coroutine* main_co)
   : resume_cnt_(0) {
 
-  state_ = CoroState::kInitialized;
+  state_ = CoroState::kInit;
   sstk_ = aco_share_stack_new(COROUTINE_STACK_SIZE);
   coro_ = aco_create(main_co->coro_, sstk_, 0, entry, this);
 
@@ -80,7 +80,7 @@ std::string Coroutine::StateToString() const {
       return "Paused";
     case CoroState::kRunning:
       return "Running";
-    case CoroState::kInitialized:
+    case CoroState::kInit:
       return "Initialized";
     default:
       break;

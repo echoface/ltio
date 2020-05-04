@@ -212,7 +212,7 @@ Coroutine* CoroRunner::RetrieveCoroutine() {
 #ifdef USE_LIBACO_CORO_IMPL
     Coroutine::Create(&CoroRunner::CoroutineMain, main_coro_);
 #else
-  Coroutine::Create(&CoroRunner::CoroutineMain);
+    Coroutine::Create(&CoroRunner::CoroutineMain);
 #endif
   coro_ptr->SelfHolder(coro_ptr);
 

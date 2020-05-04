@@ -1,6 +1,3 @@
-
-ADD_DEFINITIONS(-std=c++11)
-
 add_library(ltasyncmysql STATIC
   query_session.cc
   mysql_async_con.cc
@@ -8,8 +5,8 @@ add_library(ltasyncmysql STATIC
   )
 
 ltio_default_properties(ltasyncmysql)
-
-target_include_directories(ltasyncmysql PUBLIC
+target_include_directories(ltasyncmysql
+  PUBLIC
   ${LtIO_INCLUDE_DIRS}
   ${MYSQL_INCLUDE_DIR}
   ${LT_INTEGRATION_DIR}

@@ -8,11 +8,7 @@
 #include <base/base_micro.h>
 #include <base/message_loop/message_loop.h>
 
-#ifdef USE_LIBACO_CORO_IMPL
-  #include "aco_coroutine.h"
-#else
-  #include "coroutine.h"
-#endif
+#include "coroutine.h"
 
 namespace base {
 
@@ -88,7 +84,7 @@ public:
 
   /* judge wheather running in a main coroutine with thread*/
   bool InMainCoroutine() const { return (main_coro_ == current_);}
-  
+
   bool CanYieldHere() const {return !InMainCoroutine();}
 protected:
   CoroRunner();
