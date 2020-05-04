@@ -40,4 +40,6 @@ else()
 endif()
 
 add_library(ltbase_objs OBJECT ${BASE_SOURCES})
+add_dependencies(ltbase_objs ${CORO_LIBRARY})
 ltio_default_properties(ltbase_objs)
+

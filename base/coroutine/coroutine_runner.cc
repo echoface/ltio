@@ -1,8 +1,9 @@
+#include "coroutine_runner.h"
+
+#include "glog/logging.h"
+
 #include <base/closure/closure_task.h>
 #include <base/memory/lazy_instance.h>
-
-#include "coroutine_runner.h"
-#include "glog/logging.h"
 
 namespace {
 static const char* kCoSleepWarning =
