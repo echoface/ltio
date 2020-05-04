@@ -28,7 +28,7 @@ public:
   virtual void OnNewClientConnected(int socket_fd, SocketAddr& local, SocketAddr& remote) = 0;
 };
 
-class Connector {
+class Connector : public base::FdEvent::Handler {
 public:
   Connector(base::EventPump* pump, ConnectorDelegate* delegate);
   ~Connector() {};
@@ -40,14 +40,19 @@ public:
 
   void OnWrite(WeakPtrFdEvent weak_fdevent);
   void OnError(WeakPtrFdEvent weak_fdevent);
-
 private:
-  void CleanUpBadChannel(base::RefFdEvent& event);
+  void HandleRead(base::FdEvent* fd_event) override;
+  void HandleWrite(base::FdEvent* fd_event) override;
+  void HandleError(base::FdEvent* fd_event) override;
+  void HandleClose(base::FdEvent* fd_event) override;
 
+  void CleanUpBadChannel(base::FdEvent* event);
+  bool remove_fdevent(base::FdEvent* event);
 private:
   base::EventPump* pump_;
   ConnectorDelegate* delegate_;
   std::set<base::RefFdEvent> connecting_sockets_;
+  //DoubleLinkedList<FdEvent> listen_events_;
 };
 
 }}

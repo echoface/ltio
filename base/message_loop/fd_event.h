@@ -22,9 +22,9 @@ public:
     virtual ~FdEventWatcher() {}
     virtual void OnEventChanged(FdEvent* fd_event) = 0;
   };
-  class EventHandler { //fd owner should implement those
+  class Handler { //fd owner should implement those
   public:
-    virtual ~EventHandler() {}
+    virtual ~Handler() {}
     virtual void HandleRead(FdEvent* fd_event) = 0;
     virtual void HandleWrite(FdEvent* fd_event) = 0;
     virtual void HandleError(FdEvent* fd_event) = 0;
@@ -32,9 +32,9 @@ public:
   };
 
   typedef std::function<void()> EventCallback;
-  static std::shared_ptr<FdEvent> Create(int fd, LtEvent event);
+  static std::shared_ptr<FdEvent> Create(Handler* handler, int fd, LtEvent event);
 
-  FdEvent(int fd, LtEvent events);
+  FdEvent(Handler* handler, int fd, LtEvent events);
   ~FdEvent();
 
   void SetFdWatcher(FdEventWatcher *d);
@@ -64,7 +64,7 @@ public:
   void DisableWriting();
 
   inline int fd() const {return fd_;};
-  inline void GiveupOwnerFd() {owner_fd_life_ = false;}
+  inline void GiveupOwnerFd() {owner_fd_ = false;}
 
   std::string EventInfo() const;
   LtEvent ActivedEvent() const {return revents_;};
@@ -76,8 +76,8 @@ private:
   const int fd_;
   LtEvent events_;
   LtEvent revents_;
-  bool owner_fd_life_;
-
+  bool owner_fd_;
+  Handler* handler_ = NULL;
   FdEventWatcher* watcher_ = NULL;
 
   EventCallback read_callback_;

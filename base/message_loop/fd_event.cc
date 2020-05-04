@@ -4,19 +4,20 @@
 
 namespace base {
 
-RefFdEvent FdEvent::Create(int fd, LtEvent events) {
-  return std::make_shared<FdEvent>(fd, events);
+RefFdEvent FdEvent::Create(FdEvent::Handler* handler, int fd, LtEvent events) {
+  return std::make_shared<FdEvent>(handler, fd, events);
 }
 
-FdEvent::FdEvent(int fd, LtEvent event):
+FdEvent::FdEvent(FdEvent::Handler* handler, int fd, LtEvent event):
   fd_(fd),
   events_(event),
   revents_(0),
-  owner_fd_life_(true) {
+  owner_fd_(true),
+  handler_(handler) {
 }
 
 FdEvent::~FdEvent() {
-  if (owner_fd_life_) {
+  if (owner_fd_) {
     ::close(fd_);
   }
 }
@@ -46,11 +47,7 @@ void FdEvent::SetRcvEvents(const LtEvent& ev) {
 }
 
 void FdEvent::ResetCallback() {
-  static const EventCallback kNullCallback;
-  error_callback_ = kNullCallback;
-  write_callback_ = kNullCallback;
-  read_callback_  = kNullCallback;
-  close_callback_ = kNullCallback;
+  handler_ = nullptr;
 }
 
 void FdEvent::EnableReading() {
@@ -96,27 +93,27 @@ void FdEvent::HandleEvent() {
   VLOG(GLOG_VTRACE) << __FUNCTION__ << EventInfo() << " rcv event:" << RcvEventAsString();
   do {
     if (revents_ & LtEv::LT_EVENT_ERROR) {
-      if (error_callback_) {
-        error_callback_();
+      if (handler_) {
+        handler_->HandleError(this);
       }
       break;
     }
 
     if (revents_ & LtEv::LT_EVENT_WRITE) {
-      if (write_callback_) {
-        write_callback_();
+      if (handler_) {
+        handler_->HandleWrite(this);
       }
     }
 
     if (revents_ & LtEv::LT_EVENT_READ) {
-      if (read_callback_) {
-        read_callback_();
+      if (handler_) {
+        handler_->HandleRead(this);
       }
     }
 
     if (revents_ & LtEv::LT_EVENT_CLOSE) {
       if (close_callback_) {
-        close_callback_();
+        handler_->HandleClose(this);
       }
     }
   } while(0);

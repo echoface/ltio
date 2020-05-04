@@ -82,12 +82,10 @@ MessageLoop::MessageLoop()
   wakeup_pipe_out_ = fds[0];
   wakeup_pipe_in_ = fds[1];
 
-  wakeup_event_ = FdEvent::Create(wakeup_pipe_out_, LtEv::LT_EVENT_READ);
-  wakeup_event_->SetReadCallback(std::bind(&MessageLoop::RunCommandTask, this, ScheduledTaskType::TaskTypeCtrl));
+  wakeup_event_ = FdEvent::Create(this, wakeup_pipe_out_, LtEv::LT_EVENT_READ);
 
   task_fd_ = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
-  task_event_ = FdEvent::Create(task_fd_, LtEv::LT_EVENT_READ);
-  task_event_->SetReadCallback(std::bind(&MessageLoop::RunCommandTask, this, ScheduledTaskType::TaskTypeDefault));
+  task_event_ = FdEvent::Create(this, task_fd_, LtEv::LT_EVENT_READ);
 
   running_.clear();
 }
@@ -105,6 +103,28 @@ MessageLoop::~MessageLoop() {
   task_event_.reset();
   wakeup_pipe_in_ = -1;
   wakeup_pipe_out_ = -1;
+}
+
+void MessageLoop::HandleRead(FdEvent* fd_event) {
+  if (fd_event == wakeup_event_.get()) {
+    RunCommandTask(ScheduledTaskType::TaskTypeCtrl);
+  } else if (fd_event == task_event_.get()) {
+    RunCommandTask(ScheduledTaskType::TaskTypeDefault);
+  } else {
+    LOG(ERROR) << __func__ << " should not reached";
+  }
+}
+
+void MessageLoop::HandleWrite(FdEvent* fd_event) {
+  LOG(ERROR) << __func__ << " should not reached";
+}
+
+void MessageLoop::HandleError(FdEvent* fd_event) {
+  LOG(ERROR) << __func__ << " error event, fd" << fd_event->fd();
+}
+
+void MessageLoop::HandleClose(FdEvent* fd_event) {
+  LOG(ERROR) << __func__ << " close event, fd" << fd_event->fd();
 }
 
 void MessageLoop::SetLoopName(std::string name) {
@@ -181,6 +201,9 @@ void MessageLoop::ThreadMain() {
   //delegate_->BeforeLoopRun();
   event_pump_.Run();
   //delegate_->AfterLoopRun();
+
+  task_event_->ResetCallback();
+  wakeup_event_->ResetCallback();
 
   event_pump_.RemoveFdEvent(wakeup_event_.get());
   event_pump_.RemoveFdEvent(task_event_.get());

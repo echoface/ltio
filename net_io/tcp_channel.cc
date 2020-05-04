@@ -26,18 +26,13 @@ TcpChannel::TcpChannel(int socket_fd,
                        const SocketAddr& peer,
                        base::EventPump* pump)
   : SocketChannel(socket_fd, loc, peer, pump) {
-
-  fd_event_->SetReadCallback(std::bind(&TcpChannel::HandleRead, this));
-  fd_event_->SetWriteCallback(std::bind(&TcpChannel::HandleWrite, this));
-  fd_event_->SetCloseCallback(std::bind(&TcpChannel::HandleClose, this));
-  fd_event_->SetErrorCallback(std::bind(&TcpChannel::HandleError, this));
 }
 
 TcpChannel::~TcpChannel() {
   VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
 }
 
-void TcpChannel::HandleRead() {
+void TcpChannel::HandleRead(base::FdEvent* event) {
   static const int32_t block_size = 4 * 1024;
   do {
     in_buffer_.EnsureWritableSize(block_size);
@@ -53,7 +48,7 @@ void TcpChannel::HandleRead() {
 
     } else if (0 == bytes_read) {
 
-      HandleClose();
+      HandleClose(event);
       break;
 
     } else if (bytes_read == -1) {
@@ -62,13 +57,13 @@ void TcpChannel::HandleRead() {
         break;
       }
       LOG(ERROR) << __FUNCTION__ << ChannelInfo() << " read error:" << base::StrError();
-      HandleClose();
+      HandleClose(event);
       break;
     }
   } while(1);
 }
 
-void TcpChannel::HandleWrite() {
+void TcpChannel::HandleWrite(base::FdEvent* event) {
   int fatal_err = 0;
   int socket_fd = fd_event_->fd();
 
@@ -86,7 +81,7 @@ void TcpChannel::HandleWrite() {
 
   if (fatal_err != 0) {
     LOG(ERROR) << __FUNCTION__ << ChannelInfo() << " write err:" << base::StrError(fatal_err);
-    HandleClose();
+    HandleClose(event);
 	  return;
   }
 
@@ -95,20 +90,20 @@ void TcpChannel::HandleWrite() {
     fd_event_->DisableWriting();
     reciever_->OnDataFinishSend(this);
     if (schedule_shutdown_) {
-      HandleClose();
+      HandleClose(event);
     }
   }
 }
 
-void TcpChannel::HandleError() {
+void TcpChannel::HandleError(base::FdEvent* event) {
 
   int err = socketutils::GetSocketError(fd_event_->fd());
   LOG(ERROR) << __FUNCTION__ << ChannelInfo() << " error: [" << base::StrError(err) << "]";
 
-  HandleClose();
+  HandleClose(event);
 }
 
-void TcpChannel::HandleClose() {
+void TcpChannel::HandleClose(base::FdEvent* event) {
   DCHECK(pump_->IsInLoopThread());
 
   VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();

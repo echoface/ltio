@@ -1,7 +1,9 @@
 #ifndef _LT_FW_RAPID_MESSAGE_H_
 #define _LT_FW_RAPID_MESSAGE_H_
 
+#include <sstream>
 #include <string>
+#include <glog/logging.h>
 #include <net_io/codec/codec_message.h>
 
 using namespace lt;
@@ -90,6 +92,16 @@ class FwRapidMessage : public lt::net::CodecMessage {
 
     bool AsHeartbeat() override {SetType(0xFF); return true;};
     bool IsHeartbeat() const override {return Type() == 0xFF;};
+    const std::string Dump() const override {
+      std::ostringstream oss;
+      oss << "header=[seqid:" << header_.seqid
+        << ", type:" << int(header_.type)
+        << ", cmd:" << int(header_.cmdid)
+        << ", ver:" << int(header_.version)
+        << ", extr:" << int(header_.extra)
+        << "], body=[" << content_ << "];";
+      return oss.str();
+    };
   private:
     RapidHeader header_;
     std::string content_;

@@ -18,7 +18,7 @@ namespace lt {
 namespace net {
 
 
-class SocketChannel {
+class SocketChannel : public base::FdEvent::Handler {
 public:
   enum class Status {
     CONNECTING,

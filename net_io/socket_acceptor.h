@@ -12,7 +12,7 @@
 namespace lt {
 namespace net {
 
-class SocketAcceptor {
+class SocketAcceptor : public base::FdEvent::Handler {
 public:
   SocketAcceptor(base::EventPump*, const SocketAddr&);
   ~SocketAcceptor();
@@ -25,8 +25,11 @@ public:
   const SocketAddr& ListeningAddress() const { return address_; };
 private:
   bool InitListener();
-  void OnAcceptorError();
-  void HandleCommingConnection();
+  //override from FdEvent::Handler
+  void HandleRead(base::FdEvent* fd_event) override;
+  void HandleWrite(base::FdEvent* fd_event) override;
+  void HandleError(base::FdEvent* fd_event) override;
+  void HandleClose(base::FdEvent* fd_event) override;
 
   bool listening_;
   SocketAddr address_;

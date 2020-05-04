@@ -30,7 +30,8 @@ enum LoopState {
   ST_STOPED  = 3
 };
 
-class MessageLoop : public PumpDelegate {
+class MessageLoop : public PumpDelegate,
+                    public FdEvent::Handler {
   public:
     static MessageLoop* Current();
 
@@ -112,6 +113,11 @@ class MessageLoop : public PumpDelegate {
     void RunTimerClosure(const TimerEventList&) override;
 
     int Notify(int fd, const void* data, size_t count);
+
+    void HandleRead(FdEvent* fd_event) override;
+    void HandleWrite(FdEvent* fd_event) override;
+    void HandleError(FdEvent* fd_event) override;
+    void HandleClose(FdEvent* fd_event) override;
   private:
 
     std::atomic_int status_;

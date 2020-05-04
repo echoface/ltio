@@ -23,7 +23,7 @@ struct MysqlOptions {
 
 typedef std::shared_ptr<base::TimeoutEvent> RefTimeoutEvent;
 
-class MysqlAsyncConnect {
+class MysqlAsyncConnect : public base::FdEvent::Handler {
 public:
   enum State{
     STATE_NONE = 0,
@@ -89,10 +89,14 @@ private:
   bool HandleStateConnect(int in_event = 0);
   bool HandleStateSelectDB(int in_event = 0);
 
-  void OnError();
-  void OnClose();
   void OnTimeOut();
   void OnWaitEventInvoked();
+
+  void HandleRead(base::FdEvent* fd_event) override;
+  void HandleWrite(base::FdEvent* fd_event) override;
+  void HandleError(base::FdEvent* fd_event) override;
+  void HandleClose(base::FdEvent* fd_event) override;
+
   void WaitMysqlStatus(int status);
 
   void clean_up();

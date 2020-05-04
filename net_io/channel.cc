@@ -19,19 +19,19 @@ SocketChannel::SocketChannel(int socket_fd,
     peer_addr_(peer),
     name_(loc.IpPort()) {
 
-  fd_event_ = base::FdEvent::Create(socket_fd,
+  fd_event_ = base::FdEvent::Create(this,
+                                    socket_fd,
                                     base::LtEv::LT_EVENT_NONE);
   socketutils::KeepAlive(fd_event_->fd(), true);
 }
 
 void SocketChannel::SetReciever(SocketChannel::Reciever* rec) {
-  VLOG(GLOG_VTRACE) << " set reciever:" << rec << " fd:" << fd_event_->fd();
+  VLOG(GLOG_VTRACE) << "set reciever:" << rec << " fd:" << binded_fd();
   reciever_ = rec;
 }
 
 void SocketChannel::StartChannel() {
-  CHECK(fd_event_ &&
-        reciever_ &&
+  CHECK(fd_event_ && reciever_ &&
         pump_->IsInLoopThread() &&
         status_ == Status::CONNECTING);
 

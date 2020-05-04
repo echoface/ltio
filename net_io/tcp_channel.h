@@ -31,10 +31,10 @@ protected:
              const SocketAddr& peer,
              base::EventPump* pump);
 
-  void HandleRead();
-  void HandleWrite();
-  void HandleError();
-  void HandleClose();
+  void HandleRead(base::FdEvent* event) override;
+  void HandleWrite(base::FdEvent* event) override;
+  void HandleError(base::FdEvent* event) override;
+  void HandleClose(base::FdEvent* event) override;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(TcpChannel);

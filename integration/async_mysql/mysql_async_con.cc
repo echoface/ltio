@@ -394,23 +394,23 @@ void MysqlAsyncConnect::OnTimeOut() {
   HandleState(MYSQL_WAIT_TIMEOUT);
 }
 
-void MysqlAsyncConnect::OnClose() {
-  int status = LtEvToMysqlStatus(fd_event_->ActivedEvent());
-  reset_wait_event();
-  HandleState(status);
-}
-
-void MysqlAsyncConnect::OnError() {
-  int status = LtEvToMysqlStatus(fd_event_->ActivedEvent());
-  reset_wait_event();
-
-  HandleState(status);
-}
-
 void MysqlAsyncConnect::OnWaitEventInvoked() {
   int status = LtEvToMysqlStatus(fd_event_->ActivedEvent());
   reset_wait_event();
   HandleState(status);
+}
+
+void MysqlAsyncConnect::HandleRead(base::FdEvent* fd_event) {
+  OnWaitEventInvoked();
+}
+void MysqlAsyncConnect::HandleWrite(base::FdEvent* fd_event) {
+  OnWaitEventInvoked();
+}
+void MysqlAsyncConnect::HandleError(base::FdEvent* fd_event) {
+  OnWaitEventInvoked();
+}
+void MysqlAsyncConnect::HandleClose(base::FdEvent* fd_event) {
+  OnWaitEventInvoked();
 }
 
 void MysqlAsyncConnect::reset_wait_event() {
@@ -427,13 +427,10 @@ void MysqlAsyncConnect::WaitMysqlStatus(int status) {
   base::EventPump* pump = loop_->Pump();
   if (!fd_event_) {
     int fd = ::mysql_get_socket(&mysql_);
-    fd_event_ = base::FdEvent::Create(fd, base::LtEv::LT_EVENT_NONE);
-    fd_event_->GiveupOwnerFd();
-    fd_event_->SetErrorCallback(std::bind(&MysqlAsyncConnect::OnError, this));
-    fd_event_->SetCloseCallback(std::bind(&MysqlAsyncConnect::OnClose, this));
-    fd_event_->SetReadCallback(std::bind(&MysqlAsyncConnect::OnWaitEventInvoked, this));
-    fd_event_->SetWriteCallback(std::bind(&MysqlAsyncConnect::OnWaitEventInvoked, this));
+    fd_event_ =
+      base::FdEvent::Create(this, fd, base::LtEv::LT_EVENT_NONE);
 
+    fd_event_->GiveupOwnerFd();
     pump->InstallFdEvent(fd_event_.get());
   }
 

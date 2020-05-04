@@ -80,7 +80,7 @@ class RawMessage : public CodecMessage {
   const std::string& Content() const { return content_;}
   uint64_t ContentLength() const { return content_.size(); }
 
-  const std::string Dump() const;
+  const std::string Dump() const override;
 private:
   LtRawHeader header_;
   std::string content_;
