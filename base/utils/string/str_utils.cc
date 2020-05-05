@@ -1,4 +1,5 @@
 #include "str_utils.h"
+#include <glog/logging.h>
 
 namespace base {
 
@@ -99,6 +100,19 @@ std::vector<std::string> StrUtil::Split(const std::string &text,
     tokens.push_back(text.substr(previous, current - previous));
   }
   return tokens;
+}
+
+template <class string_type>
+inline typename string_type::value_type*
+WriteIntoT(string_type* str, size_t length_with_null) {
+  DCHECK_GE(length_with_null, 1u);
+  str->reserve(length_with_null);
+  str->resize(length_with_null - 1);
+  return &((*str)[0]);
+}
+
+char* AsWriteInto(std::string* str, size_t length_with_null) {
+  return WriteIntoT(str, length_with_null);
 }
 
 } // ena base

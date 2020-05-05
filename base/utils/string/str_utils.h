@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstddef>
 #include <cstring>
 #include <functional>
 #include <locale>
@@ -123,6 +124,9 @@ inline bool StrUtil::Parse(const std::string &s) {
   ToLower(new_s);
   return new_s == "on" || new_s == "yes" || new_s == "true";
 }
+
+/*make a str reserve enough size use for write something into it*/
+char* AsWriteInto(std::string* str, size_t length_with_null);
 
 }  // namespace base
 #endif

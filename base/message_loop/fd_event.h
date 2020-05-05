@@ -31,7 +31,6 @@ public:
     virtual void HandleClose(FdEvent* fd_event) = 0;
   };
 
-  typedef std::function<void()> EventCallback;
   static std::shared_ptr<FdEvent> Create(Handler* handler, int fd, LtEvent event);
 
   FdEvent(Handler* handler, int fd, LtEvent events);
@@ -42,10 +41,6 @@ public:
 
   void HandleEvent();
   void ResetCallback();
-  void SetReadCallback(const EventCallback &cb);
-  void SetWriteCallback(const EventCallback &cb);
-  void SetErrorCallback(const EventCallback &cb);
-  void SetCloseCallback(const EventCallback &cb);
 
   //the event we take care about
   LtEvent MonitorEvents() const;
@@ -80,10 +75,6 @@ private:
   Handler* handler_ = NULL;
   FdEventWatcher* watcher_ = NULL;
 
-  EventCallback read_callback_;
-  EventCallback write_callback_;
-  EventCallback error_callback_;
-  EventCallback close_callback_;
   DISALLOW_COPY_AND_ASSIGN(FdEvent);
 };
 

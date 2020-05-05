@@ -30,18 +30,6 @@ LtEvent FdEvent::MonitorEvents() const {
   return events_;
 }
 
-void FdEvent::SetReadCallback(const EventCallback &cb) {
-  read_callback_ = cb;
-}
-
-void FdEvent::SetWriteCallback(const EventCallback &cb) {
-  write_callback_ = cb;
-}
-
-void FdEvent::SetErrorCallback(const EventCallback &cb) {
-  error_callback_ = cb;
-}
-
 void FdEvent::SetRcvEvents(const LtEvent& ev) {
   revents_ = ev;
 }
@@ -85,10 +73,6 @@ void FdEvent::notify_watcher() {
   VLOG_IF(GLOG_VTRACE, watcher_ == NULL) << " no watcher monitor this event";
 }
 
-void FdEvent::SetCloseCallback(const EventCallback &cb) {
-  close_callback_ = cb;
-}
-
 void FdEvent::HandleEvent() {
   VLOG(GLOG_VTRACE) << __FUNCTION__ << EventInfo() << " rcv event:" << RcvEventAsString();
   do {
@@ -112,7 +96,7 @@ void FdEvent::HandleEvent() {
     }
 
     if (revents_ & LtEv::LT_EVENT_CLOSE) {
-      if (close_callback_) {
+      if (handler_) {
         handler_->HandleClose(this);
       }
     }
