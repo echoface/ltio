@@ -6,6 +6,7 @@ else()
   ADD_SUBDIRECTORY(libcoro)
 endif()
 
+ADD_SUBDIRECTORY(fmt)
 ADD_SUBDIRECTORY(resp)
 ADD_SUBDIRECTORY(hat-trie)
 

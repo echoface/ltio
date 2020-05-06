@@ -10,6 +10,10 @@ set(LTNET_SOURCE
   socket_acceptor.cc
   url_utils.cc
 
+  base/ip_address.cc
+  base/ip_endpoint.cc
+  base/address_family.cc
+
   #protocol codec
   codec/codec_message.cc
   codec/codec_service.cc
@@ -55,3 +59,9 @@ set(LTNET_SOURCE
 
 add_library(ltnet_objs OBJECT ${LTNET_SOURCE})
 ltio_default_properties(ltnet_objs)
+target_link_libraries(ltnet_objs
+  PUBLIC lt3rd
+  PUBLIC fmt::fmt
+  PUBLIC ${CORO_LIBRARY}
+  PUBLIC ${LtIO_LINKER_LIBS}
+  )

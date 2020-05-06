@@ -30,7 +30,7 @@ if (LTIO_BUILD_SHARED_LIBS)
   ltio_default_properties(ltio_shared)
   target_link_libraries(ltio_shared
     PUBLIC lt3rd
-    PUBLIC ${CORO_LIBRARY}
+    PUBLIC fmt::fmt
     PUBLIC ${CORO_LIBRARY}
     PUBLIC ${LtIO_LINKER_LIBS}
     )
