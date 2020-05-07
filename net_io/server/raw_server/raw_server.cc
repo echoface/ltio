@@ -1,5 +1,4 @@
 #include "glog/logging.h"
-#include "net_io/address.h"
 #include "net_io/tcp_channel.h"
 #include "net_io/url_utils.h"
 #include "net_io/io_service.h"
@@ -93,8 +92,7 @@ void RawServer::ServeAddress(const std::string address, RawMessageHandler handle
 
   message_handler_ = handler;
 
-  net::SocketAddr addr(sch_ip_port.host_ip, sch_ip_port.port);
-
+  net::IPEndPoint addr(sch_ip_port.host_ip, sch_ip_port.port);
   {
 #if defined SO_REUSEPORT && defined NET_ENABLE_REUSER_PORT
     for (base::MessageLoop* loop : io_loops_) {

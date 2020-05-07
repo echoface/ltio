@@ -187,10 +187,10 @@ public:
   }
 
 
-  net::Client*  raw_client = NULL; //(base::MessageLoop*, const SocketAddr&);
+  net::Client*  raw_client = NULL; //(base::MessageLoop*, const IPEndpoint&);
   net::Client*  redis_client = NULL;
 
-  net::Client*  http_client = NULL; //(base::MessageLoop*, const SocketAddr&);
+  net::Client*  http_client = NULL; //(base::MessageLoop*, const IPEndpoint&);
   static std::atomic_int io_round_count;
   std::vector<base::MessageLoop*> loops;
 

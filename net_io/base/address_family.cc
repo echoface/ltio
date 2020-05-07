@@ -6,6 +6,7 @@
 #include "sys_addrinfo.h"
 #include "address_family.h"
 
+namespace lt {
 namespace net {
 
 AddressFamily GetAddressFamily(const IPAddress& address) {
@@ -30,5 +31,5 @@ int ConvertAddressFamily(AddressFamily address_family) {
   return AF_UNSPEC;
 }
 
-}  // namespace net
+}}  // namespace net
 

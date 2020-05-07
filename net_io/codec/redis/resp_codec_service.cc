@@ -2,7 +2,7 @@
 #include <cstring>
 #include "redis_request.h"
 #include "resp_codec_service.h"
-
+#include <base/base_constants.h>
 #include "glog/logging.h"
 #include <net_io/io_buffer.h>
 #include <net_io/tcp_channel.h>

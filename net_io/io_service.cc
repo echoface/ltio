@@ -1,4 +1,5 @@
 #include <atomic>
+#include "base/ip_endpoint.h"
 #include "glog/logging.h"
 #include <base/base_constants.h>
 #include "base/closure/closure_task.h"
@@ -12,7 +13,7 @@
 namespace lt {
 namespace net {
 
-IOService::IOService(const SocketAddr addr,
+IOService::IOService(const IPEndPoint& addr,
                      const std::string protocol,
                      base::MessageLoop* ioloop,
                      IOServiceDelegate* delegate)
@@ -23,7 +24,7 @@ IOService::IOService(const SocketAddr addr,
 
   CHECK(delegate_);
 
-  service_name_ = addr.IpPort();
+  service_name_ = addr.ToString();
   acceptor_.reset(new SocketAcceptor(accept_loop_->Pump(), addr));
   acceptor_->SetNewConnectionCallback(std::bind(&IOService::OnNewConnection,
                                                 this,
@@ -73,10 +74,10 @@ void IOService::StopIOService() {
   }
 }
 
-void IOService::OnNewConnection(int fd, const SocketAddr& peer_addr) {
+void IOService::OnNewConnection(int fd, const IPEndPoint& peer_addr) {
   CHECK(accept_loop_->IsInLoopThread());
 
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << " connect apply from:" << peer_addr.IpPort();
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << " connect apply from:" << peer_addr.ToString();
 
   //check connection limit and others
   if (!delegate_->CanCreateNewChannel()) {
@@ -99,7 +100,8 @@ void IOService::OnNewConnection(int fd, const SocketAddr& peer_addr) {
     return socketutils::CloseSocket(fd);
   }
 
-  SocketAddr local_addr(socketutils::GetLocalAddrIn(fd));
+  IPEndPoint local_addr;
+  CHECK(socketutils::GetLocalEndpoint(fd, &local_addr));
 
   codec_service->SetDelegate(this);
   codec_service->BindToSocket(fd, local_addr, peer_addr);
@@ -113,7 +115,7 @@ void IOService::OnNewConnection(int fd, const SocketAddr& peer_addr) {
   StoreProtocolService(codec_service);
 
   VLOG(GLOG_VTRACE) << __FUNCTION__
-    << " Connection from:" << peer_addr.IpPort() << " establisted";
+    << " Connection from:" << peer_addr.ToString() << " establisted";
 }
 
 void IOService::OnCodecMessage(const RefCodecMessage& message) {

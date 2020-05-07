@@ -4,12 +4,14 @@
 #include <atomic>
 #include <unordered_set>
 #include <unordered_map>
+#include "base/ip_endpoint.h"
 #include "net_callback.h"
 #include "socket_acceptor.h"
 #include "codec/codec_message.h"
 #include "codec/codec_service.h"
 #include "dispatcher/workload_dispatcher.h"
 #include "base/message_loop/message_loop.h"
+
 
 namespace lt {
 namespace net {
@@ -47,7 +49,7 @@ public:
    *
    * A IOService Accept listen a local address and accept incoming connection; every connections
    * will bind to protocol service*/
-  IOService(const SocketAddr local,
+  IOService(const IPEndPoint& local,
             const std::string protocol,
             base::MessageLoop* workloop,
             IOServiceDelegate* delegate);
@@ -64,7 +66,7 @@ public:
 private:
   //void HandleProtoMessage(RefCodecMessage message);
   /* create a new connection channel */
-  void OnNewConnection(int, const SocketAddr&);
+  void OnNewConnection(int, const IPEndPoint&);
 
   // override from CodecService::Delegate to manager[remove] from managed list
   void OnCodecMessage(const RefCodecMessage& message) override;

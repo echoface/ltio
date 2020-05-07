@@ -99,7 +99,7 @@ RefClientChannel Client::get_ready_channel() {
   return NULL;
 }
 
-void Client::OnNewClientConnected(int socket_fd, SocketAddr& local, SocketAddr& remote) {
+void Client::OnNewClientConnected(int socket_fd, IPEndPoint& local, IPEndPoint& remote) {
   CHECK(work_loop_->IsInLoopThread());
 
   base::MessageLoop* io_loop = next_client_io_loop();

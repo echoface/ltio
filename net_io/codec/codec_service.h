@@ -6,6 +6,8 @@
 #include <net_io/url_utils.h>
 #include <net_io/net_callback.h>
 #include <net_io/tcp_channel.h>
+#include <net_io/base/ip_endpoint.h>
+#include <base/message_loop/message_loop.h>
 
 namespace base {
   class MessageLoop;
@@ -36,13 +38,14 @@ public:
   /* this can be override for create diffrent type SocketChannel,
    * eg SSLChannel, UdpChannel, ....... */
   virtual bool BindToSocket(int fd,
-                            const SocketAddr& local,
-                            const SocketAddr& peer);
+                            const IPEndPoint& local,
+                            const IPEndPoint& peer);
 
   virtual void StartProtocolService();
 
   TcpChannel* Channel() {return channel_.get();};
   base::MessageLoop* IOLoop() const { return binded_loop_;}
+  base::EventPump* Pump() const { return binded_loop_->Pump();}
 
   void CloseService();
   bool IsConnected() const;

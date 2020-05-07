@@ -8,6 +8,7 @@
 #include <netinet/in.h>
 #include <assert.h>
 
+#include "base/ip_endpoint.h"
 #include "glog/logging.h"
 
 #include <sys/uio.h>
@@ -22,35 +23,6 @@ namespace net {
 namespace socketutils {
 
 #define SocketFd int
-
-template<typename To, typename From>
-inline To implicit_cast(From const &f) {
-  return f;
-}
-
-struct sockaddr* sockaddr_cast(struct sockaddr_in6* addr) {
-  return static_cast<struct sockaddr*>(implicit_cast<void*>(addr));
-}
-
-struct sockaddr* sockaddr_cast(struct sockaddr_in* addr) {
-  return static_cast<struct sockaddr*>(implicit_cast<void*>(addr));
-}
-
-const struct sockaddr* sockaddr_cast(const struct sockaddr_in* addr) {
-  return static_cast<const struct sockaddr*>(implicit_cast<const void*>(addr));
-}
-
-const struct sockaddr* sockaddr_cast(const struct sockaddr_in6* addr) {
-  return static_cast<const struct sockaddr*>(implicit_cast<const void*>(addr));
-}
-
-const struct sockaddr_in* sockaddr_in_cast(const struct sockaddr* addr) {
-  return static_cast<const struct sockaddr_in*>(implicit_cast<const void*>(addr));
-}
-
-const struct sockaddr_in6* sockaddr_in6_cast(const struct sockaddr* addr)  {
-  return static_cast<const struct sockaddr_in6*>(implicit_cast<const void*>(addr));
-}
 
 SocketFd CreateNonBlockingSocket(sa_family_t family) {
   int sockfd = ::socket(family, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_TCP);
@@ -79,10 +51,12 @@ int ListenSocket(SocketFd socket_fd) {
   return ret;
 }
 
-SocketFd AcceptSocket(SocketFd sockfd, struct sockaddr_in* addr, int* err) {
+SocketFd AcceptSocket(SocketFd sockfd, struct sockaddr* addr, int* err) {
   socklen_t addrlen = static_cast<socklen_t>(sizeof *addr);
-  int connfd = ::accept4(sockfd, sockaddr_cast(addr),
-                         &addrlen, SOCK_NONBLOCK | SOCK_CLOEXEC);
+  int connfd = ::accept4(sockfd,
+                         addr,
+                         &addrlen,
+                         SOCK_NONBLOCK | SOCK_CLOEXEC);
   int savedErrno = 0;
   if (connfd < 0) {
     savedErrno = errno;
@@ -141,59 +115,6 @@ void ShutdownWrite(SocketFd sockfd) {
   }
 }
 
-std::string SocketAddr2Ip(const struct sockaddr* addr) {
-  char buf[64] = "";
-  if (addr->sa_family == AF_INET) {
-
-    assert(64 >= INET_ADDRSTRLEN);
-    const struct sockaddr_in* addr4 = sockaddr_in_cast(addr);
-
-    ::inet_ntop(AF_INET,
-                &addr4->sin_addr,
-                buf,
-                static_cast<socklen_t>(sizeof buf));
-
-  } else if (addr->sa_family == AF_INET6) {
-
-    assert(64 >= INET6_ADDRSTRLEN);
-    const struct sockaddr_in6* addr6 = sockaddr_in6_cast(addr);
-
-    ::inet_ntop(AF_INET6,
-                &addr6->sin6_addr,
-                buf,
-                static_cast<socklen_t>(sizeof buf));
-  }
-  return buf;
-}
-
-std::string SocketAddr2IpPort(const struct sockaddr* addr) {
-  std::string ip_port = SocketAddr2Ip(addr);
-
-  const struct sockaddr_in* addr4 = sockaddr_in_cast(addr);
-
-  uint16_t port = be16toh(addr4->sin_port);
-
-  ip_port += (":" + std::to_string(port));
-  return ip_port;
-}
-
-void FromIpPort(const char* ip, uint16_t port, struct sockaddr_in* addr) {
-
-  addr->sin_family = AF_INET;
-  addr->sin_port = htobe16(port);
-  if (::inet_pton(AF_INET, ip, &addr->sin_addr) <= 0) {
-    LOG(ERROR) << " ::inet_pton error:" << base::StrError() << " ip:" << ip;
-  }
-}
-
-void FromIpPort(const char* ip, uint16_t port, struct sockaddr_in6* addr) {
-  addr->sin6_family = AF_INET6;
-  addr->sin6_port = htobe16(port);
-  if (::inet_pton(AF_INET6, ip, &addr->sin6_addr) <= 0) {
-    LOG(ERROR) << " ::inet_pton error:" << base::StrError();
-  }
-}
-
 int GetSocketError(SocketFd sockfd) {
   int optval;
   socklen_t optlen = static_cast<socklen_t>(sizeof optval);
@@ -208,62 +129,72 @@ int GetSocketError(SocketFd sockfd) {
   return optval;
 }
 
-struct sockaddr_in GetLocalAddrIn(int sockfd) {
-  struct sockaddr_in localaddr;
+bool GetPeerEndpoint(int sock, IPEndPoint* ep) {
+  struct sockaddr peeraddr;
+  bzero(&peeraddr, sizeof peeraddr);
+  socklen_t addrlen = static_cast<socklen_t>(sizeof peeraddr);
+  if (::getpeername(sock, &peeraddr, &addrlen) < 0) {
+    LOG(ERROR) << "socketutils::GetPeerAddr Failed";
+  }
+  return ep->FromSockAddr(&peeraddr, addrlen);
+}
+
+bool GetLocalEndpoint(int sock, IPEndPoint* ep) {
+  struct sockaddr localaddr;
   bzero(&localaddr, sizeof localaddr);
 
   socklen_t addrlen = static_cast<socklen_t>(sizeof localaddr);
-  if (::getsockname(sockfd, sockaddr_cast(&localaddr), &addrlen) < 0) {
+  if (::getsockname(sock, &localaddr, &addrlen) < 0) {
+    return false;
+  }
+  return ep->FromSockAddr(&localaddr, addrlen);
+}
+
+struct sockaddr GetLocalAddrIn(int sockfd) {
+  struct sockaddr localaddr;
+  bzero(&localaddr, sizeof localaddr);
+
+  socklen_t addrlen = static_cast<socklen_t>(sizeof localaddr);
+  if (::getsockname(sockfd, &localaddr, &addrlen) < 0) {
     LOG(ERROR) << "socketutils::GetLocalAddrIn Call getsockname ERROR";
   }
   return localaddr;
 }
 
-struct sockaddr_in6 GetLocalAddrIn6(int sockfd) {
-  struct sockaddr_in6 localaddr;
-  bzero(&localaddr, sizeof localaddr);
-
-  socklen_t addrlen = static_cast<socklen_t>(sizeof localaddr);
-  if (::getsockname(sockfd, sockaddr_cast(&localaddr), &addrlen) < 0) {
-    LOG(ERROR) << "socketutils::GetLocalAddrIn6 Call getsockname ERROR";
-  }
-  return localaddr;
-}
-
-struct sockaddr_in GetPeerAddrIn(int sockfd) {
-  struct sockaddr_in peeraddr;
+struct sockaddr GetPeerAddrIn(int sockfd) {
+  struct sockaddr peeraddr;
   bzero(&peeraddr, sizeof peeraddr);
   socklen_t addrlen = static_cast<socklen_t>(sizeof peeraddr);
-  if (::getpeername(sockfd, sockaddr_cast(&peeraddr), &addrlen) < 0) {
+  if (::getpeername(sockfd, &peeraddr, &addrlen) < 0) {
     LOG(ERROR) << "socketutils::GetPeerAddr Failed";
   }
   return peeraddr;
 }
 
-struct sockaddr_in6 GetPeerAddrIn6(int sockfd) {
-  struct sockaddr_in6 peeraddr;
-  bzero(&peeraddr, sizeof peeraddr);
-  socklen_t addrlen = static_cast<socklen_t>(sizeof peeraddr);
-  if (::getpeername(sockfd, sockaddr_cast(&peeraddr), &addrlen) < 0) {
-    LOG(ERROR) << "socketutils::GetPeerAddr Failed";
+uint32_t SockAddrFamily(struct sockaddr* addr) {
+  const struct sockaddr_in* laddr4 = reinterpret_cast<struct sockaddr_in*>(addr);
+  if (laddr4->sin_family == AF_INET) {
+    return AF_INET;
   }
-  return peeraddr;
+  return AF_INET6;
 }
 
 bool IsSelfConnect(int sockfd) {
-  struct sockaddr_in6 localaddr = GetLocalAddrIn6(sockfd);
-  struct sockaddr_in6 peeraddr = GetPeerAddrIn6(sockfd);
-  if (localaddr.sin6_family == AF_INET) {
+  struct sockaddr peeraddr = GetPeerAddrIn(sockfd);
+  struct sockaddr localaddr = GetLocalAddrIn(sockfd);
 
+  uint32_t family = SockAddrFamily(&peeraddr);
+  if (family == AF_INET) {
     const struct sockaddr_in* laddr4 = reinterpret_cast<struct sockaddr_in*>(&localaddr);
     const struct sockaddr_in* raddr4 = reinterpret_cast<struct sockaddr_in*>(&peeraddr);
     return laddr4->sin_port == raddr4->sin_port &&
            laddr4->sin_addr.s_addr == raddr4->sin_addr.s_addr;
 
-  } else if (localaddr.sin6_family == AF_INET6) {
-
-    return localaddr.sin6_port == peeraddr.sin6_port &&
-           memcmp(&localaddr.sin6_addr, &peeraddr.sin6_addr, sizeof localaddr.sin6_addr) == 0;
+  } else if (family == AF_INET6) {
+    const struct sockaddr_in6* raddr6 = reinterpret_cast<struct sockaddr_in6*>(&peeraddr);
+    const struct sockaddr_in6* laddr6 = reinterpret_cast<struct sockaddr_in6*>(&localaddr);
+    return laddr6->sin6_port == raddr6->sin6_port &&
+           memcmp(&laddr6->sin6_addr, &raddr6->sin6_addr, sizeof(raddr6->sin6_addr)) == 0;
   }
 
   return false;

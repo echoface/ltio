@@ -5,6 +5,7 @@
 #include "net_io/tcp_channel.h"
 #include "net_io/socket_utils.h"
 #include "net_io/socket_acceptor.h"
+#include "net_io/base/ip_endpoint.h"
 
 using namespace lt;
 
@@ -42,8 +43,10 @@ int main(int argc, char** argv) {
 
   loop.Start();
 
-  auto on_new_connection = [&](int fd, const net::SocketAddr& peer) {
-    net::SocketAddr local(net::socketutils::GetLocalAddrIn(fd));
+  auto on_new_connection = [&](int fd, const net::IPEndPoint& peer) {
+    net::IPEndPoint local;
+    CHECK(net::socketutils::GetLocalEndpoint(fd, &local));
+
     auto ch = net::TcpChannel::Create(fd, local, peer, loop.Pump());
     ch->SetReciever(&global_consumer);
 
@@ -59,8 +62,10 @@ int main(int argc, char** argv) {
 
   net::SocketAcceptor* acceptor;
   loop.PostTask(NewClosure([&]() {
-    net::SocketAddr addr(5005);
-    acceptor = new net::SocketAcceptor(loop.Pump(), addr);
+    net::IPAddress addr;
+    addr.AssignFromIPLiteral("127.0.0.1");
+    net::IPEndPoint endpoint(addr, 5005);
+    acceptor = new net::SocketAcceptor(loop.Pump(), endpoint);
     acceptor->SetNewConnectionCallback(std::bind(on_new_connection, std::placeholders::_1, std::placeholders::_2));
     CHECK(acceptor->StartListen());
   }));

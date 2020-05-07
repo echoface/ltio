@@ -5,9 +5,12 @@
 #ifndef NET_BASE_IP_ENDPOINT_H_
 #define NET_BASE_IP_ENDPOINT_H_
 
+#include <bits/stdint-uintn.h>
+#include <cstdint>
 #include <stdint.h>
 
 #include <string>
+#include <unistd.h>
 
 #include "address_family.h"
 #include "ip_address.h"
@@ -16,6 +19,7 @@
 
 struct sockaddr;
 
+namespace lt {
 namespace net {
 
 // An IPEndPoint represents the address of a transport endpoint:
@@ -23,8 +27,9 @@ namespace net {
 //  * Port
 class NET_EXPORT IPEndPoint {
  public:
-  IPEndPoint();
   ~IPEndPoint();
+  IPEndPoint();
+  IPEndPoint(const base::StringPiece ip, uint16_t port);
   IPEndPoint(const IPAddress& address, uint16_t port);
   IPEndPoint(const IPEndPoint& endpoint);
 
@@ -38,13 +43,11 @@ class NET_EXPORT IPEndPoint {
   int GetSockAddrFamily() const;
 
   // Convert to a provided sockaddr struct.
-  // |address| is the sockaddr to copy into.  Should be at least
-  //    sizeof(struct sockaddr_storage) bytes.
-  // |address_length| is an input/output parameter.  On input, it is the
-  //    size of data in |address| available.  On output, it is the size of
-  //    the address that was copied into |address|.
-  // Returns true on success, false on failure.
-  bool ToSockAddr(struct sockaddr* address, socklen_t* address_length) const;
+  // |address_length| is the size of data in |address| available.
+  //
+  // on failure: return zero
+  // on success: return size of the addresss that was copied into address
+  socklen_t ToSockAddr(struct sockaddr* address, socklen_t address_length) const;
 
   // Convert from a sockaddr struct.
   // |address| is the address.
@@ -69,6 +72,6 @@ class NET_EXPORT IPEndPoint {
   uint16_t port_;
 };
 
-}  // namespace net
+}}  // namespace net
 
 #endif  // NET_BASE_IP_ENDPOINT_H_

@@ -3,6 +3,7 @@
 #include "client_connector.h"
 #include <base/utils/sys_error.h>
 #include "base/message_loop/event.h"
+#include "net_io/base/sockaddr_storage.h"
 
 namespace lt {
 namespace net {
@@ -12,33 +13,39 @@ Connector::Connector(base::EventPump* pump, ConnectorDelegate* d)
     delegate_(d) {
   CHECK(delegate_);
 }
+bool Connector::Launch(const net::IPEndPoint &address) {
+  CHECK(pump_->IsInLoopThread() && delegate_);
 
-bool Connector::Launch(const net::SocketAddr &address) {
-  CHECK(pump_->IsInLoopThread());
-
-  int sock_fd = net::socketutils::CreateNonBlockingSocket(address.Family());
+  int sock_fd = socketutils::CreateNonBlockingSocket(address.GetSockAddrFamily());
   if (sock_fd == -1) {
     LOG(ERROR) << __FUNCTION__ << " CreateNonBlockingSocket failed";
     return false;
   }
 
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << " connect to add:" << address.IpPort();
-  const struct sockaddr* sock_addr = net::socketutils::sockaddr_cast(address.SockAddrIn());
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << " connect to add:" << address.ToString();
+
+  SockaddrStorage storage;
+  if (!address.ToSockAddr(storage.addr, storage.addr_len)) {
+    socketutils::CloseSocket(sock_fd);
+    return false;
+  }
 
   bool success = false;
 
   int error = 0;
-  int ret = socketutils::SocketConnect(sock_fd, sock_addr, &error);
+  int ret = socketutils::SocketConnect(sock_fd, storage.addr, &error);
   VLOG(GLOG_VTRACE) << __FUNCTION__ << " ret:" << ret << " error:" << error;
   if (ret == 0 && error == 0) {
-    net::SocketAddr remote_addr(net::socketutils::GetPeerAddrIn(sock_fd));
-    net::SocketAddr local_addr(net::socketutils::GetLocalAddrIn(sock_fd));
-    if (delegate_) {
-      delegate_->OnNewClientConnected(sock_fd, local_addr, remote_addr);
-    } else {
-      net::socketutils::CloseSocket(sock_fd);
+    IPEndPoint remote_addr;
+    IPEndPoint local_addr;
+
+    if (!socketutils::GetPeerEndpoint(sock_fd, &remote_addr) ||
+        !socketutils::GetLocalEndpoint(sock_fd, &local_addr)) {
+      socketutils::CloseSocket(sock_fd);
+      return false;
     }
-    VLOG(GLOG_VTRACE) << __FUNCTION__ << " " << address.IpPort() << " connected at once";
+    delegate_->OnNewClientConnected(sock_fd, local_addr, remote_addr);
+    VLOG(GLOG_VTRACE) << __FUNCTION__ << " " << address.ToString() << " connected at once";
     return true;
   }
 
@@ -55,7 +62,7 @@ bool Connector::Launch(const net::SocketAddr &address) {
 
       fd_event->EnableWriting();
       connecting_sockets_.insert(fd_event);
-      VLOG(GLOG_VTRACE) << __FUNCTION__ << " " << address.IpPort() << " connecting, fd:" << fd_event->fd();
+      VLOG(GLOG_VTRACE) << __FUNCTION__ << " " << address.ToString() << " connecting, fd:" << fd_event->fd();
     } break;
     default: {
       success = false;
@@ -64,12 +71,9 @@ bool Connector::Launch(const net::SocketAddr &address) {
   }
 
   if (!success) {
-    if (delegate_) {
-      delegate_->OnClientConnectFailed();
-    }
-    net::socketutils::CloseSocket(sock_fd);
+    delegate_->OnClientConnectFailed();
+    socketutils::CloseSocket(sock_fd);
   }
-
   return success;
 }
 
@@ -78,31 +82,38 @@ void Connector::HandleRead(base::FdEvent* fd_event) {
 }
 
 void Connector::HandleWrite(base::FdEvent* fd_event) {
-  //base::RefFdEvent fd_event = weak_fdevent.lock();
+
   int socket_fd = fd_event->fd();
-
-  if (net::socketutils::IsSelfConnect(socket_fd)) {
-
+  if (!delegate_) {
     CleanUpBadChannel(fd_event);
-    delegate_->OnClientConnectFailed();
-    LOG(ERROR) << __func__ << " IsSelfConnect, clean...";
-
     return;
   }
 
-  pump_->RemoveFdEvent(fd_event);
-  fd_event->GiveupOwnerFd();
+  if (net::socketutils::IsSelfConnect(socket_fd)) {
+    CleanUpBadChannel(fd_event);
+    LOG(ERROR) << __func__ << " IsSelfConnect, clean...";
+    delegate_->OnClientConnectFailed();
+    return;
+  }
 
+  fd_event->GiveupOwnerFd();
+  pump_->RemoveFdEvent(fd_event);
   remove_fdevent(fd_event); //destructor here
 
-  net::SocketAddr remote_addr(net::socketutils::GetPeerAddrIn(socket_fd));
-  net::SocketAddr local_addr(net::socketutils::GetLocalAddrIn(socket_fd));
+  IPEndPoint remote_addr;
+  IPEndPoint local_addr;
+  if (!socketutils::GetPeerEndpoint(socket_fd, &remote_addr) ||
+      !socketutils::GetLocalEndpoint(socket_fd, &local_addr)) {
+    CleanUpBadChannel(fd_event);
+    LOG(ERROR) << __func__ << " bad socket fd, clean...";
+    delegate_->OnClientConnectFailed();
+    return;
+  }
   delegate_->OnNewClientConnected(socket_fd, local_addr, remote_addr);
 }
 
 void Connector::HandleError(base::FdEvent* fd_event) {
   CleanUpBadChannel(fd_event);
-
   if (delegate_) {
     delegate_->OnClientConnectFailed();
   }

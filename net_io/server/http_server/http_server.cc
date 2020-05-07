@@ -1,6 +1,5 @@
 #include "glog/logging.h"
 #include "net_io/io_service.h"
-#include "net_io/address.h"
 #include "net_io/tcp_channel.h"
 #include "net_io/url_utils.h"
 #include "net_io/codec/codec_service.h"
@@ -63,7 +62,7 @@ void HttpServer::ServeAddress(const std::string address, HttpMessageHandler hand
   message_handler_ = handler;
   CHECK(!io_loops_.empty());
 
-  net::SocketAddr addr(sch_ip_port.host_ip, sch_ip_port.port);
+  net::IPEndPoint addr(sch_ip_port.host_ip, sch_ip_port.port);
 
   {
 #if defined SO_REUSEPORT && defined NET_ENABLE_REUSER_PORT

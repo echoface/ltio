@@ -1,6 +1,7 @@
 #ifndef _NET_CALLBACK_DEF_H_H
 #define _NET_CALLBACK_DEF_H_H
 
+#include "base/ip_endpoint.h"
 #include <string>
 #include <memory>
 #include <functional>
@@ -9,7 +10,7 @@ namespace lt {
 namespace net {
 
 class IOBuffer;
-class SocketAddr;
+class IPEndPoint;
 class SocketAcceptor;
 class TcpChannel;
 class IOService;
@@ -30,7 +31,7 @@ typedef std::function<void(RefTcpChannel&, IOBuffer*)> RcvDataCallback;
 /* ============= Service Acceptor relative ===========*/
 typedef std::shared_ptr<SocketAcceptor> RefSocketAcceptor;
 typedef std::unique_ptr<SocketAcceptor> SocketAcceptorPtr;
-typedef std::function<void(int/*socket_fd*/, const SocketAddr&)> NewConnectionCallback;
+typedef std::function<void(int/*socket_fd*/, const IPEndPoint&)> NewConnectionCallback;
 
 /* protoservice handle tcpmessage to different type protocol request and message */
 typedef std::unique_ptr<CodecService> CodecServicePtr;

@@ -13,7 +13,6 @@
 #include <thirdparty/catch/catch.hpp>
 
 #include <glog/logging.h>
-#include "net_io/address.h"
 #include "net_io/tcp_channel.h"
 #include "net_io/socket_utils.h"
 #include "net_io/socket_acceptor.h"

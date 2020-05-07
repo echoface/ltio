@@ -1,8 +1,8 @@
 #ifndef _NET_SERVICE_ACCEPTOR_H_H_
 #define _NET_SERVICE_ACCEPTOR_H_H_
 
-#include "address.h"
 #include "socket_utils.h"
+#include "base/ip_endpoint.h"
 
 #include "net_callback.h"
 #include "base/base_micro.h"
@@ -14,7 +14,7 @@ namespace net {
 
 class SocketAcceptor : public base::FdEvent::Handler {
 public:
-  SocketAcceptor(base::EventPump*, const SocketAddr&);
+  SocketAcceptor(base::EventPump*, const IPEndPoint&);
   ~SocketAcceptor();
 
   bool StartListen();
@@ -22,7 +22,7 @@ public:
   bool IsListening() { return listening_; }
 
   void SetNewConnectionCallback(const NewConnectionCallback& cb);
-  const SocketAddr& ListeningAddress() const { return address_; };
+  const IPEndPoint& ListeningAddress() const { return address_; };
 private:
   bool InitListener();
   //override from FdEvent::Handler
@@ -32,7 +32,7 @@ private:
   void HandleClose(base::FdEvent* fd_event) override;
 
   bool listening_;
-  SocketAddr address_;
+  IPEndPoint address_;
 
   base::EventPump* event_pump_;
   base::RefFdEvent socket_event_;

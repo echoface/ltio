@@ -46,9 +46,10 @@ public:
   Srv() {
     tcp_protoservice_.reset(new TcpCodecService);
     InitWorkLoop();
-
-    net::SocketAddr addr("127.0.0.1", 5005);
-    ioservice_.reset(new IOService(addr, "tcp", &acceptor_loop_, this));
+    net::IPAddress ip;
+    ip.AssignFromIPLiteral("127.0.0.1");
+    net::IPEndPoint ep(ip, 5005);
+    ioservice_.reset(new IOService(ep, "tcp", &acceptor_loop_, this));
   }
   ~Srv() {
   }

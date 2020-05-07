@@ -1,6 +1,7 @@
 
 #include <glog/logging.h>
 #include "net_io/codec/codec_service.h"
+#include "base/message_loop/message_loop.h"
 
 #include "http_context.h"
 

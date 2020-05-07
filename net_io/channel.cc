@@ -2,6 +2,7 @@
 // Created by gh on 18-12-5.
 //
 #include "channel.h"
+#include "socket_utils.h"
 #include "base/base_constants.h"
 #include "base/message_loop/event_pump.h"
 #include "glog/logging.h"
@@ -11,13 +12,13 @@ namespace lt {
 namespace net {
 
 SocketChannel::SocketChannel(int socket_fd,
-                             const SocketAddr& loc,
-                             const SocketAddr& peer,
+                             const IPEndPoint& loc,
+                             const IPEndPoint& peer,
                              base::EventPump* pump)
   : pump_(pump),
-    local_addr_(loc),
-    peer_addr_(peer),
-    name_(loc.IpPort()) {
+    local_ep_(loc),
+    remote_ep_(peer),
+    name_(loc.ToString()) {
 
   fd_event_ = base::FdEvent::Create(this,
                                     socket_fd,
@@ -63,11 +64,11 @@ int32_t SocketChannel::binded_fd() const {
 }
 
 std::string SocketChannel::local_name() const {
-  return local_addr_.IpPort();
+  return local_ep_.ToString();
 }
 
 std::string SocketChannel::remote_name() const {
-  return peer_addr_.IpPort();
+  return remote_ep_.ToString();
 }
 
 std::string SocketChannel::ChannelInfo() const {

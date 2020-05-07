@@ -40,14 +40,14 @@ void ClientChannel::CloseClientChannel() {
 
   state_ = kClosing;
 
-	base::MessageLoop* io = IOLoop();
-  CHECK(io->IsInLoopThread());
+	base::EventPump* pump = EventPump();
+  CHECK(pump->IsInLoopThread());
 
   BeforeCloseChannel();
 
   delegate_ = NULL;
   if (heartbeat_timer_) {
-    io->Pump()->RemoveTimeoutEvent(heartbeat_timer_);
+    pump->RemoveTimeoutEvent(heartbeat_timer_);
     delete heartbeat_timer_;
     heartbeat_timer_ = NULL;
   }

@@ -1,20 +1,22 @@
 
 
-#include "tcp_channel.h"
+#include "glog/logging.h"
 
 #include "base/base_constants.h"
 #include "base/message_loop/event_pump.h"
-#include "glog/logging.h"
 #include "base/closure/closure_task.h"
 #include <base/utils/sys_error.h>
+
+#include "socket_utils.h"
+#include "tcp_channel.h"
 
 namespace lt {
 namespace net {
 
 //static
 RefTcpChannel TcpChannel::Create(int socket_fd,
-                                 const SocketAddr& local,
-                                 const SocketAddr& peer,
+                                 const IPEndPoint& local,
+                                 const IPEndPoint& peer,
                                  base::EventPump* pump) {
 
   //std::make_shared<TcpChannel>(socket_fd, local, peer, loop);
@@ -22,8 +24,8 @@ RefTcpChannel TcpChannel::Create(int socket_fd,
 }
 
 TcpChannel::TcpChannel(int socket_fd,
-                       const SocketAddr& loc,
-                       const SocketAddr& peer,
+                       const IPEndPoint& loc,
+                       const IPEndPoint& peer,
                        base::EventPump* pump)
   : SocketChannel(socket_fd, loc, peer, pump) {
 }

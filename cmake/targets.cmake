@@ -13,6 +13,7 @@ target_compile_definitions(ltio
   )
 target_link_libraries(ltio
   PUBLIC lt3rd
+  PUBLIC fmt::fmt
   PUBLIC ${CORO_LIBRARY}
   PUBLIC ${LtIO_LINKER_LIBS}
   )

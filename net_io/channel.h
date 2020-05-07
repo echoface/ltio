@@ -5,13 +5,14 @@
 #ifndef LIGHTINGIO_NET_CHANNEL_H
 #define LIGHTINGIO_NET_CHANNEL_H
 
-#include "address.h"
-#include "base/message_loop/event_pump.h"
+#include <cstdint>
 #include "io_buffer.h"
 #include "net_callback.h"
 #include "base/base_micro.h"
-#include "base/message_loop/message_loop.h"
-#include <cstdint>
+#include <base/base_constants.h>
+#include "base/message_loop/event_pump.h"
+
+#include "base/ip_endpoint.h"
 
 // socket chennel interface and base class
 namespace lt {
@@ -55,8 +56,8 @@ public:
   const std::string& ChannelName() const {return name_;}
 protected:
   SocketChannel(int socket_fd,
-                const SocketAddr& loc,
-                const SocketAddr& peer,
+                const IPEndPoint& loc,
+                const IPEndPoint& peer,
                 base::EventPump* pump);
   virtual ~SocketChannel() {
     CHECK(status_ == Status::CLOSED);
@@ -77,8 +78,8 @@ protected:
 
   base::RefFdEvent fd_event_;
 
-  SocketAddr local_addr_;
-  SocketAddr peer_addr_;
+  IPEndPoint local_ep_;
+  IPEndPoint remote_ep_; 
 
   std::string name_;
 

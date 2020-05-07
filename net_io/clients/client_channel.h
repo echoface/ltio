@@ -49,6 +49,7 @@ public:
   bool Initializing() const {return state_ == kInitialing;}
 
   void SetRequestTimeout(uint32_t ms) {request_timeout_ = ms;};
+  base::EventPump* EventPump() {return codec_->Pump();}
   base::MessageLoop* IOLoop() {return codec_->IOLoop();};
 
   //override from CodecService::Delegate

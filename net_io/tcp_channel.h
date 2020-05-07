@@ -18,8 +18,8 @@ class TcpChannel : public SocketChannel,
                    public EnableShared(TcpChannel) {
 public:
   static RefTcpChannel Create(int socket_fd,
-                              const SocketAddr& local,
-                              const SocketAddr& peer,
+                              const IPEndPoint& local,
+                              const IPEndPoint& peer,
                               base::EventPump* pump);
   ~TcpChannel();
 
@@ -27,8 +27,8 @@ public:
   int32_t Send(const char* data, const int32_t len) override;
 protected:
   TcpChannel(int socket_fd,
-             const SocketAddr& loc,
-             const SocketAddr& peer,
+             const IPEndPoint& loc,
+             const IPEndPoint& peer,
              base::EventPump* pump);
 
   void HandleRead(base::FdEvent* event) override;

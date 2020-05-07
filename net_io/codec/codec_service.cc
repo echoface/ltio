@@ -21,8 +21,8 @@ bool CodecService::IsConnected() const {
 }
 
 bool CodecService::BindToSocket(int fd,
-                                const SocketAddr& local,
-                                const SocketAddr& peer) {
+                                const IPEndPoint& local,
+                                const IPEndPoint& peer) {
 
   channel_ = TcpChannel::Create(fd, local, peer, binded_loop_->Pump());
 	channel_->SetReciever(this);

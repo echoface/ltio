@@ -15,7 +15,6 @@
 #include "client_connector.h"
 
 #include <net_io/url_utils.h>
-#include "net_io/address.h"
 #include "net_io/tcp_channel.h"
 #include "net_io/socket_utils.h"
 #include "net_io/socket_acceptor.h"
@@ -79,7 +78,7 @@ public:
   // notified from connector
   void OnClientConnectFailed() override;
   // notified from connector
-  void OnNewClientConnected(int fd, SocketAddr& loc, SocketAddr& remote) override;
+  void OnNewClientConnected(int fd, IPEndPoint& loc, IPEndPoint& remote) override;
 
   // clientchanneldelegate
   const ClientConfig& GetClientConfig() const override {return config_;}
@@ -99,7 +98,7 @@ private:
   /*return a io loop for client channel work on*/
   base::MessageLoop* next_client_io_loop();
 
-  SocketAddr address_;
+  IPEndPoint address_;
   const url::RemoteInfo remote_info_;
 
   /* NOTE:

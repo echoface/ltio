@@ -27,6 +27,7 @@
 //#include "url/gurl.h"
 //#include "url/url_canon_ip.h"
 
+namespace lt {
 namespace net {
 namespace {
 
@@ -521,4 +522,4 @@ size_t MaskPrefixLength(const IPAddress& mask) {
   return CommonPrefixLength(mask, IPAddress(all_ones.data(), all_ones.size()));
 }
 
-}  // namespace net
+}}  // namespace net

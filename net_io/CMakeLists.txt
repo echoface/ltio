@@ -2,7 +2,6 @@ ADD_DEFINITIONS(-std=c++11)
 
 set(LTNET_SOURCE
   channel.cc
-  address.cc
   io_buffer.cc
   io_service.cc
   tcp_channel.cc
@@ -10,9 +9,11 @@ set(LTNET_SOURCE
   socket_acceptor.cc
   url_utils.cc
 
+  #base/address.cc
   base/ip_address.cc
   base/ip_endpoint.cc
   base/address_family.cc
+  base/sockaddr_storage.cc
 
   #protocol codec
   codec/codec_message.cc

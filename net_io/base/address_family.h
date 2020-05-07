@@ -5,6 +5,7 @@
 #ifndef NET_BASE_ADDRESS_FAMILY_H_
 #define NET_BASE_ADDRESS_FAMILY_H_
 
+namespace lt {
 namespace net {
 
 class IPAddress;
@@ -38,7 +39,7 @@ AddressFamily GetAddressFamily(const IPAddress& address);
 // Maps the given AddressFamily to either AF_INET, AF_INET6 or AF_UNSPEC.
 int ConvertAddressFamily(AddressFamily address_family);
 
-}  // namespace net
+}}  // namespace net
 
 #endif  // NET_BASE_ADDRESS_FAMILY_H_
 

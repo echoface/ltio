@@ -18,6 +18,7 @@ namespace base {
 typedef nonstd::string_view StringPiece;
 }
 
+namespace lt {
 namespace net {
 
 // Helper class to represent the sequence of bytes in an IP address.
@@ -295,6 +296,6 @@ bool IPAddressStartsWith(const IPAddress& address, const uint8_t (&prefix)[N]) {
   return std::equal(prefix, prefix + N, address.bytes().begin());
 }
 
-}  // namespace net
+}}  // namespace net
 
 #endif  // NET_BASE_IP_ADDRESS_H_

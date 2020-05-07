@@ -1,6 +1,7 @@
 #ifndef LIGHTING_NET_SOCKET_UTILS_H
 #define LIGHTING_NET_SOCKET_UTILS_H
 
+#include "base/ip_endpoint.h"
 #include <arpa/inet.h>
 #include <string>
 
@@ -11,13 +12,6 @@ namespace socketutils {
 
 #define SocketFd int
 
-struct sockaddr* sockaddr_cast(struct sockaddr_in6* addr);
-struct sockaddr* sockaddr_cast(struct sockaddr_in* addr);
-const struct sockaddr* sockaddr_cast(const struct sockaddr_in* addr);
-const struct sockaddr* sockaddr_cast(const struct sockaddr_in6* addr);
-const struct sockaddr_in* sockaddr_in_cast(const struct sockaddr* addr);
-const struct sockaddr_in6* sockaddr_in6_cast(const struct sockaddr* addr);
-
 SocketFd CreateNonBlockingSocket(sa_family_t family);
 
 int ListenSocket(SocketFd fd);
@@ -26,7 +20,7 @@ int BindSocketFd(SocketFd fd, const struct sockaddr* addr);
 
 int SocketConnect(SocketFd fd, const struct sockaddr* addr, int* err);
 
-SocketFd AcceptSocket(SocketFd fd, struct sockaddr_in* addr, int* err);
+SocketFd AcceptSocket(SocketFd fd, struct sockaddr* addr, int* err);
 
 ssize_t Read(SocketFd fd, void* buf, size_t count);
 
@@ -38,18 +32,13 @@ void CloseSocket(SocketFd fd);
 
 void ShutdownWrite(SocketFd fd);
 
-std::string SocketAddr2Ip(const struct sockaddr* addr);
-std::string SocketAddr2IpPort(const struct sockaddr* addr);
-
-void FromIpPort(const char* ip, uint16_t port, struct sockaddr_in* addr);
-void FromIpPort(const char* ip, uint16_t port, struct sockaddr_in6* addr);
-
 int GetSocketError(SocketFd fd);
 
-struct sockaddr_in GetLocalAddrIn(int sockfd);
-struct sockaddr_in6 GetLocalAddrIn6(int sockfd);
-struct sockaddr_in GetPeerAddrIn(int sockfd);
-struct sockaddr_in6 GetPeerAddrIn6(int sockfd);
+bool GetPeerEndpoint(int sock, IPEndPoint* ep);
+bool GetLocalEndpoint(int sock, IPEndPoint* ep);
+
+struct sockaddr GetPeerAddrIn(int sockfd);
+struct sockaddr GetLocalAddrIn(int sockfd);
 
 bool IsSelfConnect(int sockfd);
 
