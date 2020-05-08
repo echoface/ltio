@@ -34,7 +34,7 @@ bool Connector::Launch(const net::IPEndPoint &address) {
 
   int error = 0;
   int ret = socketutils::SocketConnect(sock_fd, storage.addr, &error);
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << " ret:" << ret << " error:" << error;
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << " ret:" << ret << " error:" << base::StrError(error);
   if (ret == 0 && error == 0) {
     IPEndPoint remote_addr;
     IPEndPoint local_addr;
@@ -59,8 +59,8 @@ bool Connector::Launch(const net::IPEndPoint &address) {
         base::FdEvent::Create(this, sock_fd, base::LtEv::LT_EVENT_WRITE);
 
       pump_->InstallFdEvent(fd_event.get());
-
       fd_event->EnableWriting();
+
       connecting_sockets_.insert(fd_event);
       VLOG(GLOG_VTRACE) << __FUNCTION__ << " " << address.ToString() << " connecting, fd:" << fd_event->fd();
     } break;

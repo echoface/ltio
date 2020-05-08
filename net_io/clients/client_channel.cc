@@ -28,6 +28,7 @@ ClientChannel::ClientChannel(Delegate* d, const RefCodecService& service)
 }
 
 ClientChannel::~ClientChannel() {
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << " gone :" << ConnectionInfo();
   codec_->SetDelegate(NULL);
 }
 
@@ -52,6 +53,7 @@ void ClientChannel::CloseClientChannel() {
     heartbeat_timer_ = NULL;
   }
   codec_->CloseService();
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << " close:" << ConnectionInfo() << " back";
 }
 
 void ClientChannel::ResetDelegate() {
@@ -101,6 +103,8 @@ bool ClientChannel::HandleResponse(const RefCodecMessage& req,
 
 //override
 void ClientChannel::OnProtocolServiceGone(const RefCodecService& service) {
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << " enter";
+
   base::MessageLoop* loop = IOLoop();
   if (heartbeat_timer_) {
     loop->Pump()->RemoveTimeoutEvent(heartbeat_timer_);

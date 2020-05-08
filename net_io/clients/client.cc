@@ -46,6 +46,7 @@ void Client::Finalize() {
     return;
   }
 
+  LOG(INFO) << __func__ << " close client:" << ClientInfo();
   if (work_loop_->IsInLoopThread()) {
     connector_->Stop(); //sync
   } else {
@@ -104,7 +105,7 @@ void Client::OnNewClientConnected(int socket_fd, IPEndPoint& local, IPEndPoint& 
 
   base::MessageLoop* io_loop = next_client_io_loop();
 
-  auto codec_service =
+  RefCodecService codec_service =
     CodecFactory::NewClientService(remote_info_.protocol, io_loop);
   codec_service->BindToSocket(socket_fd, local, remote);
 

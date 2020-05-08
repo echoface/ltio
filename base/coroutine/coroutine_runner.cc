@@ -27,8 +27,6 @@ void CoroRunner::CoroutineMain(void *coro) {
   CHECK(coroutine);
 
   CoroRunner& runner = CoroRunner::Runner();
-  bool continue_run = true;
-
   do {
     DCHECK(coroutine->IsRunning());
     if (runner.coro_tasks_.size()) {
@@ -74,6 +72,7 @@ CoroRunner::CoroRunner()
 
   current_ = main_coro_ = coro_ptr.get();
 
+  LOG(INFO) << __FUNCTION__ << " CoroRunner initialized in loop:" << bind_loop_;
   LOG_IF(ERROR, !bind_loop_) << __FUNCTION__ << " CoroRunner need constructor with initialized loop";
   CHECK(bind_loop_);
 }

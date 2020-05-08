@@ -163,7 +163,7 @@ bool ParseRemote(const std::string& str, RemoteInfo& out, bool resolve) {
 }
 
 std::string RemoteInfo::HostIpPort() const {
-  return base::StrUtil::Concat(host, "[", host_ip, "]:", port);
+  return base::StrUtil::Concat(host, " [", host_ip, "]:", port);
 }
 
 }}} //net::url

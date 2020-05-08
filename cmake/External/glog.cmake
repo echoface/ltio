@@ -50,7 +50,7 @@ if (NOT __GLOG_INCLUDED)
     set(GLOG_FOUND TRUE)
     set(GLOG_INCLUDE_DIRS ${glog_INSTALL}/include)
     set(GLOG_LIBRARY ${glog_INSTALL}/lib/libglog.so)
-    set(GLOG_LIBRARIES ${GFLAGS_LIBRARIES} ${glog_INSTALL}/lib/libglog.so)
+    set(GLOG_LIBRARIES ${glog_INSTALL}/lib/libglog.so ${GFLAGS_LIBRARIES})
     set(GLOG_LIBRARY_DIRS ${glog_INSTALL}/lib)
     set(GLOG_EXTERNAL TRUE)
 

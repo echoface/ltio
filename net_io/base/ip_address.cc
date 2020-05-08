@@ -386,9 +386,9 @@ std::string IPAddressToStringWithPort(const IPAddress& address, uint16_t port) {
     return address_str;
 
   if (address.IsIPv6()) {
-    return fmt::format("[%s]:%d", address_str.c_str(), port);
+    return fmt::format("[{0}]:{1}", address_str.c_str(), port);
   }
-  return fmt::format("%s:%d", address_str.c_str(), port);
+  return fmt::format("{0}:{1}", address_str.c_str(), port);
 }
 
 std::string IPAddressToPackedString(const IPAddress& address) {

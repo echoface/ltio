@@ -84,6 +84,7 @@ void AsyncChannel::OnCodecMessage(const RefCodecMessage& res) {
 }
 
 void AsyncChannel::OnProtocolServiceGone(const RefCodecService& service) {
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << service->Channel()->ChannelInfo() << " protocol service closed";
 	DCHECK(IOLoop()->IsInLoopThread());
   ClientChannel::OnProtocolServiceGone(service);
 

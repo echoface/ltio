@@ -32,7 +32,7 @@ public:
 
 public:
   CodecService(base::MessageLoop* loop);
-  virtual ~CodecService() {};
+  virtual ~CodecService();
 
   void SetDelegate(Delegate* d);
   /* this can be override for create diffrent type SocketChannel,
@@ -84,6 +84,7 @@ protected:
   RefTcpChannel channel_;
   Delegate* delegate_ = nullptr;
   base::MessageLoop* binded_loop_ = nullptr;
+  DISALLOW_COPY_AND_ASSIGN(CodecService);
 };
 
 }}

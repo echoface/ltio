@@ -61,8 +61,5 @@ set(LTNET_SOURCE
 add_library(ltnet_objs OBJECT ${LTNET_SOURCE})
 ltio_default_properties(ltnet_objs)
 target_link_libraries(ltnet_objs
-  PUBLIC lt3rd
-  PUBLIC fmt::fmt
-  PUBLIC ${CORO_LIBRARY}
-  PUBLIC ${LtIO_LINKER_LIBS}
+  PRIVATE fmt::fmt
   )

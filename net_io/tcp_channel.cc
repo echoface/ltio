@@ -120,7 +120,7 @@ void TcpChannel::HandleClose(base::FdEvent* event) {
 }
 
 void TcpChannel::ShutdownChannel(bool half_close) {
-  CHECK(pump_->IsInLoopThread());
+  DCHECK(pump_->IsInLoopThread());
 
   VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
 

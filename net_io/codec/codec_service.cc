@@ -10,10 +10,16 @@ namespace net {
 
 CodecService::CodecService(base::MessageLoop* loop)
   : binded_loop_(loop){
+  LOG(INFO) << __func__ << "this:" << this << " created";
 }
+
+CodecService::~CodecService() {
+  LOG(INFO) << __func__ << "this:" << this << " gone";
+};
 
 void CodecService::SetDelegate(CodecService::Delegate* d) {
 	delegate_ = d;
+  LOG(INFO) << __func__ << " this:" << this << " set delegate_:" << delegate_;
 }
 
 bool CodecService::IsConnected() const {
@@ -36,7 +42,7 @@ void CodecService::StartProtocolService() {
 }
 
 void CodecService::CloseService() {
-	CHECK(binded_loop_->IsInLoopThread());
+	DCHECK(binded_loop_->IsInLoopThread());
 
 	BeforeCloseService();
 	channel_->ShutdownChannel(false);
@@ -54,6 +60,7 @@ void CodecService::OnChannelClosed(const SocketChannel* channel) {
 	RefCodecService guard = shared_from_this();
 	AfterChannelClosed();
 	if (delegate_) {
+    LOG(INFO) << "delegate_:" << delegate_ << " call delegate_->OnProtocolServiceGone";
 		delegate_->OnProtocolServiceGone(guard);
 	}
 }
@@ -61,6 +68,7 @@ void CodecService::OnChannelClosed(const SocketChannel* channel) {
 void CodecService::OnChannelReady(const SocketChannel*) {
   RefCodecService guard = shared_from_this();
   if (delegate_) {
+    LOG(INFO) << __func__ << " this:" << this << " has delegate_:" << delegate_;
     delegate_->OnProtocolServiceReady(guard);
   }
 }
