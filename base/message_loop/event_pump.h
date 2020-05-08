@@ -1,7 +1,6 @@
 #ifndef BASE_EVENT_PUMP_H_
 #define BASE_EVENT_PUMP_H_
 
-#include <bits/stdint-uintn.h>
 #include <vector>
 #include <memory>
 #include <map>

@@ -2,7 +2,6 @@
 #define _BASE_MSG_EVENT_LOOP_H_H
 
 #include <atomic>
-#include <bits/stdint-uintn.h>
 #include <functional>
 #include <thread>
 #include <queue>

@@ -140,7 +140,7 @@ TEST_CASE("ip.endpoint", "[ip endpoint test]") {
   sockaddr_in6 addr;
   uint32_t len = sizeof(sockaddr_in6);
   REQUIRE(local_ep.ToSockAddr((struct sockaddr*)&addr, len));
-  REQUIRE(addr.sin6_port == ::htobe16(8080));
+  REQUIRE(addr.sin6_port == htobe16(8080));
 
   LOG(INFO) << "ipv6 localhost with port 8080:" << local_ep.ToString();
 }

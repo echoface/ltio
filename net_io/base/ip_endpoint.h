@@ -5,7 +5,6 @@
 #ifndef NET_BASE_IP_ENDPOINT_H_
 #define NET_BASE_IP_ENDPOINT_H_
 
-#include <bits/stdint-uintn.h>
 #include <cstdint>
 #include <stdint.h>
 

@@ -2,19 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "ip_endpoint.h"
-
 #include "base/build_config.h"
 
 #include <endian.h>
 #include <netinet/in.h>
 #include <string.h>
 #include <tuple>
+#include <endian.h>
 
 //#include "base/sys_byteorder.h"
 #include "glog/logging.h"
 #include "ip_address.h"
-
+#include "ip_endpoint.h"
 
 namespace lt {
 namespace net {
@@ -39,7 +38,7 @@ bool GetIPAddressFromSockAddr(const struct sockaddr* sock_addr,
     *address = reinterpret_cast<const uint8_t*>(&addr->sin_addr);
     *address_len = IPAddress::kIPv4AddressSize;
     if (port) {
-      *port = ::be16toh(addr->sin_port); //base::NetToHost16(addr->sin_port);
+      *port = be16toh(addr->sin_port); //base::NetToHost16(addr->sin_port);
     }
     return true;
   }
@@ -53,7 +52,7 @@ bool GetIPAddressFromSockAddr(const struct sockaddr* sock_addr,
     *address = reinterpret_cast<const uint8_t*>(&addr->sin6_addr);
     *address_len = IPAddress::kIPv6AddressSize;
     if (port) {
-      *port = ::be16toh(addr->sin6_port); //base::NetToHost16(addr->sin6_port);
+      *port = be16toh(addr->sin6_port); //base::NetToHost16(addr->sin6_port);
     }
     return true;
   }
@@ -123,7 +122,7 @@ socklen_t IPEndPoint::ToSockAddr(struct sockaddr* address,
       struct sockaddr_in* addr = reinterpret_cast<struct sockaddr_in*>(address);
       memset(addr, 0, sizeof(struct sockaddr_in));
       addr->sin_family = AF_INET;
-      addr->sin_port = ::htobe16(port_); //base::HostToNet16(port_);
+      addr->sin_port = htobe16(port_); //base::HostToNet16(port_);
       memcpy(&addr->sin_addr,
              address_.bytes().data(),
              IPAddress::kIPv4AddressSize);
@@ -137,7 +136,7 @@ socklen_t IPEndPoint::ToSockAddr(struct sockaddr* address,
       struct sockaddr_in6* addr6 = reinterpret_cast<struct sockaddr_in6*>(address);
       memset(addr6, 0, sizeof(struct sockaddr_in6));
       addr6->sin6_family = AF_INET6;
-      addr6->sin6_port = ::htobe16(port_); //base::HostToNet16(port_);
+      addr6->sin6_port = htobe16(port_); //base::HostToNet16(port_);
       memcpy(&addr6->sin6_addr,
              address_.bytes().data(),
              IPAddress::kIPv6AddressSize);
