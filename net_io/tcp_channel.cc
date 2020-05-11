@@ -7,6 +7,7 @@
 #include "base/closure/closure_task.h"
 #include <base/utils/sys_error.h>
 
+#include "net_callback.h"
 #include "socket_utils.h"
 #include "tcp_channel.h"
 
@@ -14,13 +15,12 @@ namespace lt {
 namespace net {
 
 //static
-RefTcpChannel TcpChannel::Create(int socket_fd,
+TcpChannelPtr TcpChannel::Create(int socket_fd,
                                  const IPEndPoint& local,
                                  const IPEndPoint& peer,
                                  base::EventPump* pump) {
 
-  //std::make_shared<TcpChannel>(socket_fd, local, peer, loop);
-  return RefTcpChannel(new TcpChannel(socket_fd, local, peer, pump));
+  return TcpChannelPtr(new TcpChannel(socket_fd, local, peer, pump));
 }
 
 TcpChannel::TcpChannel(int socket_fd,
@@ -34,7 +34,7 @@ TcpChannel::~TcpChannel() {
   VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
 }
 
-void TcpChannel::HandleRead(base::FdEvent* event) {
+bool TcpChannel::HandleRead(base::FdEvent* event) {
   static const int32_t block_size = 4 * 1024;
   do {
     in_buffer_.EnsureWritableSize(block_size);
@@ -45,7 +45,7 @@ void TcpChannel::HandleRead(base::FdEvent* event) {
     if (bytes_read > 0) {
 
       in_buffer_.Produce(bytes_read);
-      VLOG(GLOG_VTRACE) << __FUNCTION__ << " call reciever_->OnDataReceived:" << bytes_read;
+      VLOG(GLOG_VTRACE) << __FUNCTION__ << " READ bytes:" << bytes_read;
       reciever_->OnDataReceived(this, &in_buffer_);
 
     } else if (0 == bytes_read) {
@@ -63,9 +63,11 @@ void TcpChannel::HandleRead(base::FdEvent* event) {
       break;
     }
   } while(1);
+
+  return true;
 }
 
-void TcpChannel::HandleWrite(base::FdEvent* event) {
+bool TcpChannel::HandleWrite(base::FdEvent* event) {
   int fatal_err = 0;
   int socket_fd = fd_event_->fd();
 
@@ -83,60 +85,47 @@ void TcpChannel::HandleWrite(base::FdEvent* event) {
 
   if (fatal_err != 0) {
     LOG(ERROR) << __FUNCTION__ << ChannelInfo() << " write err:" << base::StrError(fatal_err);
-    HandleClose(event);
-	  return;
+    return HandleClose(event);
   }
 
   if (out_buffer_.CanReadSize() == 0) {
 
     fd_event_->DisableWriting();
     reciever_->OnDataFinishSend(this);
+
     if (schedule_shutdown_) {
-      HandleClose(event);
+      return HandleClose(event);
     }
   }
+  return true;
 }
 
-void TcpChannel::HandleError(base::FdEvent* event) {
-
+bool TcpChannel::HandleError(base::FdEvent* event) {
   int err = socketutils::GetSocketError(fd_event_->fd());
   LOG(ERROR) << __FUNCTION__ << ChannelInfo() << " error: [" << base::StrError(err) << "]";
-
-  HandleClose(event);
+  return HandleClose(event);
 }
 
-void TcpChannel::HandleClose(base::FdEvent* event) {
+bool TcpChannel::HandleClose(base::FdEvent* event) {
   DCHECK(pump_->IsInLoopThread());
 
   VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
 
   if (!IsConnected()) {
-    return reciever_->OnChannelClosed(this);
+    reciever_->OnChannelClosed(this);
+    return false;
   }
-
   //avoid in callback delete/free it
-  RefTcpChannel guard(shared_from_this());
   close_channel();
+  return false;
 }
 
 void TcpChannel::ShutdownChannel(bool half_close) {
   DCHECK(pump_->IsInLoopThread());
+  SetChannelStatus(Status::CLOSING);
 
   VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
 
-  if (!IsConnected()) {
-    return reciever_->OnChannelClosed(this);
-  }
-
-  schedule_shutdown_ = true;
-  SetChannelStatus(Status::CLOSING);
-  if (half_close && fd_event_->IsWriteEnable()) {
-    schedule_shutdown_ = false;
-    return;
-  }
-
-  //avoid in callback delete/free it
-  RefTcpChannel guard(shared_from_this());
   close_channel();
 }
 
@@ -170,7 +159,8 @@ int32_t TcpChannel::Send(const char* data, const int32_t len) {
         out_buffer_.WriteRawData(data + n_write, n_remain);
 
       } else {
-        // to avoid A -> B -> callback  delete A problem, we use a writecallback handle this
+        // to avoid A -> B -> callback delete A problem,
+        // use a write event to triggle handle close action
       	fatal_err = errno;
         schedule_shutdown_ = true;
         SetChannelStatus(Status::CLOSING);
@@ -187,7 +177,7 @@ int32_t TcpChannel::Send(const char* data, const int32_t len) {
     DCHECK((n_write + n_remain) == size_t(len));
   } while(n_remain != 0);
 
-  if (!fd_event_->IsWriteEnable() && out_buffer_.CanReadSize() > 0) {
+  if (out_buffer_.CanReadSize() && (!fd_event_->IsWriteEnable())) {
     fd_event_->EnableWriting();
   }
   return fatal_err != 0 ? -1 : n_write;

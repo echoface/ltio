@@ -16,9 +16,6 @@ LineCodecService::LineCodecService(base::MessageLoop* loop)
 LineCodecService::~LineCodecService() {
 }
 
-void LineCodecService::OnStatusChanged(const SocketChannel* channel) {
-  ;
-}
 void LineCodecService::OnDataFinishSend(const SocketChannel* channel) {
   ;
 }

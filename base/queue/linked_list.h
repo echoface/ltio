@@ -27,6 +27,10 @@ public:
     }
   }
 
+  bool Attatched() const {
+    return pre_ != nullptr && next_ != nullptr;
+  }
+
   // Insert |this| into the linked list, before |e|.
   void InsertBefore(LinkedNode<T>* e) {
     this->next_ = e;
@@ -68,7 +72,6 @@ public:
   T* value() {
     return static_cast<T*>(this);
   }
-
 private:
   LinkedNode<T>* pre_ = nullptr;
   LinkedNode<T>* next_ = nullptr;

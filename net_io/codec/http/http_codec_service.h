@@ -22,7 +22,6 @@ public:
   ~HttpCodecService();
 
   // override from CodecService
-  void OnStatusChanged(const SocketChannel*) override;
   void OnDataFinishSend(const SocketChannel*) override;
   void OnDataReceived(const SocketChannel*, IOBuffer *) override;
 
@@ -37,8 +36,8 @@ public:
 
   const RefCodecMessage NewResponse(const CodecMessage*) override;
 private:
-  bool ParseHttpRequest(const RefTcpChannel&, IOBuffer*);
-  bool ParseHttpResponse(const RefTcpChannel&, IOBuffer*);
+  bool ParseHttpRequest(TcpChannel* channel, IOBuffer*);
+  bool ParseHttpResponse(TcpChannel* channel, IOBuffer*);
 
   ReqParseContext* request_context_;
   ResParseContext* response_context_;

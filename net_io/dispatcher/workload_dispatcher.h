@@ -24,7 +24,7 @@ public:
   // or woker according to HandleWorkInIOLoop
   virtual bool SetWorkContext(CodecMessage* message);
   // transmit task from IO TO worker loop
-  virtual bool Dispatch(base::StlClosure& closuse);
+  virtual bool Dispatch(StlClosure& closuse);
 protected:
   base::MessageLoop* NextWorker();
 private:

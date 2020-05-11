@@ -29,6 +29,8 @@ DEFINE_bool(raw_client, false, "wheather enable self connected http client");
 DEFINE_bool(http_client, true, "wheather enable self connected raw client");
 DEFINE_int32(loops, 4, "how many loops use for handle message and io");
 
+class SampleApp;
+
 void DumpRedisResponse(RedisResponse* redis_response);
 net::ClientConfig DeafaultClientConfig(int count = 2) {
   net::ClientConfig config;
@@ -37,6 +39,51 @@ net::ClientConfig DeafaultClientConfig(int count = 2) {
   config.message_timeout = 1000;
   config.heartbeat_ms = 500;
   return config;
+}
+void HandleHttp(SampleApp* app, net::HttpContext* context);
+void HandleRaw(SampleApp* app,net::RawServerContext* context);
+
+void DumpRedisResponse(RedisResponse* redis_response) {
+  for (size_t i = 0; i < redis_response->Count(); i++) {
+
+    auto& value = redis_response->ResultAtIndex(i);
+    switch(value.type()) {
+      case resp::ty_string: {
+        LOG(INFO) << "string:" << value.string().data();
+      }
+      break;
+      case resp::ty_error: {
+        LOG(INFO) << "error:" << value.error().data();
+      }
+      break;
+      case resp::ty_integer: {
+        LOG(INFO) << "interger:" << value.integer();
+      }
+      break;
+      case resp::ty_null: {
+        LOG(INFO) << "null:";
+      } break;
+      case resp::ty_array: {
+        resp::unique_array<resp::unique_value> arr = value.array();
+        std::ostringstream oss;
+        for (size_t i = 0; i < arr.size(); i++) {
+          oss << "'" << std::string(arr[i].bulkstr().data(), arr[i].bulkstr().size()) << "'";
+          if (i < arr.size() - 1) {
+            oss << ", ";
+          }
+        }
+        LOG(INFO) << "array: [" << oss.str() << "]";
+      } break;
+      case resp::ty_bulkstr: {
+        LOG(INFO) << "bulkstr:" << std::string(value.bulkstr().data(), value.bulkstr().size());
+      }
+      break;
+      default: {
+        LOG(INFO) << " default handler for redis message response";
+      }
+      break;
+    }
+  }
 }
 
 base::MessageLoop main_loop;
@@ -53,6 +100,7 @@ public:
   }
 
   ~SampleApp() {
+    LOG(INFO) << __func__ << " close app";
     delete dispatcher_;
     if (FLAGS_raw_client) {
       delete raw_client;
@@ -75,6 +123,17 @@ public:
       loops.push_back(loop);
     }
     dispatcher_->SetWorkerLoops(loops);
+
+    raw_server.SetIOLoops(loops);
+    raw_server.SetDispatcher(dispatcher_);
+    raw_server.ServeAddress(base::StrUtil::Concat("raw://", FLAGS_raw),
+                            std::bind(HandleRaw, this, std::placeholders::_1));
+
+    http_server.SetIOLoops(loops);
+    http_server.SetDispatcher(dispatcher_);
+    http_server.ServeAddress(base::StrUtil::Concat("http://", FLAGS_http),
+                             std::bind(HandleHttp, this, std::placeholders::_1));
+
   }
 
   base::MessageLoop* NextIOLoopForClient() {
@@ -88,6 +147,7 @@ public:
   void StartHttpClients(std::string url) {
     net::url::RemoteInfo server_info;
     LOG_IF(ERROR, !net::url::ParseRemote(url, server_info)) << " server can't be resolve";
+
     http_client = new net::Client(NextIOLoopForClient(), server_info);
     net::ClientConfig config = DeafaultClientConfig(2);
     http_client->SetDelegate(this);
@@ -165,6 +225,9 @@ public:
 
   void StopAllService() {
     LOG(INFO) << __FUNCTION__ << " stop enter";
+    for (auto loop : loops) {
+      LOG(INFO) << __FUNCTION__ << " loop:" << loop;
+    }
 
     LOG(INFO) << __FUNCTION__ << " start stop httpclient";
     http_client->Finalize();
@@ -182,8 +245,17 @@ public:
       LOG(INFO) << __FUNCTION__ << " redis client has stoped";
     }
 
-    main_loop.QuitLoop();
+    CHECK(co_can_yield);
+    raw_server.SetCloseCallback(co_resumer());
+    raw_server.StopServer();
+    co_pause;
+
+    http_server.SetCloseCallback(co_resumer());
+    http_server.StopServer();
+    co_pause;
+
     LOG(INFO) << __FUNCTION__ << " stop leave";
+    main_loop.QuitLoop();
   }
 
 
@@ -199,18 +271,20 @@ public:
 #else
   Dispatcher* dispatcher_ = NULL;
 #endif
+  net::RawServer raw_server;
+  net::HttpServer http_server;
 };
 std::atomic_int SampleApp::io_round_count = {0};
 
 SampleApp app;
 
-void HandleHttp(net::HttpContext* context) {
+void HandleHttp(SampleApp* app, net::HttpContext* context) {
   net::HttpRequest* req = context->Request();
   VLOG(1) << " GOT Http request, body:" << req->Dump();
   LOG_EVERY_N(INFO, 10000) << " got 1w Http request, body:" << req->Dump();
 
   if (req->RequestUrl() == "/raw" && FLAGS_raw_client) {
-    app.SendRawRequest();
+    app->SendRawRequest();
     return context->ReplyString("do raw request.");
   }
 
@@ -222,7 +296,7 @@ void HandleHttp(net::HttpContext* context) {
 #endif
 
   if (req->RequestUrl() == "/http") {
-    app.SendHttpRequest();
+    app->SendHttpRequest();
     return context->ReplyString("do http request.");
   } else if (req->RequestUrl() == "/ping") {
     return context->ReplyString("pong");
@@ -231,7 +305,7 @@ void HandleHttp(net::HttpContext* context) {
   context->ReplyString(kresponse);
 }
 
-void HandleRaw(net::RawServerContext* context) {
+void HandleRaw(SampleApp* app,net::RawServerContext* context) {
   const LtRawMessage* req = context->GetRequest<LtRawMessage>();
   LOG_EVERY_N(INFO, 10000) << " got request:" << req->Dump();
 
@@ -241,54 +315,14 @@ void HandleRaw(net::RawServerContext* context) {
   return context->SendResponse(res);
 }
 
-void DumpRedisResponse(RedisResponse* redis_response) {
-  for (size_t i = 0; i < redis_response->Count(); i++) {
-
-    auto& value = redis_response->ResultAtIndex(i);
-    switch(value.type()) {
-      case resp::ty_string: {
-        LOG(INFO) << "string:" << value.string().data();
-      }
-      break;
-      case resp::ty_error: {
-        LOG(INFO) << "error:" << value.error().data();
-      }
-      break;
-      case resp::ty_integer: {
-        LOG(INFO) << "interger:" << value.integer();
-      }
-      break;
-      case resp::ty_null: {
-        LOG(INFO) << "null:";
-      } break;
-      case resp::ty_array: {
-        resp::unique_array<resp::unique_value> arr = value.array();
-        std::ostringstream oss;
-        for (size_t i = 0; i < arr.size(); i++) {
-          oss << "'" << std::string(arr[i].bulkstr().data(), arr[i].bulkstr().size()) << "'";
-          if (i < arr.size() - 1) {
-            oss << ", ";
-          }
-        }
-        LOG(INFO) << "array: [" << oss.str() << "]";
-      } break;
-      case resp::ty_bulkstr: {
-        LOG(INFO) << "bulkstr:" << std::string(value.bulkstr().data(), value.bulkstr().size());
-      }
-      break;
-      default: {
-        LOG(INFO) << " default handler for redis message response";
-      }
-      break;
-    }
-  }
-}
 
 void signalHandler( int signum ){
   LOG(INFO) << "sighandler sig:" << signum;
-  main_loop.PostTask(NewClosure(std::bind(&SampleApp::StopAllService, &app)));
+  co_go &main_loop << std::bind(&SampleApp::StopAllService, &app);
 }
+
 int main(int argc, char* argv[]) {
+  //google::InstallFailureSignalHandler();
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   gflags::SetUsageMessage("usage: exec --http=ip:port --raw=ip:port --noredis_client ...");
 
@@ -300,19 +334,6 @@ int main(int argc, char* argv[]) {
 
   app.Initialize();
 
-  net::RawServer raw_server;
-  net::RawServer* rserver = &raw_server;
-  raw_server.SetIOLoops(app.loops);
-  raw_server.SetDispatcher(app.dispatcher_);
-  raw_server.ServeAddressSync(base::StrUtil::Concat("raw://", FLAGS_raw),
-                              std::bind(HandleRaw, std::placeholders::_1));
-
-  net::HttpServer http_server;
-  net::HttpServer* hserver = &http_server;
-  http_server.SetIOLoops(app.loops);
-  http_server.SetDispatcher(app.dispatcher_);
-  http_server.ServeAddressSync(base::StrUtil::Concat("http://", FLAGS_http),
-                               std::bind(HandleHttp, std::placeholders::_1));
 
   app.StartHttpClients(base::StrUtil::Concat("http://", FLAGS_http));
 
@@ -328,10 +349,5 @@ int main(int argc, char* argv[]) {
   signal(SIGTERM, signalHandler);
 
   main_loop.WaitLoopEnd();
-
-  rserver->StopServerSync();
-  hserver->StopServerSync();
-
-  std::this_thread::sleep_for(std::chrono::seconds(5));
 }
 

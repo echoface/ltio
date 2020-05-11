@@ -13,7 +13,6 @@ public:
   ~LineCodecService();
 
   // override from CodecService
-  void OnStatusChanged(const SocketChannel*) override;
   void OnDataFinishSend(const SocketChannel*) override;
   void OnDataReceived(const SocketChannel*, IOBuffer *) override;
 

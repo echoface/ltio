@@ -19,13 +19,7 @@ class CodecMessage;
 
 
 /* ============ connection channel relative =========*/
-typedef std::shared_ptr<TcpChannel> RefTcpChannel;
-typedef std::weak_ptr<TcpChannel> WeakPtrTcpChannel;
-
-typedef std::function<void(const RefTcpChannel&)> FinishSendCallback;
-typedef std::function<void(const RefTcpChannel&)> ChannelClosedCallback;
-typedef std::function<void(const RefTcpChannel&)> ChannelStatusCallback;
-typedef std::function<void(RefTcpChannel&, IOBuffer*)> RcvDataCallback;
+typedef std::unique_ptr<TcpChannel> TcpChannelPtr;
 
 
 /* ============= Service Acceptor relative ===========*/
@@ -40,7 +34,6 @@ typedef std::weak_ptr<CodecService> WeakCodecService;
 
 /* ============== io service ====== */
 typedef std::shared_ptr<IOService> RefIOService;
-typedef std::unique_ptr<IOService> IOServicePtr;
 
 }}
 #endif

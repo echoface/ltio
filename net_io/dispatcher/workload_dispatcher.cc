@@ -26,7 +26,7 @@ bool Dispatcher::SetWorkContext(CodecMessage* message) {
   return loop != NULL;
 }
 
-bool Dispatcher::Dispatch(base::StlClosure& clourse) {
+bool Dispatcher::Dispatch(StlClosure& clourse) {
   if (HandleWorkInIOLoop()) {
     clourse();
     return true;

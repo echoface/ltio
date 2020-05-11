@@ -91,40 +91,46 @@ MessageLoop::MessageLoop()
 }
 
 MessageLoop::~MessageLoop() {
-  LOG(INFO) << "MessageLoop: [" << LoopName() << "] Gone...";
   CHECK(status_.load() != ST_STARTED || !IsInLoopThread());
 
   QuitLoop();
   Notify(wakeup_pipe_in_, &kQuit, sizeof(kQuit));
   WaitLoopEnd();
-  wakeup_event_.reset();
   close(wakeup_pipe_in_);
 
-  task_event_.reset();
   wakeup_pipe_in_ = -1;
   wakeup_pipe_out_ = -1;
+  LOG(INFO) << "MessageLoop: [" << LoopName() << "] " << "this:" << this << " Gone...";
 }
 
-void MessageLoop::HandleRead(FdEvent* fd_event) {
+bool MessageLoop::HandleRead(FdEvent* fd_event) {
   if (fd_event == wakeup_event_.get()) {
+
     RunCommandTask(ScheduledTaskType::TaskTypeCtrl);
+
   } else if (fd_event == task_event_.get()) {
+
     RunCommandTask(ScheduledTaskType::TaskTypeDefault);
+
   } else {
     LOG(ERROR) << __func__ << " should not reached";
   }
+  return true;
 }
 
-void MessageLoop::HandleWrite(FdEvent* fd_event) {
+bool MessageLoop::HandleWrite(FdEvent* fd_event) {
   LOG(ERROR) << __func__ << " should not reached";
+  return true;
 }
 
-void MessageLoop::HandleError(FdEvent* fd_event) {
+bool MessageLoop::HandleError(FdEvent* fd_event) {
   LOG(ERROR) << __func__ << " error event, fd" << fd_event->fd();
+  return true;
 }
 
-void MessageLoop::HandleClose(FdEvent* fd_event) {
+bool MessageLoop::HandleClose(FdEvent* fd_event) {
   LOG(ERROR) << __func__ << " close event, fd" << fd_event->fd();
+  return true;
 }
 
 void MessageLoop::SetLoopName(std::string name) {
@@ -138,7 +144,10 @@ void MessageLoop::SetMinPumpTimeout(uint64_t ms) {
 }
 
 bool MessageLoop::IsInLoopThread() const {
-  return event_pump_.IsInLoopThread();
+  if (!thread_ptr_) {
+    return false;
+  }
+  return thread_ptr_->get_id() == std::this_thread::get_id();
 }
 
 void MessageLoop::Start() {
@@ -159,13 +168,14 @@ void MessageLoop::Start() {
 void MessageLoop::WaitLoopEnd(int32_t ms) {
   //can't wait stop in loop thread
   CHECK(!IsInLoopThread());
+
   //first join, others wait util loop end
   int32_t has_join = has_join_.exchange(1);
   if (has_join == 0 && thread_ptr_ && thread_ptr_->joinable()) {
-    LOG(INFO) << " join here wait loop end";
+    LOG(INFO) << " thread join wait loop end";
     thread_ptr_->join();
   } else {
-    LOG(INFO) << " cv wait here wait loop end";
+    LOG(INFO) << " conditional variable wait here till loop end";
     std::unique_lock<std::mutex> lk(start_stop_lock_);
     while(cv_.wait_for(lk, std::chrono::milliseconds(100)) == std::cv_status::timeout) {
       if (status_.load() != ST_STARTED) break;
@@ -179,8 +189,6 @@ void MessageLoop::PumpStarted() {
 }
 
 void MessageLoop::PumpStopped() {
-  status_.store(ST_STOPED);
-  cv_.notify_all();
 }
 
 uint64_t MessageLoop::PumpTimeout() {
@@ -202,14 +210,17 @@ void MessageLoop::ThreadMain() {
   event_pump_.Run();
   //delegate_->AfterLoopRun();
 
-  task_event_->ResetCallback();
-  wakeup_event_->ResetCallback();
-
   event_pump_.RemoveFdEvent(wakeup_event_.get());
   event_pump_.RemoveFdEvent(task_event_.get());
 
+  RunNestedTask();
+
+  RunScheduledTask();
   threadlocal_current_ = NULL;
-  LOG(INFO) << "MessageLoop: [" << loop_name_ << "] Stop Running";
+
+  status_.store(ST_STOPED);
+  cv_.notify_all();
+  LOG(INFO) << "MessageLoop: [" << loop_name_ << " this:" << this <<  "] Stop Running";
 }
 
 bool MessageLoop::PostDelayTask(TaskBasePtr task, uint32_t ms) {
@@ -255,9 +266,21 @@ void MessageLoop::RunTimerClosure(const TimerEventList& timer_evs) {
   }
 }
 
+void MessageLoop::RunScheduledTask() {
+  DCHECK(IsInLoopThread());
+
+  TaskBasePtr task;  // instead of pinco *p;
+  while (scheduled_tasks_.try_dequeue(task)) {
+    task->Run();
+    task.reset();
+  }
+}
+
 void MessageLoop::RunNestedTask() {
   DCHECK(IsInLoopThread());
-  for (auto& task : in_loop_tasks_) {
+  while(in_loop_tasks_.size()) {
+    auto task = std::move(in_loop_tasks_.front());
+    in_loop_tasks_.pop_front();
     task->Run();
   }
   in_loop_tasks_.clear();
@@ -267,19 +290,22 @@ void MessageLoop::RunCommandTask(ScheduledTaskType type) {
   switch(type) {
     case ScheduledTaskType::TaskTypeDefault: {
       notify_flag_.clear();
-      uint64_t count = 0;
-      CHECK(sizeof(count) == ::read(task_fd_, &count, sizeof(count)));
 
-      TaskBasePtr task;  // instead of pinco *p;
-      while (scheduled_tasks_.try_dequeue(task)) {
-        DCHECK(task);
-        task->Run();
-      }
+      uint64_t count = 0;
+      int ret = ::read(task_fd_, &count, sizeof(count));
+      LOG_IF(ERROR, ret < 0) << " error:" << StrError(errno) << " fd:" << task_fd_;
+
+      //CHECK(sizeof(count) == ::read(task_fd_, &count, sizeof(count)));
+      RunScheduledTask();
+
     } break;
     case ScheduledTaskType::TaskTypeCtrl: {
       DCHECK(wakeup_event_->fd() == wakeup_pipe_out_);
-      char buf;
-      CHECK(sizeof(buf) == ::read(wakeup_pipe_out_, &buf, sizeof(buf)));
+
+      char buf = 0x7F;
+      int ret = ::read(wakeup_pipe_out_, &buf, sizeof(buf));
+      LOG_IF(ERROR, ret < 0) << " error:" << StrError(errno) << " fd:" << wakeup_pipe_out_;
+
       switch (buf) {
         case kQuit: {
           QuitLoop();

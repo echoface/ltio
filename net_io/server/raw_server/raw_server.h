@@ -44,9 +44,10 @@ public:
   void SetWorkLoops(std::vector<base::MessageLoop*>& loops);
 
   void ServeAddress(const std::string, RawMessageHandler);
-  void ServeAddressSync(const std::string, RawMessageHandler);
+
   void StopServer();
-  void StopServerSync();
+  // set a callback if wan't got a callback when server stoped
+  void SetCloseCallback(StlClosure callback);
 protected:
   //override from ioservice delegate
   bool CanCreateNewChannel() override;
@@ -65,10 +66,10 @@ private:
   RawMessageHandler message_handler_;
 
   std::mutex mtx_;
-  std::condition_variable cv_;
 
   std::vector<base::MessageLoop*> io_loops_;
-  std::list<IOServicePtr> ioservices_;
+  std::list<RefIOService> ioservices_;
+  StlClosure closed_callback_;
 
   std::atomic<bool> serving_flag_;
   std::atomic_uint32_t connection_count_;

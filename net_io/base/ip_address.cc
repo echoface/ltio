@@ -355,35 +355,19 @@ bool IPAddress::operator<(const IPAddress& that) const {
 std::string IPAddress::ToString() const {
   std::string str;
 
-  /*
-   * char str[INET_ADDRSTRLEN];
-  // store this IP address in sa:
-  inet_pton(AF_INET, "192.0.2.33", &(sa.sin_addr));
-
-  // now get it back and print it
-  inet_ntop(AF_INET, &(sa.sin_addr), str, INET_ADDRSTRLEN);
-   * */
   int af_type = IsIPv4() ? AF_INET : AF_INET6; 
   size_t out_len = IsIPv4() ? INET_ADDRSTRLEN : INET6_ADDRSTRLEN; 
 
   char* start = base::AsWriteInto(&str, out_len);
-  ::inet_ntop(af_type, ip_address_.data(), start, INET_ADDRSTRLEN);
+  ::inet_ntop(af_type, ip_address_.data(), start, out_len);
   return str;
-
-#if 0 //chromium's implement
-  if (IsIPv4()) {
-    url::AppendIPv4Address(ip_address_.data(), &output);
-  } else if (IsIPv6()) {
-    url::AppendIPv6Address(ip_address_.data(), &output);
-  }
-  return str;
-#endif
 }
 
 std::string IPAddressToStringWithPort(const IPAddress& address, uint16_t port) {
   std::string address_str = address.ToString();
-  if (address_str.empty())
+  if (address_str.empty()) {
     return address_str;
+  }
 
   if (address.IsIPv6()) {
     return fmt::format("[{0}]:{1}", address_str.c_str(), port);

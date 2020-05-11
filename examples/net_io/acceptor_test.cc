@@ -10,7 +10,7 @@
 using namespace lt;
 
 base::MessageLoop loop;
-std::set<net::RefTcpChannel> connections;
+std::set<net::TcpChannelPtr> connections;
 
 class EchoConsumer : public net::SocketChannel::Reciever {
 public:
@@ -28,7 +28,7 @@ public:
   void OnDataReceived(const net::SocketChannel* ch, net::IOBuffer *buf) override {
     auto iter = std::find_if(connections.begin(),
                              connections.end(),
-                             [&](const net::RefTcpChannel& channel) -> bool {
+                             [&](const net::TcpChannelPtr& channel) -> bool {
                                return ch == channel.get();
                              });
     net::TcpChannel* channel = iter->get();
@@ -53,11 +53,12 @@ int main(int argc, char** argv) {
     if (loop.IsInLoopThread()) {
       ch->StartChannel();
     } else {
-      loop.PostTask(NewClosure(std::bind(&net::TcpChannel::StartChannel, ch)));
+      loop.PostTask(NewClosure(std::bind(&net::TcpChannel::StartChannel, ch.get())));
     }
 
-    connections.insert(ch);
-    LOG(INFO) << "channel:[" << ch->ChannelName() << "] connected, connections count:" << connections.size();
+    LOG(INFO) << "channel:[" << ch->ChannelName()
+      << "] connected, connections count:" << connections.size();
+    connections.insert(std::move(ch));
   };
 
   net::SocketAcceptor* acceptor;

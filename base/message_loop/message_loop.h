@@ -55,8 +55,7 @@ class MessageLoop : public PumpDelegate,
 
     template <typename Functor, typename... Args>
     bool PostTask(const Location& location, Functor&& functor, Args&&... args) {
-      return PostTask(
-        base::CreateClosure(location, std::bind(std::forward(functor), std::forward(args...))));
+      return PostTask(CreateClosure(location, std::bind(functor, args...)));
     }
 
     /* Task will run in target loop thread,
@@ -109,14 +108,15 @@ class MessageLoop : public PumpDelegate,
     // nested task: post another task in current loop
     // override from pump for nested task;
     void RunNestedTask() override;
+    void RunScheduledTask();
     void RunTimerClosure(const TimerEventList&) override;
 
     int Notify(int fd, const void* data, size_t count);
 
-    void HandleRead(FdEvent* fd_event) override;
-    void HandleWrite(FdEvent* fd_event) override;
-    void HandleError(FdEvent* fd_event) override;
-    void HandleClose(FdEvent* fd_event) override;
+    bool HandleRead(FdEvent* fd_event) override;
+    bool HandleWrite(FdEvent* fd_event) override;
+    bool HandleError(FdEvent* fd_event) override;
+    bool HandleClose(FdEvent* fd_event) override;
   private:
 
     std::atomic_int status_;

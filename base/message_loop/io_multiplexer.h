@@ -21,9 +21,9 @@ public:
   virtual void UpdateFdEvent(FdEvent* fd_ev) = 0;
   virtual int WaitingIO(FdEventList& active_list, int32_t timeout_ms) = 0;
 
-  uint32_t WatchingFdCounts() const;
 protected:
-  DoubleLinkedList<FdEvent> listen_events_;
+  //DoubleLinkedList<FdEvent> listen_events_;
+  LinkedList<FdEvent> listen_events_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(IOMux);

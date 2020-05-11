@@ -1,6 +1,7 @@
 #ifndef _LT_NET_CLIENT_CONNECTOR_H_H
 #define _LT_NET_CLIENT_CONNECTOR_H_H
 
+#include <list>
 #include <set>
 
 #include "../tcp_channel.h"
@@ -41,18 +42,17 @@ public:
   void OnWrite(WeakPtrFdEvent weak_fdevent);
   void OnError(WeakPtrFdEvent weak_fdevent);
 private:
-  void HandleRead(base::FdEvent* fd_event) override;
-  void HandleWrite(base::FdEvent* fd_event) override;
-  void HandleError(base::FdEvent* fd_event) override;
-  void HandleClose(base::FdEvent* fd_event) override;
+  bool HandleRead(base::FdEvent* fd_event) override;
+  bool HandleWrite(base::FdEvent* fd_event) override;
+  bool HandleError(base::FdEvent* fd_event) override;
+  bool HandleClose(base::FdEvent* fd_event) override;
 
   void CleanUpBadChannel(base::FdEvent* event);
   bool remove_fdevent(base::FdEvent* event);
 private:
   base::EventPump* pump_;
   ConnectorDelegate* delegate_;
-  std::set<base::RefFdEvent> connecting_sockets_;
-  //DoubleLinkedList<FdEvent> listen_events_;
+  std::list<base::RefFdEvent> connecting_sockets_;
 };
 
 }}

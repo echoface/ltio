@@ -81,19 +81,18 @@ uint32_t IOMuxEpoll::ToEpollEvent(const LtEvent& lt_ev, bool add_extr) {
 void IOMuxEpoll::AddFdEvent(FdEvent* fd_ev) {
 
   EpollCtl(fd_ev, EPOLL_CTL_ADD);
-
-  if (listen_events_.Attatched(fd_ev)) {
-    listen_events_.Remove(fd_ev);
+  if (fd_ev->Attatched()) {
+    fd_ev->RemoveFromList();
   }
-  listen_events_.PushBack(fd_ev);
+  listen_events_.Append(fd_ev);
 }
 
 void IOMuxEpoll::DelFdEvent(FdEvent* fd_ev) {
 
   EpollCtl(fd_ev, EPOLL_CTL_DEL);
 
-  if (listen_events_.Attatched(fd_ev)) {
-    listen_events_.Remove(fd_ev);
+  if (fd_ev->Attatched()) {
+    fd_ev->RemoveFromList();
   } else {
     LOG(ERROR) << "Attept Remove A FdEvent From Another Holder";
   }
@@ -101,8 +100,8 @@ void IOMuxEpoll::DelFdEvent(FdEvent* fd_ev) {
 
 void IOMuxEpoll::UpdateFdEvent(FdEvent* fd_ev) {
   if (0 == EpollCtl(fd_ev, EPOLL_CTL_MOD)) {
-    if (!listen_events_.Attatched(fd_ev)) {
-      listen_events_.PushBack(fd_ev);
+    if (!fd_ev->Attatched()) {
+      listen_events_.Append(fd_ev);
     }
   }
 }

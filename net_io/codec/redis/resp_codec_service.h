@@ -26,7 +26,6 @@ public:
   RespCodecService(base::MessageLoop* loop);
   ~RespCodecService();
 
-  void OnStatusChanged(const SocketChannel*) override;
   void OnDataFinishSend(const SocketChannel*) override;
 
   void OnDataReceived(const SocketChannel*, IOBuffer *) override;

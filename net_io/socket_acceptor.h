@@ -26,10 +26,10 @@ public:
 private:
   bool InitListener();
   //override from FdEvent::Handler
-  void HandleRead(base::FdEvent* fd_event) override;
-  void HandleWrite(base::FdEvent* fd_event) override;
-  void HandleError(base::FdEvent* fd_event) override;
-  void HandleClose(base::FdEvent* fd_event) override;
+  bool HandleRead(base::FdEvent* fd_event) override;
+  bool HandleWrite(base::FdEvent* fd_event) override;
+  bool HandleError(base::FdEvent* fd_event) override;
+  bool HandleClose(base::FdEvent* fd_event) override;
 
   bool listening_;
   IPEndPoint address_;

@@ -24,7 +24,7 @@ namespace net {
 // An IPEndPoint represents the address of a transport endpoint:
 //  * IP address (either v4 or v6)
 //  * Port
-class NET_EXPORT IPEndPoint {
+class IPEndPoint {
  public:
   ~IPEndPoint();
   IPEndPoint();

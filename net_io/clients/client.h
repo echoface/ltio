@@ -1,6 +1,7 @@
 #ifndef LT_NET_CLIENT_H_H
 #define LT_NET_CLIENT_H_H
 
+#include <list>
 #include <vector>
 #include <memory>
 #include <chrono>             // std::chrono::seconds
@@ -56,7 +57,9 @@ public:
 class Client: public ConnectorDelegate,
               public ClientChannel::Delegate {
 public:
-public:
+  typedef std::vector<RefClientChannel> ClientChannelList;
+  typedef std::shared_ptr<ClientChannelList> RefClientChannelList;
+
   Client(base::MessageLoop*, const url::RemoteInfo&);
   virtual ~Client();
 
@@ -114,12 +117,8 @@ private:
   ClientConfig config_;
   RefConnector connector_;
   ClientDelegate* delegate_;
-  typedef std::vector<RefClientChannel> ClientChannelList;
-
   //a channels copy for client caller
   std::atomic<uint32_t> next_index_;
-
-  REF_TYPEDEFINE(ClientChannelList);
   RefClientChannelList in_use_channels_;
 
   DISALLOW_COPY_AND_ASSIGN(Client);

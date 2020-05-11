@@ -1,3 +1,4 @@
+#include "fd_event.h"
 #include "glog/logging.h"
 #include <base/utils/sys_error.h>
 
@@ -5,6 +6,7 @@
 #include "io_mux_epoll.h"
 #include "linux_signal.h"
 #include <algorithm>
+#include <iostream>
 
 namespace base {
 
@@ -50,7 +52,7 @@ void EventPump::Run() {
 
     ProcessTimerEvent();
 
-    for (auto &fd_event : active_events) {
+    for (FdEvent* fd_event : active_events) {
       fd_event->HandleEvent();
     }
 
@@ -66,7 +68,6 @@ void EventPump::Run() {
 }
 
 void EventPump::Quit() { running_ = false; }
-
 bool EventPump::IsInLoopThread() const {
   return tid_ == std::this_thread::get_id();
 }

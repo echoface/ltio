@@ -28,7 +28,7 @@ class QuerySession {
 
     QuerySession& UseDB(const std::string& db);
     QuerySession& Query(const std::string& sql);
-    QuerySession& Then(base::StlClosure callback);
+    QuerySession& Then(StlClosure callback);
 
     const int Code() const {return code_;}
     const std::string& ErrorMessage() const {return err_message_;}
@@ -65,7 +65,7 @@ class QuerySession {
 
     RowHeaders colum_names_;
     QueryResults results_;
-    base::StlClosure finish_callback_;
+    StlClosure finish_callback_;
 };
 
 }//end lt

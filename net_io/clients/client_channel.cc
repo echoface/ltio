@@ -10,8 +10,8 @@
 namespace lt {
 namespace net {
 
-RefClientChannel CreateClientChannel(ClientChannel::Delegate* delegate,
-                                     const RefCodecService& service) {
+RefClientChannel
+  CreateClientChannel(ClientChannel::Delegate* delegate, RefCodecService service) {
 	if (service->KeepSequence()) {
 		auto client_channel = QueuedChannel::Create(delegate, service);
 		return std::static_pointer_cast<ClientChannel>(client_channel);
@@ -28,7 +28,6 @@ ClientChannel::ClientChannel(Delegate* d, const RefCodecService& service)
 }
 
 ClientChannel::~ClientChannel() {
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << " gone :" << ConnectionInfo();
   codec_->SetDelegate(NULL);
 }
 
@@ -37,27 +36,27 @@ void ClientChannel::StartClientChannel() {
 }
 
 void ClientChannel::CloseClientChannel() {
+	base::EventPump* pump = EventPump();
+  CHECK(pump->IsInLoopThread());
+
   VLOG(GLOG_VTRACE) << __FUNCTION__ << " going to close:" << ConnectionInfo();
 
   state_ = kClosing;
 
-	base::EventPump* pump = EventPump();
-  CHECK(pump->IsInLoopThread());
-
   BeforeCloseChannel();
 
   delegate_ = NULL;
+
+  codec_->CloseService();
+
   if (heartbeat_timer_) {
     pump->RemoveTimeoutEvent(heartbeat_timer_);
     delete heartbeat_timer_;
     heartbeat_timer_ = NULL;
   }
-  codec_->CloseService();
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << " close:" << ConnectionInfo() << " back";
-}
 
-void ClientChannel::ResetDelegate() {
-  delegate_ = NULL;
+  state_ = kDisconnected;
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << " close:" << ConnectionInfo() << " back";
 }
 
 std::string ClientChannel::ConnectionInfo() const {
@@ -78,7 +77,7 @@ const url::RemoteInfo* ClientChannel::GetRemoteInfo() const {
 
 void ClientChannel::OnHearbeatTimerInvoke() {
   if (heartbeat_message_) {
-    LOG(ERROR) << __FUNCTION__ << " heartbeat snowball, timeout_ms > heartbeat_ms?";
+    LOG(ERROR) << __FUNCTION__ << " heartbea snowball";
     return;
   }
   heartbeat_message_ = codec_->NewHeartbeat();
@@ -105,9 +104,8 @@ bool ClientChannel::HandleResponse(const RefCodecMessage& req,
 void ClientChannel::OnProtocolServiceGone(const RefCodecService& service) {
   VLOG(GLOG_VTRACE) << __FUNCTION__ << " enter";
 
-  base::MessageLoop* loop = IOLoop();
   if (heartbeat_timer_) {
-    loop->Pump()->RemoveTimeoutEvent(heartbeat_timer_);
+    EventPump()->RemoveTimeoutEvent(heartbeat_timer_);
     delete heartbeat_timer_;
     heartbeat_timer_ = NULL;
   }
@@ -128,7 +126,7 @@ void ClientChannel::OnProtocolServiceReady(const RefCodecService& service) {
 
     auto heartbeat_fun = std::bind(&ClientChannel::OnHearbeatTimerInvoke, this);
     heartbeat_timer_->InstallTimerHandler(NewClosure(heartbeat_fun));
-    IOLoop()->Pump()->AddTimeoutEvent(heartbeat_timer_);
+    EventPump()->AddTimeoutEvent(heartbeat_timer_);
   }
 };
 

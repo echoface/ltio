@@ -400,17 +400,23 @@ void MysqlAsyncConnect::OnWaitEventInvoked() {
   HandleState(status);
 }
 
-void MysqlAsyncConnect::HandleRead(base::FdEvent* fd_event) {
+bool MysqlAsyncConnect::HandleRead(base::FdEvent* fd_event) {
   OnWaitEventInvoked();
+  return true;
 }
-void MysqlAsyncConnect::HandleWrite(base::FdEvent* fd_event) {
+
+bool MysqlAsyncConnect::HandleWrite(base::FdEvent* fd_event) {
   OnWaitEventInvoked();
+  return true;
 }
-void MysqlAsyncConnect::HandleError(base::FdEvent* fd_event) {
+bool MysqlAsyncConnect::HandleError(base::FdEvent* fd_event) {
   OnWaitEventInvoked();
+  return true;
 }
-void MysqlAsyncConnect::HandleClose(base::FdEvent* fd_event) {
+
+bool MysqlAsyncConnect::HandleClose(base::FdEvent* fd_event) {
   OnWaitEventInvoked();
+  return true;
 }
 
 void MysqlAsyncConnect::reset_wait_event() {

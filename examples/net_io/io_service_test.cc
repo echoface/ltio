@@ -23,15 +23,12 @@ public:
     return true;
   };
 
-  void OnStatusChanged(const SocketChannel* channel) override {
-    LOG(INFO) << "RefTcpChannel status changed:" << channel->StatusAsString();
-  }
   void OnDataFinishSend(const SocketChannel* channel) override {
-    LOG(INFO) << " RefTcpChannel  data write finished";
+    LOG(INFO) << " channel write data finished";
   }
 
   void OnDataReceived(const SocketChannel* channel, IOBuffer *buffer) override {
-    LOG(INFO) << " RefTcpChannel  recieve data" << buffer->CanReadSize();
+    LOG(INFO) << " channel recieve data" << buffer->CanReadSize();
     CHECK(channel == Channel());
     int32_t size = Channel()->Send(buffer->GetRead(), buffer->CanReadSize());
     if (size > 0) {
@@ -114,7 +111,7 @@ private:
   base::MessageLoop iowork_loop_;
   base::MessageLoop acceptor_loop_;
 
-  IOServicePtr ioservice_;
+  RefIOService ioservice_;
   CodecServicePtr tcp_protoservice_;
 };
 

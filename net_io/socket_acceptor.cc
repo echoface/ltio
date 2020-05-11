@@ -80,9 +80,9 @@ void SocketAcceptor::StopListen() {
   if (!listening_) {
     return;
   }
-
-  socket_event_->DisableAll();
   event_pump_->RemoveFdEvent(socket_event_.get());
+  socket_event_->DisableAll();
+
   listening_ = false;
   LOG(INFO) << " Stop Listen on:" << address_.ToString();
 }
@@ -91,7 +91,7 @@ void SocketAcceptor::SetNewConnectionCallback(const NewConnectionCallback& cb) {
   new_conn_callback_ = std::move(cb);
 }
 
-void SocketAcceptor::HandleRead(base::FdEvent* fd_event) {
+bool SocketAcceptor::HandleRead(base::FdEvent* fd_event) {
 
   struct sockaddr client_socket_in;
 
@@ -99,7 +99,7 @@ void SocketAcceptor::HandleRead(base::FdEvent* fd_event) {
   int peer_fd = socketutils::AcceptSocket(socket_event_->fd(), &client_socket_in, &err);
   if (peer_fd < 0) {
     LOG(ERROR) << __FUNCTION__ << " accept new connection failed, err:" << base::StrError(err);
-    return ;
+    return true;
   }
 
   IPEndPoint client_addr;
@@ -107,19 +107,21 @@ void SocketAcceptor::HandleRead(base::FdEvent* fd_event) {
 
   VLOG(GLOG_VTRACE) << __FUNCTION__ << " accept a connection:" << client_addr.ToString();
   if (new_conn_callback_) {
-    return new_conn_callback_(peer_fd, client_addr);
+    new_conn_callback_(peer_fd, client_addr);
+    return true;
   }
   socketutils::CloseSocket(peer_fd);
+  return true;
 }
 
-void SocketAcceptor::HandleWrite(base::FdEvent* fd_event) {
-  LOG(ERROR) << __FUNCTION__
-    << " accept fd [" << socket_event_->fd() << "] write should not reached";
+bool SocketAcceptor::HandleWrite(base::FdEvent* ev) {
+  LOG(ERROR) << __FUNCTION__ << " fd [" << ev->fd() << "] write event should not reached";
+  return true;
 }
 
-void SocketAcceptor::HandleError(base::FdEvent* fd_event) {
+bool SocketAcceptor::HandleError(base::FdEvent* fd_event) {
   LOG(ERROR) << __FUNCTION__
-    << " accept fd [" << socket_event_->fd() << "] error:[" << base::StrError() << "]";
+    << " fd [" << fd_event->fd() << "] error:[" << base::StrError() << "]";
 
   listening_ = false;
 
@@ -129,11 +131,12 @@ void SocketAcceptor::HandleError(base::FdEvent* fd_event) {
     LOG_IF(ERROR, !re_listen_ok) << __FUNCTION__
       << " acceptor:[" << address_.ToString() << "] re-listen failed";
   }
+  return false;
 }
 
-void SocketAcceptor::HandleClose(base::FdEvent* fd_event) {
-  LOG(ERROR) << __FUNCTION__ << " accept fd [" << socket_event_->fd() << "] close";
-  HandleError(fd_event);
+bool SocketAcceptor::HandleClose(base::FdEvent* fd_event) {
+  LOG(ERROR) << __FUNCTION__ << " fd [" << fd_event->fd() << "] closed";
+  return HandleError(fd_event);
 }
 
 }}//end namespace net

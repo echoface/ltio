@@ -17,20 +17,41 @@ using namespace base;
 
 #define USE_CORO_DISPATCH 1
 
-base::MessageLoop main_loop;
-class SampleApp: public net::ClientDelegate {
+MessageLoop main_loop;
+
+void HandleRaw(RawServerContext* context) {
+  const FwRapidMessage* req = context->GetRequest<FwRapidMessage>();
+  LOG_EVERY_N(INFO, 10000) << " got request:" << req->Dump();
+  auto res = FwRapidMessage::CreateResponse(req);
+  res->SetContent(req->Content());
+  return context->SendResponse(res);
+}
+
+class SampleApp: public ClientDelegate {
 public:
   SampleApp() {
+
     int loop_count = std::min(4, int(std::thread::hardware_concurrency()));
     for (int i = 0; i < loop_count; i++) {
-      auto loop = new(base::MessageLoop);
+      auto loop = new(MessageLoop);
       loop->SetLoopName("io_" + std::to_string(i));
       loop->Start();
       loops.push_back(loop);
     }
 
-    dispatcher_ = new net::CoroDispatcher(true);
+    CodecFactory::RegisterCreator(
+      "rapid", [](MessageLoop* loop) -> RefCodecService {
+        auto service = std::make_shared<RawCodecService<FwRapidMessage>>(loop);
+        return std::static_pointer_cast<CodecService>(service);
+      });
+
+    dispatcher_ = new CoroDispatcher(true);
     dispatcher_->SetWorkerLoops(loops);
+
+    raw_server.SetIOLoops(loops);
+    raw_server.SetDispatcher(dispatcher_);
+    raw_server.ServeAddress("rapid://0.0.0.0:5004",
+                            std::bind(HandleRaw, std::placeholders::_1));
   }
 
   ~SampleApp() {
@@ -41,7 +62,7 @@ public:
     loops.clear();
   }
 
-  base::MessageLoop* NextIOLoopForClient() {
+  MessageLoop* NextIOLoopForClient() {
     if (loops.empty()) {
       return NULL;
     }
@@ -50,32 +71,31 @@ public:
   }
 
   void StopAllService() {
-    LOG(INFO) << __FUNCTION__ << " stop enter";
+    CHECK(co_can_yield);
+
+    raw_server.SetCloseCallback(co_resumer());
+    raw_server.StopServer();
+    co_pause;
+
     main_loop.QuitLoop();
-    LOG(INFO) << __FUNCTION__ << " stop leave";
   }
 
-  static std::atomic_int io_round_count;
-  std::vector<base::MessageLoop*> loops;
+  RawServer raw_server;
   CoroDispatcher* dispatcher_ = NULL;
+  static std::atomic_int io_round_count;
+  std::vector<MessageLoop*> loops;
 };
 
 std::atomic_int SampleApp::io_round_count = {0};
 
-SampleApp app;
 
-void HandleRaw(net::RawServerContext* context) {
-  const FwRapidMessage* req = context->GetRequest<FwRapidMessage>();
-  LOG_EVERY_N(INFO, 10000) << " got request:" << req->Dump();
-  auto res = FwRapidMessage::CreateResponse(req);
-  res->SetContent(req->Content());
-  return context->SendResponse(res);
-}
+SampleApp app;
 
 void signalHandler( int signum ){
   LOG(INFO) << "sighandler sig:" << signum;
-  app.StopAllService();
+  co_go &main_loop << std::bind(&SampleApp::StopAllService, &app);
 }
+
 
 int main(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
@@ -83,25 +103,9 @@ int main(int argc, char* argv[]) {
   main_loop.SetLoopName("main");
   main_loop.Start();
 
-  net::CodecFactory::RegisterCreator(
-    "rapid", [](base::MessageLoop* loop) -> net::RefCodecService {
-      auto service = std::make_shared<RawCodecService<FwRapidMessage>>(loop);
-      return std::static_pointer_cast<CodecService>(service);
-    });
-
-  net::RawServer raw_server;
-  net::RawServer* rserver = &raw_server;
-  raw_server.SetIOLoops(app.loops);
-  raw_server.SetDispatcher(app.dispatcher_);
-  raw_server.ServeAddressSync("rapid://0.0.0.0:5004",
-                              std::bind(HandleRaw, std::placeholders::_1));
-
   signal(SIGINT, signalHandler);
   signal(SIGTERM, signalHandler);
-
   main_loop.WaitLoopEnd();
-  rserver->StopServerSync();
-  std::this_thread::sleep_for(std::chrono::seconds(5));
 }
 
 

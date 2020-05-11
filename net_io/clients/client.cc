@@ -3,6 +3,7 @@
 #include "base/base_constants.h"
 #include "base/utils/string/str_utils.h"
 #include "base/coroutine/coroutine_runner.h"
+#include "client_channel.h"
 #include "glog/logging.h"
 
 namespace lt {
@@ -26,6 +27,7 @@ Client::Client(base::MessageLoop* loop, const url::RemoteInfo& info)
 
 Client::~Client() {
   Finalize();
+  VLOG(GLOG_VINFO) << __func__ << " gone:" << ClientInfo();
 }
 
 void Client::SetDelegate(ClientDelegate* delegate) {
@@ -46,7 +48,6 @@ void Client::Finalize() {
     return;
   }
 
-  LOG(INFO) << __func__ << " close client:" << ClientInfo();
   if (work_loop_->IsInLoopThread()) {
     connector_->Stop(); //sync
   } else {
@@ -54,9 +55,10 @@ void Client::Finalize() {
   }
 
   auto channels = std::atomic_load(&in_use_channels_);
-  for (auto& ch : *channels) {
-    ch->IOLoop()->PostTask(
-      NewClosure(std::bind(&ClientChannel::CloseClientChannel, ch)));
+
+  ClientChannelList copy_channels = *channels;
+  for (RefClientChannel& ch : copy_channels) {
+    ch->IOLoop()->PostTask(FROM_HERE, &ClientChannel::CloseClientChannel, ch);
   }
 
   channels->clear();
@@ -104,27 +106,30 @@ void Client::OnNewClientConnected(int socket_fd, IPEndPoint& local, IPEndPoint& 
   CHECK(work_loop_->IsInLoopThread());
 
   base::MessageLoop* io_loop = next_client_io_loop();
+  LOG(INFO) << __func__ << " gonghuan: loop for next client:" << io_loop;
 
   RefCodecService codec_service =
     CodecFactory::NewClientService(remote_info_.protocol, io_loop);
+
   codec_service->BindToSocket(socket_fd, local, remote);
 
-  auto client_channel = CreateClientChannel(this, codec_service);
+  RefClientChannel client_channel = CreateClientChannel(this, codec_service);
   client_channel->SetRequestTimeout(config_.message_timeout);
 
-  in_use_channels_->push_back(client_channel);
-
   //这里的交互界面是Connector 《== 》与ClientChannel
-  if (io_loop->IsInLoopThread()) {
-    client_channel->StartClientChannel();
-  } else {
-    io_loop->PostTask(NewClosure(
-        std::bind(&ClientChannel::StartClientChannel, client_channel)));
-  }
+  //if (io_loop->IsInLoopThread()) {
+  //  client_channel->StartClientChannel();
+  //  LOG(INFO) << __func__ << " gonghuan: loop:" << io_loop
+  //    << " codec's loop:" << codec_service->IOLoop()
+  //    << " clientchannel:" << client_channel.get();
+  //} else {
+  in_use_channels_->push_back(client_channel);
+  io_loop->PostTask(FROM_HERE, &ClientChannel::StartClientChannel, client_channel);
+  //}
   VLOG(GLOG_VINFO) << __FUNCTION__ << ClientInfo() << " connected, initializing...";
 }
 
-void Client::OnClientChannelInited(const ClientChannel* channel) {;
+void Client::OnClientChannelInited(const ClientChannel* channel) {
   if (!work_loop_->IsInLoopThread()) {
     auto functor = std::bind(&Client::OnClientChannelInited, this, channel);
     work_loop_->PostTask(NewClosure(std::move(functor)));
@@ -150,11 +155,19 @@ void Client::OnClientChannelClosed(const RefClientChannel& channel) {
     RefClientChannelList in_use_list = std::atomic_load(&in_use_channels_);
     RefClientChannelList new_list(new ClientChannelList(*in_use_list));
 
+    std::remove_if(new_list->begin(),
+                   new_list->end(),
+                   [&](const RefClientChannel& ch) ->bool {
+                      return ch == channel;
+                   });
+    std::atomic_store(&in_use_channels_, new_list);
+    /*
     auto iter = std::find(new_list->begin(), new_list->end(), channel);
     if (iter != new_list->end()) {
       new_list->erase(iter);
       std::atomic_store(&in_use_channels_, new_list);
     }
+    */
   }while(0);
 
   uint32_t connected_count = ConnectedCount();
@@ -190,7 +203,7 @@ bool Client::AsyncDoRequest(RefCodecMessage& req, AsyncCallBack callback) {
 
   //IMPORTANT: avoid self holder for capture list
   CodecMessage* request = req.get();
-  base::StlClosure resumer = [=]() {
+  StlClosure resumer = [=]() {
     if (worker->IsInLoopThread()) {
       callback(request->RawResponse());
     } else {
@@ -208,8 +221,7 @@ bool Client::AsyncDoRequest(RefCodecMessage& req, AsyncCallBack callback) {
   }
 
   base::MessageLoop* io = client->IOLoop();
-  return io->PostTask(
-    NewClosure(std::bind(&ClientChannel::SendRequest, client, req)));
+  return io->PostTask(FROM_HERE, &ClientChannel::SendRequest, client, req);
 }
 
 CodecMessage* Client::DoRequest(RefCodecMessage& message) {
@@ -251,7 +263,7 @@ uint64_t Client::ConnectedCount() const {
 std::string Client::ClientInfo() const {
   std::ostringstream oss;
   oss << "[remote:" << RemoteIpPort()
-      << ", connections:" << ConnectedCount()
+      << ", count:" << ConnectedCount()
       << "]";
   return oss.str();
 }

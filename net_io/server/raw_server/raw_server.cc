@@ -6,6 +6,7 @@
 #include "base/message_loop/linux_signal.h"
 #include "net_io/codec/codec_factory.h"
 
+#include <algorithm>
 #include "raw_server.h"
 
 namespace lt {
@@ -60,16 +61,6 @@ void RawServer::SetDispatcher(Dispatcher* dispatcher) {
   dispatcher_ = dispatcher;
 }
 
-void RawServer::ServeAddressSync(const std::string addr, RawMessageHandler handler) {
-
-  ServeAddress(addr, handler);
-
-  std::unique_lock<std::mutex> lck(mtx_);
-  while (cv_.wait_for(lck, std::chrono::milliseconds(500)) == std::cv_status::timeout) {
-    LOG(INFO) << "starting... ... ...";
-  }
-}
-
 void RawServer::ServeAddress(const std::string address, RawMessageHandler handler) {
 
   bool served = serving_flag_.exchange(true);
@@ -96,7 +87,7 @@ void RawServer::ServeAddress(const std::string address, RawMessageHandler handle
   {
 #if defined SO_REUSEPORT && defined NET_ENABLE_REUSER_PORT
     for (base::MessageLoop* loop : io_loops_) {
-      IOServicePtr service(new IOService(addr, sch_ip_port.protocol, loop, this));
+      RefIOService service(new IOService(addr, sch_ip_port.protocol, loop, this));
       ioservices_.push_back(std::move(service));
     }
 #else
@@ -105,7 +96,7 @@ void RawServer::ServeAddress(const std::string address, RawMessageHandler handle
     ioservices_.push_back(std::move(service));
 #endif
 
-    for (IOServicePtr& service : ioservices_) {
+    for (RefIOService& service : ioservices_) {
       service->StartIOService();
     }
   }
@@ -119,7 +110,7 @@ void RawServer::OnRequestMessage(const RefCodecMessage& request) {
     return;
   }
 
-  base::StlClosure functor = std::bind(&RawServer::HandleRawRequest, this, request);
+  StlClosure functor = std::bind(&RawServer::HandleRawRequest, this, request);
   if (false == dispatcher_->Dispatch(functor)) {
     LOG(ERROR) << __FUNCTION__ << " dispatcher_->Dispatch failed";
     auto codec_service = request->GetIOCtx().codec.lock();
@@ -167,14 +158,14 @@ base::MessageLoop* RawServer::GetNextIOWorkLoop() {
 }
 
 bool RawServer::IncreaseChannelCount() {
-  connection_count_.fetch_add(1);
-  LOG(INFO) << __FUNCTION__ << " rawserver connections +1 count:" << connection_count_;
+  uint32_t count = connection_count_.fetch_add(1);
+  VLOG(GLOG_VTRACE) << __func__ << " connections +1 now:" << count + 1;
   return true;
 }
 
 void RawServer::DecreaseChannelCount() {
-  connection_count_.fetch_sub(1);
-  LOG(INFO) << __FUNCTION__ << " rawserver connections -1 count:" << connection_count_;
+  uint64_t count = connection_count_.fetch_sub(1);
+  VLOG(GLOG_VTRACE) << __func__ << " connections -1 now:" << count + 1;
 }
 
 bool RawServer::BeforeIOServiceStart(IOService* ioservice) {
@@ -183,50 +174,38 @@ bool RawServer::BeforeIOServiceStart(IOService* ioservice) {
 
 void RawServer::IOServiceStarted(const IOService* service) {
   LOG(INFO) << "Raw Server IO Service " << service->IOServiceName() << " Started .......";
+}
 
-  { //sync
-    std::unique_lock<std::mutex> lck(mtx_);
-    for (auto& service : ioservices_) {
-      if (!service->IsRunning()) return;
-    }
-    cv_.notify_all();
-  }
+void RawServer::SetCloseCallback(StlClosure callback) {
+  closed_callback_ = callback;
 }
 
 void RawServer::IOServiceStoped(const IOService* service) {
-  LOG(INFO) << "Raw Server IO Service " << service->IOServiceName() << " Stoped  .......";
-
+  LOG(INFO) << __func__ << " IO Service " << service->IOServiceName() << " Stoped";
   {
     std::unique_lock<std::mutex> lck(mtx_);
-    ioservices_.remove_if([&](IOServicePtr& s) -> bool {
+    ioservices_.remove_if([&](RefIOService& s) -> bool {
       return s.get() == service;
     });
-  }
 
-  { //sync
-    std::unique_lock<std::mutex> lck(mtx_);
-    for (auto& service : ioservices_) {
-      if (service->IsRunning()) return;
+    LOG_IF(INFO, ioservices_.empty()) << __func__ << " RawServer stoped Done";
+    if (ioservices_.empty() && closed_callback_) {
+      closed_callback_();
     }
-    cv_.notify_all();
-  }
-}
-
-void RawServer::StopServerSync() {
-
-  StopServer();
-
-  std::unique_lock<std::mutex> lck(mtx_);
-  while (cv_.wait_for(lck, std::chrono::milliseconds(500)) == std::cv_status::timeout) {
-    LOG(INFO) << "stoping... ... ...";
   }
 }
 
 void RawServer::StopServer() {
-  std::unique_lock<std::mutex> lck(mtx_);
-  for (auto& service : ioservices_) {
-    service->StopIOService();
-  }
+  LOG(INFO) << __func__ << " Start stop rawserver";
+
+  std::list<RefIOService> services = ioservices_;
+
+  std::for_each(services.begin(),
+                services.end(),
+                [](const RefIOService& service) {
+                  base::MessageLoop* io = service->AcceptorLoop();
+                  io->PostTask(FROM_HERE, &IOService::StopIOService, service);
+                });;
 }
 
 }} //end net

@@ -33,7 +33,7 @@ IOService::IOService(const IPEndPoint& addr,
 }
 
 IOService::~IOService() {
-  LOG(INFO) << "IOServce protocol " << protocol_ << " Gone";
+  LOG(INFO) << __FUNCTION__ << "IOServce gone, this:" << this;
 }
 
 void IOService::StartIOService() {
@@ -46,7 +46,9 @@ void IOService::StartIOService() {
 
   CHECK(acceptor_->StartListen());
 
-  delegate_->IOServiceStarted(this);
+  if (delegate_) {
+    delegate_->IOServiceStarted(this);
+  }
 }
 
 /* step1: close the acceptor */
@@ -64,12 +66,12 @@ void IOService::StopIOService() {
   is_stopping_ = true;
 
   //async
-  for (auto& codec_service : codecs) {
+  for (auto& codec_service : codecs_) {
     base::MessageLoop* loop = codec_service->IOLoop();
     loop->PostTask(NewClosure(std::bind(&CodecService::CloseService, codec_service)));
   }
 
-  if (codecs.empty()) {
+  if (codecs_.empty() && delegate_) {
     delegate_->IOServiceStoped(this);
   }
 }
@@ -80,9 +82,9 @@ void IOService::OnNewConnection(int fd, const IPEndPoint& peer_addr) {
   VLOG(GLOG_VTRACE) << __FUNCTION__ << " connect apply from:" << peer_addr.ToString();
 
   //check connection limit and others
-  if (!delegate_->CanCreateNewChannel()) {
+  if (!delegate_ || !delegate_->CanCreateNewChannel()) {
     LOG(INFO) << __FUNCTION__ << " Stop accept new connection"
-      << ", current has:[" << codecs.size() << "]";
+      << ", current has:[" << codecs_.size() << "]";
     return socketutils::CloseSocket(fd);
   }
 
@@ -119,7 +121,10 @@ void IOService::OnNewConnection(int fd, const IPEndPoint& peer_addr) {
 }
 
 void IOService::OnCodecMessage(const RefCodecMessage& message) {
-  delegate_->OnRequestMessage(message);
+  if (delegate_) {
+    return delegate_->OnRequestMessage(message);
+  }
+  LOG(INFO) << __func__ <<  " nobody handle this request";
 }
 
 void IOService::OnProtocolServiceGone(const net::RefCodecService &service) {
@@ -132,16 +137,17 @@ void IOService::OnProtocolServiceGone(const net::RefCodecService &service) {
 void IOService::StoreProtocolService(const RefCodecService service) {
   CHECK(accept_loop_->IsInLoopThread());
 
-  codecs.insert(service);
+  codecs_.insert(service);
   delegate_->IncreaseChannelCount();
 }
 
 void IOService::RemoveProtocolService(const RefCodecService service) {
   CHECK(accept_loop_->IsInLoopThread());
-  codecs.erase(service);
+
+  codecs_.erase(service);
 
   delegate_->DecreaseChannelCount();
-  if (is_stopping_ && codecs.size() == 0) {
+  if (delegate_ && is_stopping_ && codecs_.empty()) {
     delegate_->IOServiceStoped(this);
   }
 }

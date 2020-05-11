@@ -75,33 +75,23 @@ void FdEvent::notify_watcher() {
 
 void FdEvent::HandleEvent() {
   VLOG(GLOG_VTRACE) << __FUNCTION__ << EventInfo() << " rcv event:" << RcvEventAsString();
+  LtEvent rcv_event = revents_;
+  revents_ = LtEv::LT_EVENT_NONE;
   do {
-    if (revents_ & LtEv::LT_EVENT_ERROR) {
-      if (handler_) {
-        handler_->HandleError(this);
-      }
+    if (rcv_event & LtEv::LT_EVENT_ERROR) {
+      handler_->HandleError(this);
       break;
     }
-
-    if (revents_ & LtEv::LT_EVENT_WRITE) {
-      if (handler_) {
-        handler_->HandleWrite(this);
-      }
+    if (rcv_event & LtEv::LT_EVENT_WRITE && !handler_->HandleWrite(this)) {
+      break;
     }
-
-    if (revents_ & LtEv::LT_EVENT_READ) {
-      if (handler_) {
-        handler_->HandleRead(this);
-      }
+    if (rcv_event & LtEv::LT_EVENT_READ && !handler_->HandleRead(this)) {
+      break;
     }
-
-    if (revents_ & LtEv::LT_EVENT_CLOSE) {
-      if (handler_) {
-        handler_->HandleClose(this);
-      }
+    if (rcv_event & LtEv::LT_EVENT_CLOSE && !handler_->HandleClose(this)) {
+      break;
     }
   } while(0);
-  revents_ = LtEv::LT_EVENT_NONE;
 }
 
 std::string FdEvent::EventInfo() const {

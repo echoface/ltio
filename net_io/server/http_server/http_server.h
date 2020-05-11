@@ -31,9 +31,8 @@ public:
   void SetIOLoops(std::vector<base::MessageLoop*>& loops);
 
   void ServeAddress(const std::string, HttpMessageHandler);
-  void ServeAddressSync(const std::string, HttpMessageHandler);
   void StopServer();
-  void StopServerSync();
+  void SetCloseCallback(StlClosure callback);
 protected:
   //override from ioservice delegate
   bool CanCreateNewChannel() override;
@@ -57,8 +56,9 @@ private:
   std::condition_variable cv_;
 
   std::vector<base::MessageLoop*> io_loops_;
+  std::list<RefIOService> ioservices_;
+  StlClosure closed_callback_;
 
-  std::list<IOServicePtr> ioservices_;
   std::atomic_bool serving_flag_;
 
   std::atomic_uint32_t connection_count_;

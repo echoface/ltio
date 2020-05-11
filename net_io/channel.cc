@@ -33,11 +33,16 @@ void SocketChannel::SetReciever(SocketChannel::Reciever* rec) {
 }
 
 void SocketChannel::StartChannel() {
-  CHECK(fd_event_ && reciever_ &&
+  CHECK(fd_event_ &&
+        reciever_ &&
         pump_->IsInLoopThread() &&
         status_ == Status::CONNECTING);
-
   setup_channel();
+}
+
+bool SocketChannel::TryFlush() {
+  HandleWrite(fd_event_.get());
+  return true;
 }
 
 void SocketChannel::setup_channel() {
@@ -53,7 +58,6 @@ void SocketChannel::setup_channel() {
 void SocketChannel::close_channel() {
 
 	pump_->RemoveFdEvent(fd_event_.get());
-	fd_event_->ResetCallback();
 
   SetChannelStatus(Status::CLOSED);
 
@@ -84,7 +88,6 @@ std::string SocketChannel::ChannelInfo() const {
 
 void SocketChannel::SetChannelStatus(Status st) {
   status_ = st;
-  reciever_->OnStatusChanged(this);
 }
 
 const std::string SocketChannel::StatusAsString() const {

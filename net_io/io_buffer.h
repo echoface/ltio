@@ -25,9 +25,9 @@ public:
 
   char* GetWrite();
   const char* GetRead();
-
-  inline uint64_t CanReadSize() {return write_index_ - read_index_;}
-  inline uint64_t CanWriteSize() {return data_.size() - write_index_;}
+  inline uint64_t Empty() const {return CanReadSize() == 0;}
+  inline uint64_t CanReadSize() const {return write_index_ - read_index_;}
+  inline uint64_t CanWriteSize() const {return data_.size() - write_index_;}
 
   void WriteString(const std::string& str);
   void WriteRawData(const void* data, size_t len);

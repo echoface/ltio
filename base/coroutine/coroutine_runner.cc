@@ -67,10 +67,8 @@ CoroRunner::CoroRunner()
     max_reuse_coroutines_(kMaxReuseCoroutineNumbersPerThread) {
   tls_runner = &tls_runner_impl;
 
-  RefCoroutine coro_ptr = Coroutine::CreateMain();
-  coro_ptr->SelfHolder(coro_ptr);
-
-  current_ = main_coro_ = coro_ptr.get();
+  main_ = Coroutine::CreateMain();
+  current_ = main_coro_ = main_.get();
 
   LOG(INFO) << __FUNCTION__ << " CoroRunner initialized in loop:" << bind_loop_;
   LOG_IF(ERROR, !bind_loop_) << __FUNCTION__ << " CoroRunner need constructor with initialized loop";
@@ -85,8 +83,6 @@ CoroRunner::~CoroRunner() {
   }
   stash_list_.clear();
 
-  current_->ReleaseSelfHolder();
-  main_coro_->ReleaseSelfHolder();
   current_ = nullptr;
   main_coro_ = nullptr;
 }

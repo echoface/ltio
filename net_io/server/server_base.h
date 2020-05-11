@@ -16,7 +16,7 @@
 namespace lt {
 namespace net {
 
-typedef std::list<IOServicePtr> IOServiceList;
+typedef std::list<RefIOService> IOServiceList;
 typedef std::vector<base::MessageLoop*> LoopList;
 class ServerBase : public IOServiceDelegate {
  public:

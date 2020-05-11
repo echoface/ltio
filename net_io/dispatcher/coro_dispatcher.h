@@ -12,9 +12,9 @@ public:
   CoroDispatcher(bool handle_in_io);
   ~CoroDispatcher();
 
-  void TransferAndYield(base::MessageLoop* ioloop, base::StlClosure);
+  void TransferAndYield(base::MessageLoop* ioloop, StlClosure);
 
-  bool Dispatch(base::StlClosure& clourse) override;
+  bool Dispatch(StlClosure& clourse) override;
   bool SetWorkContext(CodecMessage* message) override;
 };
 

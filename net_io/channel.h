@@ -11,6 +11,7 @@
 #include "base/base_micro.h"
 #include <base/base_constants.h>
 #include "base/message_loop/event_pump.h"
+#include "base/message_loop/message_loop.h"
 
 #include "base/ip_endpoint.h"
 
@@ -29,7 +30,6 @@ public:
   };
   typedef struct Reciever {
     virtual void OnChannelReady(const SocketChannel*) {};
-    virtual void OnStatusChanged(const SocketChannel*) {};
     virtual void OnDataFinishSend(const SocketChannel*) {};
     virtual void OnChannelClosed(const SocketChannel*) = 0;
     virtual void OnDataReceived(const SocketChannel*, IOBuffer *) = 0;
@@ -39,6 +39,7 @@ public:
   void StartChannel();
   void SetReciever(SocketChannel::Reciever* consumer);
 
+  virtual bool TryFlush();
   /* return -1 when error,
    * return 0 when all data pending to buffer,
    * other case return the byte of writen*/
@@ -50,6 +51,7 @@ public:
   virtual void ShutdownChannel(bool half_close) = 0;
 
   bool IsConnected() const {return status_ == Status::CONNECTED;};
+  IOBuffer* WriterBuffer() {return &out_buffer_;} 
 
   std::string ChannelInfo() const;
   const std::string StatusAsString() const;
@@ -79,7 +81,7 @@ protected:
   base::RefFdEvent fd_event_;
 
   IPEndPoint local_ep_;
-  IPEndPoint remote_ep_; 
+  IPEndPoint remote_ep_;
 
   std::string name_;
 

@@ -21,7 +21,7 @@ QuerySession& QuerySession::Query(const std::string& sql) {
   query_ = sql;
   return *this;
 }
-QuerySession& QuerySession::Then(base::StlClosure callback) {
+QuerySession& QuerySession::Then(StlClosure callback) {
   finish_callback_ = callback;
   return *this;
 }

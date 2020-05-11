@@ -37,7 +37,6 @@ public:
   ClientChannel(Delegate* d, const RefCodecService& service);
   virtual ~ClientChannel();
 
-  void ResetDelegate();
   virtual void StartClientChannel();
   virtual void CloseClientChannel();
   // a change for close all inprogress request
@@ -72,7 +71,7 @@ protected:
   RefCodecMessage heartbeat_message_;
 };
 
-RefClientChannel CreateClientChannel(ClientChannel::Delegate*, const RefCodecService&);
+RefClientChannel CreateClientChannel(ClientChannel::Delegate*, RefCodecService);
 
 }}//end namespace
 #endif

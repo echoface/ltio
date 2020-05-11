@@ -35,7 +35,7 @@ void CodecMessage::SetWorkerCtx(base::MessageLoop* loop) {
   work_context_.loop = loop;
 }
 
-void CodecMessage::SetWorkerCtx(base::MessageLoop* loop, base::StlClosure resumer) {
+void CodecMessage::SetWorkerCtx(base::MessageLoop* loop, StlClosure resumer) {
   work_context_.loop = loop;
   work_context_.resumer_fn = resumer;
 }

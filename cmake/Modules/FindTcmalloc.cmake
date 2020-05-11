@@ -4,7 +4,7 @@
 #  Tcmalloc_LIBRARIES   - List of libraries when using Tcmalloc.
 #  Tcmalloc_FOUND       - True if Tcmalloc found.
 
-set(TCMALLOC_NAMES 
+set(TCMALLOC_NAMES
   tcmalloc
   tcmalloc_minimal
   )

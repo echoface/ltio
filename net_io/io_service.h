@@ -41,7 +41,8 @@ public:
 /* Every IOService own a acceptor and listing on a adress,
  * handle incomming connection from acceptor and manager
  * them on working-messageloop */
-class IOService : public CodecService::Delegate {
+class IOService : public EnableShared(IOService),
+                  public CodecService::Delegate {
 public:
   /* Must Construct in ownerloop, why? bz we want all io level is clear and tiny
    * it only handle io relative things, it's easy! just post a task IOMain at everything
@@ -87,7 +88,7 @@ private:
 
   uint64_t channel_count_;
   std::string service_name_;
-  std::unordered_set<RefCodecService> codecs;
+  std::unordered_set<RefCodecService> codecs_;
 };
 
 }}

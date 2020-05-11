@@ -54,7 +54,7 @@ TEST_CASE("coro.co_resumer()", "[coroutine resumer with loop reply task]") {
   base::MessageLoop loop;
   loop.Start();
 
-  base::StlClosure stack_sensitive_fn = []() {
+  StlClosure stack_sensitive_fn = []() {
     sleep(1);
   };
 

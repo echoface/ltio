@@ -56,22 +56,21 @@ HttpCodecService::~HttpCodecService() {
   delete response_context_;
 }
 
-void HttpCodecService::OnStatusChanged(const SocketChannel* channel) {
-}
-
 void HttpCodecService::OnDataFinishSend(const SocketChannel* channel) {
 }
 
 void HttpCodecService::OnDataReceived(const SocketChannel* channel, IOBuffer *buf) {
   DCHECK(channel == channel_.get());
   VLOG(GLOG_VTRACE) << __FUNCTION__ << " enter";
-  bool success = IsServerSide() ? ParseHttpRequest(channel_, buf) : ParseHttpResponse(channel_, buf);
+  bool success = IsServerSide() ?
+    ParseHttpRequest(channel_.get(), buf) : ParseHttpResponse(channel_.get(), buf);
+
   if (!success) {
   	CloseService();
   }
 }
 
-bool HttpCodecService::ParseHttpRequest(const RefTcpChannel& channel, IOBuffer* buf) {
+bool HttpCodecService::ParseHttpRequest(TcpChannel* channel, IOBuffer* buf) {
   size_t buffer_size = buf->CanReadSize();
   const char* buffer_start = (const char*)buf->GetRead();
   http_parser* parser = request_context_->Parser();
@@ -118,7 +117,7 @@ bool HttpCodecService::ParseHttpRequest(const RefTcpChannel& channel, IOBuffer* 
   return true;
 }
 
-bool HttpCodecService::ParseHttpResponse(const RefTcpChannel& channel, IOBuffer* buf) {
+bool HttpCodecService::ParseHttpResponse(TcpChannel* channel, IOBuffer* buf) {
   VLOG(GLOG_VTRACE) << __FUNCTION__ << " enter";
 
   size_t buffer_size = buf->CanReadSize();
@@ -212,11 +211,10 @@ bool HttpCodecService::EncodeToChannel(CodecMessage* message) {
   auto request = static_cast<HttpRequest*>(message);
   BeforeSendRequest(request);
 
-  IOBuffer buffer;
-  if (!RequestToBuffer(request, &buffer)) {
+  if (!RequestToBuffer(request, channel_->WriterBuffer())) {
     return false;
   }
-  return channel_->Send(buffer.GetRead(), buffer.CanReadSize()) >= 0;
+  return channel_->TryFlush();
 }
 
 bool HttpCodecService::EncodeResponseToChannel(const CodecMessage* req, CodecMessage* res) {
@@ -225,11 +223,10 @@ bool HttpCodecService::EncodeResponseToChannel(const CodecMessage* req, CodecMes
 
   BeforeSendResponseMessage(request, response);
 
-  IOBuffer buffer;
-  if (!ResponseToBuffer(response, &buffer)) {
+  if (!ResponseToBuffer(response, channel_->WriterBuffer())) {
     return false;
   }
-  return channel_->Send(buffer.GetRead(), buffer.CanReadSize()) >= 0;
+  return channel_->TryFlush();
 };
 
 //static

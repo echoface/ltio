@@ -13,6 +13,7 @@ Connector::Connector(base::EventPump* pump, ConnectorDelegate* d)
     delegate_(d) {
   CHECK(delegate_);
 }
+
 bool Connector::Launch(const net::IPEndPoint &address) {
   CHECK(pump_->IsInLoopThread() && delegate_);
 
@@ -22,10 +23,10 @@ bool Connector::Launch(const net::IPEndPoint &address) {
     return false;
   }
 
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << " connect to add:" << address.ToString();
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << " connect to addr:" << address.ToString();
 
   SockaddrStorage storage;
-  if (!address.ToSockAddr(storage.addr, storage.addr_len)) {
+  if (address.ToSockAddr(storage.addr, storage.addr_len) == 0) {
     socketutils::CloseSocket(sock_fd);
     return false;
   }
@@ -61,8 +62,10 @@ bool Connector::Launch(const net::IPEndPoint &address) {
       pump_->InstallFdEvent(fd_event.get());
       fd_event->EnableWriting();
 
-      connecting_sockets_.insert(fd_event);
-      VLOG(GLOG_VTRACE) << __FUNCTION__ << " " << address.ToString() << " connecting, fd:" << fd_event->fd();
+      connecting_sockets_.push_back(fd_event);
+      VLOG(GLOG_VTRACE) << __FUNCTION__
+        << " " << address.ToString()
+        << " connecting, fd:" << fd_event->fd();
     } break;
     default: {
       success = false;
@@ -77,50 +80,57 @@ bool Connector::Launch(const net::IPEndPoint &address) {
   return success;
 }
 
-void Connector::HandleRead(base::FdEvent* fd_event) {
+bool Connector::HandleRead(base::FdEvent* fd_event) {
   LOG(ERROR) << __func__ << " should not reached";
+  return true;
 }
 
-void Connector::HandleWrite(base::FdEvent* fd_event) {
+bool Connector::HandleWrite(base::FdEvent* fd_event) {
 
   int socket_fd = fd_event->fd();
   if (!delegate_) {
     CleanUpBadChannel(fd_event);
-    return;
+    return false;
   }
 
   if (net::socketutils::IsSelfConnect(socket_fd)) {
     CleanUpBadChannel(fd_event);
     LOG(ERROR) << __func__ << " IsSelfConnect, clean...";
     delegate_->OnClientConnectFailed();
-    return;
+    return false;
   }
 
   fd_event->GiveupOwnerFd();
   pump_->RemoveFdEvent(fd_event);
+
   remove_fdevent(fd_event); //destructor here
 
   IPEndPoint remote_addr;
   IPEndPoint local_addr;
   if (!socketutils::GetPeerEndpoint(socket_fd, &remote_addr) ||
       !socketutils::GetLocalEndpoint(socket_fd, &local_addr)) {
+
     CleanUpBadChannel(fd_event);
-    LOG(ERROR) << __func__ << " bad socket fd, clean...";
     delegate_->OnClientConnectFailed();
-    return;
+
+    LOG(ERROR) << __func__ << " bad socket fd, connect failed";
+    return false;
   }
+
   delegate_->OnNewClientConnected(socket_fd, local_addr, remote_addr);
+  return false;
 }
 
-void Connector::HandleError(base::FdEvent* fd_event) {
+bool Connector::HandleError(base::FdEvent* fd_event) {
   CleanUpBadChannel(fd_event);
   if (delegate_) {
     delegate_->OnClientConnectFailed();
   }
+  return false;
 }
 
-void Connector::HandleClose(base::FdEvent* fd_event) {
-  HandleError(fd_event);
+bool Connector::HandleClose(base::FdEvent* fd_event) {
+  return HandleError(fd_event);
 }
 
 void Connector::Stop() {
@@ -139,22 +149,18 @@ void Connector::Stop() {
 
 void Connector::CleanUpBadChannel(base::FdEvent* event) {
 
-  event->ResetCallback();
   pump_->RemoveFdEvent(event);
+  //event->ResetCallback();
 
   remove_fdevent(event); //destructor here
   VLOG(GLOG_VINFO) << " connecting list size:" << connecting_sockets_.size();
 }
 
 bool Connector::remove_fdevent(base::FdEvent* event) {
-  auto iter = connecting_sockets_.begin();
-  for (; iter != connecting_sockets_.end(); iter++) {
-    if (iter->get() == event) {
-      iter = connecting_sockets_.erase(iter);
-      return true;
-    }
-  }
-  return false;
+  connecting_sockets_.remove_if([event](base::RefFdEvent& ev) -> bool {
+    return ev.get() == event;
+  });
+  return true;
 }
 
 

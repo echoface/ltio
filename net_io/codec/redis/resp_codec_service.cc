@@ -18,9 +18,6 @@ RespCodecService::RespCodecService(base::MessageLoop* loop)
 RespCodecService::~RespCodecService() {
 }
 
-void RespCodecService::OnStatusChanged(const SocketChannel* channel) {
-}
-
 void RespCodecService::OnDataFinishSend(const SocketChannel*) {
 }
 

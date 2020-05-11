@@ -32,7 +32,7 @@ typedef struct {
 
 typedef struct {
   base::MessageLoop* loop;
-  base::StlClosure resumer_fn;
+  StlClosure resumer_fn;
 } WorkContext;
 
 class CodecMessage;
@@ -58,7 +58,7 @@ public:
 
   WorkContext& GetWorkCtx() {return work_context_;}
   void SetWorkerCtx(base::MessageLoop* loop);
-  void SetWorkerCtx(base::MessageLoop* loop, base::StlClosure resumer);
+  void SetWorkerCtx(base::MessageLoop* loop, StlClosure resumer);
 
   MessageCode FailCode() const;
   void SetFailCode(MessageCode reason);

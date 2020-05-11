@@ -8,8 +8,9 @@
 #include <netinet/in.h>
 #include <assert.h>
 
-#include "base/ip_endpoint.h"
 #include "glog/logging.h"
+#include "base/ip_endpoint.h"
+#include "base/sockaddr_storage.h"
 
 #include <sys/uio.h>
 #include <sys/types.h>
@@ -32,7 +33,7 @@ SocketFd CreateNonBlockingSocket(sa_family_t family) {
 
 int BindSocketFd(SocketFd sockfd, const struct sockaddr* addr) {
   int ret = ::bind(sockfd, addr, static_cast<socklen_t>(sizeof(struct sockaddr_in6)));
-  LOG_IF(ERROR, ret < 0) << __FUNCTION__ << " socket bind failed, err:[" << base::StrError() << "]";
+  LOG_IF(ERROR, ret < 0) << __FUNCTION__ << " bind err:[" << base::StrError() << "]";
   return ret;
 }
 
@@ -104,15 +105,13 @@ ssize_t ReadV(SocketFd sockfd, const struct iovec* iov, int iovcnt) {
 }
 
 void CloseSocket(SocketFd sockfd) {
-  if (::close(sockfd) < 0) {
-    LOG(ERROR) << "socketutils::CloseSocket Failed";
-  }
+  LOG_IF(ERROR, (::close(sockfd) < 0)) << __func__
+    << " close socket error:" << base::StrError(errno);
 }
 
 void ShutdownWrite(SocketFd sockfd) {
-  if (::shutdown(sockfd, SHUT_WR) < 0) {
-    LOG(ERROR) << "socketutils::ShutdownWrite Failed";
-  }
+  LOG_IF(ERROR, ::shutdown(sockfd, SHUT_WR) < 0) << __FUNCTION__
+    << " shutdown write error:" << base::StrError(errno);
 }
 
 int GetSocketError(SocketFd sockfd) {
@@ -134,7 +133,8 @@ bool GetPeerEndpoint(int sock, IPEndPoint* ep) {
   bzero(&peeraddr, sizeof peeraddr);
   socklen_t addrlen = static_cast<socklen_t>(sizeof peeraddr);
   if (::getpeername(sock, &peeraddr, &addrlen) < 0) {
-    LOG(ERROR) << "socketutils::GetPeerAddr Failed";
+    LOG(ERROR) << __func__ << " Failed";
+    return false;
   }
   return ep->FromSockAddr(&peeraddr, addrlen);
 }
@@ -145,6 +145,7 @@ bool GetLocalEndpoint(int sock, IPEndPoint* ep) {
 
   socklen_t addrlen = static_cast<socklen_t>(sizeof localaddr);
   if (::getsockname(sock, &localaddr, &addrlen) < 0) {
+    LOG(ERROR) << __func__ << " Failed";
     return false;
   }
   return ep->FromSockAddr(&localaddr, addrlen);
@@ -180,23 +181,42 @@ uint32_t SockAddrFamily(struct sockaddr* addr) {
 }
 
 bool IsSelfConnect(int sockfd) {
-  struct sockaddr peeraddr = GetPeerAddrIn(sockfd);
-  struct sockaddr localaddr = GetLocalAddrIn(sockfd);
-
-  uint32_t family = SockAddrFamily(&peeraddr);
-  if (family == AF_INET) {
-    const struct sockaddr_in* laddr4 = reinterpret_cast<struct sockaddr_in*>(&localaddr);
-    const struct sockaddr_in* raddr4 = reinterpret_cast<struct sockaddr_in*>(&peeraddr);
-    return laddr4->sin_port == raddr4->sin_port &&
-           laddr4->sin_addr.s_addr == raddr4->sin_addr.s_addr;
-
-  } else if (family == AF_INET6) {
-    const struct sockaddr_in6* raddr6 = reinterpret_cast<struct sockaddr_in6*>(&peeraddr);
-    const struct sockaddr_in6* laddr6 = reinterpret_cast<struct sockaddr_in6*>(&localaddr);
-    return laddr6->sin6_port == raddr6->sin6_port &&
-           memcmp(&laddr6->sin6_addr, &raddr6->sin6_addr, sizeof(raddr6->sin6_addr)) == 0;
+  IPEndPoint peer_ep;
+  IPEndPoint local_ep;
+  if (!GetLocalEndpoint(sockfd, &local_ep) ||
+      !GetPeerEndpoint(sockfd, &peer_ep)) {
+    return false;
+  };
+  SockaddrStorage peer_storage;
+  if (!peer_ep.ToSockAddr(peer_storage.addr, peer_storage.addr_len)) {
+    return false;
   }
 
+  SockaddrStorage local_storage;
+  if (!local_ep.ToSockAddr(local_storage.addr, local_storage.addr_len)) {
+    return false;
+  }
+
+  switch(local_ep.GetSockAddrFamily()) {
+    case AF_INET:  {
+      const struct sockaddr_in* laddr4 =
+        reinterpret_cast<struct sockaddr_in*>(local_storage.addr);
+      const struct sockaddr_in* raddr4 =
+        reinterpret_cast<struct sockaddr_in*>(peer_storage.addr);
+      return laddr4->sin_port == raddr4->sin_port &&
+        laddr4->sin_addr.s_addr == raddr4->sin_addr.s_addr;
+    }break;
+    case AF_INET6: {
+      const struct sockaddr_in6* raddr6 =
+        reinterpret_cast<struct sockaddr_in6*>(peer_storage.addr);
+      const struct sockaddr_in6* laddr6 =
+        reinterpret_cast<struct sockaddr_in6*>(local_storage.addr);
+      return laddr6->sin6_port == raddr6->sin6_port &&
+        (memcmp(&laddr6->sin6_addr, &raddr6->sin6_addr, sizeof(raddr6->sin6_addr)) == 0);
+    }
+    default:
+      break;
+  };
   return false;
 }
 

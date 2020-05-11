@@ -18,14 +18,14 @@ namespace net {
 
 /* a stateless encoder/decoder and
  * transfer the ProtoMessage to real Handler */
-class CodecService : public SocketChannel::Reciever,
-                     public EnableShared(CodecService) {
+class CodecService : public EnableShared(CodecService),
+                     public SocketChannel::Reciever {
 public:
   class Delegate {
     public:
+      virtual void OnCodecMessage(const RefCodecMessage& message) = 0;
       virtual void OnProtocolServiceReady(const RefCodecService& service) {};
       virtual void OnProtocolServiceGone(const RefCodecService& service) = 0;
-      virtual void OnCodecMessage(const RefCodecMessage& message) = 0;
       //for client side
       virtual const url::RemoteInfo* GetRemoteInfo() const {return NULL;};
   };
@@ -81,7 +81,7 @@ protected:
   void OnChannelClosed(const SocketChannel*) override;
 
   bool server_side_;
-  RefTcpChannel channel_;
+  TcpChannelPtr channel_;
   Delegate* delegate_ = nullptr;
   base::MessageLoop* binded_loop_ = nullptr;
   DISALLOW_COPY_AND_ASSIGN(CodecService);

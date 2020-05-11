@@ -14,16 +14,16 @@
 namespace lt {
 namespace net {
 
-class TcpChannel : public SocketChannel,
-                   public EnableShared(TcpChannel) {
+class TcpChannel : public SocketChannel {
 public:
-  static RefTcpChannel Create(int socket_fd,
+  static TcpChannelPtr Create(int socket_fd,
                               const IPEndPoint& local,
                               const IPEndPoint& peer,
                               base::EventPump* pump);
   ~TcpChannel();
 
   void ShutdownChannel(bool half_close) override;
+
   int32_t Send(const char* data, const int32_t len) override;
 protected:
   TcpChannel(int socket_fd,
@@ -31,10 +31,10 @@ protected:
              const IPEndPoint& peer,
              base::EventPump* pump);
 
-  void HandleRead(base::FdEvent* event) override;
-  void HandleWrite(base::FdEvent* event) override;
-  void HandleError(base::FdEvent* event) override;
-  void HandleClose(base::FdEvent* event) override;
+  bool HandleWrite(base::FdEvent* event) override;
+  bool HandleRead(base::FdEvent* event) override;
+  bool HandleError(base::FdEvent* event) override;
+  bool HandleClose(base::FdEvent* event) override;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(TcpChannel);

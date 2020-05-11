@@ -9,12 +9,14 @@
 
 #include "event.h"
 #include "base/base_micro.h"
+#include "base/queue/linked_list.h"
 #include "base/queue/double_linked_list.h"
 
 namespace base {
 /* A Event Holder and Owner represend a filedescriptor,
  * Create With a fd and take it owner  close it when it's gone*/
-class FdEvent : public EnableDoubleLinked<FdEvent> {
+//class FdEvent : public EnableDoubleLinked<FdEvent> {
+class FdEvent : public LinkedNode<FdEvent> {
 public:
   /* interface notify poller notify_watcher polling events*/
   class FdEventWatcher {
@@ -25,10 +27,12 @@ public:
   class Handler { //fd owner should implement those
   public:
     virtual ~Handler() {}
-    virtual void HandleRead(FdEvent* fd_event) = 0;
-    virtual void HandleWrite(FdEvent* fd_event) = 0;
-    virtual void HandleError(FdEvent* fd_event) = 0;
-    virtual void HandleClose(FdEvent* fd_event) = 0;
+    // operator api, return false to block event popup
+    // return true continue all event handle triggle
+    virtual bool HandleRead(FdEvent* fd_event) = 0;
+    virtual bool HandleWrite(FdEvent* fd_event) = 0;
+    virtual bool HandleError(FdEvent* fd_event) = 0;
+    virtual bool HandleClose(FdEvent* fd_event) = 0;
   };
 
   static std::shared_ptr<FdEvent> Create(Handler* handler, int fd, LtEvent event);

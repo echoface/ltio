@@ -18,7 +18,7 @@ class WaitGroup {
     void Wait(int64_t timeout_ms = -1);
   private:
     void wake_up();
-    base::StlClosure resumer_;
+    StlClosure resumer_;
 
     TimeoutEvent* timeout_;
     std::atomic_flag flag_;

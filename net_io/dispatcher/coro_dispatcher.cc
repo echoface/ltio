@@ -18,7 +18,7 @@ CoroDispatcher::CoroDispatcher(bool handle_in_io)
 CoroDispatcher::~CoroDispatcher() {
 }
 
-void CoroDispatcher::TransferAndYield(base::MessageLoop* ioloop, base::StlClosure clourse) {
+void CoroDispatcher::TransferAndYield(base::MessageLoop* ioloop, StlClosure clourse) {
   CHECK(ioloop);
   ioloop->PostTask(NewClosure(std::move(clourse)));
   co_pause;
@@ -29,7 +29,7 @@ bool CoroDispatcher::SetWorkContext(CodecMessage* message) {
   return base::MessageLoop::Current();
 }
 
-bool CoroDispatcher::Dispatch(base::StlClosure& closure) {
+bool CoroDispatcher::Dispatch(StlClosure& closure) {
 
   if (HandleWorkInIOLoop()) {
     co_go closure;

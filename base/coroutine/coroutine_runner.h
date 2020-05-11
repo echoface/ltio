@@ -126,6 +126,7 @@ protected:
   void SwapCurrentAndTransferTo(Coroutine *next);
 private:
   Coroutine* current_;
+  RefCoroutine main_;
   Coroutine* main_coro_;
 
   bool gc_task_scheduled_;
