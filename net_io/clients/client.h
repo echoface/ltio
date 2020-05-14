@@ -1,6 +1,7 @@
 #ifndef LT_NET_CLIENT_H_H
 #define LT_NET_CLIENT_H_H
 
+#include <atomic>
 #include <list>
 #include <vector>
 #include <memory>
@@ -120,6 +121,11 @@ private:
   //a channels copy for client caller
   std::atomic<uint32_t> next_index_;
   RefClientChannelList in_use_channels_;
+
+  //full list for manager purpose, once changed
+  //a copy of update set to in_use_channels_;
+  std::atomic_uint32_t channels_count_;
+  std::list<RefClientChannel> channels_;
 
   DISALLOW_COPY_AND_ASSIGN(Client);
 };

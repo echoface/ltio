@@ -57,10 +57,9 @@ void SocketChannel::setup_channel() {
 
 void SocketChannel::close_channel() {
 
-	pump_->RemoveFdEvent(fd_event_.get());
+  pump_->RemoveFdEvent(fd_event_.get());
 
   SetChannelStatus(Status::CLOSED);
-
   reciever_->OnChannelClosed(this);
 }
 
@@ -79,9 +78,10 @@ std::string SocketChannel::remote_name() const {
 std::string SocketChannel::ChannelInfo() const {
   std::ostringstream oss;
   oss << "[fd:" << binded_fd()
-      << ", loc:" << local_name()
-      << ", remote:" << remote_name()
-      << ", status:" << StatusAsString() << "]";
+    << ", this:" << this
+    << ", local:" << local_name()
+    << ", remote:" << remote_name()
+    << ", status:" << StatusAsString() << "]";
   return oss.str();
 }
 

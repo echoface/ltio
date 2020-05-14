@@ -86,17 +86,18 @@ void AsyncChannel::OnCodecMessage(const RefCodecMessage& res) {
 void AsyncChannel::OnProtocolServiceGone(const RefCodecService& service) {
   VLOG(GLOG_VTRACE) << __FUNCTION__ << service->Channel()->ChannelInfo() << " protocol service closed";
 	DCHECK(IOLoop()->IsInLoopThread());
-  ClientChannel::OnProtocolServiceGone(service);
 
   for (auto kv : in_progress_) {
     kv.second->SetFailCode(MessageCode::kConnBroken);
     HandleResponse(kv.second, CodecMessage::kNullMessage);
   }
   in_progress_.clear();
+  auto guard = shared_from_this();
   if (delegate_) {
-    auto guard = shared_from_this();
     delegate_->OnClientChannelClosed(guard);
   }
+
+  ClientChannel::OnProtocolServiceGone(service);
 }
 
 

@@ -4,27 +4,33 @@
 #include <map>
 #include <vector>
 
+#include "event.h"
 #include "fd_event.h"
 #include "base/queue/double_linked_list.h"
 
 namespace base {
 
-typedef std::vector<FdEvent*> FdEventList;
+typedef struct FiredEvent {
+  int fd_id;
+  LtEvent event_mask;
+  void reset() {fd_id = -1; event_mask = LT_EVENT_NONE;} 
+}FiredEvent;
 
-class IOMux {
+class IOMux : public FdEvent::Watcher {
 public:
   IOMux();
   virtual ~IOMux();
 
+  virtual int WaitingIO(FiredEvent* start, int32_t timeout_ms) = 0;
+
   virtual void AddFdEvent(FdEvent* fd_ev) = 0;
   virtual void DelFdEvent(FdEvent* fd_ev) = 0;
-  virtual void UpdateFdEvent(FdEvent* fd_ev) = 0;
-  virtual int WaitingIO(FdEventList& active_list, int32_t timeout_ms) = 0;
+  //override for watch event update
+  virtual void UpdateFdEvent(FdEvent* fd_ev) override = 0;
 
-protected:
-  //DoubleLinkedList<FdEvent> listen_events_;
-  LinkedList<FdEvent> listen_events_;
-
+  /* may return NULL if removed by
+   * previous InvokedEvent handler*/
+  virtual FdEvent* FindFdEvent(int fd) = 0;
 private:
   DISALLOW_COPY_AND_ASSIGN(IOMux);
 };

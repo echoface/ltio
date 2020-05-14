@@ -22,6 +22,7 @@ Client::Client(base::MessageLoop* loop, const url::RemoteInfo& info)
   auto empty_list = std::make_shared<ClientChannelList>();
   std::atomic_store(&in_use_channels_, empty_list);
 
+  channels_count_.store(0);
   connector_.reset(new Connector(work_loop_->Pump(), this));
 }
 
@@ -48,21 +49,13 @@ void Client::Finalize() {
     return;
   }
 
-  if (work_loop_->IsInLoopThread()) {
-    connector_->Stop(); //sync
-  } else {
-    work_loop_->PostTask(NewClosure(std::bind(&Connector::Stop, connector_)));
-  }
+  channels_count_ = 0;
+  work_loop_->PostTask(FROM_HERE, &Connector::Stop, connector_);
 
   auto channels = std::atomic_load(&in_use_channels_);
-
-  ClientChannelList copy_channels = *channels;
-  for (RefClientChannel& ch : copy_channels) {
+  for (RefClientChannel& ch : *channels) {
     ch->IOLoop()->PostTask(FROM_HERE, &ClientChannel::CloseClientChannel, ch);
   }
-
-  channels->clear();
-  std::atomic_store(&in_use_channels_, channels);
 }
 
 void Client::OnClientConnectFailed() {
@@ -87,18 +80,18 @@ base::MessageLoop* Client::next_client_io_loop() {
 }
 
 RefClientChannel Client::get_ready_channel() {
-  RefClientChannelList channels = std::atomic_load(&in_use_channels_);
+
+  auto channels = std::atomic_load(&in_use_channels_);
   if (!channels || channels->size() == 0) return NULL;
 
   int32_t max_step = std::min(10, int(channels->size()));
   do {
     uint32_t idx = next_index_.fetch_add(1) % channels->size();
     auto& ch = channels->at(idx);
-    if (ch->Ready()) {
+    if (ch && ch->Ready()) {
       return ch;
     }
   } while(max_step--);
-
   return NULL;
 }
 
@@ -123,9 +116,13 @@ void Client::OnNewClientConnected(int socket_fd, IPEndPoint& local, IPEndPoint& 
   //    << " codec's loop:" << codec_service->IOLoop()
   //    << " clientchannel:" << client_channel.get();
   //} else {
-  in_use_channels_->push_back(client_channel);
+  channels_.push_back(client_channel);
   io_loop->PostTask(FROM_HERE, &ClientChannel::StartClientChannel, client_channel);
-  //}
+
+  RefClientChannelList new_list(
+    new ClientChannelList(channels_.begin(), channels_.end()));
+  channels_count_.store(new_list->size());
+  std::atomic_store(&in_use_channels_, new_list);
   VLOG(GLOG_VINFO) << __FUNCTION__ << ClientInfo() << " connected, initializing...";
 }
 
@@ -151,27 +148,21 @@ void Client::OnClientChannelClosed(const RefClientChannel& channel) {
   }
   VLOG(GLOG_VTRACE) << __FUNCTION__ << " enter in work loop";
 
-  do {
-    RefClientChannelList in_use_list = std::atomic_load(&in_use_channels_);
-    RefClientChannelList new_list(new ClientChannelList(*in_use_list));
 
-    std::remove_if(new_list->begin(),
-                   new_list->end(),
-                   [&](const RefClientChannel& ch) ->bool {
-                      return ch == channel;
-                   });
+  do {
+    channels_.remove_if([&](const RefClientChannel& ch) ->bool {
+      return ch == NULL || ch == channel;
+    });
+
+    RefClientChannelList new_list(
+      new ClientChannelList(channels_.begin(), channels_.end()));
+    channels_count_.store(new_list->size());
     std::atomic_store(&in_use_channels_, new_list);
-    /*
-    auto iter = std::find(new_list->begin(), new_list->end(), channel);
-    if (iter != new_list->end()) {
-      new_list->erase(iter);
-      std::atomic_store(&in_use_channels_, new_list);
-    }
-    */
   }while(0);
 
-  uint32_t connected_count = ConnectedCount();
+  uint32_t connected_count = channels_.size();
   if (stopping_ && connected_count == 0) {
+    //NOTIFY?
     VLOG(GLOG_VTRACE) << __FUNCTION__ << " all client channel closed, stoping done";
     return;
   }
@@ -256,8 +247,7 @@ CodecMessage* Client::DoRequest(RefCodecMessage& message) {
 }
 
 uint64_t Client::ConnectedCount() const {
-  auto channels = std::atomic_load(&in_use_channels_);
-  return channels->size();
+  return channels_count_;
 }
 
 std::string Client::ClientInfo() const {

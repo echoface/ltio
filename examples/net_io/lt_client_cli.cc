@@ -83,7 +83,7 @@ int main(int argc, char** argv) {
 
   raw_router.reset(new net::Client(&mainloop, server_info));
 
-  config.connections = 4;
+  config.connections = 200;
   config.recon_interval = 1000;
   config.message_timeout = 5000;
   raw_router->Initialize(config);
@@ -95,6 +95,7 @@ int main(int argc, char** argv) {
     std::getline(std::cin, content);
     if (content == "quit") {
       raw_router->Finalize();
+      mainloop.QuitLoop();
       break;
     }
 
@@ -106,9 +107,10 @@ int main(int argc, char** argv) {
 
     std::string response;
     if (!message_queue.wait_dequeue_timed(response, 1000 * 1000)) {
-      LOG(INFO) << "request timeout";
+      LOG(INFO) << "no response got, timeout/failed";
     } else {
       LOG(INFO) << "<<" << response;
     }
   };
+  mainloop.WaitLoopEnd();
 }

@@ -114,8 +114,6 @@ void QueuedChannel::OnCodecMessage(const RefCodecMessage& res) {
 
 void QueuedChannel::OnProtocolServiceGone(const RefCodecService& service) {
   VLOG(GLOG_VTRACE) << __FUNCTION__ << service->Channel()->ChannelInfo() << " protocol service closed";
-  ClientChannel::OnProtocolServiceGone(service);
-
   if (ing_request_) {
     ing_request_->SetFailCode(MessageCode::kConnBroken);
     HandleResponse(ing_request_, CodecMessage::kNullMessage);
@@ -129,10 +127,12 @@ void QueuedChannel::OnProtocolServiceGone(const RefCodecService& service) {
     waiting_list_.pop_front();
   }
 
+  auto guard = shared_from_this();
   if (delegate_) {
-    auto guard = shared_from_this();
     delegate_->OnClientChannelClosed(guard);
   }
+
+  ClientChannel::OnProtocolServiceGone(service);
 }
 
 }}//net

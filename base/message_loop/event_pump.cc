@@ -3,27 +3,31 @@
 #include <base/utils/sys_error.h>
 
 #include "event_pump.h"
+#include "io_multiplexer.h"
 #include "io_mux_epoll.h"
 #include "linux_signal.h"
 #include <algorithm>
-#include <iostream>
+#include <bits/stdint-intn.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 
 namespace base {
 
-EventPump::EventPump() :
-  delegate_(NULL),
-  running_(false) {
-
-  InitializeTimeWheel();
-  io_mux_.reset(new base::IOMuxEpoll());
+EventPump::EventPump() : EventPump(NULL) {
 }
 
 EventPump::EventPump(PumpDelegate *d) :
   delegate_(d),
   running_(false) {
 
+  struct rlimit limit;
+  if (0 != getrlimit(RLIMIT_NOFILE, &limit)) {
+    max_fds_ = 65535;
+  } else {
+    max_fds_ = limit.rlim_cur;
+  }
   InitializeTimeWheel();
-  io_mux_.reset(new base::IOMuxEpoll());
+  io_mux_.reset(new base::IOMuxEpoll(max_fds_));
 }
 
 EventPump::~EventPump() {
@@ -34,34 +38,29 @@ EventPump::~EventPump() {
 }
 
 void EventPump::Run() {
-  static const uint64_t default_timeout_ms = 2000;
-
   IgnoreSigPipeSignalOnCurrentThread();
-
-  uint64_t perfect_timeout_ms = 0;
-  std::vector<FdEvent *> active_events;
 
   running_ = true;
   if (delegate_) {
     delegate_->PumpStarted();
   }
-  while (running_) {
-    active_events.clear();
 
-    io_mux_->WaitingIO(active_events, NextTimeout(default_timeout_ms));
+  FiredEvent* active_list = new FiredEvent[max_fds_];
+  while (running_) {
+
+    int count = io_mux_->WaitingIO(active_list, NextTimeout());
 
     ProcessTimerEvent();
 
-    for (FdEvent* fd_event : active_events) {
-      fd_event->HandleEvent();
-    }
+    InvokeFiredEvent(active_list, count);
 
     if (delegate_) {
       delegate_->RunNestedTask();
     }
   }
-  FinalizeTimeWheel();
   running_ = false;
+  delete []active_list;
+  FinalizeTimeWheel();
   if (delegate_) {
     delegate_->PumpStopped();
   }
@@ -78,8 +77,7 @@ bool EventPump::InstallFdEvent(FdEvent *fd_event) {
     LOG(ERROR) << __FUNCTION__ << " event has registered," << fd_event->EventInfo();
     return false;
   }
-
-  fd_event->SetFdWatcher(AsFdWatcher());
+  fd_event->SetFdWatcher(io_mux_.get());
   io_mux_->AddFdEvent(fd_event);
   return true;
 }
@@ -94,11 +92,6 @@ bool EventPump::RemoveFdEvent(FdEvent *fd_event) {
 
   io_mux_->DelFdEvent(fd_event);
   return true;
-}
-
-void EventPump::OnEventChanged(FdEvent *fd_event) {
-  CHECK(IsInLoopThread() && fd_event->EventWatcher());
-  io_mux_->UpdateFdEvent(fd_event);
 }
 
 void EventPump::AddTimeoutEvent(TimeoutEvent *timeout_ev) {
@@ -143,20 +136,35 @@ void EventPump::ProcessTimerEvent() {
   }
 }
 
-timeout_t EventPump::NextTimeout(timeout_t hint) {
+void EventPump::InvokeFiredEvent(FiredEvent* evs, int count) {
+  for (int i = 0; i < count; i++) {
+    FdEvent* fd_event = io_mux_->FindFdEvent(evs[i].fd_id);
+    if (fd_event) {
+      fd_event->HandleEvent(evs[i].event_mask);
+    } else {
+      LOG(ERROR) << __func__ << " event removed by previous handler";
+    }
+    evs[i].reset();
+  }
+}
+
+timeout_t EventPump::NextTimeout() {
+  static const uint64_t default_timeout_ms = 2000;
+
   ::timeouts_update(timeout_wheel_, time_ms());
   if (::timeouts_expired(timeout_wheel_)) {
     return 0;
   }
 
+  timeout_t next_timeout = default_timeout_ms;
   if (::timeouts_pending(timeout_wheel_)) {
-    hint = ::timeouts_timeout(timeout_wheel_);
+    next_timeout = ::timeouts_timeout(timeout_wheel_);
   }
 
   if (!delegate_) {
-    return hint;
+    return next_timeout;
   }
-  return std::min(hint, delegate_->PumpTimeout());
+  return std::min(next_timeout, delegate_->PumpTimeout());
 }
 
 void EventPump::InitializeTimeWheel() {

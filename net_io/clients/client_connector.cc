@@ -63,9 +63,7 @@ bool Connector::Launch(const net::IPEndPoint &address) {
       fd_event->EnableWriting();
 
       connecting_sockets_.push_back(fd_event);
-      VLOG(GLOG_VTRACE) << __FUNCTION__
-        << " " << address.ToString()
-        << " connecting, fd:" << fd_event->fd();
+      VLOG(GLOG_VTRACE) << __FUNCTION__ << " add new EINPROGRESS fd:" << fd_event->fd();
     } break;
     default: {
       success = false;
@@ -137,6 +135,7 @@ void Connector::Stop() {
   CHECK(pump_->IsInLoopThread());
 
   delegate_ = NULL;
+  LOG(INFO) << " connecting list size:" << connecting_sockets_.size();
   for (auto& event : connecting_sockets_) {
     event->GiveupOwnerFd();
     pump_->RemoveFdEvent(event.get());
@@ -150,7 +149,6 @@ void Connector::Stop() {
 void Connector::CleanUpBadChannel(base::FdEvent* event) {
 
   pump_->RemoveFdEvent(event);
-  //event->ResetCallback();
 
   remove_fdevent(event); //destructor here
   VLOG(GLOG_VINFO) << " connecting list size:" << connecting_sockets_.size();
@@ -160,6 +158,9 @@ bool Connector::remove_fdevent(base::FdEvent* event) {
   connecting_sockets_.remove_if([event](base::RefFdEvent& ev) -> bool {
     return ev.get() == event;
   });
+  VLOG(GLOG_VTRACE) << __FUNCTION__
+    << " remove EINPROGRESS fd:" << event->fd()
+    << " now EINPROGRESS count:" << connecting_sockets_.size();
   return true;
 }
 

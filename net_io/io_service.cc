@@ -130,8 +130,7 @@ void IOService::OnCodecMessage(const RefCodecMessage& message) {
 void IOService::OnProtocolServiceGone(const net::RefCodecService &service) {
   // use another task remove a service is a more safe way delete channel& protocol things
   // avoid somewhere->B(do close a channel) ->  ~A  -> use A again in somewhere
-  auto functor = std::bind(&IOService::RemoveProtocolService, this, service);
-  accept_loop_->PostTask(NewClosure(std::move(functor)));
+  accept_loop_->PostTask(FROM_HERE, &IOService::RemoveProtocolService, this, service);
 }
 
 void IOService::StoreProtocolService(const RefCodecService service) {
@@ -144,10 +143,17 @@ void IOService::StoreProtocolService(const RefCodecService service) {
 void IOService::RemoveProtocolService(const RefCodecService service) {
   CHECK(accept_loop_->IsInLoopThread());
 
-  codecs_.erase(service);
+  size_t count = codecs_.erase(service);
+  LOG_IF(INFO, count == 0) << __func__ << " seems been erase early";
+  if (!delegate_) {
+    return;
+  }
 
-  delegate_->DecreaseChannelCount();
-  if (delegate_ && is_stopping_ && codecs_.empty()) {
+  if (count == 1) {
+    delegate_->DecreaseChannelCount();
+  }
+
+  if (is_stopping_ && codecs_.empty()) {
     delegate_->IOServiceStoped(this);
   }
 }

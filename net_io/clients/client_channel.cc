@@ -28,6 +28,7 @@ ClientChannel::ClientChannel(Delegate* d, const RefCodecService& service)
 }
 
 ClientChannel::~ClientChannel() {
+  LOG(INFO) << __func__ << " this:" << this << " gone";
   codec_->SetDelegate(NULL);
 }
 

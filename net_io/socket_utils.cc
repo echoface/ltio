@@ -28,6 +28,8 @@ namespace socketutils {
 SocketFd CreateNonBlockingSocket(sa_family_t family) {
   int sockfd = ::socket(family, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_TCP);
   LOG_IF(ERROR, sockfd == -1) << __FUNCTION__ << " open socket err:[" << base::StrError() << "]";
+
+  LOG(INFO) << __FUNCTION__ << " fd:" << sockfd;
   return sockfd;
 }
 

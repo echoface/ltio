@@ -36,35 +36,33 @@ TcpChannel::~TcpChannel() {
 
 bool TcpChannel::HandleRead(base::FdEvent* event) {
   static const int32_t block_size = 4 * 1024;
+  bool ev_continue = true;
   do {
     in_buffer_.EnsureWritableSize(block_size);
 
     ssize_t bytes_read = ::read(fd_event_->fd(), in_buffer_.GetWrite(), in_buffer_.CanWriteSize());
+    int err = errno;
     VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo() << " read [" << bytes_read << "] bytes";
 
     if (bytes_read > 0) {
 
       in_buffer_.Produce(bytes_read);
-      VLOG(GLOG_VTRACE) << __FUNCTION__ << " READ bytes:" << bytes_read;
       reciever_->OnDataReceived(this, &in_buffer_);
+      continue;
 
     } else if (0 == bytes_read) {
 
-      HandleClose(event);
-      break;
+      ev_continue = HandleClose(event);
 
-    } else if (bytes_read == -1) {
-      if (errno == EAGAIN || errno == EWOULDBLOCK) {
-        VLOG(GLOG_VTRACE) << __FUNCTION__ << "EAGAIN, EWOULDBLOCK";
-        break;
-      }
+    } else if (bytes_read == -1 && (err != EAGAIN && err != EWOULDBLOCK)) {
+
+      ev_continue = HandleClose(event);
       LOG(ERROR) << __FUNCTION__ << ChannelInfo() << " read error:" << base::StrError();
-      HandleClose(event);
-      break;
-    }
-  } while(1);
 
-  return true;
+    }
+    break;
+  } while(1);
+  return ev_continue;
 }
 
 bool TcpChannel::HandleWrite(base::FdEvent* event) {
@@ -108,25 +106,21 @@ bool TcpChannel::HandleError(base::FdEvent* event) {
 
 bool TcpChannel::HandleClose(base::FdEvent* event) {
   DCHECK(pump_->IsInLoopThread());
-
   VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
 
   if (!IsConnected()) {
     reciever_->OnChannelClosed(this);
     return false;
   }
-  //avoid in callback delete/free it
   close_channel();
   return false;
 }
 
 void TcpChannel::ShutdownChannel(bool half_close) {
   DCHECK(pump_->IsInLoopThread());
-  SetChannelStatus(Status::CLOSING);
 
   VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
-
-  close_channel();
+  HandleClose(fd_event_.get());
 }
 
 int32_t TcpChannel::Send(const char* data, const int32_t len) {

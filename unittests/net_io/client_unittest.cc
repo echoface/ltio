@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <atomic>
 
+#include <base/utils/string/str_utils.h>
 #include "glog/logging.h"
 #include <base/time/time_utils.h>
 #include "base/closure/closure_task.h"
@@ -694,4 +695,65 @@ TEST_CASE("client.redis_heartbeat", "[redis client heartbeat]") {
   };
   loop.WaitLoopEnd();
   return;
+}
+
+class ClientD : public net::ClientDelegate {
+public:
+  ClientD() {
+    for (size_t i = 0; i < 4; i++) {
+      auto loop = new base::MessageLoop();
+      loop->SetLoopName(base::StrUtil::Concat("io_", i));
+      loop->Start();
+      loops_.push_back(loop);
+    }
+  }
+  base::MessageLoop* NextIOLoopForClient() {
+    return loops_.at((index_++) % loops_.size());
+  };
+  /* do some init things like select db for redis,
+   * or enable keepalive action etc*/
+  void OnClientChannelReady(const lt::net::ClientChannel* channel) {
+    LOG(INFO) << " a client channel ready";
+  }
+  /* when a abnormal broken happend, here a chance to notify
+   * application level for handle this case, eg:remote server
+   * shutdown,crash etc*/
+  void OnAllClientPassiveBroken(const lt::net::Client* client) {
+    LOG(INFO) << " all client broken";
+  };
+private:
+  std::atomic_int index_;
+  std::vector<base::MessageLoop*> loops_;
+};
+
+TEST_CASE("client.http_pool", "[http client pool manager]") {
+  LOG(INFO) << " start test client.http_pool, http client send request";
+
+  ClientD delegate;
+  base::MessageLoop loop;
+  loop.SetLoopName("client");
+  loop.Start();
+
+  static const int connections = 10000;
+
+  net::url::RemoteInfo server_info;
+  LOG_IF(ERROR, !net::url::ParseRemote("http://g.test.amnetapi.com", server_info)) << " server can't be resolve";
+
+  net::Client http_client(&loop, server_info);
+
+  net::ClientConfig config;
+  config.recon_interval = 100;
+  config.message_timeout = 5000;
+  config.connections = connections;
+
+  http_client.SetDelegate(&delegate);
+  http_client.Initialize(config);
+
+  sleep(0);
+
+  http_client.Finalize();
+
+  loop.WaitLoopEnd();
+
+  LOG(INFO) << " end test client.http.request, http client send request";
 }

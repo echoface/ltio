@@ -51,7 +51,7 @@ public:
   virtual void ShutdownChannel(bool half_close) = 0;
 
   bool IsConnected() const {return status_ == Status::CONNECTED;};
-  IOBuffer* WriterBuffer() {return &out_buffer_;} 
+  IOBuffer* WriterBuffer() {return &out_buffer_;}
 
   std::string ChannelInfo() const;
   const std::string StatusAsString() const;

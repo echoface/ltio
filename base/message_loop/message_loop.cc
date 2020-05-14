@@ -210,12 +210,12 @@ void MessageLoop::ThreadMain() {
   event_pump_.Run();
   //delegate_->AfterLoopRun();
 
+  RunNestedTask();
+  RunScheduledTask();
+
   event_pump_.RemoveFdEvent(wakeup_event_.get());
   event_pump_.RemoveFdEvent(task_event_.get());
 
-  RunNestedTask();
-
-  RunScheduledTask();
   threadlocal_current_ = NULL;
 
   status_.store(ST_STOPED);

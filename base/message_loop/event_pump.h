@@ -8,6 +8,7 @@
 #include <thread>
 
 #include "fd_event.h"
+#include "io_multiplexer.h"
 #include "timeout_event.h"
 #include <thirdparty/timeout/timeout.h>
 
@@ -32,7 +33,7 @@ public:
 };
 
 /* pump fd event and timeout event and pass them to handler by delegate interface*/
-class EventPump : public FdEvent::FdEventWatcher {
+class EventPump {
 public:
   EventPump();
   EventPump(PumpDelegate* d);
@@ -44,9 +45,6 @@ public:
   bool InstallFdEvent(FdEvent *fd_event);
   bool RemoveFdEvent(FdEvent* fd_event);
 
-  // override from FdEventWatcher
-  void OnEventChanged(FdEvent* fd_event) override;
-
   void AddTimeoutEvent(TimeoutEvent* timeout_ev);
   void RemoveTimeoutEvent(TimeoutEvent* timeout_ev);
 
@@ -55,15 +53,15 @@ public:
   bool Running() { return running_; }
   void SetLoopThreadId(std::thread::id id) {tid_ = id;}
 protected:
-  inline FdEvent::FdEventWatcher* AsFdWatcher() {return this;}
   /* update the time wheel mononic time and get all expired
    * timeoutevent will be invoke and re shedule if was repeated*/
   void ProcessTimerEvent();
 
+  void InvokeFiredEvent(FiredEvent* start, int count);
   /* return the minimal timeout for next poll
    * return 0 when has event expired,
    * return default_timeout when no other timeout provided*/
-  timeout_t NextTimeout(timeout_t default_timeout);
+  timeout_t NextTimeout();
 
   /* finalize TimeoutWheel and delete Life-Ownered timeoutEvent*/
   void InitializeTimeWheel();
@@ -82,7 +80,9 @@ private:
   // replace by new timeout_wheel for more effective perfomance [ O(1) ]
   //TimerTaskQueue timer_queue_;
 #endif
+  int32_t max_fds_;
   std::thread::id tid_;
+  int32_t timestamp_;
   TimeoutWheel* timeout_wheel_ = nullptr;
 };
 

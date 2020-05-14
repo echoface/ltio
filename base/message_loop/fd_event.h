@@ -13,16 +13,20 @@
 #include "base/queue/double_linked_list.h"
 
 namespace base {
+class FdEvent;
+typedef std::shared_ptr<FdEvent> RefFdEvent;
+typedef std::unique_ptr<FdEvent> FdEventPtr;
+
 /* A Event Holder and Owner represend a filedescriptor,
  * Create With a fd and take it owner  close it when it's gone*/
 //class FdEvent : public EnableDoubleLinked<FdEvent> {
-class FdEvent : public LinkedNode<FdEvent> {
+class FdEvent final {
 public:
   /* interface notify poller notify_watcher polling events*/
-  class FdEventWatcher {
+  class Watcher {
   public:
-    virtual ~FdEventWatcher() {}
-    virtual void OnEventChanged(FdEvent* fd_event) = 0;
+    virtual ~Watcher() {}
+    virtual void UpdateFdEvent(FdEvent* fd_event) = 0;
   };
   class Handler { //fd owner should implement those
   public:
@@ -35,32 +39,28 @@ public:
     virtual bool HandleClose(FdEvent* fd_event) = 0;
   };
 
-  static std::shared_ptr<FdEvent> Create(Handler* handler, int fd, LtEvent event);
+  static RefFdEvent Create(Handler* handler, int fd, LtEvent event);
 
   FdEvent(Handler* handler, int fd, LtEvent events);
   ~FdEvent();
 
-  void SetFdWatcher(FdEventWatcher *d);
-  FdEventWatcher* EventWatcher() {return watcher_;}
+  void SetFdWatcher(Watcher* watcher);
+  Watcher* EventWatcher() {return watcher_;}
 
-  void HandleEvent();
-  void ResetCallback();
+  void HandleEvent(LtEvent event);
 
   //the event we take care about
   LtEvent MonitorEvents() const;
-  void SetRcvEvents(const LtEvent& ev);
-
-  void SetEvent(const LtEv& lt_ev) {events_ = lt_ev; notify_watcher();}
 
   void EnableReading();
-  inline bool IsReadEnable() const {return events_ & LtEv::LT_EVENT_READ;}
-
   void EnableWriting();
-  inline bool IsWriteEnable() const {return events_ & LtEv::LT_EVENT_WRITE;}
-
-  void DisableAll() { events_ = LtEv::LT_EVENT_NONE; notify_watcher();}
   void DisableReading();
   void DisableWriting();
+  void SetEvent(const LtEv& lt_ev) {events_ = lt_ev; notify_watcher();}
+  void DisableAll() { events_ = LtEv::LT_EVENT_NONE; notify_watcher();}
+  inline bool IsReadEnable() const {return events_ & LtEv::LT_EVENT_READ;}
+  inline bool IsWriteEnable() const {return events_ & LtEv::LT_EVENT_WRITE;}
+
 
   inline int fd() const {return fd_;};
   inline void GiveupOwnerFd() {owner_fd_ = false;}
@@ -77,12 +77,10 @@ private:
   LtEvent revents_;
   bool owner_fd_;
   Handler* handler_ = NULL;
-  FdEventWatcher* watcher_ = NULL;
+  Watcher* watcher_ = NULL;
 
   DISALLOW_COPY_AND_ASSIGN(FdEvent);
 };
-
-typedef std::shared_ptr<FdEvent> RefFdEvent;
 
 } // namespace
 #endif // EVENT_H

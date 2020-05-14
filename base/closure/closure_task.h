@@ -26,6 +26,11 @@ private:
   Location location_;
 };
 
+class TaskInterceptor {
+public:
+  virtual bool Track(TaskBase* task) = 0;
+  static TaskInterceptor* global_tracker;
+};
 typedef std::unique_ptr<TaskBase> TaskBasePtr;
 
 template <typename Functor>
