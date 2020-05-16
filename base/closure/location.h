@@ -39,7 +39,6 @@ private:
   int line_number_ = -1;
   const char* file_name_ = nullptr;
   const char* function_name_ = nullptr;
-  //const void* program_counter_ = nullptr;
 };
 
 #define FROM_HERE ::base::Location(__func__, __FILE__, __LINE__)

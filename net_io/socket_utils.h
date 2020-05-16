@@ -12,6 +12,9 @@ namespace socketutils {
 
 #define SocketFd int
 
+SocketFd CreateNoneBlockTCP(sa_family_t family, int type = 0);
+SocketFd CreateNoneBlockUDP(sa_family_t family, int type = 0);
+
 SocketFd CreateNonBlockingSocket(sa_family_t family);
 
 int ListenSocket(SocketFd fd);

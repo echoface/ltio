@@ -55,7 +55,7 @@ public:
   virtual void OnAllClientPassiveBroken(const Client* client) {};
 };
 
-class Client: public ConnectorDelegate,
+class Client: public Connector::Delegate,
               public ClientChannel::Delegate {
 public:
   typedef std::vector<RefClientChannel> ClientChannelList;
@@ -80,9 +80,9 @@ public:
   bool AsyncDoRequest(RefCodecMessage& req, AsyncCallBack);
 
   // notified from connector
-  void OnClientConnectFailed() override;
+  void OnConnectFailed(uint32_t count) override;
   // notified from connector
-  void OnNewClientConnected(int fd, IPEndPoint& loc, IPEndPoint& remote) override;
+  void OnConnected(int fd, IPEndPoint& loc, IPEndPoint& remote) override;
 
   // clientchanneldelegate
   const ClientConfig& GetClientConfig() const override {return config_;}
@@ -96,6 +96,8 @@ public:
   std::string ClientInfo() const;
   std::string RemoteIpPort() const;
 private:
+  void launch_next_if_need(); 
+  uint32_t required_count() const;
   /*return a connected and initialized channel*/
   RefClientChannel get_ready_channel();
 
@@ -127,6 +129,10 @@ private:
   std::atomic_uint32_t channels_count_;
   std::list<RefClientChannel> channels_;
 
+  /* reset to zero when a success connected
+   * otherwise increase utill kMaxReconInterval*/
+  uint32_t next_reconnect_interval_;
+  static const uint32_t kMaxReconInterval; //in ms
   DISALLOW_COPY_AND_ASSIGN(Client);
 };
 

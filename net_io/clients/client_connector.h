@@ -1,8 +1,12 @@
 #ifndef _LT_NET_CLIENT_CONNECTOR_H_H
 #define _LT_NET_CLIENT_CONNECTOR_H_H
 
+#include <atomic>
+#include <bits/stdint-uintn.h>
+#include <cstdint>
 #include <list>
 #include <set>
+#include <sys/types.h>
 
 #include "../tcp_channel.h"
 #include "../socket_utils.h"
@@ -17,42 +21,45 @@ namespace lt {
 namespace net {
 
 class Connector;
+using base::FdEvent;
+using base::RefFdEvent;
+using base::EventPump;
 
 typedef std::shared_ptr<Connector> RefConnector;
 typedef std::unique_ptr<Connector> OwnedConnector;
 typedef std::weak_ptr<base::FdEvent> WeakPtrFdEvent;
 
-class ConnectorDelegate {
-public:
-  virtual ~ConnectorDelegate() {};
-  virtual void OnClientConnectFailed() = 0;
-  virtual void OnNewClientConnected(int socket_fd, IPEndPoint& local, IPEndPoint& remote) = 0;
-};
 
 class Connector : public base::FdEvent::Handler {
 public:
-  Connector(base::EventPump* pump, ConnectorDelegate* delegate);
+  class Delegate {
+    public:
+      virtual ~Delegate() {};
+      //notify connect failed and report inprogress count
+      virtual void OnConnectFailed(uint32_t count) = 0;
+      virtual void OnConnected(int socket_fd, IPEndPoint& local, IPEndPoint& remote) = 0;
+  };
+  Connector(base::EventPump* pump, Delegate* delegate);
   ~Connector() {};
 
   void Stop();
 
-  //TODO: add a connect timeout
-  bool Launch(const net::IPEndPoint &address);
+  /*gurantee a callback atonce or later*/
+  void Launch(const net::IPEndPoint &address);
 
-  void OnWrite(WeakPtrFdEvent weak_fdevent);
-  void OnError(WeakPtrFdEvent weak_fdevent);
+  uint32_t InprocessCount() const {return count_;}
 private:
-  bool HandleRead(base::FdEvent* fd_event) override;
-  bool HandleWrite(base::FdEvent* fd_event) override;
-  bool HandleError(base::FdEvent* fd_event) override;
-  bool HandleClose(base::FdEvent* fd_event) override;
+  bool HandleRead(FdEvent* fd_event) override;
+  bool HandleWrite(FdEvent* fd_event) override;
+  bool HandleError(FdEvent* fd_event) override;
+  bool HandleClose(FdEvent* fd_event) override;
 
-  void CleanUpBadChannel(base::FdEvent* event);
-  bool remove_fdevent(base::FdEvent* event);
+  void Cleanup(base::FdEvent* event);
 private:
-  base::EventPump* pump_;
-  ConnectorDelegate* delegate_;
-  std::list<base::RefFdEvent> connecting_sockets_;
+  EventPump* pump_;
+  Delegate* delegate_;
+  std::atomic_uint32_t count_;
+  std::list<RefFdEvent> inprogress_list_;
 };
 
 }}

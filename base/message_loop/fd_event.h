@@ -63,6 +63,7 @@ public:
 
 
   inline int fd() const {return fd_;};
+  inline int GetFd() const {return fd_;};
   inline void GiveupOwnerFd() {owner_fd_ = false;}
 
   std::string EventInfo() const;
@@ -75,7 +76,7 @@ private:
   const int fd_;
   LtEvent events_;
   LtEvent revents_;
-  bool owner_fd_;
+  bool owner_fd_ = true;
   Handler* handler_ = NULL;
   Watcher* watcher_ = NULL;
 

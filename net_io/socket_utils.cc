@@ -17,19 +17,28 @@
 #include <arpa/inet.h>
 #include <base/base_constants.h>
 #include "base/utils/sys_error.h"
+#include "socket_utils.h"
 
 namespace lt {
 namespace net {
 
 namespace socketutils {
 
-#define SocketFd int
+SocketFd CreateNoneBlockTCP(sa_family_t family, int type) {
+  int sockfd = ::socket(family, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, type);
+  LOG_IF(ERROR, sockfd == -1) << " create tcp socket err:[" << base::StrError() << "]";
+  return sockfd;
+}
+
+SocketFd CreateNoneBlockUDP(sa_family_t family, int type) {
+  int sockfd = ::socket(family, SOCK_DGRAM | SOCK_NONBLOCK | SOCK_CLOEXEC, type);
+  LOG_IF(ERROR, sockfd == -1) << " create udp socket err:[" << base::StrError() << "]";
+  return sockfd;
+}
 
 SocketFd CreateNonBlockingSocket(sa_family_t family) {
   int sockfd = ::socket(family, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_TCP);
   LOG_IF(ERROR, sockfd == -1) << __FUNCTION__ << " open socket err:[" << base::StrError() << "]";
-
-  LOG(INFO) << __FUNCTION__ << " fd:" << sockfd;
   return sockfd;
 }
 

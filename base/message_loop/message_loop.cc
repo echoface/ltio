@@ -100,7 +100,7 @@ MessageLoop::~MessageLoop() {
 
   wakeup_pipe_in_ = -1;
   wakeup_pipe_out_ = -1;
-  LOG(INFO) << "MessageLoop: [" << LoopName() << "] " << "this:" << this << " Gone...";
+  VLOG(GLOG_VINFO) << "MessageLoop@" << this << "[name:" << loop_name_ << "] Gone";
 }
 
 bool MessageLoop::HandleRead(FdEvent* fd_event) {
@@ -172,10 +172,9 @@ void MessageLoop::WaitLoopEnd(int32_t ms) {
   //first join, others wait util loop end
   int32_t has_join = has_join_.exchange(1);
   if (has_join == 0 && thread_ptr_ && thread_ptr_->joinable()) {
-    LOG(INFO) << " thread join wait loop end";
+    VLOG(GLOG_VINFO) << __FUNCTION__ << " join here wait loop end";
     thread_ptr_->join();
   } else {
-    LOG(INFO) << " conditional variable wait here till loop end";
     std::unique_lock<std::mutex> lk(start_stop_lock_);
     while(cv_.wait_for(lk, std::chrono::milliseconds(100)) == std::cv_status::timeout) {
       if (status_.load() != ST_STARTED) break;
@@ -204,7 +203,7 @@ void MessageLoop::ThreadMain() {
   event_pump_.InstallFdEvent(task_event_.get());
   event_pump_.InstallFdEvent(wakeup_event_.get());
 
-  VLOG(GLOG_VINFO) << "MessageLoop: [" << loop_name_ << "] Start Running";
+  VLOG(GLOG_VINFO) << "MessageLoop@" << this << "[name:" << loop_name_ << "] Start";
 
   //delegate_->BeforeLoopRun();
   event_pump_.Run();
@@ -220,7 +219,7 @@ void MessageLoop::ThreadMain() {
 
   status_.store(ST_STOPED);
   cv_.notify_all();
-  LOG(INFO) << "MessageLoop: [" << loop_name_ << " this:" << this <<  "] Stop Running";
+  VLOG(GLOG_VINFO) << "MessageLoop@" << this << "[name:" << loop_name_ << "] End";
 }
 
 bool MessageLoop::PostDelayTask(TaskBasePtr task, uint32_t ms) {

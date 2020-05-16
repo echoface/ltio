@@ -8,19 +8,20 @@
 namespace lt {
 namespace net {
 
-Connector::Connector(base::EventPump* pump, ConnectorDelegate* d)
+Connector::Connector(EventPump* pump, Delegate* d)
   : pump_(pump),
     delegate_(d) {
   CHECK(delegate_);
+  count_.store(0);
 }
 
-bool Connector::Launch(const net::IPEndPoint &address) {
+void Connector::Launch(const IPEndPoint &address) {
   CHECK(pump_->IsInLoopThread() && delegate_);
 
   int sock_fd = socketutils::CreateNonBlockingSocket(address.GetSockAddrFamily());
   if (sock_fd == -1) {
     LOG(ERROR) << __FUNCTION__ << " CreateNonBlockingSocket failed";
-    return false;
+    return delegate_->OnConnectFailed(inprogress_list_.size());
   }
 
   VLOG(GLOG_VTRACE) << __FUNCTION__ << " connect to addr:" << address.ToString();
@@ -28,10 +29,8 @@ bool Connector::Launch(const net::IPEndPoint &address) {
   SockaddrStorage storage;
   if (address.ToSockAddr(storage.addr, storage.addr_len) == 0) {
     socketutils::CloseSocket(sock_fd);
-    return false;
+    return delegate_->OnConnectFailed(inprogress_list_.size());
   }
-
-  bool success = false;
 
   int error = 0;
   int ret = socketutils::SocketConnect(sock_fd, storage.addr, &error);
@@ -42,92 +41,92 @@ bool Connector::Launch(const net::IPEndPoint &address) {
 
     if (!socketutils::GetPeerEndpoint(sock_fd, &remote_addr) ||
         !socketutils::GetLocalEndpoint(sock_fd, &local_addr)) {
+
       socketutils::CloseSocket(sock_fd);
-      return false;
+      return delegate_->OnConnectFailed(inprogress_list_.size());
     }
-    delegate_->OnNewClientConnected(sock_fd, local_addr, remote_addr);
+
     VLOG(GLOG_VTRACE) << __FUNCTION__ << " " << address.ToString() << " connected at once";
-    return true;
+    return delegate_->OnConnected(sock_fd, local_addr, remote_addr);
   }
 
-  VLOG(GLOG_VINFO) << __FUNCTION__ << " launch connection err:" << base::StrError(error);
   switch(error) {
     case EINTR:
     case EISCONN:
     case EINPROGRESS: {
-      success = true;
-      base::RefFdEvent fd_event =
-        base::FdEvent::Create(this, sock_fd, base::LtEv::LT_EVENT_WRITE);
+
+      RefFdEvent fd_event =
+        FdEvent::Create(this, sock_fd, base::LtEv::LT_EVENT_WRITE);
 
       pump_->InstallFdEvent(fd_event.get());
-      fd_event->EnableWriting();
 
-      connecting_sockets_.push_back(fd_event);
+      inprogress_list_.push_back(fd_event);
+      count_.store(inprogress_list_.size());
       VLOG(GLOG_VTRACE) << __FUNCTION__ << " add new EINPROGRESS fd:" << fd_event->fd();
+
     } break;
     default: {
-      success = false;
+
+      socketutils::CloseSocket(sock_fd);
       LOG(ERROR) << __FUNCTION__ << " launch connection failed:" << base::StrError(error);
+      return delegate_->OnConnectFailed(inprogress_list_.size());
+
     } break;
   }
-
-  if (!success) {
-    delegate_->OnClientConnectFailed();
-    socketutils::CloseSocket(sock_fd);
-  }
-  return success;
 }
 
 bool Connector::HandleRead(base::FdEvent* fd_event) {
   LOG(ERROR) << __func__ << " should not reached";
-  return true;
+  return HandleClose(fd_event);
 }
 
 bool Connector::HandleWrite(base::FdEvent* fd_event) {
+  int socket_fd = fd_event->GetFd();
 
-  int socket_fd = fd_event->fd();
-  if (!delegate_) {
-    CleanUpBadChannel(fd_event);
+  if (nullptr == delegate_) {
+    LOG(ERROR) << __func__ << " delegate_ null, endup";
+    Cleanup(fd_event);
     return false;
   }
 
-  if (net::socketutils::IsSelfConnect(socket_fd)) {
-    CleanUpBadChannel(fd_event);
-    LOG(ERROR) << __func__ << " IsSelfConnect, clean...";
-    delegate_->OnClientConnectFailed();
+  if (socketutils::IsSelfConnect(socket_fd)) {
+
+    LOG(ERROR) << __func__ << " detect a self connection, endup";
+    Cleanup(fd_event);
+    delegate_->OnConnectFailed(inprogress_list_.size());
     return false;
   }
 
   fd_event->GiveupOwnerFd();
-  pump_->RemoveFdEvent(fd_event);
-
-  remove_fdevent(fd_event); //destructor here
+  Cleanup(fd_event);
 
   IPEndPoint remote_addr;
   IPEndPoint local_addr;
   if (!socketutils::GetPeerEndpoint(socket_fd, &remote_addr) ||
       !socketutils::GetLocalEndpoint(socket_fd, &local_addr)) {
 
-    CleanUpBadChannel(fd_event);
-    delegate_->OnClientConnectFailed();
-
+    Cleanup(fd_event);
+    delegate_->OnConnectFailed(inprogress_list_.size());
     LOG(ERROR) << __func__ << " bad socket fd, connect failed";
     return false;
   }
 
-  delegate_->OnNewClientConnected(socket_fd, local_addr, remote_addr);
+  delegate_->OnConnected(socket_fd, local_addr, remote_addr);
   return false;
 }
 
 bool Connector::HandleError(base::FdEvent* fd_event) {
-  CleanUpBadChannel(fd_event);
+  LOG(ERROR) << __func__ << " connect fd error";
+  Cleanup(fd_event);
+
   if (delegate_) {
-    delegate_->OnClientConnectFailed();
+    delegate_->OnConnectFailed(inprogress_list_.size());
   }
   return false;
 }
 
 bool Connector::HandleClose(base::FdEvent* fd_event) {
+  LOG(ERROR) << __func__ << " connect fd close";
   return HandleError(fd_event);
 }
 
@@ -135,34 +134,20 @@ void Connector::Stop() {
   CHECK(pump_->IsInLoopThread());
 
   delegate_ = NULL;
-  LOG(INFO) << " connecting list size:" << connecting_sockets_.size();
-  for (auto& event : connecting_sockets_) {
-    event->GiveupOwnerFd();
+  for (auto& event : inprogress_list_) {
     pump_->RemoveFdEvent(event.get());
-
-    int socket_fd = event->fd();
-    net::socketutils::CloseSocket(socket_fd);
   }
-  connecting_sockets_.clear();
+  inprogress_list_.clear();
+  count_.store(inprogress_list_.size());
 }
 
-void Connector::CleanUpBadChannel(base::FdEvent* event) {
-
+void Connector::Cleanup(base::FdEvent* event) {
   pump_->RemoveFdEvent(event);
-
-  remove_fdevent(event); //destructor here
-  VLOG(GLOG_VINFO) << " connecting list size:" << connecting_sockets_.size();
-}
-
-bool Connector::remove_fdevent(base::FdEvent* event) {
-  connecting_sockets_.remove_if([event](base::RefFdEvent& ev) -> bool {
+  inprogress_list_.remove_if([event](base::RefFdEvent& ev) -> bool {
     return ev.get() == event;
   });
-  VLOG(GLOG_VTRACE) << __FUNCTION__
-    << " remove EINPROGRESS fd:" << event->fd()
-    << " now EINPROGRESS count:" << connecting_sockets_.size();
-  return true;
+  count_.store(inprogress_list_.size());
+  VLOG(GLOG_VINFO) << " connecting list size:" << inprogress_list_.size();
 }
-
 
 }}//end namespace

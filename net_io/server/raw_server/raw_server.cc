@@ -158,8 +158,8 @@ base::MessageLoop* RawServer::GetNextIOWorkLoop() {
 }
 
 bool RawServer::IncreaseChannelCount() {
-  uint32_t count = connection_count_.fetch_add(1);
-  VLOG(GLOG_VTRACE) << __func__ << " connections +1 now:" << count + 1;
+  connection_count_.fetch_add(1);
+  VLOG(GLOG_VTRACE) << __func__ << " connections +1 now:" << connection_count_;
   return true;
 }
 
@@ -173,7 +173,7 @@ bool RawServer::BeforeIOServiceStart(IOService* ioservice) {
 }
 
 void RawServer::IOServiceStarted(const IOService* service) {
-  LOG(INFO) << "Raw Server IO Service " << service->IOServiceName() << " Started .......";
+  LOG(INFO) << "RawServer IOService:[" << service->IOServiceName() << "] Started";
 }
 
 void RawServer::SetCloseCallback(StlClosure callback) {
@@ -181,7 +181,7 @@ void RawServer::SetCloseCallback(StlClosure callback) {
 }
 
 void RawServer::IOServiceStoped(const IOService* service) {
-  LOG(INFO) << __func__ << " IO Service " << service->IOServiceName() << " Stoped";
+  LOG(INFO) << "RawServer IOService:[" << service->IOServiceName() << "] Stoped";
   {
     std::unique_lock<std::mutex> lck(mtx_);
     ioservices_.remove_if([&](RefIOService& s) -> bool {
@@ -196,8 +196,6 @@ void RawServer::IOServiceStoped(const IOService* service) {
 }
 
 void RawServer::StopServer() {
-  LOG(INFO) << __func__ << " Start stop rawserver";
-
   std::list<RefIOService> services = ioservices_;
 
   std::for_each(services.begin(),

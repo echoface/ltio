@@ -28,7 +28,6 @@ SocketChannel::SocketChannel(int socket_fd,
 
 void SocketChannel::SetReciever(SocketChannel::Reciever* rec) {
   VLOG(GLOG_VTRACE) << "set reciever:" << rec << " fd:" << binded_fd();
-  LOG(INFO) << "set reciever:" << rec << " fd:" << binded_fd();
   reciever_ = rec;
 }
 

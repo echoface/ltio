@@ -70,13 +70,12 @@ CoroRunner::CoroRunner()
   main_ = Coroutine::CreateMain();
   current_ = main_coro_ = main_.get();
 
-  LOG(INFO) << __FUNCTION__ << " CoroRunner initialized in loop:" << bind_loop_;
   LOG_IF(ERROR, !bind_loop_) << __FUNCTION__ << " CoroRunner need constructor with initialized loop";
   CHECK(bind_loop_);
+  LOG(INFO) << "CoroutineRunner@" << this << " initialized";
 }
 
 CoroRunner::~CoroRunner() {
-  LOG(INFO) << __FUNCTION__ << " coroutine runner gone";
   DestroyCroutine();
   for (auto coro : stash_list_) {
     coro->ReleaseSelfHolder();
@@ -85,6 +84,7 @@ CoroRunner::~CoroRunner() {
 
   current_ = nullptr;
   main_coro_ = nullptr;
+  LOG(INFO) << "CoroutineRunner@" << this << " gone";
 }
 
 CoroRunner& CoroRunner::Runner() {

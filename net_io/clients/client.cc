@@ -5,9 +5,14 @@
 #include "base/coroutine/coroutine_runner.h"
 #include "client_channel.h"
 #include "glog/logging.h"
+#include <algorithm>
+#include <bits/stdint-uintn.h>
 
 namespace lt {
 namespace net {
+
+static const uint32_t kConnetBatchCount = 10;
+const uint32_t Client::kMaxReconInterval = 10000;
 
 Client::Client(base::MessageLoop* loop, const url::RemoteInfo& info)
   : address_(info.host_ip, info.port),
@@ -37,12 +42,11 @@ void Client::SetDelegate(ClientDelegate* delegate) {
 
 void Client::Initialize(const ClientConfig& config) {
   config_ = config;
-  for (uint32_t i = 0; i < config_.connections; i++) {
-    auto functor = std::bind(&Connector::Launch, connector_, address_);
-    work_loop_->PostTask(NewClosure(functor));
+  uint32_t init_count = std::min(kConnetBatchCount, required_count());
+  for (uint32_t i = 0; i < init_count; i++) {
+    work_loop_->PostTask(FROM_HERE, &Connector::Launch, connector_, address_);
   }
 }
-
 
 void Client::Finalize() {
   if (stopping_.exchange(true)) {
@@ -58,17 +62,23 @@ void Client::Finalize() {
   }
 }
 
-void Client::OnClientConnectFailed() {
+void Client::OnConnectFailed(uint32_t count) {
   CHECK(work_loop_->IsInLoopThread());
 
   VLOG(GLOG_VTRACE) << __FUNCTION__ << " connect failed";
-  if (stopping_ || config_.connections <= ConnectedCount()) {
+  if (stopping_ || required_count() <= ConnectedCount()) {
     return;
   }
+
+  //re-connct
+  next_reconnect_interval_ += 10;
+
+  int32_t delay = std::min(next_reconnect_interval_, kMaxReconInterval);
   auto functor = std::bind(&Connector::Launch, connector_, address_);
-  work_loop_->PostDelayTask(NewClosure(functor), config_.recon_interval);
-  VLOG(GLOG_VERROR) << __FUNCTION__ << ClientInfo()
-    << " try after " << config_.recon_interval << " ms";
+
+  work_loop_->PostDelayTask(NewClosure(functor), delay);
+
+  VLOG(GLOG_VERROR) << "reconnect:"<< RemoteIpPort() << " after " << delay << "(ms)";
 }
 
 base::MessageLoop* Client::next_client_io_loop() {
@@ -77,6 +87,22 @@ base::MessageLoop* Client::next_client_io_loop() {
     io_loop = delegate_->NextIOLoopForClient();
   }
   return io_loop ? io_loop : work_loop_;
+}
+
+uint32_t Client::required_count() const {
+  return config_.connections;
+}
+
+void Client::launch_next_if_need() {
+  CHECK(work_loop_->IsInLoopThread());
+
+  uint64_t connected =  ConnectedCount();
+  uint32_t inprocess_cnt = connector_->InprocessCount();
+  if (stopping_ || required_count() <= connected + inprocess_cnt) {
+    return;
+  }
+  int start = connected + inprocess_cnt;
+  work_loop_->PostTask(FROM_HERE, &Connector::Launch, connector_, address_);
 }
 
 RefClientChannel Client::get_ready_channel() {
@@ -95,11 +121,11 @@ RefClientChannel Client::get_ready_channel() {
   return NULL;
 }
 
-void Client::OnNewClientConnected(int socket_fd, IPEndPoint& local, IPEndPoint& remote) {
+void Client::OnConnected(int socket_fd, IPEndPoint& local, IPEndPoint& remote) {
   CHECK(work_loop_->IsInLoopThread());
+  next_reconnect_interval_ = 0;
 
   base::MessageLoop* io_loop = next_client_io_loop();
-  LOG(INFO) << __func__ << " gonghuan: loop for next client:" << io_loop;
 
   RefCodecService codec_service =
     CodecFactory::NewClientService(remote_info_.protocol, io_loop);
@@ -109,13 +135,6 @@ void Client::OnNewClientConnected(int socket_fd, IPEndPoint& local, IPEndPoint& 
   RefClientChannel client_channel = CreateClientChannel(this, codec_service);
   client_channel->SetRequestTimeout(config_.message_timeout);
 
-  //这里的交互界面是Connector 《== 》与ClientChannel
-  //if (io_loop->IsInLoopThread()) {
-  //  client_channel->StartClientChannel();
-  //  LOG(INFO) << __func__ << " gonghuan: loop:" << io_loop
-  //    << " codec's loop:" << codec_service->IOLoop()
-  //    << " clientchannel:" << client_channel.get();
-  //} else {
   channels_.push_back(client_channel);
   io_loop->PostTask(FROM_HERE, &ClientChannel::StartClientChannel, client_channel);
 
@@ -124,14 +143,16 @@ void Client::OnNewClientConnected(int socket_fd, IPEndPoint& local, IPEndPoint& 
   channels_count_.store(new_list->size());
   std::atomic_store(&in_use_channels_, new_list);
   VLOG(GLOG_VINFO) << __FUNCTION__ << ClientInfo() << " connected, initializing...";
+
+  launch_next_if_need();
 }
 
 void Client::OnClientChannelInited(const ClientChannel* channel) {
-  if (!work_loop_->IsInLoopThread()) {
-    auto functor = std::bind(&Client::OnClientChannelInited, this, channel);
-    work_loop_->PostTask(NewClosure(std::move(functor)));
+  if (!stopping_ && !work_loop_->IsInLoopThread()) {
+    work_loop_->PostTask(FROM_HERE, &Client::OnClientChannelInited, this, channel);
     return;
   }
+
   VLOG(GLOG_VTRACE) << __FUNCTION__ << " enter, in worker loop(connector loop)";
   if (delegate_) {
     delegate_->OnClientChannelReady(channel);
@@ -142,12 +163,11 @@ void Client::OnClientChannelInited(const ClientChannel* channel) {
 /*on the loop of client IO, need managed by connector loop*/
 void Client::OnClientChannelClosed(const RefClientChannel& channel) {
   if (!work_loop_->IsInLoopThread() && !stopping_) {
-    auto functor = std::bind(&Client::OnClientChannelClosed, this, channel);
-    work_loop_->PostTask(NewClosure(std::move(functor)));
+    work_loop_->PostTask(FROM_HERE, &Client::OnClientChannelClosed, this, channel);
     return;
   }
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << " enter in work loop";
 
+  VLOG(GLOG_VINFO) << __FUNCTION__ << ClientInfo() << " ClientChannel closed";
 
   do {
     channels_.remove_if([&](const RefClientChannel& ch) ->bool {
@@ -157,26 +177,17 @@ void Client::OnClientChannelClosed(const RefClientChannel& channel) {
     RefClientChannelList new_list(
       new ClientChannelList(channels_.begin(), channels_.end()));
     channels_count_.store(new_list->size());
+
     std::atomic_store(&in_use_channels_, new_list);
   }while(0);
 
-  uint32_t connected_count = channels_.size();
-  if (stopping_ && connected_count == 0) {
-    //NOTIFY?
-    VLOG(GLOG_VTRACE) << __FUNCTION__ << " all client channel closed, stoping done";
-    return;
-  }
+  //reconnect
+  launch_next_if_need();
 
-  if (connected_count == 0 && delegate_) {
+  uint32_t connected_count = channels_.size();
+  if (!stopping_ && connected_count == 0 && delegate_) {
     delegate_->OnAllClientPassiveBroken(this);
   }
-  //reconnect
-  if (!stopping_ && connected_count < config_.connections) {
-    auto f = std::bind(&Connector::Launch, connector_, address_);
-    work_loop_->PostDelayTask(NewClosure(f), config_.recon_interval);
-    VLOG(GLOG_VTRACE) << __FUNCTION__ << ClientInfo() << " reconnect after:" << config_.recon_interval;
-  }
-  VLOG(GLOG_VINFO) << __FUNCTION__ << ClientInfo() << " a client connection gone";
 }
 
 void Client::OnRequestGetResponse(const RefCodecMessage& request,
@@ -187,10 +198,7 @@ void Client::OnRequestGetResponse(const RefCodecMessage& request,
 
 bool Client::AsyncDoRequest(RefCodecMessage& req, AsyncCallBack callback) {
   base::MessageLoop* worker = base::MessageLoop::Current();
-  if (!worker) {
-    LOG(ERROR) << __FUNCTION__ << " Only Work IN MessageLoop";
-    return false;
-  }
+  CHECK(worker);
 
   //IMPORTANT: avoid self holder for capture list
   CodecMessage* request = req.get();
@@ -199,7 +207,7 @@ bool Client::AsyncDoRequest(RefCodecMessage& req, AsyncCallBack callback) {
       callback(request->RawResponse());
     } else {
       auto responser = std::bind(callback, request->RawResponse());
-      worker->PostTask(NewClosure(responser));
+      worker->PostTask(FROM_HERE, responser);
     }
   };
 
@@ -216,10 +224,7 @@ bool Client::AsyncDoRequest(RefCodecMessage& req, AsyncCallBack callback) {
 }
 
 CodecMessage* Client::DoRequest(RefCodecMessage& message) {
-  if (!base::MessageLoop::Current()) {
-    LOG(ERROR) << __FUNCTION__ << " must call on coroutine task";
-    return NULL;
-  }
+  CHECK(co_can_yield);
 
   message->SetRemoteHost(remote_info_.host);
   message->SetWorkerCtx(base::MessageLoop::Current(), co_resumer());
@@ -232,12 +237,8 @@ CodecMessage* Client::DoRequest(RefCodecMessage& message) {
   }
 
   base::MessageLoop* io_loop = channel->IOLoop();
-  bool success = io_loop->PostTask(
-    NewClosure(std::bind(&ClientChannel::SendRequest, channel, message)));
-
-  if (!success) {
+  if (!io_loop->PostTask(FROM_HERE, &ClientChannel::SendRequest, channel, message)) {
     message->SetFailCode(MessageCode::kConnBroken);
-    LOG(ERROR) << "schedule task to io_loop failed";
     return NULL;
   }
 
