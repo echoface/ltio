@@ -51,10 +51,9 @@ public:
 protected:
   //override from ioservice delegate
   bool CanCreateNewChannel() override;
-  bool IncreaseChannelCount() override;
+  void IncreaseChannelCount() override;
   void DecreaseChannelCount() override;
   base::MessageLoop* GetNextIOWorkLoop() override;
-  bool BeforeIOServiceStart(IOService* ioservice) override;
   void IOServiceStarted(const IOService* ioservice) override;
   void IOServiceStoped(const IOService* ioservice) override;
   void OnRequestMessage(const RefCodecMessage&) override;

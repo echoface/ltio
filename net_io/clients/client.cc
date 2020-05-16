@@ -73,12 +73,16 @@ void Client::OnConnectFailed(uint32_t count) {
   //re-connct
   next_reconnect_interval_ += 10;
 
-  int32_t delay = std::min(next_reconnect_interval_, kMaxReconInterval);
-  auto functor = std::bind(&Connector::Launch, connector_, address_);
 
-  work_loop_->PostDelayTask(NewClosure(functor), delay);
-
-  VLOG(GLOG_VERROR) << "reconnect:"<< RemoteIpPort() << " after " << delay << "(ms)";
+  if (connector_->InprocessCount() > kConnetBatchCount) {
+    VLOG(GLOG_VERROR) << RemoteIpPort() << ", giveup reconnect"
+      << ", inprogress connection:"<< connector_->InprocessCount();
+  } else {
+    int32_t delay = std::min(next_reconnect_interval_, kMaxReconInterval);
+    auto functor = std::bind(&Connector::Launch, connector_, address_);
+    work_loop_->PostDelayTask(NewClosure(functor), delay);
+    VLOG(GLOG_VERROR) << "reconnect:"<< RemoteIpPort() << " after " << delay << "(ms)";
+  }
 }
 
 base::MessageLoop* Client::next_client_io_loop() {
@@ -153,11 +157,10 @@ void Client::OnClientChannelInited(const ClientChannel* channel) {
     return;
   }
 
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << " enter, in worker loop(connector loop)";
   if (delegate_) {
     delegate_->OnClientChannelReady(channel);
   }
-  VLOG(GLOG_VINFO) << __FUNCTION__ << ClientInfo() << " new channel ready for use";
+  VLOG(GLOG_VINFO) << __FUNCTION__ << ClientInfo() << "@" << channel << " ready for use";
 }
 
 /*on the loop of client IO, need managed by connector loop*/
@@ -167,7 +170,7 @@ void Client::OnClientChannelClosed(const RefClientChannel& channel) {
     return;
   }
 
-  VLOG(GLOG_VINFO) << __FUNCTION__ << ClientInfo() << " ClientChannel closed";
+  VLOG(GLOG_VINFO) << __FUNCTION__ << ClientInfo() << "@" << channel.get() << " closed";
 
   do {
     channels_.remove_if([&](const RefClientChannel& ch) ->bool {
@@ -232,7 +235,7 @@ CodecMessage* Client::DoRequest(RefCodecMessage& message) {
   auto channel = get_ready_channel();
   if (!channel) {
     message->SetFailCode(MessageCode::kNotConnected);
-    LOG_EVERY_N(ERROR, 1000) << "no established client can use";
+    LOG_EVERY_N(ERROR, 1000) << ClientInfo() << ", no inited/established client";
     return NULL;
   }
 
@@ -254,8 +257,8 @@ uint64_t Client::ConnectedCount() const {
 std::string Client::ClientInfo() const {
   std::ostringstream oss;
   oss << "[remote:" << RemoteIpPort()
-      << ", count:" << ConnectedCount()
-      << "]";
+      << ", in_use:" << ConnectedCount()
+      << ", connecting:" << connector_->InprocessCount() << "]";
   return oss.str();
 }
 

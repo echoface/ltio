@@ -39,6 +39,8 @@ set(LTNET_SOURCE
   dispatcher/workload_dispatcher.cc
 
   #server
+  server/generic_server.h
+  server/request_context.cc
   server/raw_server/raw_server.cc
   server/http_server/http_server.cc
   server/http_server/http_context.cc

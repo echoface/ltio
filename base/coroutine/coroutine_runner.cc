@@ -72,7 +72,7 @@ CoroRunner::CoroRunner()
 
   LOG_IF(ERROR, !bind_loop_) << __FUNCTION__ << " CoroRunner need constructor with initialized loop";
   CHECK(bind_loop_);
-  LOG(INFO) << "CoroutineRunner@" << this << " initialized";
+  VLOG(GLOG_VINFO) << "CoroutineRunner@" << this << " initialized";
 }
 
 CoroRunner::~CoroRunner() {
@@ -84,7 +84,7 @@ CoroRunner::~CoroRunner() {
 
   current_ = nullptr;
   main_coro_ = nullptr;
-  LOG(INFO) << "CoroutineRunner@" << this << " gone";
+  VLOG(GLOG_VINFO) << "CoroutineRunner@" << this << " gone";
 }
 
 CoroRunner& CoroRunner::Runner() {

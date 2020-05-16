@@ -40,7 +40,7 @@ void LineCodecService::OnDataReceived(const SocketChannel*, IOBuffer *buf) {
     buf->Consume(len + 2/*lenth of /r/n*/);
 
     if (delegate_) {
-      delegate_->OnCodecMessage(std::static_pointer_cast<CodecMessage>(msg));
+      delegate_->OnCodecMessage(RefCast(CodecMessage, msg));
     }
   }
 }

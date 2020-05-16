@@ -69,14 +69,13 @@ bool SocketAcceptor::StartListen() {
     LOG(INFO) << __FUNCTION__ << " failed listen on" << address_.ToString();
     return false;
   }
-  LOG(INFO) << __FUNCTION__ << " start listen on:" << address_.ToString();
+  VLOG(GLOG_VINFO) << "start listen on:" << address_.ToString();
   listening_ = true;
   return true;
 }
 
 void SocketAcceptor::StopListen() {
   CHECK(event_pump_->IsInLoopThread());
-
   if (!listening_) {
     return;
   }
@@ -84,7 +83,7 @@ void SocketAcceptor::StopListen() {
   socket_event_->DisableAll();
 
   listening_ = false;
-  LOG(INFO) << " Stop Listen on:" << address_.ToString();
+  VLOG(GLOG_VINFO) << "stop listen on:" << address_.ToString();
 }
 
 void SocketAcceptor::SetNewConnectionCallback(const NewConnectionCallback& cb) {

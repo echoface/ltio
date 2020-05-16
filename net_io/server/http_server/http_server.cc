@@ -118,19 +118,14 @@ base::MessageLoop* HttpServer::GetNextIOWorkLoop() {
 #endif
 }
 
-bool HttpServer::IncreaseChannelCount() {
+void HttpServer::IncreaseChannelCount() {
   connection_count_.fetch_add(1);
   LOG(INFO) << __FUNCTION__ << " httpserver connections +1 count:" << connection_count_;
-  return true;
 }
 
 void HttpServer::DecreaseChannelCount() {
   connection_count_.fetch_sub(1);
   LOG(INFO) << __FUNCTION__ << " httpserver connections -1 count:" << connection_count_;
-}
-
-bool HttpServer::BeforeIOServiceStart(IOService* ioservice) {
-  return true;
 }
 
 void HttpServer::IOServiceStarted(const IOService* service) {

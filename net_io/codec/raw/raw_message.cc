@@ -39,9 +39,9 @@ LtRawMessage::RefRawMessage RawMessage::Create(bool request) {
 RawMessage::RefRawMessage RawMessage::CreateResponse(const RawMessage* request) {
   auto response = Create(false);
   response->header_.code = 0;
-  response->header_.method = 0;
   response->header_.content_size_ = 0;
-  response->header_.sequence_id_ = request->header_.seq_id();
+  response->header_.method = request->Method();
+  response->header_.sequence_id_ = request->AsyncId();
   return response;
 }
 

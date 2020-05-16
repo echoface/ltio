@@ -21,7 +21,7 @@ void HttpContext::ReplyFile(const std::string& path, uint16_t code) {
 void HttpContext::ReplyJson(const std::string& json, uint16_t code) {
   if (did_reply_) return;
 
-  RefHttpResponse response = HttpResponse::CreatWithCode(code);
+  RefHttpResponse response = HttpResponse::CreateWithCode(code);
   response->InsertHeader("Content-Type", "application/json;utf-8");
   response->MutableBody() = json;
 
@@ -31,7 +31,7 @@ void HttpContext::ReplyJson(const std::string& json, uint16_t code) {
 void HttpContext::ReplyString(const char* content, uint16_t code) {
   if (did_reply_) return;
 
-  RefHttpResponse response = HttpResponse::CreatWithCode(code);
+  RefHttpResponse response = HttpResponse::CreateWithCode(code);
   response->MutableBody().append(content);
 
   DoReplyResponse(response);
@@ -40,7 +40,7 @@ void HttpContext::ReplyString(const char* content, uint16_t code) {
 void HttpContext::ReplyString(const std::string& content, uint16_t code) {
   if (did_reply_) return;
 
-  RefHttpResponse response = HttpResponse::CreatWithCode(code);
+  RefHttpResponse response = HttpResponse::CreateWithCode(code);
   response->MutableBody() = std::move(content);
 
   DoReplyResponse(response);

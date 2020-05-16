@@ -17,19 +17,18 @@ public:
   Dispatcher(bool handle_in_io);
   virtual ~Dispatcher() {};
 
-  bool HandleWorkInIOLoop() const {return handle_in_io_;}
   void SetWorkerLoops(LoopList& loops) {workers_ = loops;};
 
   // must call at Worker Loop, may ioworker
-  // or woker according to HandleWorkInIOLoop
+  // or woker according to handle_in_io_ 
   virtual bool SetWorkContext(CodecMessage* message);
   // transmit task from IO TO worker loop
-  virtual bool Dispatch(StlClosure& closuse);
+  virtual bool Dispatch(StlClosure closuse);
 protected:
-  base::MessageLoop* NextWorker();
-private:
-
   const bool handle_in_io_;
+  base::MessageLoop* NextWorker();
+
+private:
   std::vector<base::MessageLoop*> workers_;
   std::atomic<uint64_t> round_robin_counter_;
 };

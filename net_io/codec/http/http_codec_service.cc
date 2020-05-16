@@ -61,7 +61,9 @@ void HttpCodecService::OnDataFinishSend(const SocketChannel* channel) {
 
 void HttpCodecService::OnDataReceived(const SocketChannel* channel, IOBuffer *buf) {
   DCHECK(channel == channel_.get());
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << " enter";
+
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << " buffer_size:" << buf->CanReadSize();
+
   bool success = IsServerSide() ?
     ParseHttpRequest(channel_.get(), buf) : ParseHttpResponse(channel_.get(), buf);
 
@@ -112,7 +114,7 @@ bool HttpCodecService::ParseHttpRequest(TcpChannel* channel, IOBuffer* buf) {
     message->SetIOCtx(shared_from_this());
     CHECK(message->GetMessageType() == MessageType::kRequest);
     VLOG(GLOG_VTRACE) << " pass message to message reciever" << channel_->ChannelInfo();
-    delegate_->OnCodecMessage(std::static_pointer_cast<CodecMessage>(message));
+    delegate_->OnCodecMessage(RefCast(CodecMessage, message));
   }
   return true;
 }
@@ -150,7 +152,7 @@ bool HttpCodecService::ParseHttpResponse(TcpChannel* channel, IOBuffer* buf) {
     message->SetIOCtx(shared_from_this());
     CHECK(message->GetMessageType() == MessageType::kResponse);
 
-    delegate_->OnCodecMessage(std::static_pointer_cast<CodecMessage>(message));
+    delegate_->OnCodecMessage(RefCast(CodecMessage, message));
   }
   return true;
 }
@@ -224,7 +226,24 @@ bool HttpCodecService::EncodeResponseToChannel(const CodecMessage* req, CodecMes
   BeforeSendResponseMessage(request, response);
 
   if (!ResponseToBuffer(response, channel_->WriterBuffer())) {
+    LOG(ERROR) << __FUNCTION__ << " failed encode:" << response->Dump();
     return false;
+  }
+  VLOG(GLOG_VINFO) << __FUNCTION__ << " write response:" << response->Dump();
+  /* see: https://tools.ietf.org/html/rfc7230#section-6.1
+
+   The "close" connection option is defined for a sender to signal that
+   this connection will be closed after completion of the response.  For
+   example,
+
+     Connection: close
+
+   in either the request or the response header fields indicates that
+   the sender is going to close the connection after the current
+   request/response is complete (Section 6.6).
+   * */
+  if (!response->IsKeepAlive()) {
+    channel_->ShutdownChannel(true);
   }
   return channel_->TryFlush();
 };
@@ -276,7 +295,7 @@ const RefCodecMessage HttpCodecService::NewResponse(const CodecMessage* request)
   CHECK(request && request->GetMessageType() == MessageType::kRequest);
   const HttpRequest* http_request = (HttpRequest*)request;//static_cast<HttpRequest*>(request);
 
-  RefHttpResponse http_res = HttpResponse::CreatWithCode(500);
+  RefHttpResponse http_res = HttpResponse::CreateWithCode(500);
 
   http_res->SetKeepAlive(http_request->IsKeepAlive());
   http_res->InsertHeader("Content-Type", "text/plain");

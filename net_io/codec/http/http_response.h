@@ -20,7 +20,7 @@ public:
   HttpResponse();
   ~HttpResponse();
 
-  static RefHttpResponse CreatWithCode(uint16_t code);
+  static RefHttpResponse CreateWithCode(uint16_t code);
 
   std::string& MutableBody();
   const std::string& Body() const;

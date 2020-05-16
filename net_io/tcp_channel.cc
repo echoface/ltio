@@ -100,7 +100,7 @@ bool TcpChannel::HandleWrite(base::FdEvent* event) {
 
 bool TcpChannel::HandleError(base::FdEvent* event) {
   int err = socketutils::GetSocketError(fd_event_->fd());
-  LOG(ERROR) << __FUNCTION__ << ChannelInfo() << " error: [" << base::StrError(err) << "]";
+  VLOG(GLOG_VERROR) << __FUNCTION__ << ChannelInfo() << " error: [" << base::StrError(err) << "]";
   return HandleClose(event);
 }
 
@@ -119,8 +119,16 @@ bool TcpChannel::HandleClose(base::FdEvent* event) {
 void TcpChannel::ShutdownChannel(bool half_close) {
   DCHECK(pump_->IsInLoopThread());
 
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
-  HandleClose(fd_event_.get());
+  schedule_shutdown_ = true;
+  if (half_close) {
+    if (!fd_event_->IsWriteEnable()) {
+      fd_event_->EnableWriting();
+    }
+  } else {
+
+    VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
+    HandleClose(fd_event_.get());
+  }
 }
 
 int32_t TcpChannel::Send(const char* data, const int32_t len) {

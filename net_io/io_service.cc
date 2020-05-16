@@ -33,7 +33,7 @@ IOService::IOService(const IPEndPoint& addr,
 }
 
 IOService::~IOService() {
-  LOG(INFO) << __FUNCTION__ << "IOServce gone, this:" << this;
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << " IOService@" << this << " Gone";
 }
 
 void IOService::StartIOService() {

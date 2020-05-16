@@ -26,12 +26,11 @@ public:
   /* use for couting connection numbers and limit
    * max connections; return false when reach limits,
    * otherwise return true */
-  virtual bool IncreaseChannelCount() = 0;
-  virtual void DecreaseChannelCount() = 0;
-
   virtual bool CanCreateNewChannel() { return true;}
+
+  virtual void IncreaseChannelCount() = 0;
+  virtual void DecreaseChannelCount() = 0;
   /* do other config things for this ioservice; return false will kill this service*/
-  virtual bool BeforeIOServiceStart(IOService* ioservice) {return true;};
   virtual void IOServiceStarted(const IOService* ioservice) {};
   virtual void IOServiceStoped(const IOService* ioservice) {};
 

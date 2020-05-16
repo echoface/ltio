@@ -18,24 +18,17 @@ CoroDispatcher::CoroDispatcher(bool handle_in_io)
 CoroDispatcher::~CoroDispatcher() {
 }
 
-void CoroDispatcher::TransferAndYield(base::MessageLoop* ioloop, StlClosure clourse) {
-  CHECK(ioloop);
-  ioloop->PostTask(NewClosure(std::move(clourse)));
-  co_pause;
-}
-
 bool CoroDispatcher::SetWorkContext(CodecMessage* message) {
   message->SetWorkerCtx(base::MessageLoop::Current(), co_resumer());
   return base::MessageLoop::Current();
 }
 
-bool CoroDispatcher::Dispatch(StlClosure& closure) {
-
-  if (HandleWorkInIOLoop()) {
+bool CoroDispatcher::Dispatch(StlClosure closure) {
+  if (handle_in_io_) {
     co_go closure;
-    return true;
+  } else {
+    co_go NextWorker() << closure;
   }
-  co_go NextWorker() << closure;
   return true;
 }
 

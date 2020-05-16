@@ -82,9 +82,8 @@ public:
   base::MessageLoop* GetNextIOWorkLoop() {
     return &iowork_loop_;
   }
-  bool IncreaseChannelCount() {
+  void IncreaseChannelCount() {
     LOG(INFO) << " a new channel comming";
-    return true;
   }
   void DecreaseChannelCount() {
     LOG(INFO) << " a channel going gone";

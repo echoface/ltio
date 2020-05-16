@@ -12,6 +12,9 @@
 #include "base/coroutine/coroutine_runner.h"
 #include "base/message_loop/message_loop.h"
 
+#include "net_io/server/generic_server.h"
+#include "net_io/server/request_context.h"
+
 #include <csignal>
 
 using namespace lt::net;
@@ -40,8 +43,6 @@ net::ClientConfig DeafaultClientConfig(int count = 2) {
   config.heartbeat_ms = 500;
   return config;
 }
-void HandleHttp(SampleApp* app, net::HttpContext* context);
-void HandleRaw(SampleApp* app,net::RawServerContext* context);
 
 void DumpRedisResponse(RedisResponse* redis_response) {
   for (size_t i = 0; i < redis_response->Count(); i++) {
@@ -88,6 +89,7 @@ void DumpRedisResponse(RedisResponse* redis_response) {
 
 base::MessageLoop main_loop;
 
+typedef BaseServer<CommonRequestContext, DefaultConfigurator> GenericServer;
 class SampleApp: public net::ClientDelegate {
 public:
   SampleApp() {
@@ -124,16 +126,56 @@ public:
     }
     dispatcher_->SetWorkerLoops(loops);
 
-    raw_server.SetIOLoops(loops);
-    raw_server.SetDispatcher(dispatcher_);
+    raw_server.WithIOLoops(loops);
+    raw_server.WithDispatcher(dispatcher_);
     raw_server.ServeAddress(base::StrUtil::Concat("raw://", FLAGS_raw),
-                            std::bind(HandleRaw, this, std::placeholders::_1));
+                            std::bind(&SampleApp::HandleRawRequest, this, std::placeholders::_1));
 
-    http_server.SetIOLoops(loops);
-    http_server.SetDispatcher(dispatcher_);
+    http_server.WithIOLoops(loops);
+    http_server.WithDispatcher(dispatcher_);
     http_server.ServeAddress(base::StrUtil::Concat("http://", FLAGS_http),
-                             std::bind(HandleHttp, this, std::placeholders::_1));
+                             std::bind(&SampleApp::HandleHttpRequest, this, std::placeholders::_1));
 
+  }
+
+  void HandleRawRequest(GenericServer::ContextPtr context) {
+    const LtRawMessage* req = context->GetRequest<LtRawMessage>();
+    LOG_EVERY_N(INFO, 10000) << " got request:" << req->Dump();
+
+    auto res = LtRawMessage::CreateResponse(req);
+    res->SetContent(req->Content());
+    return context->Send(res);
+  }
+
+  void HandleHttpRequest(GenericServer::ContextPtr context) {
+    const HttpRequest* req = context->GetRequest<HttpRequest>();
+    LOG_EVERY_N(INFO, 10000) << " got 1w Http request, body:" << req->Dump();
+
+    RefHttpResponse response = HttpResponse::CreateWithCode(200);
+    response->SetKeepAlive(req->IsKeepAlive());
+
+#ifdef ENBALE_RDS_CLIENT
+    if (req->RequestUrl() == "/rds") {
+      app.SendRedisMessage();
+      response->MutableBody() = "proxy a raw request";
+      return context->Send(std::move(response));
+    }
+#endif
+
+    if (req->RequestUrl() == "/raw" && FLAGS_raw_client) {
+      SendRawRequest();
+      response->MutableBody() = "proxy a raw request";
+    } else if (req->RequestUrl() == "/http") {
+      SendHttpRequest();
+      response->MutableBody() = "proxy a http request";
+    } else if (req->RequestUrl() == "/ping") {
+      response->MutableBody() = "PONG";
+    } else {
+      static const std::string kresponse(3650, 'c');
+      response->MutableBody() = kresponse;
+    }
+
+    return context->Send(std::move(response));
   }
 
   base::MessageLoop* NextIOLoopForClient() {
@@ -246,12 +288,11 @@ public:
     }
 
     CHECK(co_can_yield);
-    raw_server.SetCloseCallback(co_resumer());
-    raw_server.StopServer();
+
+    raw_server.StopServer(co_resumer());
     co_pause;
 
-    http_server.SetCloseCallback(co_resumer());
-    http_server.StopServer();
+    http_server.StopServer(co_resumer());
     co_pause;
 
     LOG(INFO) << __FUNCTION__ << " stop leave";
@@ -271,8 +312,10 @@ public:
 #else
   Dispatcher* dispatcher_ = NULL;
 #endif
-  net::RawServer raw_server;
-  net::HttpServer http_server;
+  GenericServer raw_server;
+  GenericServer http_server;
+  //net::RawServer raw_server;
+  //net::HttpServer http_server;
 };
 std::atomic_int SampleApp::io_round_count = {0};
 
@@ -304,17 +347,6 @@ void HandleHttp(SampleApp* app, net::HttpContext* context) {
   static const std::string kresponse(3650, 'c');
   context->ReplyString(kresponse);
 }
-
-void HandleRaw(SampleApp* app,net::RawServerContext* context) {
-  const LtRawMessage* req = context->GetRequest<LtRawMessage>();
-  LOG_EVERY_N(INFO, 10000) << " got request:" << req->Dump();
-
-  auto res = LtRawMessage::CreateResponse(req);
-  res->SetMethod(req->Method());
-  res->SetContent(req->Content());
-  return context->SendResponse(res);
-}
-
 
 void signalHandler( int signum ){
   LOG(INFO) << "sighandler sig:" << signum;

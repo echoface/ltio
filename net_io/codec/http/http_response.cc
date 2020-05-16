@@ -12,7 +12,7 @@ namespace lt {
 namespace net {
 
 //static
-RefHttpResponse HttpResponse::CreatWithCode(uint16_t code) {
+RefHttpResponse HttpResponse::CreateWithCode(uint16_t code) {
   auto r = std::make_shared<HttpResponse>();
   r->SetResponseCode(code);
   return r;

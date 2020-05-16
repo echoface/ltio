@@ -55,7 +55,7 @@ int ReqParseContext::OnHttpRequestBegin(http_parser* parser) {
     context->reset();
     LOG(ERROR) << "Something Wrong, Current Should Be Null";
   }
-  context->current_ = (std::make_shared<HttpRequest>());
+  context->current_ = std::make_shared<HttpRequest>();
 
   context->current_->url_.clear();
 

@@ -62,7 +62,6 @@ void FdEvent::notify_watcher() {
   if (watcher_) {
     watcher_->UpdateFdEvent(this);
   }
-  VLOG_IF(GLOG_VTRACE, watcher_ == NULL) << " no watcher monitor this event";
 }
 
 void FdEvent::HandleEvent(LtEvent mask) {

@@ -26,16 +26,17 @@ bool Dispatcher::SetWorkContext(CodecMessage* message) {
   return loop != NULL;
 }
 
-bool Dispatcher::Dispatch(StlClosure& clourse) {
-  if (HandleWorkInIOLoop()) {
+bool Dispatcher::Dispatch(StlClosure clourse) {
+  if (handle_in_io_) {
     clourse();
     return true;
   }
+
   base::MessageLoop* loop = NextWorker();
   if (nullptr == loop) {
     return false;
   }
-  return loop->PostTask(NewClosure(clourse));
+  return loop->PostTask(FROM_HERE, clourse);
 }
 
 }}//end namespace net

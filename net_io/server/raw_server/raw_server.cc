@@ -157,19 +157,14 @@ base::MessageLoop* RawServer::GetNextIOWorkLoop() {
 #endif
 }
 
-bool RawServer::IncreaseChannelCount() {
+void RawServer::IncreaseChannelCount() {
   connection_count_.fetch_add(1);
   VLOG(GLOG_VTRACE) << __func__ << " connections +1 now:" << connection_count_;
-  return true;
 }
 
 void RawServer::DecreaseChannelCount() {
   uint64_t count = connection_count_.fetch_sub(1);
   VLOG(GLOG_VTRACE) << __func__ << " connections -1 now:" << count + 1;
-}
-
-bool RawServer::BeforeIOServiceStart(IOService* ioservice) {
-  return true;
 }
 
 void RawServer::IOServiceStarted(const IOService* service) {

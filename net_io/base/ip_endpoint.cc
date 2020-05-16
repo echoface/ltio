@@ -79,12 +79,10 @@ IPEndPoint::IPEndPoint() : port_(0) {}
 
 IPEndPoint::~IPEndPoint() = default;
 
-IPEndPoint::IPEndPoint(const IPAddress& address,
-                       uint16_t port)
-    : address_(address), port_(port) {}
+IPEndPoint::IPEndPoint(const IPAddress& address, uint16_t port)
+  : address_(address), port_(port) {}
 
-IPEndPoint::IPEndPoint(const base::StringPiece ip,
-                       uint16_t port)
+IPEndPoint::IPEndPoint(const base::StringPiece ip, uint16_t port)
   : port_(port) {
   address_.AssignFromIPLiteral(ip);
 }
