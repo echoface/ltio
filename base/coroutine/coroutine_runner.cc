@@ -34,7 +34,7 @@ void CoroRunner::CoroutineMain(void *coro) {
       runner.coro_tasks_.pop_front();
       task->Run();
     }
-  }while(runner.WaitPendingTask());
+  }while(runner.ContinueRun());
 
   runner.GcCoroutine(coroutine);
 }
@@ -46,17 +46,17 @@ void CoroRunner::GcCoroutine(Coroutine* coro) {
   coro->SetCoroState(CoroState::kDone);
   to_be_delete_.push_back(coro);
   if (!gc_task_scheduled_) {
-    bind_loop_->PostTask(NewClosure(std::bind(&CoroRunner::DestroyCroutine, this)));
     gc_task_scheduled_ = true;
+    bind_loop_->PostTask(FROM_HERE, &CoroRunner::DestroyCroutine, this);
   }
 
 #ifdef USE_LIBACO_CORO_IMPL
-  //aco_exit(); //libaco aco_exti will transer to main_coro in its inner ctroller
+  //libaco aco_exti will transer
+  //to main_coro in its inner controller
   current_ = main_coro_;
   coro->Exit();
 #else
-  /* libcoro has the same flow for exit the finished coroutine
-   * */
+  /* libcoro has the same flow for exit the finished coroutine*/
   SwapCurrentAndTransferTo(main_coro_);
 #endif
 }
@@ -111,13 +111,13 @@ void CoroRunner::Sleep(uint64_t ms) {
  * 如果不是在调度的线程里,则调度到目标Loop去Resume*/
 void CoroRunner::Resume(std::weak_ptr<Coroutine>& weak, uint64_t id) {
   if (bind_loop_->IsInLoopThread() && InMainCoroutine()) {
-    return DoResume(weak, id, 1);
+    return DoResume(weak, id);
   }
-  auto f = std::bind(&CoroRunner::DoResume, this, weak, id, 2);
+  auto f = std::bind(&CoroRunner::DoResume, this, weak, id);
   CHECK(bind_loop_->PostTask(NewClosure(f)));
 }
 
-void CoroRunner::DoResume(WeakCoroutine& weak, uint64_t id, int type) {
+void CoroRunner::DoResume(WeakCoroutine& weak, uint64_t id) {
   DCHECK(InMainCoroutine());
 
   Coroutine* coroutine = nullptr;
@@ -176,19 +176,19 @@ void CoroRunner::RunCoroutine() {
   invoke_coro_shceduled_ = false;
 }
 
-bool CoroRunner::WaitPendingTask() {
+bool CoroRunner::ContinueRun() {
   if (coro_tasks_.size()) {
     return true;
   }
 
-  if (stash_list_.size() < max_reuse_coroutines_) {
-
-    stash_list_.push_back(current_);
-    SwapCurrentAndTransferTo(main_coro_);
-    return true;
+  if (stash_list_.size() > max_reuse_coroutines_) {
+    return false;
   }
 
-  return false;
+  stash_list_.push_back(current_);
+  //when task need to run, will resume from here
+  SwapCurrentAndTransferTo(main_coro_);
+  return true;
 }
 
 Coroutine* CoroRunner::RetrieveCoroutine() {

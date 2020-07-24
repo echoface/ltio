@@ -102,10 +102,16 @@ protected:
   /* install coroutine to P(CoroRunner, binded to a native thread)*/
   void RunCoroutine();
 
-  /* retrieve a task from pending list
-   * 返回一个任务(可能会Yield到MainCoro等待任务Pending)
-   * 返回NULL代表结束这个Coroutine 的生命周期 */
-  bool WaitPendingTask();
+  /* check whether still has pending task need to run
+   * case 0: still has pending task need to run
+   *  return true at once
+   * case 1: no pending task need to run
+   *    1.1: enough coroutine(task executor)
+   *      return false; then corotuine will end its life time
+   *    1.2: just paused this corotuine, and wait task to resume it
+   *      return true
+   */
+  bool ContinueRun();
 
   /* from stash list got a coroutine or create new one*/
   Coroutine* RetrieveCoroutine();
@@ -114,7 +120,7 @@ protected:
   void Resume(WeakCoroutine& coro, uint64_t id);
 
   /* do resume a coroutine from main_coro*/
-  void DoResume(WeakCoroutine& coro, uint64_t id, int type);
+  void DoResume(WeakCoroutine& coro, uint64_t id);
 
 #ifdef USE_LIBACO_CORO_IMPL
   static void CoroutineMain();
