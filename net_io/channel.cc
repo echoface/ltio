@@ -23,7 +23,6 @@ SocketChannel::SocketChannel(int socket_fd,
   fd_event_ = base::FdEvent::Create(this,
                                     socket_fd,
                                     base::LtEv::LT_EVENT_NONE);
-  socketutils::KeepAlive(fd_event_->fd(), true);
 }
 
 void SocketChannel::SetReciever(SocketChannel::Reciever* rec) {

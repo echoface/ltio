@@ -48,9 +48,9 @@ public:
     net::IPEndPoint ep(ip, 5005);
     ioservice_.reset(new IOService(ep, "tcp", &acceptor_loop_, this));
   }
+
   ~Srv() {
   }
-
 
   void InitWorkLoop() {
     iowork_loop_.SetLoopName("iowork_loop");

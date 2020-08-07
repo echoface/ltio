@@ -1,6 +1,7 @@
 #ifndef _NET_IO_BUFFER_H_H
 #define _NET_IO_BUFFER_H_H
 
+#include <type_traits>
 #include <vector>
 #include <algorithm>
 #include <cinttypes>
@@ -32,7 +33,9 @@ public:
   void WriteString(const std::string& str);
   void WriteRawData(const void* data, size_t len);
 
-  template <typename T> void Append(T data) {
+  template <typename T,
+           typename = typename std::enable_if<std::is_pod<T>::value>::type>
+  void Append(T data) {
     union __X {
       T _data;
       char _x;

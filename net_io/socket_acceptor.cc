@@ -33,7 +33,6 @@ bool SocketAcceptor::InitListener() {
   socketutils::ReUseSocketPort(socket_fd, true);
   socketutils::ReUseSocketAddress(socket_fd, true);
 
-
   SockaddrStorage storage;
   address_.ToSockAddr(storage.addr, storage.addr_len);
 
