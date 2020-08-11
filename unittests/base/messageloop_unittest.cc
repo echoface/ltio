@@ -54,6 +54,7 @@ TEST_CASE("event_pump.timer", "[test event pump timer]") {
   repeated_toe->InstallTimerHandler(NewClosure([&]() {
     uint64_t t = base::time_ms();
     uint64_t diff = t - repeated_timer_checker;
+    std::cout << "time diff:" << diff << std::endl;
     REQUIRE(((diff >= 5000) && (diff <= 5001)));
     repeated_timer_checker = t;
   }));
@@ -111,7 +112,7 @@ TEST_CASE("messageloop.delaytask", "[run delay task]") {
   loop.PostDelayTask(NewClosure([&]() {
     uint64_t end = base::time_ms();
     LOG(INFO) << "delay task run:" << end - start << "(ms), expect 500";
-    REQUIRE(((end - start >= 500) && (end - start <= 501)));
+    REQUIRE(((end - start >= 500) && (end - start <= 505)));
   }), 500);
 
   loop.PostDelayTask(NewClosure([&]() {

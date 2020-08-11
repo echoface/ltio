@@ -99,7 +99,9 @@ public:
 protected:
   //override from ioservice delegate
   bool CanCreateNewChannel() override {
-    return client_count_ < T::kClientConnLimit;
+    bool can = client_count_ < T::kClientConnLimit;
+    LOG_IF(INFO, !can) << " max client limit reach";
+    return can;
   };
 
   void IncreaseChannelCount() override { client_count_++;}
@@ -122,7 +124,7 @@ protected:
         return;
       }
     }
-    LOG(INFO) << "Server on:[" << endpoint_.ToString() << "] Started";
+    LOG(INFO) << "Server " << ServerInfo() << " Started";
   }
 
   void IOServiceStoped(const IOService* service) override {
@@ -131,7 +133,7 @@ protected:
       return s.get() == service;
     });
 
-    LOG_IF(INFO, ioservices_.empty()) << "Server on:[" << endpoint_.ToString() << "] Stoped";
+    LOG_IF(INFO, ioservices_.empty()) << "Server:" << ServerInfo() << " Stoped";
     if (ioservices_.empty() && closed_callback_) {
       closed_callback_();
     }
@@ -146,6 +148,10 @@ protected:
       this->handler_(std::make_shared<Context>(std::move(request)));
     });
     CHECK(success);
+  }
+
+  std::string ServerInfo() const {
+    return uri_.protocol + ":" + endpoint_.ToString();
   }
 private:
   Handler handler_;

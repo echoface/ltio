@@ -103,6 +103,10 @@ MessageLoop::~MessageLoop() {
   VLOG(GLOG_VINFO) << "MessageLoop@" << this << "[name:" << loop_name_ << "] Gone";
 }
 
+void MessageLoop::WeakUp() {
+  Notify(task_fd_, &kTaskFdCounter, sizeof(kTaskFdCounter));
+}
+
 bool MessageLoop::HandleRead(FdEvent* fd_event) {
   if (fd_event == wakeup_event_.get()) {
 
@@ -163,6 +167,11 @@ void MessageLoop::Start() {
       if (status_.load() == ST_STARTED) break;
     }
   }
+}
+
+void MessageLoop::InstallPersistRunner(PersistRunner* runner) {
+  CHECK(IsInLoopThread());
+  persist_runner_.push_back(runner);
 }
 
 void MessageLoop::WaitLoopEnd(int32_t ms) {
@@ -277,11 +286,18 @@ void MessageLoop::RunScheduledTask() {
 
 void MessageLoop::RunNestedTask() {
   DCHECK(IsInLoopThread());
+  TaskBasePtr task;
   while(in_loop_tasks_.size()) {
-    auto task = std::move(in_loop_tasks_.front());
+    task = std::move(in_loop_tasks_.front());
     in_loop_tasks_.pop_front();
     task->Run();
   }
+
+  //Note: can't in Sched uninstall runner
+  for (PersistRunner* runner : persist_runner_) {
+    runner->Sched();
+  }
+
   in_loop_tasks_.clear();
 }
 
