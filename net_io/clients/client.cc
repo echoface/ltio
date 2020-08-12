@@ -6,7 +6,6 @@
 #include "client_channel.h"
 #include "glog/logging.h"
 #include <algorithm>
-#include <bits/stdint-uintn.h>
 
 namespace lt {
 namespace net {

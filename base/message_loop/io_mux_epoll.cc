@@ -1,6 +1,5 @@
 #include "glog/logging.h"
 #include <base/utils/sys_error.h>
-#include <bits/stdint-intn.h>
 
 #include "io_multiplexer.h"
 #include "io_mux_epoll.h"

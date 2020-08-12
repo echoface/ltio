@@ -1,13 +1,11 @@
 #include "fd_event.h"
 #include "glog/logging.h"
-#include <base/utils/sys_error.h>
 
 #include "event_pump.h"
 #include "io_multiplexer.h"
 #include "io_mux_epoll.h"
 #include "linux_signal.h"
 #include <algorithm>
-#include <bits/stdint-intn.h>
 #include <sys/time.h>
 #include <sys/resource.h>
 

@@ -2,7 +2,6 @@
 #define _LT_NET_CLIENT_CONNECTOR_H_H
 
 #include <atomic>
-#include <bits/stdint-uintn.h>
 #include <cstdint>
 #include <list>
 #include <set>
