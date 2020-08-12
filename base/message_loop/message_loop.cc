@@ -104,10 +104,14 @@ MessageLoop::~MessageLoop() {
 }
 
 void MessageLoop::WeakUp() {
-  Notify(task_fd_, &kTaskFdCounter, sizeof(kTaskFdCounter));
+  if (!notify_flag_.test_and_set() &&
+      Notify(task_fd_, &kTaskFdCounter, sizeof(kTaskFdCounter)) <= 0) {
+    notify_flag_.clear();
+  }
 }
 
 bool MessageLoop::HandleRead(FdEvent* fd_event) {
+
   if (fd_event == wakeup_event_.get()) {
 
     RunCommandTask(ScheduledTaskType::TaskTypeCtrl);
@@ -246,12 +250,10 @@ bool MessageLoop::PostDelayTask(TaskBasePtr task, uint32_t ms) {
 
 bool MessageLoop::PendingNestedTask(TaskBasePtr& task) {
   DCHECK(IsInLoopThread());
-
   in_loop_tasks_.push_back(std::move(task));
-  if (!notify_flag_.test_and_set()) {
-    if (Notify(task_fd_, &kTaskFdCounter, sizeof(kTaskFdCounter)) <= 0) {
-      notify_flag_.clear();
-    }
+  if (!notify_flag_.test_and_set() &&
+      Notify(task_fd_, &kTaskFdCounter, sizeof(kTaskFdCounter)) <= 0) {
+    notify_flag_.clear();
   }
   return true;
 }
@@ -264,10 +266,9 @@ bool MessageLoop::PostTask(TaskBasePtr task) {
   }
 
   bool ret = scheduled_tasks_.enqueue(std::move(task));
-  if (!notify_flag_.test_and_set()) {
-    if (Notify(task_fd_, &kTaskFdCounter, sizeof(kTaskFdCounter)) <= 0) {
-      notify_flag_.clear();
-    }
+  if (!notify_flag_.test_and_set() &&
+      Notify(task_fd_, &kTaskFdCounter, sizeof(kTaskFdCounter)) <= 0) {
+    notify_flag_.clear();
   }
   return ret;
 }
@@ -290,7 +291,6 @@ void MessageLoop::RunScheduledTask() {
 
 void MessageLoop::RunNestedTask() {
   DCHECK(IsInLoopThread());
-  TaskBasePtr task;
 
   std::list<TaskBasePtr> nest_tasks(std::move(in_loop_tasks_));
   in_loop_tasks_.clear();
@@ -302,8 +302,6 @@ void MessageLoop::RunNestedTask() {
   for (PersistRunner* runner : persist_runner_) {
     runner->Sched();
   }
-
-  in_loop_tasks_.clear();
 }
 
 void MessageLoop::RunCommandTask(ScheduledTaskType type) {

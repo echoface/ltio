@@ -49,21 +49,26 @@ TEST_CASE("coro.co_go", "[go flag call coroutine]") {
   loop.WaitLoopEnd();
 }
 
-TEST_CASE("coro.co_resumer()", "[coroutine resumer with loop reply task]") {
+TEST_CASE("coro.co_resumer", "[coroutine resumer with loop reply task]") {
 
   base::MessageLoop loop;
   loop.Start();
 
   StlClosure stack_sensitive_fn = []() {
+    LOG(INFO) << " normal task run enter..";
     sleep(1);
+    LOG(INFO) << " normal task run and leave..";
   };
 
   bool stack_sensitive_fn_resumed = false;
 
   // big stack function;
   co_go &loop << [&]() {
-    LOG(INFO) << " coroutine enter ..";
+    LOG(INFO) << " coroutine enter post a reply task to resume coro..";
     loop.PostTaskAndReply(FROM_HERE, stack_sensitive_fn, co_resumer());
+    //auto resumer = co_resumer();
+    //loop.PostTask(FROM_HERE, resumer);
+
     LOG(INFO) << " coroutine pasued..";
     co_pause;
     LOG(INFO) << " coroutine resumed..";
