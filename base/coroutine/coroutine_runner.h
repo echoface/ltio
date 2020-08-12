@@ -33,7 +33,7 @@ typedef std::function<void()> CoroResumer;
  * M to excute the task
  * */
 
-class CoroRunner {
+class CoroRunner : public PersistRunner{
 public:
   typedef struct _go {
     _go(const char* func, const char* file, int line)
@@ -48,11 +48,11 @@ public:
 
     template <typename Functor>
     inline void operator-(Functor arg) {
-
       CoroRunner& runner = Runner();
       runner.coro_tasks_.push_back(std::move(CreateClosure(location_, arg)));
       if (!runner.invoke_coro_shceduled_ && target_loop_) {
-        target_loop_->PostTask(NewClosure(std::bind(&CoroRunner::RunCoroutine, &runner)));
+        //runner.invoke_coro_shceduled_ = true
+        target_loop_->WeakUp();
       }
     }
 
@@ -64,7 +64,8 @@ public:
         CoroRunner& runner = Runner();
         runner.coro_tasks_.push_back(std::move(CreateClosure(location, closure_fn)));
         if (!runner.invoke_coro_shceduled_ && loop) {
-          loop->PostTask(NewClosure(std::bind(&CoroRunner::RunCoroutine, &runner)));
+          //runner.invoke_coro_shceduled_ = true
+          loop->WeakUp();
         }
     	};
       target_loop_->PostTask(NewClosure(std::bind(func, target_loop_, location_)));
@@ -76,36 +77,53 @@ public:
 public:
   static CoroRunner& Runner();
 
-  /* make current coro give up cpu*/
   void Yield();
 
-  /* give up cpu till ms pass*/
   void Sleep(uint64_t ms);
 
   StlClosure Resumer();
 
   std::string RunnerInfo() const;
 
-  /* judge wheather running in a main coroutine with thread*/
-  bool InMainCoroutine() const { return (main_coro_ == current_);}
 
-  bool CanYieldHere() const {return !InMainCoroutine();}
+  bool CanYieldHere() const {return !IsMain();}
+
 protected:
   CoroRunner();
   ~CoroRunner();
-  /* reuse coroutine or delete*/
-  void GcCoroutine(Coroutine* coro);
+
+#ifdef USE_LIBACO_CORO_IMPL
+  static void CoroutineMain();
+#else
+  static void CoroutineMain(void *coro);
+#endif
+
+protected:
+  /* override from PersistRunner
+   *
+   * load(bind) task(cargo) to coroutine(car) and run(transfer)
+   * */
+  void Sched();
 
   /* release the coroutine memory */
-  void DestroyCroutine();
+  void FreeOutdatedCoro();
 
-  /* install coroutine to P(CoroRunner, binded to a native thread)*/
-  void RunCoroutine();
+  /* check whether still has pending task need to run
+   * case 0: still has pending task need to run
+   *  return true at once
+   * case 1: no pending task need to run
+   *    1.1: enough coroutine(task executor)
+   *      return false; then corotuine will end its life time
+   *    1.2: just paused this corotuine, and wait task to resume it
+   *      return true
+   */
+  bool ContinueRun();
 
-  /* retrieve a task from pending list
-   * 返回一个任务(可能会Yield到MainCoro等待任务Pending)
-   * 返回NULL代表结束这个Coroutine 的生命周期 */
-  bool WaitPendingTask();
+  /*return true when has more task to run*/
+  bool HasMoreTask() const;
+
+  /*retrieve task from inloop queue or public task pool*/
+  bool GetTask(TaskBasePtr& task);
 
   /* from stash list got a coroutine or create new one*/
   Coroutine* RetrieveCoroutine();
@@ -114,13 +132,9 @@ protected:
   void Resume(WeakCoroutine& coro, uint64_t id);
 
   /* do resume a coroutine from main_coro*/
-  void DoResume(WeakCoroutine& coro, uint64_t id, int type);
+  void DoResume(WeakCoroutine& coro, uint64_t id);
 
-#ifdef USE_LIBACO_CORO_IMPL
-  static void CoroutineMain();
-#else
-  static void CoroutineMain(void *coro);
-#endif
+  bool IsMain() const {return main_coro_ == current_;}
 
   /* switch call stack from different coroutine*/
   void SwapCurrentAndTransferTo(Coroutine *next);
@@ -138,9 +152,8 @@ private:
   std::vector<Coroutine*> to_be_delete_;
 
   /*every thread max resuable coroutines*/
-  size_t max_reuse_coroutines_;
+  size_t max_parking_count_;
   std::list<Coroutine*> stash_list_;
-
   DISALLOW_COPY_AND_ASSIGN(CoroRunner);
 };
 

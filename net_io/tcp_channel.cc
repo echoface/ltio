@@ -28,6 +28,8 @@ TcpChannel::TcpChannel(int socket_fd,
                        const IPEndPoint& peer,
                        base::EventPump* pump)
   : SocketChannel(socket_fd, loc, peer, pump) {
+
+  socketutils::KeepAlive(socket_fd, true);
 }
 
 TcpChannel::~TcpChannel() {

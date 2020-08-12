@@ -29,6 +29,12 @@ enum LoopState {
   ST_STOPED  = 3
 };
 
+class PersistRunner {
+  public:
+    virtual void Sched() = 0;
+};
+
+
 class MessageLoop : public PumpDelegate,
                     public FdEvent::Handler {
   public:
@@ -85,6 +91,8 @@ class MessageLoop : public PumpDelegate,
     void Start();
     bool IsInLoopThread() const;
 
+    void WeakUp();
+    void InstallPersistRunner(PersistRunner* runner);
     //t: millsecond for giveup cpu for waiting
     void WaitLoopEnd(int32_t t = 1);
     void SetLoopName(std::string name);
@@ -134,6 +142,8 @@ class MessageLoop : public PumpDelegate,
     std::atomic_flag notify_flag_;
     ConcurrentTaskQueue scheduled_tasks_;
     std::list<TaskBasePtr> in_loop_tasks_;
+    // every loop will invoked task, can only opt in loop
+    std::list<PersistRunner*> persist_runner_;
 
     // pipe just use for loop control
     int wakeup_pipe_in_ = -1;

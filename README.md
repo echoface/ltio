@@ -1,13 +1,15 @@
 
-LigthingIO is a 'light' network IO application framework with some `base` impliment for better coding experience;
+LigthingIO is a 'light' network IO framework with some `base` impliment for better coding experience;
 
 it has implemnet follow code/component
+
+all of those code ispired by project Chromium/libevent/Qt/NodeJs
 
 - base code
 - message loop
 - repeat timer
-- coroutine scheduler
 - lazyinstance
+- coroutine scheduler
 
 - net io based on loop
 
@@ -21,19 +23,19 @@ it has implemnet follow code/component
 
 - thread safe lru component
 - inverted indexer table
-- count min sketch with its utils
 - bloom filter
+- count min sketch with its utils
 - source loader (TP)
 
 integration:
 - add async mysql client support; [pre]
 
 About MessageLoop:
-  like mostly messageloop class, all PostTask/PostDelayTask/PostTaskWithReply implemented, it's ispired by chromium messageloop code; it's task also support location info for more convinience debug
+  like mostly messageloop implement, all PostTask/PostDelayTask/PostTaskWithReply implemented, it's ispired by chromium messageloop code;
 
 ```c++
 /*
-  follow code will give you infomathion about the crash task where from
+  follow code will give you infomathion about the crash task where come from
   W1127 08:36:09.786927  9476 closure_task.h:46] Task Error Exception, From:LocationTaskTest@/path_to_project/base/message_loop/test/run_loop_test.cc:24
 */
 void LocationTaskTest() {
@@ -49,15 +51,18 @@ void LocationTaskTest() {
   loop.PostDelayTask(NewClosure([&]() {
     loop.QuitLoop();
   }), 2000);
+
   loop.WaitLoopEnd();
 }
 ```
 
 
 About Coroutine:
-coroutine sheduler was a 'none-system-hack' type implement, why?, most of `blablabla wonderful coroutine library` will has some not clear behavior,(eg: thread locale storage. cross thread schedule, not-compatiable system api hack); the coroutine schedule implement depend a clear resume and run condition youself control; only work in a thread your arranged;
-chinese:
-coroutine调度的实现依赖于message loop， 没有对系统调用进行hack， 往往那些实现了很NB的coroutine库看上去的确很牛逼， 但是大多数却有着他们没有提到的这样或者那样的问题。比如说跨线程调度/thread locale storage的支持. 系统api的兼容等等。这些问题上这些库往往一言带过或者避而不谈。我遇到的95%甚至更多的coroutine库都有thread locale storage的问题;谁能保证我们引入的第三方代码里面没有使用呢？有些实现NB的库实现了coroutine local storage的确很叼，谁能保证我们引入的第三方代码里面没有使用呢？在C++没有垃圾回收机制的情况下。其实这些行为都非常危险; LightingIO中的现实没有syscall的hack， 不支持自动的跨线程调度，支持使用TLS（本身也依赖TLS）。他的切换与唤起需要MessageLoop和coroutine本身的配合，看上去不那么自动化，但是能非常符合我们预期的进行控制. 本质上,corotine 只是MessageLoop的一个TaskRunner; 但是我们却没有使用Crorontine作为任务队列的默认Runner。其实对于任何stackfull的coroutine来说，都是有代价的。而大多数时候，我们并不需要这些corutine，只是在某些必要的场景下， 我们希望很好的切换来使得代码更加可读，可控;特别对我这样的菜鸟级选手而言
+
+这是一个工具类的非系统侵入的Fullstack的Coroutine实现. 其背后有基于liaco和libcoro的两份实现.
+在Ali ECS(with CentOs/Ubuntu)对比下来性能不分上下.
+
+some brief usage code looks like below:
 ```c++
 //the only requirement, be sure in a messageloop; it's LightingIO's fundamentals
 void coro_c_function();
@@ -96,28 +101,36 @@ void coro_fun(std::string tag);
 
   auto will_yield_fn = [&]() {
 
-    // do something here util has something need async done
-    // 例如这件事情需要很大的栈空间来完成或者是需要异步完成，这里挂起当前coroutine，并在这里就指定好resume的逻辑
-    loop.PostTaskWithReply(NewClosure([]() {
-      // some thing especial need big stack
-    }),
-    NewClosure(co_resumer()));
+    // do another task async with a resume callback
+    loop.PostTaskWithReply(
+      NewClosure([]() {
+        // some thing especial need big stack
+        // Task 1
+      }),
+      NewClosure(co_resumer()));
+    co_pause; // WaitTaskEnd without block this thread;
 
-    //or another function in coroutine with current corotine's resume_closure
+
+    //scheudle another coroutine task with this coroutine's resumer
     co_go std::bind(AnotherCoroutineWithResume, co_resumer());
-
     co_pause; // paused here, util co_resumer() be called in any where;
-
-    //  do other things
   }
 
-  //keep in loop run this code
-  loop.PostTask(NewClosure([&]() {
-    co_go will_yield_fn; //just schedule, not entry now
-  });
+  co_go &loop << will_yield_fn;
+
   loop.WaitLoopEnd();
 }
 ```
+这里没有Hook系统调用的原因主要有两个:
+1. Hook系统调用的集成性并没有他们所宣传的那么好(可能我理解不够).
+2. 个人仍然坚持需要知道自己在干什么,有什么风险的开发者有选择的使用Coroutone
+
+基于上面这个原因, 所以在ltio中, Coroutine是基于MessageLoop的TopLevel的工具. 其底层模拟实现了Golang类似的G,M,P 角色调度.
+不同点在于并没有支持Worksteal, 其中的一些原因有跨线程调度在C++资源管理方面带来的问题.跟重要的一点是希望通过约束其行为
+让使用着非常明确其运行的环境和作用. 如果有需要可以基于以固定Loop数量(eg: CPU*2)为Pool的基础上Wrap一个WorkSteal的封装.
+从个人角度上讲, 仍旧希望他是一基于MessageLoop的Task调度为主的实现方式, 但是可以让用户根据需要使用Coroutine作为工具辅助
+完成一些事情来让这个过程更加舒适.
+
 
 LazyInstance:
 ```c++
@@ -161,18 +174,9 @@ repeated timer:
 
 NOTE
 ---
-  INPROCESS;
 
-  This library still in progress, do not use it in your project or production environments;
-  **email** me if any question and problem;
+**email** me if any question and problem;
 
-Learning and integrate what i think into LightingIO
-
-LightingIO itself just a normal network application framework; all its technology from my practice and work
-
-at the start time of this project; i use libevent, but i find many things was limited by the exsiting code; it's hard to hack or change
-the libevent code; so... I give up libvent at last, and then start all things from zero, in thoes days and night, thanks the support from
-my girl friends; and other reference books
-
+Learning and integrate what i leaned/think into ltio
 
 From HuanGong 2018-01-08

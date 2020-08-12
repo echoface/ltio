@@ -157,7 +157,7 @@ public:
 #ifdef ENBALE_RDS_CLIENT
     if (req->RequestUrl() == "/rds") {
       app.SendRedisMessage();
-      response->MutableBody() = "proxy a raw request";
+      response->MutableBody() = "proxy a redis request";
       return context->Send(std::move(response));
     }
 #endif

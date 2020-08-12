@@ -103,6 +103,10 @@ MessageLoop::~MessageLoop() {
   VLOG(GLOG_VINFO) << "MessageLoop@" << this << "[name:" << loop_name_ << "] Gone";
 }
 
+void MessageLoop::WeakUp() {
+  Notify(task_fd_, &kTaskFdCounter, sizeof(kTaskFdCounter));
+}
+
 bool MessageLoop::HandleRead(FdEvent* fd_event) {
   if (fd_event == wakeup_event_.get()) {
 
@@ -163,6 +167,11 @@ void MessageLoop::Start() {
       if (status_.load() == ST_STARTED) break;
     }
   }
+}
+
+void MessageLoop::InstallPersistRunner(PersistRunner* runner) {
+  CHECK(IsInLoopThread());
+  persist_runner_.push_back(runner);
 }
 
 void MessageLoop::WaitLoopEnd(int32_t ms) {
@@ -239,9 +248,11 @@ bool MessageLoop::PendingNestedTask(TaskBasePtr& task) {
   DCHECK(IsInLoopThread());
 
   in_loop_tasks_.push_back(std::move(task));
-  //if (!notify_flag_.test_and_set()) {
-  Notify(task_fd_, &kTaskFdCounter, sizeof(kTaskFdCounter));
-  //}
+  if (!notify_flag_.test_and_set()) {
+    if (Notify(task_fd_, &kTaskFdCounter, sizeof(kTaskFdCounter)) <= 0) {
+      notify_flag_.clear();
+    }
+  }
   return true;
 }
 
@@ -253,9 +264,11 @@ bool MessageLoop::PostTask(TaskBasePtr task) {
   }
 
   bool ret = scheduled_tasks_.enqueue(std::move(task));
-  //if (!notify_flag_.test_and_set()) {
-  Notify(task_fd_, &kTaskFdCounter, sizeof(kTaskFdCounter));
-  //}
+  if (!notify_flag_.test_and_set()) {
+    if (Notify(task_fd_, &kTaskFdCounter, sizeof(kTaskFdCounter)) <= 0) {
+      notify_flag_.clear();
+    }
+  }
   return ret;
 }
 
@@ -277,24 +290,33 @@ void MessageLoop::RunScheduledTask() {
 
 void MessageLoop::RunNestedTask() {
   DCHECK(IsInLoopThread());
-  while(in_loop_tasks_.size()) {
-    auto task = std::move(in_loop_tasks_.front());
-    in_loop_tasks_.pop_front();
+  TaskBasePtr task;
+
+  std::list<TaskBasePtr> nest_tasks(std::move(in_loop_tasks_));
+  in_loop_tasks_.clear();
+  for (const auto& task : nest_tasks) {
     task->Run();
   }
+
+  //Note: can't in Sched uninstall runner
+  for (PersistRunner* runner : persist_runner_) {
+    runner->Sched();
+  }
+
   in_loop_tasks_.clear();
 }
 
 void MessageLoop::RunCommandTask(ScheduledTaskType type) {
   switch(type) {
     case ScheduledTaskType::TaskTypeDefault: {
-      notify_flag_.clear();
 
       uint64_t count = 0;
       int ret = ::read(task_fd_, &count, sizeof(count));
       LOG_IF(ERROR, ret < 0) << " error:" << StrError(errno) << " fd:" << task_fd_;
 
-      //CHECK(sizeof(count) == ::read(task_fd_, &count, sizeof(count)));
+      // clear must clear after read
+      notify_flag_.clear();
+
       RunScheduledTask();
 
     } break;
