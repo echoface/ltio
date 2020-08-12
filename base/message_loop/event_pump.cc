@@ -149,7 +149,7 @@ void EventPump::InvokeFiredEvent(FiredEvent* evs, int count) {
 }
 
 timeout_t EventPump::NextTimeout() {
-  static const uint64_t default_timeout_ms = 5;
+  static const uint64_t default_timeout_ms = 50;
 
   ::timeouts_update(timeout_wheel_, time_ms());
   if (::timeouts_expired(timeout_wheel_)) {
@@ -158,13 +158,9 @@ timeout_t EventPump::NextTimeout() {
 
   timeout_t next_timeout = default_timeout_ms;
   if (::timeouts_pending(timeout_wheel_)) {
-    next_timeout = ::timeouts_timeout(timeout_wheel_);
+    next_timeout = std::min(next_timeout, ::timeouts_timeout(timeout_wheel_));
   }
-
-  if (!delegate_) {
-    return next_timeout;
-  }
-  return std::min(next_timeout, delegate_->PumpTimeout());
+  return next_timeout;
 }
 
 void EventPump::InitializeTimeWheel() {
