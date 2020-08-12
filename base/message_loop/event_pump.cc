@@ -149,7 +149,7 @@ void EventPump::InvokeFiredEvent(FiredEvent* evs, int count) {
 }
 
 timeout_t EventPump::NextTimeout() {
-  static const uint64_t default_timeout_ms = 2000;
+  static const uint64_t default_timeout_ms = 5;
 
   ::timeouts_update(timeout_wheel_, time_ms());
   if (::timeouts_expired(timeout_wheel_)) {
