@@ -24,7 +24,7 @@ typedef std::function<void()> CoroResumer;
  *
  * G: CoroTask
  * M: Coroutine
- * P: CoroRunner
+ * P: CoroRunner <-bind-> MessageLoop
  *
  * __go is a utility for schedule a CoroTask(G) Bind To
  * Current(can also bind to a specific native thread) CoroRunner(P)
@@ -50,10 +50,7 @@ public:
     inline void operator-(Functor arg) {
       CoroRunner& runner = Runner();
       runner.coro_tasks_.push_back(std::move(CreateClosure(location_, arg)));
-      if (!runner.invoke_coro_shceduled_ && target_loop_) {
-        //runner.invoke_coro_shceduled_ = true
-        target_loop_->WeakUp();
-      }
+      target_loop_->WeakUp();
     }
 
     // here must make sure all things wraper(copy) into closue,
@@ -63,15 +60,12 @@ public:
     	auto func = [=](base::MessageLoop* loop, const Location& location) {
         CoroRunner& runner = Runner();
         runner.coro_tasks_.push_back(std::move(CreateClosure(location, closure_fn)));
-        if (!runner.invoke_coro_shceduled_ && loop) {
-          //runner.invoke_coro_shceduled_ = true
-          loop->WeakUp();
-        }
+        loop->WeakUp();
     	};
       target_loop_->PostTask(NewClosure(std::bind(func, target_loop_, location_)));
     }
     Location location_;
-    base::MessageLoop* target_loop_;
+    base::MessageLoop* target_loop_ = nullptr;
   }_go;
 
 public:
@@ -85,7 +79,6 @@ public:
 
   std::string RunnerInfo() const;
 
-
   bool CanYieldHere() const {return !IsMain();}
 
 protected:
@@ -93,9 +86,9 @@ protected:
   ~CoroRunner();
 
 #ifdef USE_LIBACO_CORO_IMPL
-  static void CoroutineMain();
+  static void CoroutineEntry();
 #else
-  static void CoroutineMain(void *coro);
+  static void CoroutineEntry(void *coro);
 #endif
 
 protected:
@@ -145,8 +138,6 @@ private:
 
   bool gc_task_scheduled_;
   MessageLoop* bind_loop_;
-
-  bool invoke_coro_shceduled_;
 
   std::list<TaskBasePtr> coro_tasks_;
   std::vector<Coroutine*> to_be_delete_;

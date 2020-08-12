@@ -17,10 +17,10 @@ static thread_local CoroRunner* tls_runner = NULL;
 
 //IMPORTANT NOTE: NO HEAP MEMORY HERE!!!
 #ifdef USE_LIBACO_CORO_IMPL
-void CoroRunner::CoroutineMain() {
+void CoroRunner::CoroutineEntry() {
   Coroutine* coroutine = static_cast<Coroutine*>(aco_get_arg());
 #else
-void CoroRunner::CoroutineMain(void *coro) {
+void CoroRunner::CoroutineEntry(void *coro) {
   Coroutine* coroutine = static_cast<Coroutine*>(coro);
 #endif
 
@@ -98,14 +98,13 @@ bool CoroRunner::HasMoreTask() const {
 void CoroRunner::Sched() {
   //get a corotuien and start to run
   while (HasMoreTask()) {
-    //P(Runner) get a M(Corotine) to work(CoroutineMain)
+    //P(Runner) get a M(Corotine) to work(CoroutineEntry)
     Coroutine* coro = RetrieveCoroutine();
     DCHECK(coro);
 
     SwapCurrentAndTransferTo(coro);
   }
   FreeOutdatedCoro();
-  invoke_coro_shceduled_ = false;
 }
 
 void CoroRunner::Yield() {
@@ -195,9 +194,9 @@ Coroutine* CoroRunner::RetrieveCoroutine() {
 
   auto coro_ptr =
 #ifdef USE_LIBACO_CORO_IMPL
-    Coroutine::Create(&CoroRunner::CoroutineMain, main_coro_);
+    Coroutine::Create(&CoroRunner::CoroutineEntry, main_coro_);
 #else
-    Coroutine::Create(&CoroRunner::CoroutineMain);
+    Coroutine::Create(&CoroRunner::CoroutineEntry);
 #endif
   coro_ptr->SelfHolder(coro_ptr);
 
