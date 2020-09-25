@@ -1,4 +1,3 @@
-ADD_DEFINITIONS(-std=c++11)
 
 set(LTNET_SOURCE
   channel.cc
