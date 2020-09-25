@@ -1,7 +1,0 @@
-cmake_minimum_required(VERSION 2.8)
-
-SET(LT_INTEGRATION_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-
-if (NOT LTIO_DISABLE_ASYNCMYSQL)
-  ADD_SUBDIRECTORY(async_mysql)
-endif()

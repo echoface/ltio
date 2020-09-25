@@ -75,7 +75,7 @@ bool TcpChannel::HandleWrite(base::FdEvent* event) {
 
     ssize_t writen_bytes = socketutils::Write(socket_fd, out_buffer_.GetRead(), out_buffer_.CanReadSize());
     if (writen_bytes < 0) {
-      if (errno != EAGAIN && errno != EWOULDBLOCK) {
+      if (errno != EAGAIN) {
         fatal_err = errno;
       }
       break;
@@ -158,7 +158,7 @@ int32_t TcpChannel::Send(const char* data, const int32_t len) {
 
     if (part_write < 0) {
 
-      if (errno == EAGAIN || errno == EWOULDBLOCK) {
+      if (errno == EAGAIN) {
 
         out_buffer_.WriteRawData(data + n_write, n_remain);
 
