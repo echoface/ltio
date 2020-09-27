@@ -37,12 +37,16 @@ IOService::~IOService() {
 }
 
 void IOService::StartIOService() {
-
-  if (!accept_loop_->IsInLoopThread()) {
-    auto functor = std::bind(&IOService::StartIOService, this);
-    accept_loop_->PostTask(NewClosure(std::move(functor)));
-    return;
+  if (accept_loop_->IsInLoopThread()) {
+    return StartInternal();
   }
+
+  accept_loop_->PostTask(FROM_HERE,
+                         std::bind(&IOService::StartInternal, shared_from_this()));
+}
+
+void IOService::StartInternal() {
+  DCHECK(accept_loop_->IsInLoopThread());
 
   CHECK(acceptor_->StartListen());
 
@@ -68,7 +72,8 @@ void IOService::StopIOService() {
   //async
   for (auto& codec_service : codecs_) {
     base::MessageLoop* loop = codec_service->IOLoop();
-    loop->PostTask(NewClosure(std::bind(&CodecService::CloseService, codec_service)));
+    //TODO: add a flag stop callback, force stop/close?
+    loop->PostTask(FROM_HERE, &CodecService::CloseService, codec_service, false);
   }
 
   if (codecs_.empty() && delegate_) {

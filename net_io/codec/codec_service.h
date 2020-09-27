@@ -47,7 +47,7 @@ public:
   base::MessageLoop* IOLoop() const { return binded_loop_;}
   base::EventPump* Pump() const { return binded_loop_->Pump();}
 
-  void CloseService();
+  void CloseService(bool block_callback = false);
   bool IsConnected() const;
 
   virtual void BeforeCloseService() {};

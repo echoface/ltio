@@ -23,6 +23,7 @@ public:
   ~TcpChannel();
 
   void ShutdownChannel(bool half_close) override;
+  void ShutdownWithoutNotify();
 
   int32_t Send(const char* data, const int32_t len) override;
 protected:

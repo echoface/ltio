@@ -57,6 +57,10 @@ set(LTNET_SOURCE
   clients/router/maglev_router.cc
   clients/router/ringhash_router.cc
   clients/router/roundrobin_router.cc
+
+  #udp_io
+  udp_io/udp_context.cc
+  udp_io/udp_service.cc
 )
 
 add_library(ltnet_objs OBJECT ${LTNET_SOURCE})

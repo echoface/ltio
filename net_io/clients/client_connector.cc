@@ -18,13 +18,13 @@ Connector::Connector(EventPump* pump, Delegate* d)
 void Connector::Launch(const IPEndPoint &address) {
   CHECK(pump_->IsInLoopThread() && delegate_);
 
-  int sock_fd = socketutils::CreateNonBlockingSocket(address.GetSockAddrFamily());
+  int sock_fd = socketutils::CreateNoneBlockTCP(address.GetSockAddrFamily());
   if (sock_fd == -1) {
-    LOG(ERROR) << __FUNCTION__ << " CreateNonBlockingSocket failed";
+    LOG(ERROR) << __FUNCTION__ << " connect [" << address.ToString() << "] failed";
     return delegate_->OnConnectFailed(inprogress_list_.size());
   }
 
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << " connect to addr:" << address.ToString();
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << " connect [" << address.ToString() << "] enter";
 
   SockaddrStorage storage;
   if (address.ToSockAddr(storage.addr, storage.addr_len) == 0) {
@@ -36,6 +36,7 @@ void Connector::Launch(const IPEndPoint &address) {
   int ret = socketutils::SocketConnect(sock_fd, storage.addr, &error);
   VLOG(GLOG_VTRACE) << __FUNCTION__ << " ret:" << ret << " error:" << base::StrError(error);
   if (ret == 0 && error == 0) {
+
     IPEndPoint remote_addr;
     IPEndPoint local_addr;
 
@@ -100,8 +101,7 @@ bool Connector::HandleWrite(base::FdEvent* fd_event) {
   fd_event->GiveupOwnerFd();
   Cleanup(fd_event);
 
-  IPEndPoint remote_addr;
-  IPEndPoint local_addr;
+  IPEndPoint remote_addr, local_addr;
   if (!socketutils::GetPeerEndpoint(socket_fd, &remote_addr) ||
       !socketutils::GetLocalEndpoint(socket_fd, &local_addr)) {
 

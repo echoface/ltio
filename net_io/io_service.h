@@ -64,6 +64,8 @@ public:
   bool IsRunning() {return acceptor_ && acceptor_->IsListening();}
 
 private:
+  void StartInternal();
+
   //void HandleProtoMessage(RefCodecMessage message);
   /* create a new connection channel */
   void OnNewConnection(int, const IPEndPoint&);

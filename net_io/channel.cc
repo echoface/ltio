@@ -54,11 +54,8 @@ void SocketChannel::setup_channel() {
 }
 
 void SocketChannel::close_channel() {
-
   pump_->RemoveFdEvent(fd_event_.get());
-
   SetChannelStatus(Status::CLOSED);
-  reciever_->OnChannelClosed(this);
 }
 
 int32_t SocketChannel::binded_fd() const {

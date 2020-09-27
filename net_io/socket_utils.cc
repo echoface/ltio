@@ -36,12 +36,6 @@ SocketFd CreateNoneBlockUDP(sa_family_t family, int type) {
   return sockfd;
 }
 
-SocketFd CreateNonBlockingSocket(sa_family_t family) {
-  int sockfd = ::socket(family, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_TCP);
-  LOG_IF(ERROR, sockfd == -1) << __FUNCTION__ << " open socket err:[" << base::StrError() << "]";
-  return sockfd;
-}
-
 int BindSocketFd(SocketFd sockfd, const struct sockaddr* addr) {
   int ret = ::bind(sockfd, addr, static_cast<socklen_t>(sizeof(struct sockaddr_in6)));
   LOG_IF(ERROR, ret < 0) << __FUNCTION__ << " bind err:[" << base::StrError() << "]";
@@ -233,7 +227,9 @@ bool IsSelfConnect(int sockfd) {
 
 bool ReUseSocketAddress(SocketFd socket_fd, bool reuse) {
   int option = reuse ? 1 : 0;
-  int r = ::setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR,
+  int r = ::setsockopt(socket_fd,
+                       SOL_SOCKET,
+                       SO_REUSEADDR,
                        &option, static_cast<socklen_t>(sizeof option));
   LOG_IF(ERROR, r == -1) << " REUSEADDR Failed, fd:" << socket_fd << " Reuse:" << reuse;
   return (r == 0);

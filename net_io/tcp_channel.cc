@@ -110,16 +110,17 @@ bool TcpChannel::HandleClose(base::FdEvent* event) {
   DCHECK(pump_->IsInLoopThread());
   VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
 
-  if (!IsConnected()) {
-    reciever_->OnChannelClosed(this);
-    return false;
+  if (IsConnected()) {
+    close_channel();
   }
-  close_channel();
-  return false;
+  reciever_->OnChannelClosed(this);
+  return false; // don't stop next event
 }
 
 void TcpChannel::ShutdownChannel(bool half_close) {
   DCHECK(pump_->IsInLoopThread());
+
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
 
   schedule_shutdown_ = true;
   if (half_close) {
@@ -127,9 +128,13 @@ void TcpChannel::ShutdownChannel(bool half_close) {
       fd_event_->EnableWriting();
     }
   } else {
-
-    VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
     HandleClose(fd_event_.get());
+  }
+}
+
+void TcpChannel::ShutdownWithoutNotify() {
+  if (IsConnected()) {
+    close_channel();
   }
 }
 

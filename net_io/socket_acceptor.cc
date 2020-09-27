@@ -6,6 +6,7 @@
 #include "base/base_constants.h"
 #include "base/utils/sys_error.h"
 #include "base/sockaddr_storage.h"
+#include "socket_utils.h"
 
 namespace lt {
 namespace net {
@@ -24,11 +25,11 @@ SocketAcceptor::~SocketAcceptor() {
 }
 
 bool SocketAcceptor::InitListener() {
-  int socket_fd = socketutils::CreateNonBlockingSocket(address_.GetSockAddrFamily());
+  int socket_fd = socketutils::CreateNoneBlockTCP(address_.GetSockAddrFamily());
   if (socket_fd < 0) {
-  	LOG(ERROR) << " failed create none blocking socket fd";
     return false;
   }
+
   //reuse socket addr and port if possible
   socketutils::ReUseSocketPort(socket_fd, true);
   socketutils::ReUseSocketAddress(socket_fd, true);

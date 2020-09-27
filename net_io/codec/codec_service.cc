@@ -40,12 +40,15 @@ void CodecService::StartProtocolService() {
   channel_->StartChannel();
 }
 
-void CodecService::CloseService() {
+void CodecService::CloseService(bool block_callback) {
 	DCHECK(binded_loop_->IsInLoopThread());
 
 	BeforeCloseService();
 
-	channel_->ShutdownChannel(false);
+  if (!block_callback) {
+	  return channel_->ShutdownChannel(false);
+  }
+  return channel_->ShutdownWithoutNotify();
 }
 
 void CodecService::SetIsServerSide(bool server_side) {
