@@ -6,6 +6,16 @@
 #include <base/message_loop/event_pump.h>
 #include <base/message_loop/message_loop.h>
 
+class Stub {
+  public:
+    void func(int a, int b) {
+      LOG(INFO) << __FUNCTION__ << " invoked ";
+    };
+
+};
+
+Stub stub;
+
 void FailureDump(const char* s, int sz) {
   std::string failure_info(s, sz);
   LOG(INFO) << " ERROR: " << failure_info;
@@ -179,6 +189,19 @@ TEST_CASE("messageloop.tasklocation", "[new task tracking location ]") {
     LOG(INFO) << " task_location exception by throw";
     //throw "task throw";
   }));
+
+  loop.PostDelayTask(NewClosure([&](){
+    loop.QuitLoop();
+  }), 2000);
+  loop.WaitLoopEnd();
+}
+
+
+TEST_CASE("base.wihout_bind", "[test event pump timer]") {
+  base::MessageLoop loop;
+  loop.Start();
+
+  loop.PostTask(FROM_HERE, &Stub::func, &stub, 12, 13);
 
   loop.PostDelayTask(NewClosure([&](){
     loop.QuitLoop();

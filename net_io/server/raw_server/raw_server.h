@@ -6,7 +6,6 @@
 #include <vector>
 #include <chrono>             // std::chrono::seconds
 #include <functional>
-#include <condition_variable> // std::condition_variable, std::cv_status
 
 #include "base/base_micro.h"
 #include "net_io/io_service.h"

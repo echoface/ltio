@@ -8,7 +8,6 @@
 #include <chrono>             // std::chrono::seconds
 #include <mutex>              // std::mutex, std::unique_lock
 #include <cinttypes>
-#include <condition_variable> // std::condition_variable, std::cv_status
 
 #include "client_base.h"
 #include "client_channel.h"

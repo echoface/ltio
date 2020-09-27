@@ -5,8 +5,6 @@
 #include <vector>
 #include <chrono>             // std::chrono::seconds
 #include <functional>
-#include <mutex>              // std::mutex, std::unique_lock
-#include <condition_variable> // std::condition_variable, std::cv_status
 
 #include "http_context.h"
 #include "base/base_micro.h"
@@ -51,13 +49,11 @@ private:
   Dispatcher* dispatcher_ = NULL;
   HttpMessageHandler message_handler_;
 
-  std::mutex mtx_;
-  std::condition_variable cv_;
-
   std::vector<base::MessageLoop*> io_loops_;
   std::list<RefIOService> ioservices_;
   StlClosure closed_callback_;
 
+  std::mutex mtx_;
   std::atomic_bool serving_flag_;
 
   std::atomic_uint32_t connection_count_;
