@@ -15,7 +15,8 @@ RefUDPService UDPService::Create(base::MessageLoop* io,
 
 UDPService::UDPService(base::MessageLoop* io, const IPEndPoint& ep)
   : io_(io),
-    endpoint_(ep) {
+    endpoint_(ep),
+    buffers_(100) {
 }
 
 void UDPService::StartService() {
@@ -24,8 +25,10 @@ void UDPService::StartService() {
     io_->PostTask(FROM_HERE, functor);
     return;
   }
+
   int socket = socketutils::CreateNoneBlockUDP(endpoint_.GetSockAddrFamily());
   if (socket < 0) {
+    LOG(ERROR) << "create socket failed, ep:" << endpoint_.ToString();
     return;
   }
   //reuse socket addr and port if possible
@@ -33,10 +36,11 @@ void UDPService::StartService() {
   socketutils::ReUseSocketAddress(socket, true);
 
   SockaddrStorage storage;
-  endpoint_.ToSockAddr(storage.addr, storage.addr_len);
+  endpoint_.ToSockAddr(storage.AsSockAddr(), storage.Size());
 
-  int ret = socketutils::BindSocketFd(socket, storage.addr);
+  int ret = socketutils::BindSocketFd(socket, storage.AsSockAddr());
   if (ret < 0) {
+    LOG(ERROR) << "bind socket failed, socket:" << socket << " ep:" << endpoint_.ToString();
     socketutils::CloseSocket(socket);
     return;
   }
@@ -45,12 +49,38 @@ void UDPService::StartService() {
 }
 
 void UDPService::StopService() {
-
+  if (!io_->IsInLoopThread()) {
+    io_->PostTask(FROM_HERE, &UDPService::StopService, shared_from_this());
+    return;
+  }
+  if (!socket_event_) return;
+  socketutils::CloseSocket(socket_event_->fd());
 }
 
 //override from FdEvent::Handler
 bool UDPService::HandleRead(base::FdEvent* fd_event) {
-  LOG(INFO) << __FUNCTION__ << "fd_event:" << fd_event;
+
+  do {
+    struct mmsghdr* hdr = buffers_.GetMmsghdr();
+    int recv_cnt = recvmmsg(fd_event->fd(), hdr, buffers_.Count(), MSG_WAITFORONE, NULL);
+    if (recv_cnt <= 0) {
+      if (errno == EAGAIN || errno == EINTR) {
+        break;
+      }
+
+      return HandleClose(fd_event);
+    }
+
+    for (int i = 0; i < recv_cnt; i++) {
+
+      UDPBufferDetail detail = buffers_.GetBufferDetail(i);
+      IPEndPoint endpoint;
+      bool ok = endpoint.FromSockAddr(detail.buffer->src_addr_.AsSockAddr(), detail.buffer->src_addr_.Size());
+      LOG_IF(ERROR, !ok) << "send addr can't be parse, check implement, should be a bug";
+      LOG(INFO) << "recv:" << detail.data() << " sender:" << endpoint.ToString();
+    }
+  } while(true);
+
   return true;
 }
 

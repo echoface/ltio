@@ -188,34 +188,33 @@ uint32_t SockAddrFamily(struct sockaddr* addr) {
 bool IsSelfConnect(int sockfd) {
   IPEndPoint peer_ep;
   IPEndPoint local_ep;
-  if (!GetLocalEndpoint(sockfd, &local_ep) ||
-      !GetPeerEndpoint(sockfd, &peer_ep)) {
+  if (!GetLocalEndpoint(sockfd, &local_ep) || !GetPeerEndpoint(sockfd, &peer_ep)) {
     return false;
-  };
+  }
+
   SockaddrStorage peer_storage;
-  if (!peer_ep.ToSockAddr(peer_storage.addr, peer_storage.addr_len)) {
+  if (!peer_ep.ToSockAddr(peer_storage.AsSockAddr(), peer_storage.addr_len)) {
     return false;
   }
 
   SockaddrStorage local_storage;
-  if (!local_ep.ToSockAddr(local_storage.addr, local_storage.addr_len)) {
+  if (!local_ep.ToSockAddr(local_storage.AsSockAddr(), local_storage.addr_len)) {
     return false;
   }
 
   switch(local_ep.GetSockAddrFamily()) {
     case AF_INET:  {
-      const struct sockaddr_in* laddr4 =
-        reinterpret_cast<struct sockaddr_in*>(local_storage.addr);
-      const struct sockaddr_in* raddr4 =
-        reinterpret_cast<struct sockaddr_in*>(peer_storage.addr);
+      const struct sockaddr_in* raddr4 = peer_storage.AsSockAddrIn();
+      const struct sockaddr_in* laddr4 = local_storage.AsSockAddrIn();
+
       return laddr4->sin_port == raddr4->sin_port &&
         laddr4->sin_addr.s_addr == raddr4->sin_addr.s_addr;
+
     }break;
     case AF_INET6: {
-      const struct sockaddr_in6* raddr6 =
-        reinterpret_cast<struct sockaddr_in6*>(peer_storage.addr);
-      const struct sockaddr_in6* laddr6 =
-        reinterpret_cast<struct sockaddr_in6*>(local_storage.addr);
+      const struct sockaddr_in6* raddr6 = peer_storage.AsSockAddrIn6();
+      const struct sockaddr_in6* laddr6 = local_storage.AsSockAddrIn6();
+
       return laddr6->sin6_port == raddr6->sin6_port &&
         (memcmp(&laddr6->sin6_addr, &raddr6->sin6_addr, sizeof(raddr6->sin6_addr)) == 0);
     }

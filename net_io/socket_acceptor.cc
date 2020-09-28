@@ -35,11 +35,11 @@ bool SocketAcceptor::InitListener() {
   socketutils::ReUseSocketAddress(socket_fd, true);
 
   SockaddrStorage storage;
-  address_.ToSockAddr(storage.addr, storage.addr_len);
+  address_.ToSockAddr(storage.AsSockAddr(), storage.Size());
 
-  int ret = socketutils::BindSocketFd(socket_fd, storage.addr);
+  int ret = socketutils::BindSocketFd(socket_fd, storage.AsSockAddr());
   if (ret < 0) {
-    LOG(ERROR) << " failed bind address for blocking socket fd";
+    LOG(ERROR) << " failed bind, address:" << address_.ToString() << " fd:" << socket_fd;
     socketutils::CloseSocket(socket_fd);
     return false;
   }

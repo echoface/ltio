@@ -3,6 +3,7 @@
 
 #include "base/ip_endpoint.h"
 #include <arpa/inet.h>
+#include <netinet/in.h>
 #include <string>
 
 /* about this code, a beeter refrence is muduo code, most of this from chenshuo's impliment*/
@@ -12,8 +13,8 @@ namespace socketutils {
 
 #define SocketFd int
 
-SocketFd CreateNoneBlockTCP(sa_family_t family, int type = 0);
-SocketFd CreateNoneBlockUDP(sa_family_t family, int type = 0);
+SocketFd CreateNoneBlockTCP(sa_family_t family, int type = IPPROTO_TCP);
+SocketFd CreateNoneBlockUDP(sa_family_t family, int type = IPPROTO_UDP);
 
 int ListenSocket(SocketFd fd);
 

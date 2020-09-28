@@ -27,13 +27,13 @@ void Connector::Launch(const IPEndPoint &address) {
   VLOG(GLOG_VTRACE) << __FUNCTION__ << " connect [" << address.ToString() << "] enter";
 
   SockaddrStorage storage;
-  if (address.ToSockAddr(storage.addr, storage.addr_len) == 0) {
+  if (address.ToSockAddr(storage.AsSockAddr(), storage.Size()) == 0) {
     socketutils::CloseSocket(sock_fd);
     return delegate_->OnConnectFailed(inprogress_list_.size());
   }
 
   int error = 0;
-  int ret = socketutils::SocketConnect(sock_fd, storage.addr, &error);
+  int ret = socketutils::SocketConnect(sock_fd, storage.AsSockAddr(), &error);
   VLOG(GLOG_VTRACE) << __FUNCTION__ << " ret:" << ret << " error:" << base::StrError(error);
   if (ret == 0 && error == 0) {
 

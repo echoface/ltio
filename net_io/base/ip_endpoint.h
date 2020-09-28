@@ -13,6 +13,7 @@
 
 #include "address_family.h"
 #include "ip_address.h"
+#include "sockaddr_storage.h"
 #include "sys_addrinfo.h"
 #include "net_export.h"
 

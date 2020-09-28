@@ -31,6 +31,7 @@
 #include "net_io/base/ip_address.h"
 #include "net_io/base/ip_endpoint.h"
 #include "net_io/base/sockaddr_storage.h"
+#include "net_io/udp_io/udp_service.h"
 #include <thirdparty/catch/catch.hpp>
 
 using namespace lt;
@@ -143,5 +144,20 @@ TEST_CASE("ip.endpoint", "[ip endpoint test]") {
   REQUIRE(addr.sin6_port == htobe16(8080));
 
   LOG(INFO) << "ipv6 localhost with port 8080:" << local_ep.ToString();
+}
+
+TEST_CASE("udp.pollbuffer", "[udp pollbuffer]") {
+  net::UDPPollBuffer buffer(5);
+}
+
+TEST_CASE("udp.udpservice", "[udp serivce]") {
+  base::MessageLoop main;
+  main.Start();
+
+  net::IPEndPoint ep("127.0.0.1", 8888);
+  auto service = net::UDPService::Create(&main, ep);
+  service->StartService();
+
+  main.WaitLoopEnd();
 }
 
