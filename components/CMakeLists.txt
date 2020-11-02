@@ -25,6 +25,11 @@ SET(COMPONENT_SOURCES
   ./inverted_indexer/posting_field/general_str_field.cc
   ./inverted_indexer/posting_field/bitmap_posting_list.cc
   ./inverted_indexer/posting_field/posting_list_manager.cc
+
+  #boolean indexer
+  ./boolean_indexer/document.cc
+  ./boolean_indexer/id_generator.cc
+  ./boolean_indexer/builder/be_indexer_builder.cc
 )
 
 add_library(ltcomponent_objs OBJECT ${COMPONENT_SOURCES})
