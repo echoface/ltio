@@ -6,7 +6,7 @@
 .clangd
 
 lib/
-*build*/
+*build/
 compile_commands.json
 
 .DS_*

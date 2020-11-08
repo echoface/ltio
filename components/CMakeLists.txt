@@ -28,7 +28,9 @@ SET(COMPONENT_SOURCES
 
   #boolean indexer
   ./boolean_indexer/document.cc
+  ./boolean_indexer/be_indexer.cc
   ./boolean_indexer/id_generator.cc
+  ./boolean_indexer/posting_list.cc
   ./boolean_indexer/builder/be_indexer_builder.cc
 )
 

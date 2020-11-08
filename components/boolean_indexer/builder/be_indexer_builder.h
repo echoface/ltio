@@ -18,6 +18,7 @@ class BeIndexerBuilder {
     void AddDocument(Document&& doc);
 
     BooleanIndexerPtr BuildIndexer();
+
   private:
     size_t max_conj_size_ = 0;
 
@@ -26,7 +27,6 @@ class BeIndexerBuilder {
 
     // conj_id => Conjunction
     std::unordered_map<uint64_t, Conjunction*> conjunctions_;
-
     DISALLOW_COPY_AND_ASSIGN(BeIndexerBuilder);
 };
 
