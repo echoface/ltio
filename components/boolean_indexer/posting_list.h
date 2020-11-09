@@ -3,6 +3,8 @@
 
 #include "id_generator.h"
 
+#include <sstream>
+
 namespace component {
 
 #define NULLENTRY 0xFFFFFFFFFFFFFFFF
@@ -49,6 +51,21 @@ public:
   EntryId Skip(const EntryId id);
 
   EntryId SkipTo(const EntryId id);
+
+  void DumpPostingList(std::ostringstream& oss) {
+    for (auto& pl : p_lists_) {
+      EntryId cur_id = pl.GetCurEntryID();
+      oss << pl.attr.first << "#" << pl.attr.second
+        << ", cur:" << cur_id
+        << ", doc:" << ConjUtil::GetDocumentID(EntryUtil::GetConjunctionId(cur_id))
+        << ":[";
+      for (auto& id : *pl.id_list) {
+        oss << ConjUtil::GetDocumentID(EntryUtil::GetConjunctionId(id))
+          << ", ";
+      }
+      oss << "]\n";
+    }
+  }
 
   //eg: assign {"tag", "in", [1, 2, 3]}
   //out:

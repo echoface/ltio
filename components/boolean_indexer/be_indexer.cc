@@ -86,9 +86,9 @@ uint64_t BooleanIndexer::GetUniqueID(const std::string& value) {
   return iter->second;
 }
 
-void BooleanIndexer::GetPostingLists(const size_t k_size,
-                                     const QueryAssigns& quries,
-                                     std::vector<PostingListGroup>* out) {
+size_t BooleanIndexer::GetPostingLists(const size_t k_size,
+                                       const QueryAssigns& quries,
+                                       std::vector<PostingListGroup>* out) {
 
   if (k_size == 0 && wildcard_list_) {
     static const Attr wildcard_attr("__wildcard__", 0);
@@ -120,7 +120,7 @@ void BooleanIndexer::GetPostingLists(const size_t k_size,
       out->emplace_back(std::move(group));
     }
   }
-
+  return out->size();
 }
 
 // init current and sort by order
@@ -131,18 +131,31 @@ void BooleanIndexer::InitPostingListGroup(std::vector<PostingListGroup>& plists)
 }
 
 int BooleanIndexer::Query(const QueryAssigns& quries,
-                          std::set<int32_t>* result) {
+                          std::set<int32_t>* result,
+                          const bool dump_details) {
+
   int k = std::min(max_ksize_, quries.size());
   for (; k >= 0; k--) {
 
     std::vector<PostingListGroup> plists;
-    GetPostingLists(k, quries, &plists);
+
+    size_t count = GetPostingLists(k, quries, &plists);
+   
+    if (dump_details) {
+      std::ostringstream oss;
+      oss << ">>>dump plist for k_size:" << k << ">>>>>\n";
+      for (auto& grp : plists) {
+        oss << "\t", grp.DumpPostingList(oss);
+      }
+      std::cout << oss.str();
+    }
 
     int temp_k = k;
     if (temp_k == 0) {
       temp_k = 1;
     }
-    if (plists.size() < temp_k) {
+
+    if (count < temp_k) {
       continue;
     }
 
@@ -153,13 +166,22 @@ int BooleanIndexer::Query(const QueryAssigns& quries,
       std::sort(plists.begin(),
                 plists.end(),
                 [](PostingListGroup& l, PostingListGroup& r) -> bool {
-                  return l.GetCurEntryID() > r.GetCurEntryID();
+                  return l.GetCurEntryID() < r.GetCurEntryID();
                 });
+
+      if (dump_details) {
+        std::ostringstream oss2;
+        oss2 << "after sort plist group\n";
+        for (auto& grp : plists) {
+          oss2 << "\t", grp.DumpPostingList(oss2);
+        }
+        std::cout << oss2.str();
+      }
 
       EntryId id = plists[0].GetCurEntryID();
 
+      //skip to k-1's entry id
       if (plists[0].GetCurConjID() != plists[temp_k - 1].GetCurConjID()) {
-        //skip to k-1's entry id
         EntryId skip_id = plists[temp_k - 1].GetCurEntryID();
         for (int l = 0; l < temp_k; l++) {
           plists[l].SkipTo(skip_id);
@@ -191,7 +213,7 @@ int BooleanIndexer::Query(const QueryAssigns& quries,
 
     }// end while
 
-  }// to k-1
+  }// to k = k-1
   return 0;
 }
 

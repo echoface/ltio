@@ -54,13 +54,15 @@ class BooleanIndexer {
 
     KSizeIndexes* MutableIndexes(size_t k);
 
-    void GetPostingLists(const size_t k_size,
-                         const QueryAssigns& quries,
-                         std::vector<PostingListGroup>* out);
+    size_t GetPostingLists(const size_t k_size,
+                           const QueryAssigns& quries,
+                           std::vector<PostingListGroup>* out);
 
     void InitPostingListGroup(std::vector<PostingListGroup>& plists);
 
-    int Query(const QueryAssigns& quries, std::set<int32_t>* result);
+    int Query(const QueryAssigns& quries,
+              std::set<int32_t>* result,
+              const bool dump_details = false);
 
     void DumpIndex();
 
