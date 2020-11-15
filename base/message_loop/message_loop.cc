@@ -201,6 +201,7 @@ void MessageLoop::PumpStarted() {
 }
 
 void MessageLoop::PumpStopped() {
+  running_.clear();
 }
 
 uint64_t MessageLoop::PumpTimeout() {

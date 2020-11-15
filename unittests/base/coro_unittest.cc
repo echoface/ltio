@@ -22,6 +22,16 @@ void coro_fun(std::string tag) {
   LOG(INFO) << tag << " coro_fun leave";
 }
 
+TEST_CASE("coro.background", "[run task as coro task in background]") {
+  LOG(INFO) << " start test go flag enter";
+  co_go coro_c_function;
+  co_go std::bind(&coro_fun, "tag_from_go_synatax");
+  co_go []() {
+    LOG(INFO) << " run lambda in coroutine" ;
+  };
+  LOG(INFO) << " start test go flag leave";
+}
+
 TEST_CASE("coro.co_go", "[go flag call coroutine]") {
   base::MessageLoop loop;
   loop.Start();

@@ -1,9 +1,11 @@
 
-#include "glog/logging.h"
+#include <mutex>
+
 #include <base/closure/closure_task.h>
 #include <base/memory/lazy_instance.h>
 
 #include "coroutine_runner.h"
+#include "glog/logging.h"
 
 namespace base {
 static const int kMaxReuseCoroutineNumbersPerThread = 500;
@@ -14,6 +16,9 @@ namespace __detail {
 //static thread_local base::LazyInstance<__detail::_T> tls_runner = LAZY_INSTANCE_INIT;
 static thread_local __detail::_T tls_runner_impl;
 static thread_local CoroRunner* tls_runner = NULL;
+static std::once_flag backgroup_once;
+
+ConcurrentTaskQueue CoroRunner::stealing_queue;
 
 //IMPORTANT NOTE: NO HEAP MEMORY HERE!!!
 #ifdef USE_LIBACO_CORO_IMPL
@@ -50,6 +55,29 @@ void CoroRunner::CoroutineEntry(void *coro) {
 #endif
 }
 
+
+//static
+base::MessageLoop* CoroRunner::backgroup() {
+  static base::MessageLoop backgroup;
+  std::call_once(backgroup_once, [&]() {
+    backgroup.SetLoopName("coro_background");
+    backgroup.Start();
+    //initialized a runner binded to this loop
+    backgroup.PostTask(FROM_HERE, &CoroRunner::Runner);
+  });
+  return &backgroup;
+}
+
+//static
+bool CoroRunner::schedule_task(TaskBasePtr&& task) {
+  return stealing_queue.enqueue(std::move(task));
+}
+
+//static
+void CoroRunner::RegisteAsCoroWorker(base::MessageLoop* l) {
+  l->InstallPersistRunner(&Runner());
+}
+
 CoroRunner::CoroRunner()
   : gc_task_scheduled_(false),
     bind_loop_(MessageLoop::Current()),
@@ -81,24 +109,29 @@ CoroRunner& CoroRunner::Runner() {
   return tls_runner_impl;
 }
 
+void CoroRunner::ScheduleTask(TaskBasePtr&& task) {
+  coro_tasks_.push_back(std::move(task));
+}
+
 bool CoroRunner::GetTask(TaskBasePtr& task) {
   if (!coro_tasks_.empty()) {
     task = std::move(coro_tasks_.front());
     coro_tasks_.pop_front();
     return true;
   }
+  
   // steal from global task queue
-  return false;
+  return stealing_queue.try_dequeue(task);
 }
 
 bool CoroRunner::HasMoreTask() const {
-  return !coro_tasks_.empty();
+  return coro_tasks_.size() || stealing_queue.size_approx();
 }
 
 void CoroRunner::Sched() {
   //get a corotuien and start to run
   while (HasMoreTask()) {
-    //P(Runner) get a M(Corotine) to work(CoroutineEntry)
+    //P(Runner) take a M(Corotine) do work(CoroutineEntry)
     Coroutine* coro = RetrieveCoroutine();
     DCHECK(coro);
 
