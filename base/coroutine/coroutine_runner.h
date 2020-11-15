@@ -40,7 +40,7 @@ public:
     }
 
     /* specific a loop for this task*/
-    inline _go& operator-(base::MessageLoop* loop) {
+    inline _go& operator-(MessageLoop* loop) {
       target_loop_ = loop;
       return *this;
     }
@@ -52,7 +52,7 @@ public:
      * */
     template <typename Functor>
     inline void operator-(Functor func) {
-      CoroRunner::schedule_task(NewClosure(func));
+      CoroRunner::ScheduleTask(NewClosure(func));
       target_loop_->WeakUp();
     }
 
@@ -60,16 +60,16 @@ public:
     // becuase __go object will destruction before task closure run
     template <typename Functor>
     inline void operator<<(Functor closure_fn) {
-    	auto func = [=](base::MessageLoop* loop, const Location& location) {
-        CoroRunner& runner = Runner();
-        runner.ScheduleTask(CreateClosure(location, closure_fn));
+    	auto func = [=](MessageLoop* loop, const Location& location) {
+        CoroRunner& runner = CoroRunner::instance();
+        runner.AppendTask(CreateClosure(location, closure_fn));
         loop->WeakUp();
     	};
       target_loop_->PostTask(FROM_HERE, func, target_loop_, location_);
     }
 
-    inline static base::MessageLoop* loop() {
-      base::MessageLoop* current = MessageLoop::Current();
+    inline static MessageLoop* loop() {
+      MessageLoop* current = MessageLoop::Current();
       return  current ? current : CoroRunner::backgroup();
     }
     Location location_;
@@ -88,10 +88,10 @@ public:
   static void Sleep(uint64_t ms);
 
   /* here two ways registe loop as coro runner worker
-   * 1. implicit call CoroRunner::Runner()
+   * 1. implicit call CoroRunner::instance()
    * 2. call RegisteAsCoroWorker manually
    * */
-  static void RegisteAsCoroWorker(base::MessageLoop*);
+  static void RegisteAsCoroWorker(MessageLoop*);
 
 protected:
 #ifdef USE_LIBACO_CORO_IMPL
@@ -100,13 +100,13 @@ protected:
   static void CoroutineEntry(void *coro);
 #endif
 
-  static CoroRunner& Runner();
+  static CoroRunner& instance();
+
+  static MessageLoop* backgroup();
+
+  static bool ScheduleTask(TaskBasePtr&& task);
 
   static ConcurrentTaskQueue stealing_queue;
-
-  static base::MessageLoop* backgroup();
-
-  static bool schedule_task(TaskBasePtr&& task);
 
   CoroRunner();
   ~CoroRunner();
@@ -119,7 +119,7 @@ protected:
 
   void YieldInternal();
 
-  void ScheduleTask(TaskBasePtr&& task);
+  void AppendTask(TaskBasePtr&& task);
 
   /* release the coroutine memory */
   void FreeOutdatedCoro();

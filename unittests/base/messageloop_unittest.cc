@@ -63,9 +63,10 @@ TEST_CASE("event_pump.timer", "[test event pump timer]") {
   base::TimeoutEvent* repeated_toe = new base::TimeoutEvent(5000, true);
   repeated_toe->InstallTimerHandler(NewClosure([&]() {
     uint64_t t = base::time_ms();
-    uint64_t diff = t - repeated_timer_checker;
+
+    uint64_t diff = std::abs(int(t - repeated_timer_checker));
     std::cout << "time diff:" << diff << std::endl;
-    REQUIRE(((diff >= 5000) && (diff <= 5001)));
+    REQUIRE((diff <= 5000*1.01));
     repeated_timer_checker = t;
   }));
 
@@ -73,8 +74,9 @@ TEST_CASE("event_pump.timer", "[test event pump timer]") {
   base::TimeoutEvent* oneshot_toe = new base::TimeoutEvent(5, false);
   oneshot_toe->InstallTimerHandler(NewClosure([&]() {
     uint64_t t = base::time_ms();
-    uint64_t diff = t - timer_ms_checker;
-    REQUIRE((diff >= 5 && diff <= 6));
+    uint64_t diff = std::abs(int(t - timer_ms_checker));
+    std::cout << "time diff:" << diff << std::endl;
+    REQUIRE((diff <= 5 + 1));
   }));
 
   uint64_t timer_zero_checker = 0;
@@ -82,7 +84,7 @@ TEST_CASE("event_pump.timer", "[test event pump timer]") {
   zerooneshot_toe->InstallTimerHandler(NewClosure([&]() {
     uint64_t t = base::time_ms();
     uint64_t diff = t - timer_zero_checker;
-    REQUIRE((diff >= 0 && diff <= 1));
+    REQUIRE((diff <= 0 + 1));
   }));
 
   uint64_t start, end;
@@ -90,7 +92,7 @@ TEST_CASE("event_pump.timer", "[test event pump timer]") {
   quit_toe->InstallTimerHandler(NewClosure([&]() {
     end = base::time_ms();
     std::cout << "end at ms:" << end << std::endl;
-    REQUIRE(end - start >= 30000);
+    REQUIRE(end - start <= 30000*1.01);
     pump.RemoveTimeoutEvent(repeated_toe);
     pump.RemoveTimeoutEvent(oneshot_toe);
     pump.RemoveTimeoutEvent(zerooneshot_toe);
