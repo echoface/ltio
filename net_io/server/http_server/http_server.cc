@@ -32,7 +32,7 @@ void HttpServer::SetIOLoops(std::vector<base::MessageLoop*>& loops) {
   io_loops_ = loops;
 }
 
-void HttpServer::ServeAddress(const std::string address, HttpMessageHandler handler) {
+void HttpServer::ServeAddress(const std::string& address, HttpMessageHandler handler) {
 
   bool served = serving_flag_.exchange(true);
   LOG_IF(ERROR, served) << " Server Can't Serve Twice";
@@ -81,7 +81,7 @@ void HttpServer::OnRequestMessage(const RefCodecMessage& request) {
   if (!dispatcher_) {
     return HandleHttpRequest(context);
   }
-  StlClosure func = std::bind(&HttpServer::HandleHttpRequest, this, context);
+  base::LtClosure func = std::bind(&HttpServer::HandleHttpRequest, this, context);
   bool success = dispatcher_->Dispatch(func);
   if (!success) {
     context->ReplyString("Internal Server Error", 500);
@@ -148,7 +148,7 @@ void HttpServer::IOServiceStoped(const IOService* service) {
   }
 }
 
-void HttpServer::SetCloseCallback(StlClosure callback) {
+void HttpServer::SetCloseCallback(const base::ClosureCallback& callback) {
   closed_callback_ = callback;
 }
 

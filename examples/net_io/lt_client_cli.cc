@@ -100,9 +100,9 @@ int main(int argc, char** argv) {
     }
 
     if (server_info.protocol == "raw") {
-      co_go &mainloop << std::bind(&DoLtRawRequest, content);
+      CO_GO &mainloop << std::bind(&DoLtRawRequest, content);
     } else {
-      co_go &mainloop << std::bind(&DoFwRapidRequest, content);
+      CO_GO &mainloop << std::bind(&DoFwRapidRequest, content);
     }
 
     std::string response;

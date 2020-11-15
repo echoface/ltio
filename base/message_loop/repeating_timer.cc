@@ -21,7 +21,7 @@ bool RepeatingTimer::Running() const {
   return running_;
 }
 
-void RepeatingTimer::Start(uint64_t ms, StlClosure user_task) {
+void RepeatingTimer::Start(uint64_t ms, LtClosure user_task) {
 
   if (running_) {
     Stop();
@@ -42,8 +42,10 @@ void RepeatingTimer::Start(uint64_t ms, StlClosure user_task) {
     return runner_loop_->Pump()->AddTimeoutEvent(timeout_event_.get());
   }
 
-  runner_loop_->PostTask(
-    NewClosure(std::bind(&EventPump::AddTimeoutEvent, runner_loop_->Pump(), timeout_event_.get())));
+  runner_loop_->PostTask(FROM_HERE,
+                         &EventPump::AddTimeoutEvent,
+                         runner_loop_->Pump(),
+                         timeout_event_.get());
 }
 
 // reset timeoutevent and reset it

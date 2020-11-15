@@ -28,9 +28,10 @@ public:
   void SetDispatcher(Dispatcher* dispatcher);
   void SetIOLoops(std::vector<base::MessageLoop*>& loops);
 
-  void ServeAddress(const std::string, HttpMessageHandler);
+  void ServeAddress(const std::string&, HttpMessageHandler);
+  void SetCloseCallback(const base::ClosureCallback& callback);
+
   void StopServer();
-  void SetCloseCallback(StlClosure callback);
 protected:
   //override from ioservice delegate
   bool CanCreateNewChannel() override;
@@ -51,7 +52,7 @@ private:
 
   std::vector<base::MessageLoop*> io_loops_;
   std::list<RefIOService> ioservices_;
-  StlClosure closed_callback_;
+  base::LtClosure closed_callback_;
 
   std::mutex mtx_;
   std::atomic_bool serving_flag_;

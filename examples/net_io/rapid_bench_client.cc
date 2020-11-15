@@ -117,10 +117,10 @@ int main(int argc, char** argv) {
   for (int i = 0; i < concurency; i++) {
     wc.Add(1);
     base::MessageLoop* loop = loops[i % loops.size()];
-    co_go loop << raw_request_task;
+    CO_GO loop << raw_request_task;
   }
 
-  co_go &loop << [&]() {
+  CO_GO &loop << [&]() {
     wc.Wait();
     LOG(INFO) << "success:" << success_request << " failed:" << failed_request;
     raw_router.Finalize();

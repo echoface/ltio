@@ -204,7 +204,7 @@ bool Client::AsyncDoRequest(RefCodecMessage& req, AsyncCallBack callback) {
 
   //IMPORTANT: avoid self holder for capture list
   CodecMessage* request = req.get();
-  StlClosure resumer = [=]() {
+  base::LtClosure resumer = [=]() {
     if (worker->IsInLoopThread()) {
       callback(request->RawResponse());
     } else {
@@ -226,7 +226,7 @@ bool Client::AsyncDoRequest(RefCodecMessage& req, AsyncCallBack callback) {
 }
 
 CodecMessage* Client::DoRequest(RefCodecMessage& message) {
-  CHECK(co_can_yield);
+  CHECK(co_yieldable());
 
   message->SetRemoteHost(remote_info_.host);
   message->SetWorkerCtx(base::MessageLoop::Current(), co_resumer());
@@ -244,7 +244,7 @@ CodecMessage* Client::DoRequest(RefCodecMessage& message) {
     return NULL;
   }
 
-  co_pause;
+  CO_YIELD;
 
   return message->RawResponse();
 }

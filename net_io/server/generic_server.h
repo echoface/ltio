@@ -86,7 +86,7 @@ public:
 #endif
   }
 
-  void StopServer(ClosureCallback callback = nullptr) {
+  void StopServer(const base::ClosureCallback& callback = nullptr) {
     CHECK(serving_flag_);
     closed_callback_ = callback;
 
@@ -163,7 +163,7 @@ private:
   MessageLoopList io_loops_;
   RefIOServiceList ioservices_;
 
-  ClosureCallback closed_callback_;
+  base::ClosureCallback closed_callback_;
   std::atomic<bool> serving_flag_;
   std::atomic_uint32_t client_count_;
   DISALLOW_COPY_AND_ASSIGN(BaseServer);

@@ -61,7 +61,7 @@ void RawServer::SetDispatcher(Dispatcher* dispatcher) {
   dispatcher_ = dispatcher;
 }
 
-void RawServer::ServeAddress(const std::string address, RawMessageHandler handler) {
+void RawServer::ServeAddress(const std::string& address, RawMessageHandler handler) {
 
   bool served = serving_flag_.exchange(true);
   LOG_IF(ERROR, served) << " Server Can't Serve Twice";
@@ -110,7 +110,8 @@ void RawServer::OnRequestMessage(const RefCodecMessage& request) {
     return;
   }
 
-  StlClosure functor = std::bind(&RawServer::HandleRawRequest, this, request);
+  base::LtClosure functor = std::bind(&RawServer::HandleRawRequest, this, request);
+
   if (false == dispatcher_->Dispatch(functor)) {
     LOG(ERROR) << __FUNCTION__ << " dispatcher_->Dispatch failed";
     auto codec_service = request->GetIOCtx().codec.lock();
@@ -171,7 +172,7 @@ void RawServer::IOServiceStarted(const IOService* service) {
   LOG(INFO) << "RawServer IOService:[" << service->IOServiceName() << "] Started";
 }
 
-void RawServer::SetCloseCallback(StlClosure callback) {
+void RawServer::SetCloseCallback(const base::ClosureCallback& callback) {
   closed_callback_ = callback;
 }
 

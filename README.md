@@ -72,21 +72,21 @@ void coro_c_function();
 void coro_fun(std::string tag);
 // this should be your application main
 {
-    co_go coro_c_function; //schedule c function use coroutine
+    CO_GO coro_c_function; //schedule c function use coroutine
 
-    co_go std::bind(&coro_fun, "tag_from_go_synatax"); // c++11 bind
+    CO_GO std::bind(&coro_fun, "tag_from_go_synatax"); // c++11 bind
 
-    co_go [&]() {  // lambda support
+    CO_GO [&]() {  // lambda support
         LOG(INFO) << " run lambda in coroutine" ;
     };
 
-    co_go &loop << []() { //run corotine with specify loop runing on
+    CO_GO &loop << []() { //run corotine with specify loop runing on
       LOG(INFO) << "go coroutine in loop ok!!!";
     };
 
     // 使用net.client定时去获取网络资源
     bool stop = false;
-    co_go &loop << [&]() {
+    CO_GO &loop << [&]() {
        do {
             // do http/redis/raw/line request async based on coroutine
             // see net/client for detail
@@ -112,14 +112,15 @@ void coro_fun(std::string tag);
       }),
       NewClosure(co_resumer()));
 
-    co_pause; // WaitTaskEnd without block this thread;
+    CO_YIELD; // WaitTaskEnd without block this thread;
 
     //scheudle another coroutine task with this coroutine's resumer
-    co_go std::bind(AnotherCoroutineWithResume, co_resumer());
-    co_pause; // paused here, util co_resumer() be called in any where;
+    CO_GO std::bind(AnotherCoroutineWithResume, co_resumer());
+
+    CO_YIELD; // paused here, util co_resumer() be called in any where;
   }
 
-  co_go &loop << will_yield_fn;
+  CO_GO &loop << will_yield_fn;
 
   loop.WaitLoopEnd();
 }
@@ -132,8 +133,8 @@ void coro_fun(std::string tag);
 
 - 1. Coroutine Task 开始运行后,以后只会在指定的物理线程切换状态 Yield-Run-End, 所以WorkSteal的语义被约束在一个全新的(schedule之后未开始运行的)可以被stealing调度到其他woker上运行, 而不是任何状态都可以被stealing调度, 任务Yield后恢复到Run状态后,仍旧在先前绑定的物理线程上;我想某些时候,你会感谢这样的实现的.😊
 - 2. 调度方式两种, 作出合理的选择, 有时候这很有用:
-  - `co_go task;` 允许这个task被workstealing的方式调度
-  - `co_go &specified_loop << task;` 指定物理线程运行调度任务
+  - `CO_GO task;` 允许这个task被workstealing的方式调度
+  - `CO_GO &specified_loop << task;` 指定物理线程运行调度任务
   从我作为一个在一线业务开发多年的菜鸡选手而言, 合理的设计业务比什么都重要; 合理的选择和业务设计, 会让很多所谓的锁和资源共享变得多余; 在听到golang的口号:"不要通过共享内存来通信，而应该通过通信来共享内存"之前,本人基于chromium conenten api做开发和在计算广告设计的这几年的经验教训中对此早已有深深的体会.
 
 LazyInstance:

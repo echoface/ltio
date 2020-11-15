@@ -12,7 +12,7 @@ public:
   CoroDispatcher(bool handle_in_io);
   ~CoroDispatcher();
 
-  bool Dispatch(StlClosure clourse) override;
+  bool Dispatch(const base::LtClosure& clourse) override;
   bool SetWorkContext(CodecMessage* message) override;
 };
 

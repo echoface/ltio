@@ -287,13 +287,15 @@ public:
       LOG(INFO) << __FUNCTION__ << " redis client has stoped";
     }
 
-    CHECK(co_can_yield);
+    CHECK(co_yieldable());
 
     raw_server.StopServer(co_resumer());
-    co_pause;
+    
+    CO_YIELD;
 
     http_server.StopServer(co_resumer());
-    co_pause;
+
+    CO_YIELD;
 
     LOG(INFO) << __FUNCTION__ << " stop leave";
     main_loop.QuitLoop();
@@ -350,7 +352,7 @@ void HandleHttp(SampleApp* app, net::HttpContext* context) {
 
 void signalHandler( int signum ){
   LOG(INFO) << "sighandler sig:" << signum;
-  co_go &main_loop << std::bind(&SampleApp::StopAllService, &app);
+  CO_GO &main_loop << std::bind(&SampleApp::StopAllService, &app);
 }
 
 int main(int argc, char* argv[]) {

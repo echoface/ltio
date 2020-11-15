@@ -39,7 +39,7 @@ void WaitGroup::Wait(int64_t timeout_ms) {
     loop->Pump()->AddTimeoutEvent(timeout_);
   }
 
-  co_pause;
+  CO_YIELD;
 
   if (timeout_) {
     loop->Pump()->RemoveTimeoutEvent(timeout_);

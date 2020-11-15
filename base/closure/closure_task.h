@@ -9,10 +9,10 @@
 
 #include "location.h"
 
-typedef std::function<void()> StlClosure;
-typedef std::function<void()> ClosureCallback;
-
 namespace base {
+
+typedef std::function<void()> LtClosure;
+typedef LtClosure ClosureCallback;
 
 class TaskBase {
 public:

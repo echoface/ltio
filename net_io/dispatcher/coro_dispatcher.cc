@@ -23,12 +23,13 @@ bool CoroDispatcher::SetWorkContext(CodecMessage* message) {
   return base::MessageLoop::Current();
 }
 
-bool CoroDispatcher::Dispatch(StlClosure closure) {
+bool CoroDispatcher::Dispatch(const base::LtClosure& closure) {
   if (handle_in_io_) {
-    co_go closure;
-  } else {
-    co_go NextWorker() << closure;
+    CO_GO base::MessageLoop::Current() << closure;
+    return true;
   }
+
+  CO_GO NextWorker() << closure;
   return true;
 }
 

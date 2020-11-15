@@ -71,11 +71,12 @@ public:
   }
 
   void StopAllService() {
-    CHECK(co_can_yield);
+    CHECK(co_yieldable());
 
     raw_server.SetCloseCallback(co_resumer());
     raw_server.StopServer();
-    co_pause;
+    
+    CO_YIELD;
 
     main_loop.QuitLoop();
   }
@@ -93,7 +94,7 @@ SampleApp app;
 
 void signalHandler( int signum ){
   LOG(INFO) << "sighandler sig:" << signum;
-  co_go &main_loop << std::bind(&SampleApp::StopAllService, &app);
+  CO_GO &main_loop << std::bind(&SampleApp::StopAllService, &app);
 }
 
 

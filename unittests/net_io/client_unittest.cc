@@ -196,7 +196,7 @@ TEST_CASE("client.http.request", "[http client send request]") {
   sleep(1);
 
   for (int i = 0; i < total_task; i++) {
-    co_go &loop << http_request_task;
+    CO_GO &loop << http_request_task;
   }
 
   loop.PostDelayTask(NewClosure([&](){
@@ -256,7 +256,7 @@ TEST_CASE("client.raw.request", "[raw client send request]") {
   sleep(1);
 
   for (int i = 0; i < total_task; i++) {
-    co_go &loop << raw_request_task;
+    CO_GO &loop << raw_request_task;
   }
 
   loop.PostDelayTask(NewClosure([&](){
@@ -297,7 +297,7 @@ TEST_CASE("client.timer.request", "[fetch resource every interval]") {
 
   int send_count = 10;
 
-  co_go &loop << [&]() {
+  CO_GO &loop << [&]() {
     do {
       auto request = net::LtRawMessage::Create(true);
       request->SetMethod(12);
@@ -409,7 +409,7 @@ TEST_CASE("client.raw.bench", "[raw client send request benchmark]") {
   LOG(INFO) << " start bench started.............<<<<<<";
   for (int i = 0; i < bench_concurrent; i++) {
     auto l = loops[i % loops.size()];
-    co_go l << raw_request_task;
+    CO_GO l << raw_request_task;
   }
 
   loop.WaitLoopEnd();
@@ -488,7 +488,7 @@ TEST_CASE("client.http.bench", "[http client send request benchmark]") {
   for (int i = 0; i < bench_concurrent; i++) {
     auto l = loops[i % loops.size()];
     l->PostTask(NewClosure([=]() {
-      co_go request_task;
+      CO_GO request_task;
     }));
   }
   loop.WaitLoopEnd();
@@ -570,7 +570,7 @@ TEST_CASE("client.redis_client", "[redis client]") {
 
   sleep(5);
 
-  co_go &loop << task;
+  CO_GO &loop << task;
   loop.WaitLoopEnd();
   return;
 }
@@ -646,7 +646,7 @@ TEST_CASE("client.ringhash_router", "[redis ringhash router client]") {
 
   sleep(2);
 
-  co_go &loop << task;
+  CO_GO &loop << task;
   loop.WaitLoopEnd();
   return;
 }
@@ -690,7 +690,7 @@ TEST_CASE("client.redis_heartbeat", "[redis client heartbeat]") {
   }
 
   sleep(10);
-  co_go &loop << [&]() {
+  CO_GO &loop << [&]() {
     loop.QuitLoop();
   };
   loop.WaitLoopEnd();

@@ -56,7 +56,7 @@ class MessageLoop : public PumpDelegate,
 
     template<class Functor>
     bool PostTask(const Location& location, const Functor& closure) {
-      return PostTask(TaskBasePtr(location, closure));
+      return PostTask(CreateClosure(location, closure));
     }
 
     template <typename Functor, typename... Args>
@@ -66,7 +66,7 @@ class MessageLoop : public PumpDelegate,
 
     /* Task will run in target loop thread,
      * reply will run in Current() loop if it exist,
-     * otherwise the reply task will run in target messageloop thread too*/
+     * otherwise the reply task run in target loop thread too*/
     template<class T, class R>
     bool PostTaskAndReply(const Location& location,
                           const T& task,

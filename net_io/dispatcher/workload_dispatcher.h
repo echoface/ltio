@@ -23,7 +23,7 @@ public:
   // or woker according to handle_in_io_ 
   virtual bool SetWorkContext(CodecMessage* message);
   // transmit task from IO TO worker loop
-  virtual bool Dispatch(StlClosure closuse);
+  virtual bool Dispatch(const base::LtClosure& closuse);
 protected:
   const bool handle_in_io_;
   base::MessageLoop* NextWorker();

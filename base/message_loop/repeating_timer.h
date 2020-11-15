@@ -40,7 +40,7 @@ public:
   RepeatingTimer(MessageLoop* loop);
   ~RepeatingTimer();
 
-  void Start(uint64_t ms, StlClosure user_task);
+  void Start(uint64_t ms, LtClosure user_task);
   // a sync stop
   void Stop();
 
@@ -49,7 +49,7 @@ private:
   void OnTimeout();
 
   bool running_;
-  StlClosure user_task_;
+  LtClosure user_task_;
   MessageLoop* runner_loop_ = NULL;
 
   std::unique_ptr<TimeoutEvent> timeout_event_;

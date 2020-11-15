@@ -16,8 +16,6 @@
 
 namespace base {
 
-typedef std::function<void()> CoroResumer;
-
 /*
  * same thing like go language Goroutine CSP model,
  * But with some aspect diffirence
@@ -50,7 +48,7 @@ public:
     /* schedule a corotine task to stealing_queue, and weakup a
      * target loop to run this task, but this task can be invoke
      * by other loop, if you want task invoke in specific loop
-     * use `co_go &loop << Functor`
+     * use `CO_GO &loop << Functor`
      * */
     template <typename Functor>
     inline void operator-(Functor func) {
@@ -81,7 +79,13 @@ public:
 public:
   friend class _go;
 
-  static CoroRunner& Runner();
+  static void Yield();
+
+  static bool Yieldable();
+
+  static LtClosure MakeResumer();
+
+  static void Sleep(uint64_t ms);
 
   /* here two ways registe loop as coro runner worker
    * 1. implicit call CoroRunner::Runner()
@@ -89,21 +93,14 @@ public:
    * */
   static void RegisteAsCoroWorker(base::MessageLoop*);
 
-  void Yield();
-
-  StlClosure Resumer();
-
-  void Sleep(uint64_t ms);
-
-  bool CanYieldHere() const {return !IsMain();}
-
-  std::string RunnerInfo() const;
 protected:
 #ifdef USE_LIBACO_CORO_IMPL
   static void CoroutineEntry();
 #else
   static void CoroutineEntry(void *coro);
 #endif
+
+  static CoroRunner& Runner();
 
   static ConcurrentTaskQueue stealing_queue;
 
@@ -119,6 +116,8 @@ protected:
    * load(bind) task(cargo) to coroutine(car) and run(transfer)
    * */
   void Sched();
+
+  void YieldInternal();
 
   void ScheduleTask(TaskBasePtr&& task);
 
@@ -155,6 +154,8 @@ protected:
 
   /* switch call stack from different coroutine*/
   void SwapCurrentAndTransferTo(Coroutine *next);
+
+  std::string RunnerInfo() const;
 private:
   Coroutine* current_;
   RefCoroutine main_;
@@ -174,13 +175,16 @@ private:
 
 }// end base
 
-//NOTE: co_yield,co_await,co_resume has bee reserved keywords for c++20,
-//so cry to re-name aco_xxx....
-#define co_go        ::base::CoroRunner::_go(__FUNCTION__, __FILE__, __LINE__)-
-#define co_pause     ::base::CoroRunner::Runner().Yield()
-#define co_resumer() ::base::CoroRunner::Runner().Resumer()
-#define co_sleep(ms) ::base::CoroRunner::Runner().Sleep(ms)
-#define co_can_yield \
-  (base::MessageLoop::Current() && ::base::CoroRunner::Runner().CanYieldHere())
+//NOTE: co_yield,co_await,co_resume has been part of keywords in c++20,
+// crying!!! so rename co_xxx.... to avoid conflicting
+#define co_go          ::base::CoroRunner::_go(__FUNCTION__, __FILE__, __LINE__)-
+#define co_pause       ::base::CoroRunner::Yield()
+
+#define CO_GO          ::base::CoroRunner::_go(__FUNCTION__, __FILE__, __LINE__)-
+#define CO_YIELD       ::base::CoroRunner::Yield()
+
+#define co_sleep(ms)   ::base::CoroRunner::Sleep(ms)
+#define co_resumer()   ::base::CoroRunner::MakeResumer()
+#define co_yieldable() ::base::CoroRunner::Yieldable()
 
 #endif

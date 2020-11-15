@@ -26,7 +26,7 @@ bool Dispatcher::SetWorkContext(CodecMessage* message) {
   return loop != NULL;
 }
 
-bool Dispatcher::Dispatch(StlClosure clourse) {
+bool Dispatcher::Dispatch(const base::LtClosure& clourse) {
   if (handle_in_io_) {
     clourse();
     return true;
