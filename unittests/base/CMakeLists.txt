@@ -7,4 +7,5 @@ ADD_EXECUTABLE(base_unittest
 ltio_default_properties(base_unittest)
 target_link_libraries(base_unittest
   PUBLIC ltio
+  profiler
   )

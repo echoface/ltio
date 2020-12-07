@@ -1,6 +1,3 @@
-
-#include <mutex>
-
 #include <base/closure/closure_task.h>
 #include <base/memory/lazy_instance.h>
 
@@ -79,11 +76,7 @@ bool CoroRunner::Yieldable() {
 
 //static
 void CoroRunner::Yield() {
-  if (!Yieldable()) {
-    LOG_IF(ERROR, tls_runner) << __func__ << " only yieldable in coro context";
-    sleep(0);
-    return;
-  }
+  CHECK(Yieldable());
   tls_runner->YieldInternal();
 }
 
@@ -95,7 +88,10 @@ void CoroRunner::Sleep(uint64_t ms) {
   }
 
   auto loop = tls_runner->bind_loop_;
-  loop->PostDelayTask(NewClosure(MakeResumer()), ms);
+  if (!loop->PostDelayTask(NewClosure(MakeResumer()), ms)) {
+    usleep(ms * 1000);
+    return;
+  }
   tls_runner->YieldInternal();
 }
 
