@@ -53,17 +53,17 @@ public:
     template <typename Functor>
     inline void operator-(Functor func) {
       CoroRunner::ScheduleTask(NewClosure(func));
-      target_loop_->WeakUp();
+      target_loop_->WakeUpIfNeeded();
     }
 
-    // here must make sure all things wraper(copy) into closue,
+    // here must make sure all things wrapper(copy) into closue,
     // becuase __go object will destruction before task closure run
     template <typename Functor>
     inline void operator<<(Functor closure_fn) {
     	auto func = [=](MessageLoop* loop, const Location& location) {
         CoroRunner& runner = CoroRunner::instance();
         runner.AppendTask(CreateClosure(location, closure_fn));
-        loop->WeakUp();
+        //loop->WakeUpIfNeeded(); //seems redundancy
     	};
       target_loop_->PostTask(FROM_HERE, func, target_loop_, location_);
     }
@@ -93,6 +93,7 @@ public:
    * */
   static void RegisteAsCoroWorker(MessageLoop*);
 
+  static bool ScheduleTask(TaskBasePtr&& task);
 protected:
 #ifdef USE_LIBACO_CORO_IMPL
   static void CoroutineEntry();
@@ -104,22 +105,23 @@ protected:
 
   static MessageLoop* backgroup();
 
-  static bool ScheduleTask(TaskBasePtr&& task);
-
   static ConcurrentTaskQueue stealing_queue;
 
   CoroRunner();
   ~CoroRunner();
 
   /* override from PersistRunner
-   *
    * load(bind) task(cargo) to coroutine(car) and run(transfer)
    * */
   void Sched();
 
-  void YieldInternal();
+  void YieldInternal() {
+    SwapCurrentAndTransferTo(main_coro_);
+  }
 
-  void AppendTask(TaskBasePtr&& task);
+  void AppendTask(TaskBasePtr&& task) {
+    coro_tasks_.push_back(std::move(task));
+  }
 
   /* release the coroutine memory */
   void FreeOutdatedCoro();
@@ -135,11 +137,14 @@ protected:
    */
   bool ContinueRun();
 
-  /*return true when has more task to run*/
+  /* return true when has more task to run*/
   bool HasMoreTask() const;
 
-  /*retrieve task from inloop queue or public task pool*/
+  /* retrieve task from inloop queue or public task pool*/
   bool GetTask(TaskBasePtr& task);
+
+  /* reach max cpu took time */
+  bool HitDeadLine() const;
 
   /* from stash list got a coroutine or create new one*/
   Coroutine* RetrieveCoroutine();
@@ -167,9 +172,12 @@ private:
   std::list<TaskBasePtr> coro_tasks_;
   std::vector<Coroutine*> to_be_delete_;
 
-  /*every thread max resuable coroutines*/
+  /* every thread max resuable coroutines*/
   size_t max_parking_count_;
   std::list<Coroutine*> stash_list_;
+
+  /* we hardcode a max cpu preempt time 2ms */
+  uint64_t last_run_timestamp_ = 0;
   DISALLOW_COPY_AND_ASSIGN(CoroRunner);
 };
 

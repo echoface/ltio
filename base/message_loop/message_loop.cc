@@ -103,22 +103,24 @@ MessageLoop::~MessageLoop() {
   VLOG(GLOG_VINFO) << "MessageLoop@" << this << "[name:" << loop_name_ << "] Gone";
 }
 
-void MessageLoop::WeakUp() {
-  if (!notify_flag_.test_and_set() &&
-      Notify(task_fd_, &kTaskFdCounter, sizeof(kTaskFdCounter)) <= 0) {
+void MessageLoop::WakeUpIfNeeded() {
+  if (notify_flag_.test_and_set()) {
+    return;
+  }
+  if (Notify(task_fd_, &kTaskFdCounter, sizeof(kTaskFdCounter)) <= 0) {
     notify_flag_.clear();
   }
 }
 
 bool MessageLoop::HandleRead(FdEvent* fd_event) {
 
-  if (fd_event == wakeup_event_.get()) {
-
-    RunCommandTask(ScheduledTaskType::TaskTypeCtrl);
-
-  } else if (fd_event == task_event_.get()) {
+  if (fd_event == task_event_.get()) {
 
     RunCommandTask(ScheduledTaskType::TaskTypeDefault);
+
+  } else if (fd_event == wakeup_event_.get()) {
+
+    RunCommandTask(ScheduledTaskType::TaskTypeCtrl);
 
   } else {
     LOG(ERROR) << __func__ << " should not reached";
@@ -205,7 +207,12 @@ void MessageLoop::PumpStopped() {
 }
 
 uint64_t MessageLoop::PumpTimeout() {
-  return pump_timeout_;
+  DCHECK(IsInLoopThread());
+  if (in_loop_tasks_.size() ||
+      scheduled_tasks_.size_approx()) {
+    return 0;
+  }
+  return 5;
 };
 
 
@@ -219,11 +226,10 @@ void MessageLoop::ThreadMain() {
 
   VLOG(GLOG_VINFO) << "MessageLoop@" << this << "[name:" << loop_name_ << "] Start";
 
-  //delegate_->BeforeLoopRun();
   event_pump_.Run();
-  //delegate_->AfterLoopRun();
 
   RunNestedTask();
+
   RunScheduledTask();
 
   event_pump_.RemoveFdEvent(wakeup_event_.get());
@@ -249,29 +255,27 @@ bool MessageLoop::PostDelayTask(TaskBasePtr task, uint32_t ms) {
   return true;
 }
 
-bool MessageLoop::PendingNestedTask(TaskBasePtr& task) {
+bool MessageLoop::PendingNestedTask(TaskBasePtr&& task) {
   DCHECK(IsInLoopThread());
+
+  // see PumpTimeout; when a nestedtask append, the loop will back
+  // to pump, PumpTimeout return 0(ms) when has more task to run
+
+  // WakeUpIfNeeded();
+
   in_loop_tasks_.push_back(std::move(task));
-  if (!notify_flag_.test_and_set() &&
-      Notify(task_fd_, &kTaskFdCounter, sizeof(kTaskFdCounter)) <= 0) {
-    notify_flag_.clear();
-  }
   return true;
 }
 
-bool MessageLoop::PostTask(TaskBasePtr task) {
+bool MessageLoop::PostTask(TaskBasePtr&& task) {
   LOG_IF(ERROR, status_ != ST_STARTED) << "loop not started, loc:" << task->TaskLocation().ToString();
 
   if (IsInLoopThread()) {
-    return PendingNestedTask(task);
+    return PendingNestedTask(std::move(task));
   }
 
-  bool ret = scheduled_tasks_.enqueue(std::move(task));
-  if (!notify_flag_.test_and_set() &&
-      Notify(task_fd_, &kTaskFdCounter, sizeof(kTaskFdCounter)) <= 0) {
-    notify_flag_.clear();
-  }
-  return ret;
+  WakeUpIfNeeded();
+  return scheduled_tasks_.enqueue(std::move(task));
 }
 
 void MessageLoop::RunTimerClosure(const TimerEventList& timer_evs) {
@@ -285,15 +289,14 @@ void MessageLoop::RunScheduledTask() {
 
   TaskBasePtr task;  // instead of pinco *p;
   while (scheduled_tasks_.try_dequeue(task)) {
-    task->Run();
-    task.reset();
+    task->Run(), task.reset();
   }
 }
 
 void MessageLoop::RunNestedTask() {
   DCHECK(IsInLoopThread());
 
-  std::list<TaskBasePtr> nest_tasks(std::move(in_loop_tasks_));
+  std::vector<TaskBasePtr> nest_tasks(std::move(in_loop_tasks_));
   in_loop_tasks_.clear();
   for (const auto& task : nest_tasks) {
     task->Run();
@@ -322,8 +325,8 @@ void MessageLoop::RunCommandTask(ScheduledTaskType type) {
     case ScheduledTaskType::TaskTypeCtrl: {
       DCHECK(wakeup_event_->fd() == wakeup_pipe_out_);
 
-      char buf = 0x7F;
-      int ret = ::read(wakeup_pipe_out_, &buf, sizeof(buf));
+      const char buf = 0x7F;
+      int ret = ::read(wakeup_pipe_out_, (void*)&buf, sizeof(buf));
       LOG_IF(ERROR, ret < 0) << " error:" << StrError(errno) << " fd:" << wakeup_pipe_out_;
 
       switch (buf) {

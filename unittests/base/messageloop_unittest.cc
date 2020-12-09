@@ -265,8 +265,7 @@ TEST_CASE("co_task_obo_bench", "[new coro task bench per second one by one]") {
   base::MessageLoop loop;
   loop.Start();
 
-  CO_GO std::bind(invoke, &loop, true);
-  loop.PostTask(FROM_HERE, invoke, &loop, false);
+  CO_GO &loop << std::bind(invoke, &loop, true);
   start_time = base::time_us();
 
   loop.WaitLoopEnd();

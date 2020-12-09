@@ -149,6 +149,10 @@ void EventPump::InvokeFiredEvent(FiredEvent* evs, int count) {
 timeout_t EventPump::NextTimeout() {
   static const uint64_t default_timeout_ms = 50;
 
+  if (delegate_->PumpTimeout() == 0) {
+    return 0;
+  }
+
   ::timeouts_update(timeout_wheel_, time_ms());
   if (::timeouts_expired(timeout_wheel_)) {
     return 0;

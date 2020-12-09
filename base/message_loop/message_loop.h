@@ -50,7 +50,7 @@ class MessageLoop : public PumpDelegate,
     MessageLoop();
     virtual ~MessageLoop();
 
-    bool PostTask(TaskBasePtr);
+    bool PostTask(TaskBasePtr&&);
 
     bool PostDelayTask(TaskBasePtr, uint32_t milliseconds);
 
@@ -91,7 +91,7 @@ class MessageLoop : public PumpDelegate,
     void Start();
     bool IsInLoopThread() const;
 
-    void WeakUp();
+    void WakeUpIfNeeded();
     void InstallPersistRunner(PersistRunner* runner);
     //t: millsecond for giveup cpu for waiting
     void WaitLoopEnd(int32_t t = 1);
@@ -109,7 +109,7 @@ class MessageLoop : public PumpDelegate,
     void ThreadMain();
     void SetThreadNativeName();
 
-    bool PendingNestedTask(TaskBasePtr& task);
+    bool PendingNestedTask(TaskBasePtr&& task);
 
     void RunCommandTask(ScheduledTaskType t);
 
@@ -140,9 +140,10 @@ class MessageLoop : public PumpDelegate,
     int task_fd_ = -1;
     RefFdEvent task_event_;
     std::atomic_flag notify_flag_;
+
     ConcurrentTaskQueue scheduled_tasks_;
-    std::list<TaskBasePtr> in_loop_tasks_;
-    // every loop will invoked task, can only opt in loop
+    std::vector<TaskBasePtr> in_loop_tasks_;
+
     std::list<PersistRunner*> persist_runner_;
 
     // pipe just use for loop control

@@ -4,6 +4,12 @@
 #include "coroutine_runner.h"
 #include "glog/logging.h"
 
+namespace {
+static const char* kCoSleepWarning =
+  "blocking co_sleep is hit, consider move you task into coro";
+
+}
+
 namespace base {
 
 static std::once_flag backgroup_once;
@@ -27,6 +33,16 @@ void CoroRunner::CoroutineEntry(void *coro) {
 
   TaskBasePtr task;
   do {
+#if 0
+    ST next = tls_runner->GetTask(task);
+    if (task) {
+      task->Run(); task.reset();
+    }
+    if (res.ST == kParking) {
+      tls_runner->YieldInternal();
+    }
+  } while(res.ST != kExit);
+#endif
     DCHECK(coroutine->IsRunning());
     if (tls_runner->GetTask(task)) {
       task->Run(); task.reset();
@@ -38,13 +54,12 @@ void CoroRunner::CoroutineEntry(void *coro) {
   tls_runner->to_be_delete_.push_back(coroutine);
 
 #ifdef USE_LIBACO_CORO_IMPL
-  //libaco aco_exti will transer
-  //to main_coro in its inner controller
+  // libaco aco_exti will swapout current and jump back pthread flow
   tls_runner->current_ = tls_runner->main_coro_;
   coroutine->Exit();
 #else
   /* libcoro has the same flow for exit the finished coroutine*/
-  tls_runner->SwapCurrentAndTransferTo(tls_runner->main_coro_);
+  tls_runner->YieldInternal();
 #endif
 }
 
@@ -83,6 +98,7 @@ void CoroRunner::Yield() {
 //static
 void CoroRunner::Sleep(uint64_t ms) {
   if (!Yieldable()) {
+    LOG(INFO) << kCoSleepWarning;
     usleep(ms * 1000);
     return;
   }
@@ -137,8 +153,8 @@ CoroRunner::~CoroRunner() {
   VLOG(GLOG_VINFO) << "CoroutineRunner@" << this << " gone";
 }
 
-void CoroRunner::AppendTask(TaskBasePtr&& task) {
-  coro_tasks_.push_back(std::move(task));
+bool CoroRunner::HitDeadLine() const {
+  return base::time_us() - last_run_timestamp_ > 5000;
 }
 
 bool CoroRunner::GetTask(TaskBasePtr& task) {
@@ -157,20 +173,18 @@ bool CoroRunner::HasMoreTask() const {
 }
 
 void CoroRunner::Sched() {
-  //get a corotuien and start to run
+  // get a corotuien and start to run
+  // last_run_timestamp_ = base::time_us();
+
   while (HasMoreTask()) {
-    //P(Runner) take a M(Corotine) do work(CoroutineEntry)
+
+    //P(CoroRunner) take a M(Corotine) do work(TaskBasePtr)
     Coroutine* coro = RetrieveCoroutine();
     DCHECK(coro);
 
     SwapCurrentAndTransferTo(coro);
   }
   FreeOutdatedCoro();
-}
-
-void CoroRunner::YieldInternal() {
-  VLOG(GLOG_VINFO) << __func__ << RunnerInfo() << " will paused";
-  SwapCurrentAndTransferTo(main_coro_);
 }
 
 /* 如果本身是在一个子coro里面,
@@ -220,13 +234,12 @@ bool CoroRunner::ContinueRun() {
     return true;
   }
 
-  // 不需要这个小车了, 结束小车的生命周期
+  // enough parking coroutine, end this coroutine
   if (stash_list_.size() > max_parking_count_) {
     return false;
   }
 
-  //Pause here, 将小车进站停车, 等待有客人需要
-  //调度时, 再次取回小车并从新从这里发动;
+  // parking coroutine
   stash_list_.push_back(current_);
   SwapCurrentAndTransferTo(main_coro_);
   return true;

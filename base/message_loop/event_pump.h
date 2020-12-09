@@ -28,7 +28,7 @@ public:
   virtual void PumpStarted() {};
   virtual void PumpStopped() {};
   virtual void RunNestedTask() {};
-  virtual uint64_t PumpTimeout() {return 2000;}; // ms
+  virtual uint64_t PumpTimeout() {return 5;}; // ms
   virtual void RunTimerClosure(const TimerEventList&) {};
 };
 

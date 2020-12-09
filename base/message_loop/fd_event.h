@@ -77,6 +77,8 @@ private:
   LtEvent events_;
   LtEvent revents_;
   bool owner_fd_ = true;
+  // for epoll mode
+  bool enable_et_ = false;
   Handler* handler_ = NULL;
   Watcher* watcher_ = NULL;
 

@@ -25,7 +25,8 @@ public:
 
   virtual void AddFdEvent(FdEvent* fd_ev) = 0;
   virtual void DelFdEvent(FdEvent* fd_ev) = 0;
-  //override for watch event update
+
+  // override for watch event update
   virtual void UpdateFdEvent(FdEvent* fd_ev) override = 0;
 
   /* may return NULL if removed by
