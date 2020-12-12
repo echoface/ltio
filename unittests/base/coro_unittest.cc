@@ -183,5 +183,3 @@ TEST_CASE("coro.multi_resume", "[coroutine resume twice]") {
   };
   loop.WaitLoopEnd();
 }
-
-
