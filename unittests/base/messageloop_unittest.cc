@@ -175,9 +175,11 @@ TEST_CASE("messageloop.replytask", "[task with reply function]") {
 
 
   loop.PostDelayTask(NewClosure([&](){
+    LOG(INFO) << "call quitloop";
     loop.QuitLoop();
   }), 2000);
   loop.WaitLoopEnd();
+  LOG(INFO) << "loop end, going to desctructor";
 }
 
 
@@ -245,12 +247,13 @@ TEST_CASE("CocurrencyWrite", "[new task tracking location ]") {
 }
 
 int64_t start_time;
+static std::int64_t counter= 0;
 void invoke(base::MessageLoop* loop, bool coro) {
-  static std::int64_t counter= 0;
   if (counter++ == 10000000) {
     int64_t diff = base::time_us() - start_time;
     int64_t task_per_second = 1000000 * counter / diff;
-    std::cout << "total:" << diff << ", " << task_per_second << "/sec" << std::endl;
+    LOG(INFO) << "coro:" << (coro ? "true" : "false")
+      << ", total:" << diff << ", " << task_per_second << "/sec";
     loop->QuitLoop();
     return;
   };
@@ -265,6 +268,7 @@ TEST_CASE("co_task_obo_bench", "[new coro task bench per second one by one]") {
   base::MessageLoop loop;
   loop.Start();
 
+  counter = 0;
   CO_GO &loop << std::bind(invoke, &loop, true);
   start_time = base::time_us();
 
@@ -275,6 +279,7 @@ TEST_CASE("task_obo_bench", "[new task bench per second one by one]") {
   base::MessageLoop loop;
   loop.Start();
 
+  counter = 0;
   loop.PostTask(FROM_HERE, invoke, &loop, false);
   start_time = base::time_us();
 

@@ -19,7 +19,7 @@ CoroDispatcher::~CoroDispatcher() {
 }
 
 bool CoroDispatcher::SetWorkContext(CodecMessage* message) {
-  message->SetWorkerCtx(base::MessageLoop::Current(), co_resumer());
+  message->SetWorkerCtx(base::MessageLoop::Current(), CO_RESUMER);
   return base::MessageLoop::Current();
 }
 

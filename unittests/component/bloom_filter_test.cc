@@ -15,7 +15,7 @@ TEST_CASE("base", "[Add New Item To BloomFilter]") {
   }
 }
 
-TEST_CASE("false-rate", "[false case]") {
+TEST_CASE("bloom_filter.falserate", "[false case]") {
   component::BloomFilter filter(1000000, 0.00001);
 
   for (uint64_t i = 0; i < 1000000; i++) {

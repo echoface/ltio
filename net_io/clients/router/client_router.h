@@ -27,7 +27,9 @@ public:
   //** some of router need re-calculate values and adjustment
   //** after StartRouter, DO NOT AddClient ANY MORE
   virtual void StartRouter() {};
+
   virtual void AddClient(RefClient&& client) = 0;
+
   virtual RefClient GetNextClient(const std::string& hash_key,
                                   CodecMessage* hint_message = NULL) = 0;
 };

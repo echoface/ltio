@@ -10,7 +10,7 @@ void RoundRobinRouter::AddClient(RefClient&& client) {
 
 RefClient RoundRobinRouter::GetNextClient(const std::string& key,
                                           CodecMessage* request) {
-  uint32_t idx = round_index_++ % clients_.size();
+  uint32_t idx = round_index_.fetch_add(1) % clients_.size();
   return clients_[idx];
 }
 

@@ -307,7 +307,7 @@ TEST_CASE("client.timer.request", "[fetch resource every interval]") {
       if (response && request->FailCode() == net::MessageCode::kSuccess) {
         // success  do your things
       }
-      co_sleep(50);
+      CO_SLEEP(50);
     } while(send_count--);
 
     loop.PostTask(NewClosure([&](){

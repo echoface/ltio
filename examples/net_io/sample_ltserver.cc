@@ -287,13 +287,13 @@ public:
       LOG(INFO) << __FUNCTION__ << " redis client has stoped";
     }
 
-    CHECK(co_yieldable());
+    CHECK(CO_CANYIELD);
 
-    raw_server.StopServer(co_resumer());
-    
+    raw_server.StopServer(CO_RESUMER);
+
     CO_YIELD;
 
-    http_server.StopServer(co_resumer());
+    http_server.StopServer(CO_RESUMER);
 
     CO_YIELD;
 

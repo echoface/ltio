@@ -5,24 +5,12 @@
 #include <cstdint>
 #include <unordered_map>
 #include <vector>
-#include "maglev.h"
+
 #include "client_router.h"
+#include "net_io/base/load_balance/maglev2.h"
 
 namespace lt {
 namespace net {
-
-class MaglevClientEndpoint {
-public:
-  MaglevClientEndpoint(RefClient& client);
-  uint32_t Weight() const {return node_.weight;}
-  uint32_t HashValue() const {return node_.hash;}
-  uint32_t IdentifyNum() const {return node_.num;}
-  void SetNodeWeight(uint32_t weight) {node_.weight = weight;};
-  const MaglevHelper::Endpoint& Node() const {return node_;}
-  RefClient client_;
-private:
-  MaglevHelper::Endpoint node_;
-};
 
 class MaglevRouter : ClientRouter {
   public:
@@ -37,9 +25,8 @@ class MaglevRouter : ClientRouter {
                             CodecMessage* request = NULL) override;
 
   private:
-    LookupTable lookup_table_;
-    //std::vector<MaglevClientEndpoint> node_list_;
-    std::unordered_map<int, MaglevClientEndpoint> nodes_;
+    lb::LookupTable lookup_table_;
+    std::vector<RefClient> clients_;
 };
 
 }} // namespace lt::net

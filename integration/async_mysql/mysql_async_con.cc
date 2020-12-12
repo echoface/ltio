@@ -436,7 +436,7 @@ void MysqlAsyncConnect::WaitMysqlStatus(int status) {
     fd_event_ =
       base::FdEvent::Create(this, fd, base::LtEv::LT_EVENT_NONE);
 
-    fd_event_->GiveupOwnerFd();
+    fd_event_->ReleaseOwnership();
     pump->InstallFdEvent(fd_event_.get());
   }
 

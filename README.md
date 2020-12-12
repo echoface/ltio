@@ -16,6 +16,7 @@ all of those code ispired by project Chromium/libevent/Qt/NodeJs
 - line protocol
 - http 1.x protocol
 - async redis client side support
+- maglevHash/consistentHash/roundrobin router
 - RPC implement(may based on this repo to keep code clear)
 
 + add sendfile support for zero copy between kernel and user space

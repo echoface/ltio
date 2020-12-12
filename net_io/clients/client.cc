@@ -226,10 +226,10 @@ bool Client::AsyncDoRequest(RefCodecMessage& req, AsyncCallBack callback) {
 }
 
 CodecMessage* Client::DoRequest(RefCodecMessage& message) {
-  CHECK(co_yieldable());
+  CHECK(CO_CANYIELD);
 
   message->SetRemoteHost(remote_info_.host);
-  message->SetWorkerCtx(base::MessageLoop::Current(), co_resumer());
+  message->SetWorkerCtx(base::MessageLoop::Current(), CO_RESUMER);
 
   auto channel = get_ready_channel();
   if (!channel) {

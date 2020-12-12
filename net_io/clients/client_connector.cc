@@ -98,7 +98,7 @@ bool Connector::HandleWrite(base::FdEvent* fd_event) {
     return false;
   }
 
-  fd_event->GiveupOwnerFd();
+  fd_event->ReleaseOwnership();
   Cleanup(fd_event);
 
   IPEndPoint remote_addr, local_addr;

@@ -16,9 +16,7 @@ public:
   HashRouter() {};
   virtual ~HashRouter() {};
 
-  //only call AddClient before use it
   void AddClient(RefClient&& client) override {
-    LOG(INFO) << __FUNCTION__ << ", client:" << client->ClientInfo();
     clients_.push_back(std::move(client));
   };
 

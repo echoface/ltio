@@ -18,7 +18,7 @@ static thread_local CoroRunner* tls_runner = NULL;
 
 static const int kMaxReuseCoroutineNumbersPerThread = 500;
 
-ConcurrentTaskQueue CoroRunner::stealing_queue;
+ConcurrentTaskQueue CoroRunner::remote_queue_;
 
 //IMPORTANT NOTE: NO HEAP MEMORY HERE!!!
 #ifdef USE_LIBACO_CORO_IMPL
@@ -31,27 +31,17 @@ void CoroRunner::CoroutineEntry(void *coro) {
 
   CHECK(coroutine);
 
-  TaskBasePtr task;
-  do {
-#if 0
-    ST next = tls_runner->GetTask(task);
-    if (task) {
-      task->Run(); task.reset();
-    }
-    if (res.ST == kParking) {
-      tls_runner->YieldInternal();
-    }
-  } while(res.ST != kExit);
-#endif
-    DCHECK(coroutine->IsRunning());
-    if (tls_runner->GetTask(task)) {
-      task->Run(); task.reset();
-    };
-  }while(tls_runner->ContinueRun());
-
-  task.reset();
+  {
+    TaskBasePtr task;
+    do {
+      if (tls_runner->GetTask(task)) {
+        task->Run(); task.reset();
+      }
+    }while(tls_runner->ContinueRun());
+    task.reset();
+  }
   coroutine->SetCoroState(CoroState::kDone);
-  tls_runner->to_be_delete_.push_back(coroutine);
+  tls_runner->Append2GCCache(coroutine);
 
 #ifdef USE_LIBACO_CORO_IMPL
   // libaco aco_exti will swapout current and jump back pthread flow
@@ -103,12 +93,13 @@ void CoroRunner::Sleep(uint64_t ms) {
     return;
   }
 
-  auto loop = tls_runner->bind_loop_;
-  if (!loop->PostDelayTask(NewClosure(MakeResumer()), ms)) {
-    usleep(ms * 1000);
+  MessageLoop* loop = tls_runner->bind_loop_;
+  if (loop->PostDelayTask(NewClosure(MakeResumer()), ms)) {
+    tls_runner->YieldInternal();
     return;
   }
-  tls_runner->YieldInternal();
+
+  usleep(ms * 1000);
 }
 
 //static
@@ -123,12 +114,11 @@ LtClosure CoroRunner::MakeResumer() {
 
 //static
 bool CoroRunner::ScheduleTask(TaskBasePtr&& task) {
-  return stealing_queue.enqueue(std::move(task));
+  return remote_queue_.enqueue(std::move(task));
 }
 
 CoroRunner::CoroRunner()
-  : gc_task_scheduled_(false),
-    bind_loop_(MessageLoop::Current()),
+  : bind_loop_(MessageLoop::Current()),
     max_parking_count_(kMaxReuseCoroutineNumbersPerThread) {
 
   CHECK(bind_loop_);
@@ -142,49 +132,77 @@ CoroRunner::CoroRunner()
 }
 
 CoroRunner::~CoroRunner() {
-  FreeOutdatedCoro();
-  for (auto coro : stash_list_) {
+  GcAllCachedCoroutine();
+  for (auto coro : parking_coros_) {
     coro->ReleaseSelfHolder();
   }
-  stash_list_.clear();
+  parking_coros_.clear();
 
   current_ = nullptr;
   main_coro_ = nullptr;
   VLOG(GLOG_VINFO) << "CoroutineRunner@" << this << " gone";
 }
 
-bool CoroRunner::HitDeadLine() const {
-  return base::time_us() - last_run_timestamp_ > 5000;
+bool CoroRunner::StealingTasks() {
+  TaskBasePtr task;
+  if (!remote_queue_.try_dequeue(task)) {
+    return false;
+  }
+  coro_tasks_.push_back(std::move(task));
+  return true;
 }
 
 bool CoroRunner::GetTask(TaskBasePtr& task) {
-  if (!coro_tasks_.empty()) {
-    task = std::move(coro_tasks_.front());
-    coro_tasks_.pop_front();
+  if (coro_tasks_.empty()) {
+    return false;
+  }
+  task = std::move(coro_tasks_.front());
+  coro_tasks_.pop_front();
+  return true;
+}
+
+bool CoroRunner::ContinueRun() {
+  if (coro_tasks_.size()) {
     return true;
   }
 
-  // steal from global task queue
-  return stealing_queue.try_dequeue(task);
+  if (StealingTasks()) {
+    return true;
+  }
+
+  // parking this coroutine for next task
+  if (parking_coros_.size() < max_parking_count_) {
+    parking_coros_.push_back(current_);
+    SwapCurrentAndTransferTo(main_coro_);
+    return true;
+  }
+
+  return false;
 }
 
-bool CoroRunner::HasMoreTask() const {
-  return coro_tasks_.size() || stealing_queue.size_approx();
+void CoroRunner::AppendTask(TaskBasePtr&& task) {
+  sched_tasks_.push_back(std::move(task));
+}
+
+void CoroRunner::LoopGone(MessageLoop* loop) {
+  LOG(ERROR) << "loop gone, CoroRunner feel not good";
 }
 
 void CoroRunner::Sched() {
-  // get a corotuien and start to run
-  // last_run_timestamp_ = base::time_us();
 
-  while (HasMoreTask()) {
+  // after here, any nested task will be handled next loop
+  coro_tasks_.swap(sched_tasks_);
 
-    //P(CoroRunner) take a M(Corotine) do work(TaskBasePtr)
+  //P(CoroRunner) take a M(Corotine) do work(TaskBasePtr)
+  while (coro_tasks_.size()) {
+
     Coroutine* coro = RetrieveCoroutine();
-    DCHECK(coro);
 
+    DCHECK(coro);
     SwapCurrentAndTransferTo(coro);
   }
-  FreeOutdatedCoro();
+
+  GcAllCachedCoroutine();
 }
 
 /* 如果本身是在一个子coro里面,
@@ -229,31 +247,13 @@ void CoroRunner::SwapCurrentAndTransferTo(Coroutine *next) {
   current->TransferTo(next);
 }
 
-bool CoroRunner::ContinueRun() {
-  if (HasMoreTask()) {
-    return true;
-  }
-
-  // enough parking coroutine, end this coroutine
-  if (stash_list_.size() > max_parking_count_) {
-    return false;
-  }
-
-  // parking coroutine
-  stash_list_.push_back(current_);
-  SwapCurrentAndTransferTo(main_coro_);
-  return true;
-}
-
 Coroutine* CoroRunner::RetrieveCoroutine() {
   Coroutine* coro = nullptr;
-  while(stash_list_.size() && !coro) {
-    coro = stash_list_.front();
-    stash_list_.pop_front();
-  }
+  while(parking_coros_.size()) {
+    coro = parking_coros_.front();
+    parking_coros_.pop_front();
 
-  if (coro) {
-    return coro;
+    if (coro) return coro;
   }
 
   auto coro_ptr =
@@ -267,14 +267,12 @@ Coroutine* CoroRunner::RetrieveCoroutine() {
   return coro_ptr.get();
 }
 
-void CoroRunner::FreeOutdatedCoro() {
-  for (auto& coro : to_be_delete_) {
+void CoroRunner::GcAllCachedCoroutine() {
+  for (auto& coro : cached_gc_coros_) {
     coro->ReleaseSelfHolder();
   }
-  to_be_delete_.clear();
-  gc_task_scheduled_ = false;
+  cached_gc_coros_.clear();
 }
-
 
 std::string CoroRunner::RunnerInfo() const {
   std::ostringstream oss;

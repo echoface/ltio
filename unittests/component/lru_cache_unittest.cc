@@ -8,7 +8,7 @@
 
 #include <thirdparty/catch/catch.hpp>
 
-TEST_CASE("base", "[base lru function case]") {
+TEST_CASE("lru.base", "[base lru function case]") {
     component::LRUCache<std::string, int64_t> cache(5);
     REQUIRE(cache.size() == 0);
     REQUIRE(cache.Exists("name") == false);

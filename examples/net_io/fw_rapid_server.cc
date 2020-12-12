@@ -71,11 +71,11 @@ public:
   }
 
   void StopAllService() {
-    CHECK(co_yieldable());
+    CHECK(CO_CANYIELD);
 
-    raw_server.SetCloseCallback(co_resumer());
+    raw_server.SetCloseCallback(CO_RESUMER);
     raw_server.StopServer();
-    
+
     CO_YIELD;
 
     main_loop.QuitLoop();

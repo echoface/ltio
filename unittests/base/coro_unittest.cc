@@ -23,12 +23,12 @@ void coro_fun(std::string tag) {
 }
 
 TEST_CASE("coro.crash", "[run task as coro crash task]") {
-  CO_YIELD;
+  // CO_YIELD;
 
-  co_sleep(1000);
+  CO_SLEEP(1000);
 
-  REQUIRE_FALSE(co_resumer());
-  REQUIRE_FALSE(co_yieldable());
+  REQUIRE_FALSE(CO_RESUMER);
+  REQUIRE_FALSE(CO_CANYIELD);
 }
 
 TEST_CASE("coro.background", "[run task as coro task in background]") {
@@ -45,18 +45,16 @@ TEST_CASE("coro.CO_GO", "[go flag call coroutine]") {
   base::MessageLoop loop;
   loop.Start();
 
-  loop.PostTask(NewClosure([&]() {
-    LOG(INFO) << " start test go flag enter";
+  LOG(INFO) << " start test go flag enter";
 
-    CO_GO coro_c_function;
+  CO_GO coro_c_function;
 
-    CO_GO std::bind(&coro_fun, "tag_from_go_synatax");
+  CO_GO std::bind(&coro_fun, "tag_from_go_synatax");
 
-    CO_GO []() {
-      LOG(INFO) << " run lambda in coroutine" ;
-    };
-    LOG(INFO) << " start test go flag leave";
-  }));
+  CO_GO []() {
+    LOG(INFO) << " run lambda in coroutine" ;
+  };
+  LOG(INFO) << " start test go flag leave";
 
   CO_GO &loop << []() {
     LOG(INFO) << "go coroutine in loop ok!!!";
@@ -85,7 +83,7 @@ TEST_CASE("coro.co_resumer", "[coroutine resumer with loop reply task]") {
   CO_GO &loop << [&]() {
     LOG(INFO) << " coroutine enter post a reply task to resume coro..";
 
-    loop.PostTaskAndReply(FROM_HERE, stack_sensitive_fn, co_resumer());
+    loop.PostTaskAndReply(FROM_HERE, stack_sensitive_fn, CO_RESUMER);
 
     LOG(INFO) << " coroutine pasued..";
 
@@ -115,7 +113,7 @@ TEST_CASE("coro.co_sleep", "[coroutine sleep]") {
   CO_GO &loop << [&]() {
     LOG(INFO) << " coroutine enter ..";
     LOG(INFO) << " coroutine pasued..";
-    co_sleep(50);
+    CO_SLEEP(50);
     LOG(INFO) << " coroutine resumed..";
     co_sleep_resumed = true;
   };
@@ -139,19 +137,19 @@ TEST_CASE("coro.waitGroup", "[coroutine resumer with loop reply task]") {
 
     CO_GO [&]() {
       wg.Add(1);
-      co_sleep(500);
+      CO_SLEEP(500);
       wg.Done();
     };
 
     CO_GO [&]() {
       wg.Add(1);
-      co_sleep(501);
+      CO_SLEEP(501);
       wg.Done();
     };
 
     CO_GO [&]() {
       wg.Add(1);
-      co_sleep(490);
+      CO_SLEEP(490);
       wg.Done();
     };
 
@@ -173,9 +171,9 @@ TEST_CASE("coro.multi_resume", "[coroutine resume twice]") {
   CO_GO &loop << [&]() { //main
     LOG(INFO) << "coro run start...";
 
-    loop.PostDelayTask(NewClosure(co_resumer()), 201);
-    loop.PostDelayTask(NewClosure(co_resumer()), 200);
-    loop.PostTaskAndReply(FROM_HERE, stack_sensitive_fn, co_resumer());
+    loop.PostDelayTask(NewClosure(CO_RESUMER), 201);
+    loop.PostDelayTask(NewClosure(CO_RESUMER), 200);
+    loop.PostTaskAndReply(FROM_HERE, stack_sensitive_fn, CO_RESUMER);
 
     LOG(INFO) << "coro run resumed...";
 

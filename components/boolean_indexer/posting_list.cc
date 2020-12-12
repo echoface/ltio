@@ -8,19 +8,19 @@ bool PostingList::ReachEnd() const {
   return id_list == nullptr || id_list->size() <= index;
 }
 EntryId PostingList::GetCurEntryID() const {
-  if (ReachEnd()) return NULLENTRY; 
+  if (ReachEnd()) return NULLENTRY;
   return id_list->at(index);
 }
 
 EntryId PostingList::Skip(const EntryId id) {
   EntryId cur_id = GetCurEntryID();
   if (cur_id > id) {
-    return cur_id; 
+    return cur_id;
   }
 
   int tmp_idx = index;
   int right_idx = id_list->size();
-  int mid; 
+  int mid;
   while(tmp_idx < right_idx) {
     mid = (tmp_idx + right_idx) >> 1;
     EntryId t_id = id_list->at(mid);
@@ -37,12 +37,12 @@ EntryId PostingList::Skip(const EntryId id) {
 EntryId PostingList::SkipTo(const EntryId id) {
   EntryId cur_id = GetCurEntryID();
   if (cur_id > id) {
-    return cur_id; 
+    return cur_id;
   }
 
   int tmp_idx = index;
   int right_idx = id_list->size();
-  int mid; 
+  int mid;
   while(tmp_idx < right_idx) {
     mid = (tmp_idx + right_idx) >> 1;
     EntryId t_id = id_list->at(mid);
@@ -61,7 +61,7 @@ void PostingListGroup::Initialize() {
   std::sort(p_lists_.begin(), p_lists_.end(),
             [](const PostingList& a, const PostingList& b)-> bool {
               return a.GetCurEntryID() > b.GetCurEntryID();
-            }); 
+            });
   */
   current_ = &p_lists_[0];
   EntryId min_id = NULLENTRY;

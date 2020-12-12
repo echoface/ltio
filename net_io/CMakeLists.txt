@@ -14,6 +14,9 @@ set(LTNET_SOURCE
   base/address_family.cc
   base/sockaddr_storage.cc
 
+  #base/load_balance
+  base/load_balance/maglev2.cc
+
   #protocol codec
   codec/codec_message.cc
   codec/codec_service.cc
@@ -52,7 +55,6 @@ set(LTNET_SOURCE
   clients/client_connector.cc
 
   # client rounter
-  clients/router/maglev.cc
   clients/router/hash_router.h
   clients/router/maglev_router.cc
   clients/router/ringhash_router.cc

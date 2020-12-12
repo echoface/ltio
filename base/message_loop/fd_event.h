@@ -64,7 +64,7 @@ public:
 
   inline int fd() const {return fd_;};
   inline int GetFd() const {return fd_;};
-  inline void GiveupOwnerFd() {owner_fd_ = false;}
+  inline void ReleaseOwnership() {owner_fd_ = false;}
 
   std::string EventInfo() const;
   LtEvent ActivedEvent() const {return revents_;};

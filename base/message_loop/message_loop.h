@@ -29,9 +29,11 @@ enum LoopState {
   ST_STOPED  = 3
 };
 
+class MessageLoop;
 class PersistRunner {
   public:
     virtual void Sched() = 0;
+    virtual void LoopGone(MessageLoop* loop) {};
 };
 
 
@@ -127,8 +129,8 @@ class MessageLoop : public PumpDelegate,
     bool HandleClose(FdEvent* fd_event) override;
   private:
 
-    std::atomic_int status_;
-    std::atomic_int has_join_;
+    std::atomic<int> status_;
+    std::atomic<int> has_join_;
     std::atomic_flag running_;
 
     std::mutex start_stop_lock_;
@@ -137,7 +139,6 @@ class MessageLoop : public PumpDelegate,
     std::string loop_name_;
     std::unique_ptr<std::thread> thread_ptr_;
 
-    int task_fd_ = -1;
     RefFdEvent task_event_;
     std::atomic_flag notify_flag_;
 
@@ -148,7 +149,6 @@ class MessageLoop : public PumpDelegate,
 
     // pipe just use for loop control
     int wakeup_pipe_in_ = -1;
-    int wakeup_pipe_out_ = -1;
     RefFdEvent wakeup_event_;
 
     EventPump event_pump_;

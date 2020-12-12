@@ -31,7 +31,7 @@ void WaitGroup::Wait(int64_t timeout_ms) {
     return;
   }
 
-  resumer_ = co_resumer();
+  resumer_ = CO_RESUMER;
   MessageLoop* loop = MessageLoop::Current();
   if (timeout_ms != -1) {
     timeout_ = TimeoutEvent::CreateOneShot(timeout_ms, false);

@@ -64,7 +64,6 @@ void EventPump::Run() {
   }
 }
 
-void EventPump::Quit() { running_ = false; }
 bool EventPump::IsInLoopThread() const {
   return tid_ == std::this_thread::get_id();
 }
@@ -149,7 +148,7 @@ void EventPump::InvokeFiredEvent(FiredEvent* evs, int count) {
 timeout_t EventPump::NextTimeout() {
   static const uint64_t default_timeout_ms = 50;
 
-  if (delegate_->PumpTimeout() == 0) {
+  if (delegate_ && delegate_->PumpTimeout() == 0) {
     return 0;
   }
 

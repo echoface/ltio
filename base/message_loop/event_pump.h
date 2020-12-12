@@ -40,17 +40,21 @@ public:
   ~EventPump();
 
   void Run();
-  void Quit();
+
+  void Quit() {running_ = false;};
 
   bool InstallFdEvent(FdEvent *fd_event);
+
   bool RemoveFdEvent(FdEvent* fd_event);
 
   void AddTimeoutEvent(TimeoutEvent* timeout_ev);
+
   void RemoveTimeoutEvent(TimeoutEvent* timeout_ev);
 
   bool IsInLoopThread() const;
 
   bool Running() { return running_; }
+
   void SetLoopThreadId(std::thread::id id) {tid_ = id;}
 protected:
   /* update the time wheel mononic time and get all expired

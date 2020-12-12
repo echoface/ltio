@@ -6,13 +6,13 @@
 
 #include <catch/catch.hpp>
 
-TEST_CASE("arg calulate", "[estimate and  calculate args]") {
+TEST_CASE("cm.calulate", "[estimate and  calculate args]") {
   component::CountMinSketch sketch(0.0000001, 0.99999);
   std::cout << "w:" << sketch.Width() << " d:" << sketch.Depth() << std::endl; 
   REQUIRE(sketch.Depth() <= 20);
 }
 
-TEST_CASE("base", "[test the base function]") {
+TEST_CASE("cm.base", "[test the base function]") {
 
   component::CountMinSketch sketch(0.0000001, 0.99999);
   sketch.Increase("name", 5);
@@ -26,7 +26,7 @@ TEST_CASE("base", "[test the base function]") {
   REQUIRE(2 == sketch.DistinctCount());
 }
 
-TEST_CASE("false-rate", "[Add New Item To BloomFilter]") {
+TEST_CASE("cm.falserate", "[Add New Item To BloomFilter]") {
   component::CountMinSketch sketch(0.0000001, 0.99999);
   std::cout << "w:" << sketch.Width() << " d:" << sketch.Depth() << std::endl; 
 

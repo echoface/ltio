@@ -45,7 +45,7 @@ public:
       return *this;
     }
 
-    /* schedule a corotine task to stealing_queue, and weakup a
+    /* schedule a corotine task to remote_queue_, and weakup a
      * target loop to run this task, but this task can be invoke
      * by other loop, if you want task invoke in specific loop
      * use `CO_GO &loop << Functor`
@@ -63,7 +63,7 @@ public:
     	auto func = [=](MessageLoop* loop, const Location& location) {
         CoroRunner& runner = CoroRunner::instance();
         runner.AppendTask(CreateClosure(location, closure_fn));
-        //loop->WakeUpIfNeeded(); //seems redundancy
+        // loop->WakeUpIfNeeded(); //see message loop nested task sequence
     	};
       target_loop_->PostTask(FROM_HERE, func, target_loop_, location_);
     }
@@ -87,7 +87,7 @@ public:
 
   static void Sleep(uint64_t ms);
 
-  /* here two ways registe loop as coro runner worker
+  /* here two ways register as runner worker
    * 1. implicit call CoroRunner::instance()
    * 2. call RegisteAsCoroWorker manually
    * */
@@ -105,26 +105,33 @@ protected:
 
   static MessageLoop* backgroup();
 
-  static ConcurrentTaskQueue stealing_queue;
+  static ConcurrentTaskQueue remote_queue_;
 
   CoroRunner();
   ~CoroRunner();
 
-  /* override from PersistRunner
+  /* override from MessageLoop::PersistRunner
    * load(bind) task(cargo) to coroutine(car) and run(transfer)
    * */
-  void Sched();
+  void Sched() override ;
+
+  void LoopGone(MessageLoop* loop) override;
 
   void YieldInternal() {
     SwapCurrentAndTransferTo(main_coro_);
   }
 
-  void AppendTask(TaskBasePtr&& task) {
-    coro_tasks_.push_back(std::move(task));
-  }
+  void AppendTask(TaskBasePtr&& task);
 
   /* release the coroutine memory */
-  void FreeOutdatedCoro();
+  void GcAllCachedCoroutine();
+
+  /* append to a cached-list waiting for gc */
+  void Append2GCCache(Coroutine* co) {
+    cached_gc_coros_.emplace_back(co);
+  };
+
+  bool StealingTasks();
 
   /* check whether still has pending task need to run
    * case 0: still has pending task need to run
@@ -137,14 +144,8 @@ protected:
    */
   bool ContinueRun();
 
-  /* return true when has more task to run*/
-  bool HasMoreTask() const;
-
   /* retrieve task from inloop queue or public task pool*/
   bool GetTask(TaskBasePtr& task);
-
-  /* reach max cpu took time */
-  bool HitDeadLine() const;
 
   /* from stash list got a coroutine or create new one*/
   Coroutine* RetrieveCoroutine();
@@ -166,18 +167,23 @@ private:
   RefCoroutine main_;
   Coroutine* main_coro_;
 
-  bool gc_task_scheduled_;
   MessageLoop* bind_loop_;
 
+  // executor task list
   std::list<TaskBasePtr> coro_tasks_;
-  std::vector<Coroutine*> to_be_delete_;
+
+  // scheduled task list
+  std::list<TaskBasePtr> sched_tasks_;
+
+  std::vector<Coroutine*> cached_gc_coros_;
 
   /* every thread max resuable coroutines*/
   size_t max_parking_count_;
-  std::list<Coroutine*> stash_list_;
+  std::list<Coroutine*> parking_coros_;
 
   /* we hardcode a max cpu preempt time 2ms */
-  uint64_t last_run_timestamp_ = 0;
+  uint64_t last_run_us_ = 0;
+  bool reach_max_ticks_ = false;
   DISALLOW_COPY_AND_ASSIGN(CoroRunner);
 };
 
@@ -185,14 +191,10 @@ private:
 
 //NOTE: co_yield,co_await,co_resume has been part of keywords in c++20,
 // crying!!! so rename co_xxx.... to avoid conflicting
-#define co_go          ::base::CoroRunner::_go(__FUNCTION__, __FILE__, __LINE__)-
-#define co_pause       ::base::CoroRunner::Yield()
-
-#define CO_GO          ::base::CoroRunner::_go(__FUNCTION__, __FILE__, __LINE__)-
-#define CO_YIELD       ::base::CoroRunner::Yield()
-
-#define co_sleep(ms)   ::base::CoroRunner::Sleep(ms)
-#define co_resumer()   ::base::CoroRunner::MakeResumer()
-#define co_yieldable() ::base::CoroRunner::Yieldable()
+#define CO_GO         ::base::CoroRunner::_go(__FUNCTION__, __FILE__, __LINE__)-
+#define CO_YIELD      ::base::CoroRunner::Yield()
+#define CO_RESUMER    ::base::CoroRunner::MakeResumer()
+#define CO_CANYIELD   ::base::CoroRunner::Yieldable()
+#define CO_SLEEP(ms)  ::base::CoroRunner::Sleep(ms)
 
 #endif

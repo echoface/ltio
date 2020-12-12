@@ -68,7 +68,6 @@ private:
 MessageLoop::MessageLoop()
   : running_(0),
     wakeup_pipe_in_(0),
-    wakeup_pipe_out_(0),
     event_pump_(this) {
 
   notify_flag_.clear();
@@ -76,16 +75,13 @@ MessageLoop::MessageLoop()
   has_join_.store(0);
 
   int fds[2];
-  bool ret = CreateLocalNoneBlockingPipe(fds);
-  CHECK(ret);
+  CHECK(CreateLocalNoneBlockingPipe(fds));
 
-  wakeup_pipe_out_ = fds[0];
   wakeup_pipe_in_ = fds[1];
+  wakeup_event_ = FdEvent::Create(this, fds[0], LtEv::LT_EVENT_READ);
 
-  wakeup_event_ = FdEvent::Create(this, wakeup_pipe_out_, LtEv::LT_EVENT_READ);
-
-  task_fd_ = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
-  task_event_ = FdEvent::Create(this, task_fd_, LtEv::LT_EVENT_READ);
+  int ev_fd = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
+  task_event_ = FdEvent::Create(this, ev_fd, LtEv::LT_EVENT_READ);
 
   running_.clear();
 }
@@ -93,13 +89,11 @@ MessageLoop::MessageLoop()
 MessageLoop::~MessageLoop() {
   CHECK(status_.load() != ST_STARTED || !IsInLoopThread());
 
-  QuitLoop();
-  Notify(wakeup_pipe_in_, &kQuit, sizeof(kQuit));
-  WaitLoopEnd();
-  close(wakeup_pipe_in_);
+  QuitLoop(), Notify(wakeup_pipe_in_, &kQuit, sizeof(kQuit));
 
-  wakeup_pipe_in_ = -1;
-  wakeup_pipe_out_ = -1;
+  WaitLoopEnd();
+
+  ::close(wakeup_pipe_in_);
   VLOG(GLOG_VINFO) << "MessageLoop@" << this << "[name:" << loop_name_ << "] Gone";
 }
 
@@ -107,7 +101,7 @@ void MessageLoop::WakeUpIfNeeded() {
   if (notify_flag_.test_and_set()) {
     return;
   }
-  if (Notify(task_fd_, &kTaskFdCounter, sizeof(kTaskFdCounter)) <= 0) {
+  if (Notify(task_event_->GetFd(), &kTaskFdCounter, sizeof(kTaskFdCounter)) <= 0) {
     notify_flag_.clear();
   }
 }
@@ -185,11 +179,12 @@ void MessageLoop::WaitLoopEnd(int32_t ms) {
   CHECK(!IsInLoopThread());
 
   //first join, others wait util loop end
-  int32_t has_join = has_join_.exchange(1);
-  if (has_join == 0 && thread_ptr_ && thread_ptr_->joinable()) {
+  if (has_join_.exchange(1) == 0 && thread_ptr_->joinable()) {
     VLOG(GLOG_VINFO) << __FUNCTION__ << " join here wait loop end";
     thread_ptr_->join();
-  } else {
+    return;
+  }
+  {
     std::unique_lock<std::mutex> lk(start_stop_lock_);
     while(cv_.wait_for(lk, std::chrono::milliseconds(100)) == std::cv_status::timeout) {
       if (status_.load() != ST_STARTED) break;
@@ -203,6 +198,7 @@ void MessageLoop::PumpStarted() {
 }
 
 void MessageLoop::PumpStopped() {
+  status_.store(ST_STOPED);
   running_.clear();
 }
 
@@ -212,7 +208,7 @@ uint64_t MessageLoop::PumpTimeout() {
       scheduled_tasks_.size_approx()) {
     return 0;
   }
-  return 5;
+  return 50;
 };
 
 
@@ -236,8 +232,6 @@ void MessageLoop::ThreadMain() {
   event_pump_.RemoveFdEvent(task_event_.get());
 
   threadlocal_current_ = NULL;
-
-  status_.store(ST_STOPED);
   cv_.notify_all();
   VLOG(GLOG_VINFO) << "MessageLoop@" << this << "[name:" << loop_name_ << "] End";
 }
@@ -260,7 +254,6 @@ bool MessageLoop::PendingNestedTask(TaskBasePtr&& task) {
 
   // see PumpTimeout; when a nestedtask append, the loop will back
   // to pump, PumpTimeout return 0(ms) when has more task to run
-
   // WakeUpIfNeeded();
 
   in_loop_tasks_.push_back(std::move(task));
@@ -313,8 +306,8 @@ void MessageLoop::RunCommandTask(ScheduledTaskType type) {
     case ScheduledTaskType::TaskTypeDefault: {
 
       uint64_t count = 0;
-      int ret = ::read(task_fd_, &count, sizeof(count));
-      LOG_IF(ERROR, ret < 0) << " error:" << StrError(errno) << " fd:" << task_fd_;
+      int ret = ::read(task_event_->GetFd(), &count, sizeof(count));
+      LOG_IF(ERROR, ret < 0) << " error:" << StrError(errno) << " fd:" << task_event_->GetFd();
 
       // clear must clear after read
       notify_flag_.clear();
@@ -323,19 +316,17 @@ void MessageLoop::RunCommandTask(ScheduledTaskType type) {
 
     } break;
     case ScheduledTaskType::TaskTypeCtrl: {
-      DCHECK(wakeup_event_->fd() == wakeup_pipe_out_);
-
-      const char buf = 0x7F;
-      int ret = ::read(wakeup_pipe_out_, (void*)&buf, sizeof(buf));
-      LOG_IF(ERROR, ret < 0) << " error:" << StrError(errno) << " fd:" << wakeup_pipe_out_;
+      char buf = 0x7F;
+      int ret = ::read(wakeup_event_->GetFd(), &buf, sizeof(buf));
+      LOG_IF(ERROR, ret < 0) << " error:" << StrError(errno) << " fd:" << wakeup_event_->GetFd();
 
       switch (buf) {
         case kQuit: {
           QuitLoop();
         } break;
         default: {
+          LOG(ERROR) << " Should Not Reached Here!!!" << int(buf) << " ret:" << ret;
           DCHECK(false);
-          LOG(ERROR) << " Should Not Reached Here!!!";
         } break;
       }
     } break;
