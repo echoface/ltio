@@ -53,15 +53,13 @@ class WaitGroup {
     void* operator new(size_t) noexcept {return nullptr;}
 
     void OnTimeOut();
-    void wake_up() {
-      if (resumer_) { resumer_();}
-    }
+
     LtClosure resumer_;
 
-    bool timeouted_ = false;
-    std::unique_ptr<TimeoutEvent> timeout_;
     std::atomic_flag flag_;
     std::atomic<int64_t> wait_count_;
+
+    std::unique_ptr<TimeoutEvent> timeout_;
     DISALLOW_COPY_AND_ASSIGN(WaitGroup);
 };
 

@@ -29,6 +29,9 @@ list(APPEND INSTALL_LIBS ltio)
 if (LTIO_BUILD_SHARED_LIBS)
   add_library(ltio_shared SHARED ${LTIO_LIBRARY_SOURCE_FILES})
   ltio_default_properties(ltio_shared)
+  target_compile_definitions(ltio_shared
+    PUBLIC ${EXPORT_CORO_COMPLILE_DEFINE}
+    )
   target_link_libraries(ltio_shared
     PUBLIC lt3rd
     PUBLIC fmt::fmt

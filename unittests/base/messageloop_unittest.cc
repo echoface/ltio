@@ -248,10 +248,11 @@ TEST_CASE("CocurrencyWrite", "[new task tracking location ]") {
 
 int64_t start_time;
 static std::int64_t counter= 0;
+static const std::int64_t kTaskCount = 10000000;
 void invoke(base::MessageLoop* loop, bool coro) {
-  if (counter++ == 10000000) {
+  if (counter++ == kTaskCount) {
     int64_t diff = base::time_us() - start_time;
-    int64_t task_per_second = 1000000 * counter / diff;
+    int64_t task_per_second = kTaskCount * counter / diff;
     LOG(INFO) << "coro:" << (coro ? "true" : "false")
       << ", total:" << diff << ", " << task_per_second << "/sec";
     loop->QuitLoop();
