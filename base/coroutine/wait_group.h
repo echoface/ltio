@@ -5,6 +5,32 @@
 #include <base/closure/closure_task.h>
 #include <base/message_loop/timeout_event.h>
 
+/*
+ * usage: in coro context, WaitGroup can wait multi task done
+ * without blocking backend pthread
+ *
+ * it's useful in case of broadcast or concurency task
+ *
+ * example code:
+ * ```c++
+ * WaitGroup wg;
+ * wg.Add(1);
+ * CO_GO [&]() {task1(); wg.Done();};
+ *
+ * wg.Add(1);
+ * CO_GO []() {task1(); wg.Done();};
+ *
+ * wg.Wait(); //must in same context
+ * ```
+ * or
+ * ```c++
+ * WaitGroup wg;
+ * wg.Add(1);
+ * loop->PostTask(NewClosureWithCallback(task, std::bind(WaitGroup::Done, &wg)));
+ * wg.Wait(1000); // max wait timeout 1000ms
+ *
+ * */
+
 namespace base {
 
 class WaitGroup {
@@ -15,15 +41,21 @@ class WaitGroup {
     void Add(int64_t count);
 
     void Done();
+
     void Wait(int64_t timeout_ms = -1);
   private:
-    void wake_up();
+    // WaitGroup only can create on stack
+		void operator delete(void*) {}
+    void* operator new(size_t) noexcept {return nullptr;}
+
+    void wake_up() {
+      if (resumer_) { resumer_();}
+    }
     LtClosure resumer_;
 
     TimeoutEvent* timeout_;
     std::atomic_flag flag_;
-    std::atomic_flag wakeup_flag_;
-    std::atomic_int64_t wait_count_;
+    std::atomic<int64_t> wait_count_;
     DISALLOW_COPY_AND_ASSIGN(WaitGroup);
 };
 

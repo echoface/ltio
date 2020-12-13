@@ -8,7 +8,6 @@ namespace base {
 WaitGroup::WaitGroup()
   : timeout_(NULL) {
   flag_.clear();
-  wakeup_flag_.clear();
   wait_count_.store(0);
 }
 
@@ -16,9 +15,10 @@ WaitGroup::~WaitGroup() {
 }
 
 void WaitGroup::Done() {
-  if (wait_count_.fetch_sub(1) == 1) {
-    wake_up();
+  if (wait_count_.fetch_sub(1) != 1) {
+    return;
   }
+  wake_up();
 }
 
 void WaitGroup::Add(int64_t count) {
@@ -27,7 +27,8 @@ void WaitGroup::Add(int64_t count) {
 }
 
 void WaitGroup::Wait(int64_t timeout_ms) {
-  if (flag_.test_and_set() || wait_count_ == 0) {
+  if (flag_.test_and_set() ||
+      0 == wait_count_.load()) {
     return;
   }
 
@@ -48,11 +49,4 @@ void WaitGroup::Wait(int64_t timeout_ms) {
   }
 }
 
-void WaitGroup::wake_up() {//timeout or done
-  if (wakeup_flag_.test_and_set()) {
-    return;
-  }
-  resumer_();
-}
-
-}
+} //end namespace base
