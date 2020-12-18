@@ -61,7 +61,6 @@ public:
   inline bool IsReadEnable() const {return events_ & LtEv::LT_EVENT_READ;}
   inline bool IsWriteEnable() const {return events_ & LtEv::LT_EVENT_WRITE;}
 
-
   inline int fd() const {return fd_;};
   inline int GetFd() const {return fd_;};
   inline void ReleaseOwnership() {owner_fd_ = false;}

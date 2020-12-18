@@ -48,7 +48,6 @@ bool ReUseSocketPort(SocketFd, bool reuse);
 bool ReUseSocketAddress(SocketFd socket_fd, bool reuse);
 
 void KeepAlive(SocketFd, bool alive);
-
 }}}
 #endif
 
