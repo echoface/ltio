@@ -1,5 +1,5 @@
 #include <thirdparty/catch/catch.hpp>
-
+#undef CHECK
 #include <base/message_loop/message_loop.h>
 #include <base/message_loop/repeating_timer.h>
 

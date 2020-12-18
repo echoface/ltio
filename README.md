@@ -34,6 +34,9 @@ all of those code ispired by project Chromium/libevent/Qt/NodeJs
 integration:
 - add async mysql client support; [move to ltapp]
 
+### TODO:
+- net util improve(url, getaddrinfo, ioreader, iowriter, ET mode)
+
 About MessageLoop:
   like mostly messageloop implement, all PostTask/PostDelayTask/PostTaskWithReply implemented, it's ispired by chromium messageloop code;
 
