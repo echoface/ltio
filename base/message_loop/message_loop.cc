@@ -141,12 +141,6 @@ void MessageLoop::SetLoopName(std::string name) {
   loop_name_ = name;
 }
 
-void MessageLoop::SetMinPumpTimeout(uint64_t ms) {
-  if (ms < pump_timeout_) {
-    pump_timeout_ = ms;
-  }
-}
-
 bool MessageLoop::IsInLoopThread() const {
   if (!thread_ptr_) {
     return false;
@@ -267,8 +261,9 @@ bool MessageLoop::PostTask(TaskBasePtr&& task) {
     return PendingNestedTask(std::move(task));
   }
 
+  bool ret = scheduled_tasks_.enqueue(std::move(task));
   WakeUpIfNeeded();
-  return scheduled_tasks_.enqueue(std::move(task));
+  return ret;
 }
 
 void MessageLoop::RunTimerClosure(const TimerEventList& timer_evs) {

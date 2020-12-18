@@ -11,6 +11,10 @@
 #include "socket_utils.h"
 #include "tcp_channel.h"
 
+namespace {
+  const int32_t kBlockSize = 4 * 1024;
+}
+
 namespace lt {
 namespace net {
 
@@ -29,6 +33,7 @@ TcpChannel::TcpChannel(int socket_fd,
                        base::EventPump* pump)
   : SocketChannel(socket_fd, loc, peer, pump) {
 
+  fd_event_->SetEdgeTrigger(true);
   socketutils::KeepAlive(socket_fd, true);
 }
 
@@ -37,33 +42,45 @@ TcpChannel::~TcpChannel() {
 }
 
 bool TcpChannel::HandleRead(base::FdEvent* event) {
-  static const int32_t block_size = 4 * 1024;
-  bool ev_continue = true;
-  do {
-    in_buffer_.EnsureWritableSize(block_size);
 
-    ssize_t bytes_read = ::read(fd_event_->fd(), in_buffer_.GetWrite(), in_buffer_.CanWriteSize());
+  int err = 0;
+  ssize_t bytes_read;
+  bool need_close = false;
+  do {
+    in_buffer_.EnsureWritableSize(kBlockSize);
+
+    bytes_read = ::read(fd_event_->GetFd(),
+                        in_buffer_.GetWrite(),
+                        in_buffer_.CanWriteSize());
     int err = errno;
     VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo() << " read [" << bytes_read << "] bytes";
 
     if (bytes_read > 0) {
-
       in_buffer_.Produce(bytes_read);
-      reciever_->OnDataReceived(this, &in_buffer_);
       continue;
+    }
+    if (0 == bytes_read) {
+      need_close = true;
+      break;
+    }
 
-    } else if (0 == bytes_read) {
-
-      ev_continue = HandleClose(event);
-
-    } else if (bytes_read == -1 && (err != EAGAIN && err != EWOULDBLOCK)) {
-
-      ev_continue = HandleClose(event);
+    if (err != EAGAIN) {
+      need_close = true;
       LOG(ERROR) << __FUNCTION__ << ChannelInfo() << " read error:" << base::StrError();
-
     }
     break;
+
   } while(1);
+
+  if (in_buffer_.CanReadSize()) {
+    reciever_->OnDataReceived(this, &in_buffer_);
+  }
+
+  bool ev_continue = true;
+  if (need_close) {
+      ev_continue = HandleClose(event);
+  }
+
   return ev_continue;
 }
 

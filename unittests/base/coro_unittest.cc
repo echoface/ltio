@@ -5,10 +5,12 @@
 #include <atomic>
 
 #include "glog/logging.h"
-#include <base/time/time_utils.h>
+
+#include <base/coroutine/coroutine_runner.h>
 #include <base/coroutine/wait_group.h>
 #include <base/message_loop/message_loop.h>
-#include <base/coroutine/coroutine_runner.h>
+#include <base/memory/scoped_guard.h>
+#include <base/time/time_utils.h>
 
 #include <thirdparty/catch/catch.hpp>
 
@@ -127,38 +129,6 @@ TEST_CASE("coro.co_sleep", "[coroutine sleep]") {
   REQUIRE(co_sleep_resumed == true);
 }
 
-TEST_CASE("coro.waitGroup", "[coroutine resumer with loop reply task]") {
-  base::MessageLoop loop; loop.Start();
-
-  CO_GO &loop << [&]() { //main
-    LOG(INFO) << "main start...";
-
-    base::WaitGroup wg;
-
-    CO_GO [&]() {
-      wg.Add(1);
-      CO_SLEEP(500);
-      wg.Done();
-    };
-
-    CO_GO [&]() {
-      wg.Add(1);
-      CO_SLEEP(501);
-      wg.Done();
-    };
-
-    CO_GO [&]() {
-      wg.Add(1);
-      CO_SLEEP(490);
-      wg.Done();
-    };
-
-    wg.Wait(500);
-    loop.QuitLoop();
-  };
-  loop.WaitLoopEnd();
-}
-
 TEST_CASE("coro.multi_resume", "[coroutine resume twice]") {
   base::MessageLoop loop; loop.Start();
 
@@ -179,5 +149,51 @@ TEST_CASE("coro.multi_resume", "[coroutine resume twice]") {
 
     loop.QuitLoop();
   };
+  loop.WaitLoopEnd();
+}
+
+TEST_CASE("coro.broadcast", "[coroutine resume twice]") {
+  base::MessageLoop loop, loop2;
+
+  loop.SetLoopName("l1"); loop.Start();
+  base::CoroRunner::RegisteAsCoroWorker(&loop);
+
+  loop2.SetLoopName("l2"); loop2.Start();
+  base::CoroRunner::RegisteAsCoroWorker(&loop2);
+
+  CO_GO [&]() { //main
+    LOG(INFO) << "waig group broadcast coro test start...";
+    base::WaitGroup wg;
+
+    wg.Add(1);
+    loop.PostDelayTask(NewClosure([&wg](){
+      LOG(INFO) << "deplay task run";
+      wg.Done();
+    }), 200);
+
+    for (int i = 0; i < 10; i++) {
+      wg.Add(1);
+
+      CO_GO [&wg]() {
+        base::ScopedGuard([&wg]() {wg.Done();});
+
+        base::MessageLoop* l = base::MessageLoop::Current();
+
+        LOG(INFO) << "normal task start..." << l->LoopName();
+        CO_SLEEP(5);
+        // mock network stuff
+        // request = BuildHttpRequest();
+        // auto response = client.Get(request, {})
+        // handle_response();
+        LOG(INFO) << "normal task end..." << l->LoopName();
+      };
+    }
+
+    wg.Wait();
+
+    loop.QuitLoop();
+    LOG(INFO) << "wait group braodcast coro resumed from wait...";
+  };
+
   loop.WaitLoopEnd();
 }

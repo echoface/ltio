@@ -35,6 +35,10 @@ namespace base {
 
 class WaitGroup {
   public:
+    enum WaitResult {
+      kSuccess = 0,
+      kTimeout = 1,
+    };
     WaitGroup();
     ~WaitGroup();
 
@@ -42,18 +46,20 @@ class WaitGroup {
 
     void Done();
 
-    void Wait(int64_t timeout_ms = -1);
+    WaitResult Wait(int64_t timeout_ms = -1);
   private:
     // WaitGroup only can create on stack
 		void operator delete(void*) {}
     void* operator new(size_t) noexcept {return nullptr;}
 
+    void OnTimeOut();
     void wake_up() {
       if (resumer_) { resumer_();}
     }
     LtClosure resumer_;
 
-    TimeoutEvent* timeout_;
+    bool timeouted_ = false;
+    std::unique_ptr<TimeoutEvent> timeout_;
     std::atomic_flag flag_;
     std::atomic<int64_t> wait_count_;
     DISALLOW_COPY_AND_ASSIGN(WaitGroup);

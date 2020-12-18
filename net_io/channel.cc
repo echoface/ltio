@@ -8,6 +8,8 @@
 #include "glog/logging.h"
 
 // socket chennel interface and base class
+using base::FdEvent;
+
 namespace lt {
 namespace net {
 
@@ -20,9 +22,9 @@ SocketChannel::SocketChannel(int socket_fd,
     remote_ep_(peer),
     name_(loc.ToString()) {
 
-  fd_event_ = base::FdEvent::Create(this,
-                                    socket_fd,
-                                    base::LtEv::LT_EVENT_NONE);
+    fd_event_ = FdEvent::Create(this,
+                                socket_fd,
+                                base::LtEv::LT_EVENT_NONE);
 }
 
 void SocketChannel::SetReciever(SocketChannel::Reciever* rec) {

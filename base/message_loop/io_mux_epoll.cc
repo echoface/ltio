@@ -131,6 +131,9 @@ int IOMuxEpoll::EpollCtl(FdEvent* fdev, int opt) {
 
   ev.data.fd = fd;
   ev.events = ToEpollEvent(fdev->MonitorEvents());
+  if (fdev->EdgeTriggerMode()) {
+    ev.events |= EPOLLET;
+  }
 
   int ret = ::epoll_ctl(epoll_fd_, opt, fd, &ev);
 

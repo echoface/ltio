@@ -65,7 +65,7 @@ public:
         runner.AppendTask(CreateClosure(location, closure_fn));
         // loop->WakeUpIfNeeded(); //see message loop nested task sequence
     	};
-      target_loop_->PostTask(FROM_HERE, func, target_loop_, location_);
+      target_loop_->PostTask(location_, func, target_loop_, location_);
     }
 
     inline static MessageLoop* loop() {
@@ -144,6 +144,18 @@ protected:
    */
   bool ContinueRun();
 
+  size_t TaskCount() const {
+    return coro_tasks_.size() + remote_queue_.size_approx();
+  }
+
+  size_t InQueueTaskCount() const {
+    return sched_tasks_.size();
+  } 
+
+  size_t NoneRemoteTaskCount() const {
+    return coro_tasks_.size();
+  }
+
   /* retrieve task from inloop queue or public task pool*/
   bool GetTask(TaskBasePtr& task);
 
@@ -182,8 +194,7 @@ private:
   std::list<Coroutine*> parking_coros_;
 
   /* we hardcode a max cpu preempt time 2ms */
-  uint64_t last_run_us_ = 0;
-  bool reach_max_ticks_ = false;
+  size_t stealing_counter_ = 0;
   DISALLOW_COPY_AND_ASSIGN(CoroRunner);
 };
 

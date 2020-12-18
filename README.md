@@ -34,6 +34,9 @@ all of those code ispired by project Chromium/libevent/Qt/NodeJs
 integration:
 - add async mysql client support; [move to ltapp]
 
+### TODO:
+- net util improve(url, getaddrinfo, ioreader, iowriter, ET mode)
+
 About MessageLoop:
   like mostly messageloop implement, all PostTask/PostDelayTask/PostTaskWithReply implemented, it's ispired by chromium messageloop code;
 
@@ -125,6 +128,42 @@ void coro_fun(std::string tag);
 
   loop.WaitLoopEnd();
 }
+
+{ // broadcast make sure wg in a coro context
+  CO_GO [&]() { //main
+
+    base::WaitGroup wg;
+
+    wg.Add(1);
+    loop.PostTask(FROM_HERE,
+                  [&wg]() {
+                    //things
+                    wg.Done();
+                  });
+
+    for (int i = 0; i < 10; i++) {
+      wg.Add(1);
+
+      CO_GO [&wg]() {
+        base::ScopedGuard([&wg]() {wg.Done();});
+
+        base::MessageLoop* l = base::MessageLoop::Current();
+
+        LOG(INFO) << "normal task start..." << l->LoopName();
+
+        CO_SLEEP(5);
+        // mock network stuff
+        // request = BuildHttpRequest();
+        // auto response = client.Get(request, {})
+        // handle_response();
+
+        LOG(INFO) << "normal task end..." << l->LoopName();
+      };
+    }
+
+    LOG_IF(INFO, WaitGroup::kTimeout == wg.Wait())
+      << " timeout, not all task finish in time";
+  }
 ```
 这里没有Hook系统调用的原因主要有两个:
 1. Hook系统调用的集成性并没有他们所宣传的那么好(可能我理解不够).

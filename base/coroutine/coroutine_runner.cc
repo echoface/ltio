@@ -6,9 +6,9 @@
 #include <base/memory/lazy_instance.h>
 
 namespace {
-static const char* kCoSleepWarning =
+const char* kCoSleepWarning =
   "blocking co_sleep is hit, consider move you task into coro";
-
+const size_t kMaxStealOneSched = 1024;
 }
 
 namespace base {
@@ -63,15 +63,20 @@ CoroRunner& CoroRunner::instance() {
 MessageLoop* CoroRunner::backgroup() {
   static LazyInstance<MessageLoop> loop = LAZY_INSTANCE_INIT;
   std::call_once(backgroup_once, [&]() {
-    loop->SetLoopName("coro_background"); loop->Start();
+    loop->SetLoopName("co_background");
+    loop->Start();
     //initialized a runner binded to this loop
-    loop->PostTask(FROM_HERE, &CoroRunner::instance);
+    RegisteAsCoroWorker(loop.ptr());
   });
   return loop.ptr();
 }
 
 //static
 void CoroRunner::RegisteAsCoroWorker(MessageLoop* l) {
+  if (l->IsInLoopThread()) {
+    instance();
+    return;
+  }
   l->PostTask(FROM_HERE, &CoroRunner::instance);
 }
 
@@ -146,9 +151,12 @@ CoroRunner::~CoroRunner() {
 
 bool CoroRunner::StealingTasks() {
   TaskBasePtr task;
-  if (!remote_queue_.try_dequeue(task)) {
+  if (stealing_counter_ > kMaxStealOneSched ||
+      false == remote_queue_.try_dequeue(task)) {
     return false;
   }
+
+  stealing_counter_++;
   coro_tasks_.push_back(std::move(task));
   return true;
 }
@@ -190,16 +198,17 @@ void CoroRunner::LoopGone(MessageLoop* loop) {
 }
 
 void CoroRunner::Sched() {
-
+  VLOG(GLOG_VTRACE) << "sched coro task@" << bind_loop_->LoopName();
   // after here, any nested task will be handled next loop
+  stealing_counter_ = 0;
   coro_tasks_.swap(sched_tasks_);
 
   //P(CoroRunner) take a M(Corotine) do work(TaskBasePtr)
-  while (coro_tasks_.size()) {
+  while (TaskCount() > 0) {
 
     Coroutine* coro = RetrieveCoroutine();
-
     DCHECK(coro);
+
     SwapCurrentAndTransferTo(coro);
   }
 
@@ -237,7 +246,7 @@ void CoroRunner::DoResume(WeakCoroutine& weak, uint64_t id) {
 void CoroRunner::SwapCurrentAndTransferTo(Coroutine *next) {
   if (next == current_) {
     LOG(INFO) << "coro: next_coro == current, do nothing";
-    return;
+    return std::this_thread::yield();
   }
   Coroutine* current = current_;
 

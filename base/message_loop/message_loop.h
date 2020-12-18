@@ -98,7 +98,6 @@ class MessageLoop : public PumpDelegate,
     //t: millsecond for giveup cpu for waiting
     void WaitLoopEnd(int32_t t = 1);
     void SetLoopName(std::string name);
-    void SetMinPumpTimeout(uint64_t ms);
     const std::string& LoopName() const {return loop_name_;}
 
     void QuitLoop();
@@ -152,7 +151,6 @@ class MessageLoop : public PumpDelegate,
     RefFdEvent wakeup_event_;
 
     EventPump event_pump_;
-    uint64_t pump_timeout_ = 2000;
 };
 
 } //end namespace

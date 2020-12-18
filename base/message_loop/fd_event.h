@@ -60,7 +60,8 @@ public:
   void DisableAll() { events_ = LtEv::LT_EVENT_NONE; notify_watcher();}
   inline bool IsReadEnable() const {return events_ & LtEv::LT_EVENT_READ;}
   inline bool IsWriteEnable() const {return events_ & LtEv::LT_EVENT_WRITE;}
-
+  inline bool EdgeTriggerMode() const {return enable_et_;}
+  inline void SetEdgeTrigger(bool edge) {enable_et_ = edge;}
 
   inline int fd() const {return fd_;};
   inline int GetFd() const {return fd_;};
