@@ -1,16 +1,15 @@
 #ifndef FD_EVENT_H
 #define FD_EVENT_H
 
-#include <memory>
-#include <functional>
-
 #include <sys/epoll.h>
 #include <sys/poll.h>
 
-#include "event.h"
+#include <functional>
+#include <memory>
+
 #include "base/base_micro.h"
 #include "base/queue/linked_list.h"
-#include "base/queue/double_linked_list.h"
+#include "event.h"
 
 namespace base {
 class FdEvent;
@@ -19,7 +18,6 @@ typedef std::unique_ptr<FdEvent> FdEventPtr;
 
 /* A Event Holder and Owner represend a filedescriptor,
  * Create With a fd and take it owner  close it when it's gone*/
-//class FdEvent : public EnableDoubleLinked<FdEvent> {
 class FdEvent final {
 public:
   /* interface notify poller notify_watcher polling events*/

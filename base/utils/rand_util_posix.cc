@@ -8,9 +8,10 @@
 #include <stdint.h>
 #include <unistd.h>
 
-#include "rand_util.h"
 #include "glog/logging.h"
-#include <base/no_destructor.h>
+
+#include "no_destructor.h"
+#include "rand_util.h"
 
 namespace {
 

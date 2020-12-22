@@ -30,7 +30,6 @@ SET(BASE_SOURCES
   utils/gzip/gzip_utils.cc
   # closure
   closure/location.cc
-  closure/closure_task.cc
   )
 
 if (LTIO_USE_ACO_CORO_IMPL)

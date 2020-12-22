@@ -2,24 +2,24 @@
 #define _BASE_MSG_EVENT_LOOP_H_H
 
 #include <atomic>
+#include <condition_variable>
 #include <functional>
-#include <thread>
-#include <queue>
 #include <list>
 #include <mutex>
-#include <condition_variable>
+#include <queue>
+#include <thread>
 #include <utility>
 
+#include "glog/logging.h"
+
+#include "base/base_constants.h"
 #include "base/closure/closure_task.h"
 #include "base/closure/location.h"
-#include "fd_event.h"
-#include "event_pump.h"
-
-#include "glog/logging.h"
-#include "base/base_constants.h"
-#include "base/queue/task_queue.h"
-#include "base/memory/spin_lock.h"
 #include "base/memory/scoped_ref_ptr.h"
+#include "base/memory/spin_lock.h"
+#include "base/queue/task_queue.h"
+#include "event_pump.h"
+#include "fd_event.h"
 
 namespace base {
 
@@ -151,6 +151,7 @@ class MessageLoop : public PumpDelegate,
     RefFdEvent wakeup_event_;
 
     EventPump event_pump_;
+    DISALLOW_COPY_AND_ASSIGN(MessageLoop);
 };
 
 } //end namespace

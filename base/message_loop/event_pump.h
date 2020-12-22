@@ -1,11 +1,12 @@
 #ifndef BASE_EVENT_PUMP_H_
 #define BASE_EVENT_PUMP_H_
 
-#include <vector>
-#include <memory>
-#include <map>
 #include <inttypes.h>
+
+#include <map>
+#include <memory>
 #include <thread>
+#include <vector>
 
 #include "fd_event.h"
 #include "io_multiplexer.h"

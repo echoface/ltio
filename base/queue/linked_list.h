@@ -75,10 +75,8 @@ public:
 private:
   LinkedNode<T>* pre_ = nullptr;
   LinkedNode<T>* next_ = nullptr;
-
   DISALLOW_COPY_AND_ASSIGN(LinkedNode);
 };
-
 
 template <typename T>
 class LinkedList {

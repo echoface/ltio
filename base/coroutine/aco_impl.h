@@ -2,14 +2,14 @@
 #define ACO_COROUTINE_H_H_
 
 #include <atomic>
-#include <memory>
 #include <cinttypes>
 #include <functional>
-#include <base/base_micro.h>
+#include <memory>
 
 #include "config.h"
-#include <thirdparty/libaco/aco.h>
+#include <base/base_micro.h>
 #include <base/closure/closure_task.h>
+#include <thirdparty/libaco/aco.h>
 
 namespace base {
 

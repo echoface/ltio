@@ -1,10 +1,11 @@
 #ifndef BASE_IO_MULTIPLEXER_EPOLL_H
 #define BASE_IO_MULTIPLEXER_EPOLL_H
 
+#include <array>
+
 #include "event.h"
 #include "fd_event.h"
 #include "io_multiplexer.h"
-#include <array>
 
 namespace base {
 

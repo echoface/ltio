@@ -1,5 +1,7 @@
 #include "repeating_timer.h"
+
 #include <glog/logging.h>
+
 #include <base/memory/scoped_guard.h>
 
 namespace base {

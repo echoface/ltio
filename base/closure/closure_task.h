@@ -1,18 +1,19 @@
 #ifndef BASE_CLOSURE_TASK_H_H
 #define BASE_CLOSURE_TASK_H_H
 
-#include <memory>
 #include <assert.h>
 #include <functional>
-#include <glog/logging.h>
-#include <base/base_micro.h>
+#include <memory>
 
+#include "glog/logging.h"
+
+#include "base/base_micro.h"
 #include "location.h"
 
 namespace base {
 
-typedef std::function<void()> LtClosure;
-typedef LtClosure ClosureCallback;
+using LtClosure = std::function<void()>;
+using ClosureCallback = LtClosure;
 
 class TaskBase {
 public:
@@ -25,13 +26,7 @@ public:
 private:
   Location location_;
 };
-
-class TaskInterceptor {
-public:
-  virtual bool Track(TaskBase* task) = 0;
-  static TaskInterceptor* global_tracker;
-};
-typedef std::unique_ptr<TaskBase> TaskBasePtr;
+using TaskBasePtr = std::unique_ptr<TaskBase>;
 
 template <typename Functor>
 class ClosureTask : public TaskBase {
@@ -44,7 +39,7 @@ public:
     try {
       closure_task();
     } catch (...) {
-      LOG(ERROR) << "Task Crash, From:" << ClosureInfo();
+      LOG(ERROR) << "Crash From:" << ClosureInfo();
       abort();
     }
   }

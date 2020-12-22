@@ -6,7 +6,6 @@
 
 #include "event.h"
 #include "fd_event.h"
-#include "base/queue/double_linked_list.h"
 
 namespace base {
 

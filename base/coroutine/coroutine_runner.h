@@ -1,10 +1,11 @@
 #ifndef BASE_COROUTINE_SCHEDULER_H_H_
 #define BASE_COROUTINE_SCHEDULER_H_H_
 
+#include <cinttypes>
 #include <map>
 #include <set>
 #include <vector>
-#include <cinttypes>
+
 #include <base/base_micro.h>
 #include <base/message_loop/message_loop.h>
 

@@ -1,5 +1,5 @@
-
 #include "location.h"
+
 #include <base/base_constants.h>
 
 namespace base {
