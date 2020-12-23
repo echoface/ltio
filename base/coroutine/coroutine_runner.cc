@@ -1,9 +1,14 @@
 #include "coroutine_runner.h"
 
 #include "glog/logging.h"
-
 #include <base/closure/closure_task.h>
 #include <base/memory/lazy_instance.h>
+
+#ifdef USE_LIBACO_CORO_IMPL
+#include "aco_impl.h"
+#else
+#include "coro_impl.h"
+#endif
 
 namespace {
 const char* kCoSleepWarning =

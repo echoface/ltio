@@ -9,12 +9,6 @@
 #include <base/base_micro.h>
 #include <base/message_loop/message_loop.h>
 
-#ifdef USE_LIBACO_CORO_IMPL
-#include "aco_impl.h"
-#else
-#include "coro_impl.h"
-#endif
-
 namespace base {
 
 /*
@@ -31,6 +25,9 @@ namespace base {
  * when invoke the G(CoroTask), P(CoroRunner) will choose a suitable
  * M to excute the task
  * */
+class Coroutine;
+using WeakCoroutine = std::weak_ptr<Coroutine>;
+using RefCoroutine = std::shared_ptr<Coroutine>;
 
 class CoroRunner : public PersistRunner{
 public:

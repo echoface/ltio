@@ -9,7 +9,7 @@ all of those code ispired by project Chromium/libevent/Qt/NodeJs
 - message loop
 - repeat timer
 - lazyinstance
-- net io based on loop
+- net io based on loop(ET Model)
 - coroutine scheduler(a limited G/M/P schedule model with work stealing)
 
 - raw protocol
@@ -17,7 +17,6 @@ all of those code ispired by project Chromium/libevent/Qt/NodeJs
 - http 1.x protocol
 - async redis client side support
 - maglevHash/consistentHash/roundrobin router
-- RPC implement(may based on this repo to keep code clear)
 
 + add sendfile support for zero copy between kernel and user space
 + client support full async call when task not running on coroutine task
@@ -26,16 +25,17 @@ all of those code ispired by project Chromium/libevent/Qt/NodeJs
 - bloom filter
 - countmin-sketch
 - source loader (TP)
+- net util improve(url, getaddrinfo, ioreader, iowriter, ET mode)
 
 - lru/mru component
 - boolean indexer(computing advertising)
 - inverted indexer(computing advertising)
-
-integration:
 - add async mysql client support; [move to ltapp]
 
-### TODO:
-- net util improve(url, getaddrinfo, ioreader, iowriter, ET mode)
+TODO:
+- websocket
+- http2 implement
+- RPC implement(may based on this repo to keep code clear)
 
 About MessageLoop:
   like mostly messageloop implement, all PostTask/PostDelayTask/PostTaskWithReply implemented, it's ispired by chromium messageloop code;
@@ -114,12 +114,12 @@ void coro_fun(std::string tag);
         // some thing especial need big stack
         // Task 1
       }),
-      NewClosure(co_resumer()));
+      NewClosure(CO_RESUMER()));
 
     CO_YIELD; // WaitTaskEnd without block this thread;
 
     //scheudle another coroutine task with this coroutine's resumer
-    CO_GO std::bind(AnotherCoroutineWithResume, co_resumer());
+    CO_GO std::bind(AnotherCoroutineWithResume, CO_RESUMER());
 
     CO_YIELD; // paused here, util co_resumer() be called in any where;
   }
@@ -132,20 +132,20 @@ void coro_fun(std::string tag);
 { // broadcast make sure wg in a coro context
   CO_GO [&]() { //main
 
-    base::WaitGroup wg;
+    auto wg = base::WaitGroug::New();
 
     wg.Add(1);
     loop.PostTask(FROM_HERE,
-                  [&wg]() {
+                  [wg]() {
                     //things
-                    wg.Done();
+                    wg->Done();
                   });
 
     for (int i = 0; i < 10; i++) {
       wg.Add(1);
 
-      CO_GO [&wg]() {
-        base::ScopedGuard([&wg]() {wg.Done();});
+      CO_GO [wg]() {
+        base::ScopedGuard guard([wg]() {wg->Done();});
 
         base::MessageLoop* l = base::MessageLoop::Current();
 
@@ -161,7 +161,7 @@ void coro_fun(std::string tag);
       };
     }
 
-    LOG_IF(INFO, WaitGroup::kTimeout == wg.Wait())
+    LOG_IF(INFO, WaitGroup::kTimeout == wg->Wait())
       << " timeout, not all task finish in time";
   }
 ```
