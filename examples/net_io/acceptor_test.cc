@@ -40,6 +40,7 @@ public:
 EchoConsumer global_consumer;
 
 int main(int argc, char** argv) {
+  gflags::ParseCommandLineFlags(&argc, &argv, true);
 
   loop.Start();
 
@@ -67,8 +68,13 @@ int main(int argc, char** argv) {
     addr.AssignFromIPLiteral("127.0.0.1");
     net::IPEndPoint endpoint(addr, 5005);
     acceptor = new net::SocketAcceptor(loop.Pump(), endpoint);
-    acceptor->SetNewConnectionCallback(std::bind(on_new_connection, std::placeholders::_1, std::placeholders::_2));
+    lt::net::NewConnectionCallback
+      on_callback = std::bind(on_new_connection,
+                              std::placeholders::_1,
+                              std::placeholders::_2);
+    acceptor->SetNewConnectionCallback(std::move(on_callback));
     CHECK(acceptor->StartListen());
+    LOG(INFO) << "listen on:" << endpoint.ToString();
   }));
 
   loop.WaitLoopEnd();

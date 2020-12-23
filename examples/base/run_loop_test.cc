@@ -15,16 +15,15 @@
 
 bool LocationTaskTest() {
   base::MessageLoop loop;
-
   loop.Start();
 
   loop.PostTask(NewClosure([](){
-    printf("FailureDump throw failed exception");
+    printf("will crash here and print task location");
     throw -1;
   }));
 
   loop.PostDelayTask(NewClosure([&]() {
-    loop.QuitLoop();
+    base::MessageLoop::Current()->QuitLoop();
   }), 2000);
   loop.WaitLoopEnd();
   return false;
