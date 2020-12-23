@@ -5,9 +5,17 @@
 
 namespace base {
 
+std::shared_ptr<WaitGroup> WaitGroup::New() {
+  return std::shared_ptr<WaitGroup>(new WaitGroup());
+}
+
 WaitGroup::WaitGroup()
-  : wait_count_(0){
+  : result_status_(kSuccess),
+    wait_count_(0) {
   flag_.clear();
+
+  loop_ = base::MessageLoop::Current();
+  DCHECK(loop_);
 }
 
 WaitGroup::~WaitGroup() {
@@ -17,35 +25,46 @@ void WaitGroup::Done() {
   if (wait_count_.fetch_sub(1) != 1) {
     return;
   }
-  resumer_();
+  auto guard = shared_from_this();
+  loop_->PostTask(FROM_HERE, &WaitGroup::wakeup_internal, std::move(guard));
 }
 
 void WaitGroup::Add(int64_t count) {
-  CHECK(count > 0);
+  DCHECK(count > 0);
   wait_count_.fetch_add(count);
 }
 
-WaitGroup::WaitResult WaitGroup::Wait(int64_t timeout_ms) {
+void WaitGroup::OnTimeOut() {
+  result_status_ = kTimeout;
+  wakeup_internal();
+}
+
+void WaitGroup::wakeup_internal() {
+  if (resumer_) resumer_();
+}
+
+WaitGroup::Result WaitGroup::Wait(int64_t timeout_ms) {
   if (flag_.test_and_set() || 0 == wait_count_.load()) {
     return kSuccess;
   }
 
   resumer_ = CO_RESUMER;
 
-  MessageLoop* loop = MessageLoop::Current();
-  if (timeout_ms != -1) {
+  if (timeout_ms > 0) {
     timeout_.reset(TimeoutEvent::CreateOneShot(timeout_ms, false));
-
-    timeout_->InstallTimerHandler(NewClosure(resumer_));
-    loop->Pump()->AddTimeoutEvent(timeout_.get());
+    // Don't Worry about invalid `this` happend, bz only follow two cases
+    // case 1: timeout invoke, nothing happend
+    // case 2: all task done, timeout event be removed, OnTimeOut never invoked
+    auto functor = std::bind(&WaitGroup::OnTimeOut, this);
+    timeout_->InstallTimerHandler(NewClosure(std::move(functor)));
+    loop_->Pump()->AddTimeoutEvent(timeout_.get());
   }
-
   CO_YIELD;
 
   if (timeout_) {
-    loop->Pump()->RemoveTimeoutEvent(timeout_.get());
+    loop_->Pump()->RemoveTimeoutEvent(timeout_.get());
   }
-  return kSuccess;
+  return result_status_;
 }
 
 } //end namespace base

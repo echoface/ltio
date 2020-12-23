@@ -1,6 +1,7 @@
 #ifndef _BASE_CORO_WAITGROUP_H_
 #define _BASE_CORO_WAITGROUP_H_
 
+#include "base/message_loop/message_loop.h"
 #include <atomic>
 
 #include <base/closure/closure_task.h>
@@ -14,52 +15,53 @@
  *
  * example code:
  * ```c++
- * WaitGroup wg;
- * wg.Add(1);
- * CO_GO [&]() {task1(); wg.Done();};
+ * auto wg = WaitGroup::New();
+ * wg->Add(1);
+ * //make sure copy wg into closre
+ * CO_GO [wg, &]() {task1(); wg->Done();};
  *
  * wg.Add(1);
- * CO_GO []() {task1(); wg.Done();};
+ * CO_GO [wg]() {task1(); wg->Done();};
  *
- * wg.Wait(); //must in same context
+ * // max 1secon timeout waith;
+ * // must in same context
+ * wg->Wait(1000);
  * ```
- * or
- * ```c++
- * WaitGroup wg;
- * wg.Add(1);
- * loop->PostTask(NewClosureWithCallback(task, std::bind(WaitGroup::Done, &wg)));
- * wg.Wait(1000); // max wait timeout 1000ms
  *
  * */
 
 namespace base {
 
-class WaitGroup {
+class WaitGroup : public EnableShared(WaitGroup) {
   public:
-    enum WaitResult {
+    enum Result {
       kSuccess = 0,
       kTimeout = 1,
     };
-    WaitGroup();
+
+    static std::shared_ptr<WaitGroup> New();
+
     ~WaitGroup();
 
     void Add(int64_t count);
 
     void Done();
 
-    WaitResult Wait(int64_t timeout_ms = -1);
+    Result Wait(int64_t timeout_ms = -1);
   private:
-    // WaitGroup only can create on stack
-		void operator delete(void*) {}
-    void* operator new(size_t) noexcept {return nullptr;}
+    WaitGroup();
 
     void OnTimeOut();
+    void wakeup_internal();
 
     LtClosure resumer_;
 
+    // only rw same loop
+    Result result_status_;
     std::atomic_flag flag_;
     std::atomic<int64_t> wait_count_;
 
+    base::MessageLoop* loop_ = nullptr;
     std::unique_ptr<TimeoutEvent> timeout_;
     DISALLOW_COPY_AND_ASSIGN(WaitGroup);
 };

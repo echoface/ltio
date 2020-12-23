@@ -54,7 +54,7 @@ inline void ignore_result(const T&) {
 #define EnableShared(type) \
   std::enable_shared_from_this<type>
 
-#define REF_TYPEDEFINE(Type) typedef std::shared_ptr<Type> Ref##Type 
+#define REF_TYPEDEFINE(Type) typedef std::shared_ptr<Type> Ref##Type
 
 // The following enum should be used only as a constructor argument to indicate
 // that the variable has static storage class, and that the constructor should

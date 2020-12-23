@@ -53,7 +53,7 @@ public:
      * */
     template <typename Functor>
     inline void operator-(Functor func) {
-      CoroRunner::ScheduleTask(NewClosure(func));
+      CoroRunner::ScheduleTask(CreateClosure(location_, func));
       target_loop_->WakeUpIfNeeded();
     }
 
@@ -151,7 +151,7 @@ protected:
 
   size_t InQueueTaskCount() const {
     return sched_tasks_.size();
-  } 
+  }
 
   size_t NoneRemoteTaskCount() const {
     return coro_tasks_.size();

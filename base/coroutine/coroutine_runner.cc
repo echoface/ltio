@@ -94,23 +94,22 @@ void CoroRunner::Yield() {
 //static
 void CoroRunner::Sleep(uint64_t ms) {
   if (!Yieldable()) {
-    LOG(INFO) << kCoSleepWarning;
-    usleep(ms * 1000);
+    DCHECK(false) << "CO_SLEEP only work on coro context";
     return;
   }
 
   MessageLoop* loop = tls_runner->bind_loop_;
   if (loop->PostDelayTask(NewClosure(MakeResumer()), ms)) {
-    tls_runner->YieldInternal();
-    return;
+    return tls_runner->YieldInternal();
   }
 
-  usleep(ms * 1000);
+  std::this_thread::yield();
+  DCHECK(false) << "CO_SLEEP failed, task schedule failed";
 }
 
 //static
 LtClosure CoroRunner::MakeResumer() {
-  if (!tls_runner) {
+  if (!Yieldable()) {
     return nullptr;
   }
   auto weak_coro = tls_runner->current_->AsWeakPtr();
@@ -194,13 +193,13 @@ void CoroRunner::AppendTask(TaskBasePtr&& task) {
 }
 
 void CoroRunner::LoopGone(MessageLoop* loop) {
+  bind_loop_ = nullptr;
   LOG(ERROR) << "loop gone, CoroRunner feel not good";
 }
 
 void CoroRunner::Sched() {
-  VLOG(GLOG_VTRACE) << "sched coro task@" << bind_loop_->LoopName();
-  // after here, any nested task will be handled next loop
   stealing_counter_ = 0;
+  // after here, any nested task will be handled next loop
   coro_tasks_.swap(sched_tasks_);
 
   //P(CoroRunner) take a M(Corotine) do work(TaskBasePtr)
@@ -250,10 +249,10 @@ void CoroRunner::SwapCurrentAndTransferTo(Coroutine *next) {
   }
   Coroutine* current = current_;
 
-  current_ = next;
-
   VLOG(GLOG_VTRACE) << __func__
-    << RunnerInfo() << " switch to next:" << current_;
+    << RunnerInfo() << " switch to next:" << next;
+
+  current_ = next;
   current->TransferTo(next);
 }
 

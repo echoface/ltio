@@ -60,60 +60,32 @@ TEST_CASE("event_pump.timer", "[test event pump timer]") {
   base::EventPump pump;
   pump.SetLoopThreadId(std::this_thread::get_id());
 
-  uint64_t repeated_timer_checker = 0;
-  base::TimeoutEvent* repeated_toe = new base::TimeoutEvent(5000, true);
+  size_t repeated_times = 0;
+  bool oneshot_invoked = false;
+
+  base::TimeoutEvent* repeated_toe = new base::TimeoutEvent(5, true);
   repeated_toe->InstallTimerHandler(NewClosure([&]() {
-    uint64_t t = base::time_ms();
-
-    uint64_t diff = std::abs(int(t - repeated_timer_checker));
-    std::cout << "time diff:" << diff << std::endl;
-    REQUIRE((diff <= 5000*1.01));
-    repeated_timer_checker = t;
+    repeated_times++;
   }));
 
-  uint64_t timer_ms_checker = 0;
-  base::TimeoutEvent* oneshot_toe = new base::TimeoutEvent(5, false);
-  oneshot_toe->InstallTimerHandler(NewClosure([&]() {
-    uint64_t t = base::time_ms();
-    uint64_t diff = std::abs(int(t - timer_ms_checker));
-    std::cout << "time diff:" << diff << std::endl;
-    REQUIRE((diff <= 5 + 1));
-  }));
-
-  uint64_t timer_zero_checker = 0;
-  base::TimeoutEvent* zerooneshot_toe = new base::TimeoutEvent(0, false);
-  zerooneshot_toe->InstallTimerHandler(NewClosure([&]() {
-    uint64_t t = base::time_ms();
-    uint64_t diff = t - timer_zero_checker;
-    REQUIRE((diff <= 0 + 1));
-  }));
-
-  uint64_t start, end;
-  base::TimeoutEvent* quit_toe = base::TimeoutEvent::CreateOneShot(30000, true);
+  base::TimeoutEvent* quit_toe = base::TimeoutEvent::CreateOneShot(1000, false);
   quit_toe->InstallTimerHandler(NewClosure([&]() {
-    end = base::time_ms();
-    std::cout << "end at ms:" << end << std::endl;
-    REQUIRE(end - start <= 30000*1.01);
+    oneshot_invoked = 10;
     pump.RemoveTimeoutEvent(repeated_toe);
-    pump.RemoveTimeoutEvent(oneshot_toe);
-    pump.RemoveTimeoutEvent(zerooneshot_toe);
     pump.RemoveTimeoutEvent(quit_toe);
     pump.Quit();
   }));
 
-  repeated_timer_checker = timer_ms_checker = timer_zero_checker = start = base::time_ms();
-  std::cout << "start at ms:" <<  timer_ms_checker << std::endl;
-  pump.AddTimeoutEvent(oneshot_toe);
-  pump.AddTimeoutEvent(repeated_toe);
-  pump.AddTimeoutEvent(zerooneshot_toe);
   pump.AddTimeoutEvent(quit_toe);
+  pump.AddTimeoutEvent(repeated_toe);
 
-
+  std::cout << "start at ms:" << base::time_ms() << std::endl;
   pump.Run();
+  REQUIRE(oneshot_invoked);
+  REQUIRE(repeated_times > 150);
 
+  delete quit_toe;
   delete repeated_toe;
-  delete oneshot_toe;
-  delete zerooneshot_toe;
 }
 
 TEST_CASE("messageloop.delaytask", "[run delay task]") {
@@ -136,128 +108,52 @@ TEST_CASE("messageloop.delaytask", "[run delay task]") {
 }
 
 TEST_CASE("messageloop.replytask", "[task with reply function]") {
-
   base::MessageLoop loop;
   loop.Start();
 
   base::MessageLoop replyloop;
   replyloop.Start();
 
-  bool inloop_reply_run = false;
-  bool outloop_reply_run = false;
+  int64_t replytask_invoked_times = 0;
 
   loop.PostTaskAndReply(FROM_HERE,
                         [&]() {
                           LOG(INFO) << " task bind reply in loop run";
                         }, [&]() {
-                          inloop_reply_run = true;
+                          replytask_invoked_times++;
                           REQUIRE(base::MessageLoop::Current() == &loop);
-                          inloop_reply_run = false;
-                        });
-
-  loop.PostTaskAndReply(FROM_HERE,
-                        [&]() {
-                          LOG(INFO) << " task bind stlclosure reply in loop run";
-                        }, [&]() {
-                          inloop_reply_run = true;
-                          REQUIRE(base::MessageLoop::Current() == &loop);
-                          inloop_reply_run = false;
                         });
 
   loop.PostTaskAndReply(FROM_HERE,
                         [&]() {
                           LOG(INFO) << " task bind reply use another loop run";
                         }, [&]() {
-                          outloop_reply_run = true;
+                          replytask_invoked_times++;
                           REQUIRE(base::MessageLoop::Current() == &replyloop);
-                          outloop_reply_run = false;
                         }, &replyloop);
 
-
-  loop.PostDelayTask(NewClosure([&](){
-    LOG(INFO) << "call quitloop";
-    loop.QuitLoop();
-  }), 2000);
-  loop.WaitLoopEnd();
-  LOG(INFO) << "loop end, going to desctructor";
-}
-
-
-TEST_CASE("messageloop.tasklocation", "[new task tracking location ]") {
-  google::InstallFailureSignalHandler();
-  google::InstallFailureWriter(FailureDump);
-
-  base::MessageLoop loop;
-  loop.Start();
-
-  loop.PostTask(NewClosure([&]() {
-    LOG(INFO) << " task_location exception by throw";
-    //throw "task throw";
-  }));
-
   loop.PostDelayTask(NewClosure([&](){
     loop.QuitLoop();
-  }), 2000);
+    replyloop.QuitLoop();
+  }), 100);
   loop.WaitLoopEnd();
-}
-
-
-TEST_CASE("base.wihout_bind", "[test event pump timer]") {
-  base::MessageLoop loop;
-  loop.Start();
-
-  loop.PostTask(FROM_HERE, &Stub::func, &stub, 12, 13);
-
-  loop.PostDelayTask(NewClosure([&](){
-    loop.QuitLoop();
-  }), 2000);
-  loop.WaitLoopEnd();
-}
-
-TEST_CASE("CocurrencyWrite", "[new task tracking location ]") {
-  google::InstallFailureSignalHandler();
-  google::InstallFailureWriter(FailureDump);
-
-  LOG(INFO) << " CocurrencyWrite start";
-  std::vector<std::shared_ptr<base::MessageLoop>> loops;
-  for (size_t i = 0; i < 4; i++) {
-    auto loop = std::make_shared<base::MessageLoop>();
-    loop->Start();
-    loops.push_back(loop);
-  }
-
-  std::atomic_int64_t randv;
-  std::vector<int64_t> values(10, 0);
-  auto f = [&](std::shared_ptr<base::MessageLoop> l) {
-        int64_t i = 10000000;
-        LOG(INFO) << "start write value:" << i << " times";
-        while(i-- > 0) {
-            values[0] = randv++;
-        }
-        l->QuitLoop();
-        LOG(INFO) << "end write value total:" << i << " times";
-  };
-  for (auto loop : loops) {
-    loop->PostTask(NewClosure(std::bind(f, loop)));
-  }
-
-  for (auto loop : loops) {
-    loop->WaitLoopEnd();
-  }
+  REQUIRE(replytask_invoked_times == 2);
 }
 
 int64_t start_time;
 static std::int64_t counter= 0;
 static const std::int64_t kTaskCount = 10000000;
+
 void invoke(base::MessageLoop* loop, bool coro) {
   if (counter++ == kTaskCount) {
     int64_t diff = base::time_us() - start_time;
     int64_t task_per_second = kTaskCount * counter / diff;
-    LOG(INFO) << "coro:" << (coro ? "true" : "false")
+    LOG(INFO) << "coro task one by one bench:" << (coro ? "true" : "false")
       << ", total:" << diff << ", " << task_per_second << "/sec";
     loop->QuitLoop();
     return;
   };
+
   if (coro) {
     CO_GO loop << std::bind(invoke, loop, coro);
     return;
@@ -268,15 +164,18 @@ void invoke(base::MessageLoop* loop, bool coro) {
 TEST_CASE("co_task_obo_bench", "[new coro task bench per second one by one]") {
   base::MessageLoop loop;
   loop.Start();
-
+  LOG(INFO) << __FUNCTION__ << ", co_task_obo_bench run";
   counter = 0;
   CO_GO &loop << std::bind(invoke, &loop, true);
   start_time = base::time_us();
 
   loop.WaitLoopEnd();
+  LOG(INFO) << __FUNCTION__ << ", co_task_obo_bench end";
 }
 
 TEST_CASE("task_obo_bench", "[new task bench per second one by one]") {
+  LOG(INFO) << __FUNCTION__ << ", task_obo_bench run";
+
   base::MessageLoop loop;
   loop.Start();
 
@@ -285,4 +184,5 @@ TEST_CASE("task_obo_bench", "[new task bench per second one by one]") {
   start_time = base::time_us();
 
   loop.WaitLoopEnd();
+  LOG(INFO) << __FUNCTION__ << ", task_obo_bench end";
 }
