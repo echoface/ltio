@@ -8,6 +8,7 @@ SET(BASE_SOURCES
   utils/ns_convertor.cc
   utils/string/str_utils.cc
   #coroutine
+  coroutine/coroutine.cc
   coroutine/wait_group.cc
   coroutine/coroutine_runner.cc
   #new eventloop
@@ -32,13 +33,6 @@ SET(BASE_SOURCES
   closure/location.cc
   )
 
-if (LTIO_USE_ACO_CORO_IMPL)
-  list(APPEND BASE_SOURCES coroutine/aco_impl.cc)
-else()
-  list(APPEND BASE_SOURCES coroutine/coro_impl.cc)
-endif()
-
 add_library(ltbase_objs OBJECT ${BASE_SOURCES})
 add_dependencies(ltbase_objs ${CORO_LIBRARY})
 ltio_default_properties(ltbase_objs)
-

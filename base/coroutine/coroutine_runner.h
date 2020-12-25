@@ -6,6 +6,7 @@
 #include <set>
 #include <vector>
 
+#include "coroutine.h"
 #include <base/base_micro.h>
 #include <base/message_loop/message_loop.h>
 
@@ -25,9 +26,6 @@ namespace base {
  * when invoke the G(CoroTask), P(CoroRunner) will choose a suitable
  * M to excute the task
  * */
-class Coroutine;
-using WeakCoroutine = std::weak_ptr<Coroutine>;
-using RefCoroutine = std::shared_ptr<Coroutine>;
 
 class CoroRunner : public PersistRunner{
 public:
