@@ -77,6 +77,7 @@ TEST_CASE("client.hashrouter", "[http client]") {
     lt::net::RefClient c = router.GetNextClient(key, NULL);
     LOG_IF(INFO, c != NULL) << "client:" << c;
   }
+  loop.PostTask(FROM_HERE, &base::MessageLoop::QuitLoop, &loop);
   loop.WaitLoopEnd();
   LOG(INFO) << " end test client.base, http client connections";
 }

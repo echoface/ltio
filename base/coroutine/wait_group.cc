@@ -44,7 +44,12 @@ void WaitGroup::wakeup_internal() {
 }
 
 WaitGroup::Result WaitGroup::Wait(int64_t timeout_ms) {
-  if (flag_.test_and_set() || 0 == wait_count_.load()) {
+  if (flag_.test_and_set()) {
+    LOG(ERROR) << "can't wait a yield multi times";
+    return kSuccess;
+  }
+
+  if (0 == wait_count_.load()) {
     return kSuccess;
   }
 

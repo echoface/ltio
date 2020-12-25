@@ -4,10 +4,11 @@
 #include <base/closure/closure_task.h>
 #include <base/memory/lazy_instance.h>
 
+#include "coroutine.h"
 #ifdef USE_LIBACO_CORO_IMPL
-#include "aco_impl.h"
+#include "aco_impl.hpp"
 #else
-#include "coro_impl.h"
+#include "coro_impl.hpp"
 #endif
 
 namespace {
@@ -292,7 +293,7 @@ std::string CoroRunner::RunnerInfo() const {
   std::ostringstream oss;
   oss << "[ current:" << current_
       << ", wait_id:" << current_->ResumeId()
-      << ", status:" << current_->StateToString()
+      << ", status:" << StateToString(current_->Status())
       << ", is_main:" << (IsMain() ? "true" : "false") << "] ";
   return oss.str();
 }
