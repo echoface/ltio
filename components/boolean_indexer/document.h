@@ -35,6 +35,7 @@ class Assigns {
     const ValueContainer& Values() const {
       return values_;
     };
+
     std::string name() const {return name_;}
   protected:
     std::string name_;

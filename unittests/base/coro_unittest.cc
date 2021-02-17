@@ -198,3 +198,18 @@ TEST_CASE("coro.wg_broadcast", "[coroutine braodcast resume]") {
   };
   sleep(2);
 }
+
+TEST_CASE("coro.co_sync", "[coroutine braodcast resume]") {
+
+  CO_GO []() {
+    int result = 0;
+
+    CO_SYNC([&]() {
+      LOG(INFO) << "sync coro task run...";
+      result = 12;
+    });
+
+    REQUIRE(result == 12);
+  };
+  usleep(500);
+}

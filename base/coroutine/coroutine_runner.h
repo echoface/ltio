@@ -69,7 +69,7 @@ public:
       return  current ? current : CoroRunner::backgroup();
     }
     Location location_;
-    base::MessageLoop* target_loop_ = nullptr;
+    MessageLoop* target_loop_ = nullptr;
   }_go;
 
 public:
@@ -196,12 +196,20 @@ private:
 
 }// end base
 
-//NOTE: co_yield,co_await,co_resume has been part of keywords in c++20,
+//NOTE: co_yield,co_await,co_resume has been a part of keywords in c++20,
 // crying!!! so rename co_xxx.... to avoid conflicting
 #define CO_GO         ::base::CoroRunner::_go(__FUNCTION__, __FILE__, __LINE__)-
 #define CO_YIELD      ::base::CoroRunner::Yield()
 #define CO_RESUMER    ::base::CoroRunner::MakeResumer()
 #define CO_CANYIELD   ::base::CoroRunner::Yieldable()
 #define CO_SLEEP(ms)  ::base::CoroRunner::Sleep(ms)
+
+// sync task in coroutine context
+#define CO_SYNC(func)                                                           \
+  do {                                                                          \
+    auto loop = ::base::MessageLoop::Current();                                 \
+    loop->PostTask(::base::CreateTaskWithCallback(FROM_HERE, func, CO_RESUMER));\
+    ::base::CoroRunner::Yield();                                                \
+  } while(0)
 
 #endif

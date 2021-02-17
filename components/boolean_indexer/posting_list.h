@@ -9,6 +9,7 @@ namespace component {
 
 #define NULLENTRY 0xFFFFFFFFFFFFFFFF
 
+/* represent a posting list for one Assign */
 struct PostingList {
   PostingList(const Attr& a, int idx, const EntryIdList* ids)
     : attr(a),

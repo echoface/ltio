@@ -98,7 +98,7 @@ size_t BooleanIndexer::GetPostingLists(const size_t k_size,
   }
 
   const KSizeIndexes& index_data = GetIndexes(k_size);
-  for (const auto& assign : quries) {
+  for (const auto& assign : quries) { // for each {"age": [1, 2, 3, 5, 10]}
 
     PostingListGroup group;
 
@@ -109,7 +109,7 @@ size_t BooleanIndexer::GetPostingLists(const size_t k_size,
       }
 
       Attr attr(assign.name(), iter->second);
-      const EntryIdList* entrylist =  index_data.GetEntryList(attr);
+      const EntryIdList* entrylist = index_data.GetEntryList(attr);
       if (!entrylist) {
         continue;
       }
@@ -140,7 +140,7 @@ int BooleanIndexer::Query(const QueryAssigns& quries,
     std::vector<PostingListGroup> plists;
 
     size_t count = GetPostingLists(k, quries, &plists);
-   
+
     if (dump_details) {
       std::ostringstream oss;
       oss << ">>>dump plist for k_size:" << k << ">>>>>\n";
