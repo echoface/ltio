@@ -40,6 +40,7 @@ TODO:
 About MessageLoop:
   like mostly messageloop implement, all PostTask/PostDelayTask/PostTaskWithReply implemented, it's ispired by chromium messageloop code;
 
+
 ```c++
 /*
   follow code will give you infomathion about the crash task where come from
@@ -223,3 +224,12 @@ NOTE
 Learning and integrate what i leaned/think into ltio
 
 From HuanGong 2018-01-08
+
+
+# Copyright and License
+
+Copyright (C) 2018, by HuanGong [<gonghuan.dev@gmail.com>](mailto:gonghuan.dev@gmail.com).
+
+Under the Apache License, Version 2.0.
+
+See the [LICENSE](LICENSE) file for details.
