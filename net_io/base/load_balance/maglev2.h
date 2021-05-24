@@ -1,7 +1,7 @@
 #ifndef LT_NET_BASE_LB_MAGLEVEV2_H_
 #define LT_NET_BASE_LB_MAGLEVEV2_H_
 
-/* 
+/*
  * HuanGong:
  * this is a modified version of facebook's katran implement
  * all Copyright And License guarantee flow orginal declare

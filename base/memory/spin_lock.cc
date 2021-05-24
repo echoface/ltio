@@ -1,4 +1,4 @@
-/* a spin lock implement from internet*/
+/* a spin lock implement from zhihu*/
 
 #include <thread>
 #include "spin_lock.h"

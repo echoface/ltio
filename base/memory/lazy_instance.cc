@@ -11,6 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
+
 #include "lazy_instance.h"
 #ifdef _WIN32
 #  define WIN32_LEAN_AND_MEAN 1
