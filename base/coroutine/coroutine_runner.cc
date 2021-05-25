@@ -23,9 +23,9 @@
 
 #include "coroutine.h"
 #ifdef USE_LIBACO_CORO_IMPL
-#include "aco_impl.hpp"
+#include "aco_impl.cc"
 #else
-#include "coro_impl.hpp"
+#include "coro_impl.cc"
 #endif
 
 namespace {
@@ -54,26 +54,27 @@ void CoroRunner::CoroutineEntry(void *coro) {
 #endif
 
   CHECK(coroutine);
-
+  CoroRunner& runner = instance();
   {
     TaskBasePtr task;
     do {
-      if (tls_runner->GetTask(task)) {
+      coroutine->ResetElapsedTime();
+      if (runner.GetTask(task)) {
         task->Run(); task.reset();
       }
-    }while(tls_runner->ContinueRun());
+    } while (runner.ContinueRun());
     task.reset();
   }
-  coroutine->SetCoroState(CoroState::kDone);
-  tls_runner->Append2GCCache(coroutine);
+  coroutine->SetState(CoroState::kDone);
+  runner.Append2GCCache(coroutine);
 
 #ifdef USE_LIBACO_CORO_IMPL
   // libaco aco_exti will swapout current and jump back pthread flow
-  tls_runner->current_ = tls_runner->main_coro_;
+  runner.current_ = runner.main_coro_;
   coroutine->Exit();
 #else
   /* libcoro has the same flow for exit the finished coroutine*/
-  tls_runner->YieldInternal();
+  runner.SwapCurrentAndTransferTo(runner.main_coro_);
 #endif
 }
 
@@ -108,10 +109,26 @@ bool CoroRunner::Yieldable() {
   return tls_runner ? (!tls_runner->IsMain()) : false;
 }
 
+// static
+void CoroRunner::Sched(int64_t us) {
+  if (!tls_runner || tls_runner->IsMain()) {
+    return;
+  }
+  Coroutine* coro = tls_runner->current_;
+  if (coro->ElapsedTime() < us ||
+      tls_runner->TaskCount() == 0) {
+    return;
+  }
+  MessageLoop* loop = tls_runner->bind_loop_;
+  if (loop->PostTask(NewClosure(MakeResumer()))) {
+    return tls_runner->SwapCurrentAndTransferTo(tls_runner->main_coro_);
+  }
+}
+
 //static
 void CoroRunner::Yield() {
   CHECK(Yieldable());
-  tls_runner->YieldInternal();
+  tls_runner->SwapCurrentAndTransferTo(tls_runner->main_coro_);
 }
 
 //static
@@ -123,7 +140,7 @@ void CoroRunner::Sleep(uint64_t ms) {
 
   MessageLoop* loop = tls_runner->bind_loop_;
   if (loop->PostDelayTask(NewClosure(MakeResumer()), ms)) {
-    return tls_runner->YieldInternal();
+    return tls_runner->SwapCurrentAndTransferTo(tls_runner->main_coro_);
   }
 
   std::this_thread::yield();
@@ -136,7 +153,7 @@ LtClosure CoroRunner::MakeResumer() {
     return nullptr;
   }
   auto weak_coro = tls_runner->current_->AsWeakPtr();
-  uint64_t resume_id = tls_runner->current_->ResumeId();
+  uint64_t resume_id = tls_runner->current_->ResumeID();
   return std::bind(&CoroRunner::Resume, tls_runner, weak_coro, resume_id);
 }
 
@@ -144,6 +161,7 @@ LtClosure CoroRunner::MakeResumer() {
 bool CoroRunner::ScheduleTask(TaskBasePtr&& task) {
   return remote_queue_.enqueue(std::move(task));
 }
+
 
 CoroRunner::CoroRunner()
   : bind_loop_(MessageLoop::Current()),
@@ -220,7 +238,7 @@ void CoroRunner::LoopGone(MessageLoop* loop) {
   LOG(ERROR) << "loop gone, CoroRunner feel not good";
 }
 
-void CoroRunner::Sched() {
+void CoroRunner::Run() {
   stealing_counter_ = 0;
   // after here, any nested task will be handled next loop
   coro_tasks_.swap(sched_tasks_);
@@ -289,11 +307,7 @@ Coroutine* CoroRunner::RetrieveCoroutine() {
   }
 
   auto coro_ptr =
-#ifdef USE_LIBACO_CORO_IMPL
     Coroutine::Create(&CoroRunner::CoroutineEntry, main_coro_);
-#else
-    Coroutine::Create(&CoroRunner::CoroutineEntry);
-#endif
   coro_ptr->SelfHolder(coro_ptr);
 
   return coro_ptr.get();
@@ -309,7 +323,7 @@ void CoroRunner::GcAllCachedCoroutine() {
 std::string CoroRunner::RunnerInfo() const {
   std::ostringstream oss;
   oss << "[ current:" << current_
-      << ", wait_id:" << current_->ResumeId()
+      << ", wait_id:" << current_->ResumeID()
       << ", status:" << StateToString(current_->Status())
       << ", is_main:" << (IsMain() ? "true" : "false") << "] ";
   return oss.str();

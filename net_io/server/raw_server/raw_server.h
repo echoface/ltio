@@ -87,7 +87,7 @@ private:
   std::vector<base::MessageLoop*> io_loops_;
 
   std::atomic<bool> serving_flag_;
-  std::atomic_uint32_t connection_count_;
+  std::atomic<uint32_t> connection_count_;
   DISALLOW_COPY_AND_ASSIGN(RawServer);
 };
 

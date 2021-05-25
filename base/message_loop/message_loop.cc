@@ -309,7 +309,7 @@ void MessageLoop::RunNestedTask() {
 
   //Note: can't in Sched uninstall runner
   for (PersistRunner* runner : persist_runner_) {
-    runner->Sched();
+    runner->Run();
   }
 }
 

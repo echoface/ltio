@@ -92,6 +92,11 @@ public:
 public:
   friend class _go;
 
+  // run other task if current task occupy cpu too long
+  // if task running time > us, runner will give up cpu
+  // and then run a task in pending queue
+  static void Sched(int64_t us = 2500);
+
   static void Yield();
 
   static bool Yieldable();
@@ -126,13 +131,10 @@ protected:
   /* override from MessageLoop::PersistRunner
    * load(bind) task(cargo) to coroutine(car) and run(transfer)
    * */
-  void Sched() override ;
+  void Run() override;
 
+  /* override from MessageLoop::PersistRunner*/
   void LoopGone(MessageLoop* loop) override;
-
-  void YieldInternal() {
-    SwapCurrentAndTransferTo(main_coro_);
-  }
 
   void AppendTask(TaskBasePtr&& task);
 
@@ -220,6 +222,7 @@ private:
 #define CO_RESUMER    ::base::CoroRunner::MakeResumer()
 #define CO_CANYIELD   ::base::CoroRunner::Yieldable()
 #define CO_SLEEP(ms)  ::base::CoroRunner::Sleep(ms)
+#define __co_sched_here__  ::base::CoroRunner::Sched();
 
 // sync task in coroutine context
 #define CO_SYNC(func)                                                           \

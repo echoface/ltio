@@ -74,7 +74,7 @@ private:
   std::mutex mtx_;
   std::atomic_bool serving_flag_;
 
-  std::atomic_uint32_t connection_count_;
+  std::atomic<uint32_t> connection_count_;
 
   std::atomic<uint32_t> worker_index_;
   DISALLOW_COPY_AND_ASSIGN(HttpServer);

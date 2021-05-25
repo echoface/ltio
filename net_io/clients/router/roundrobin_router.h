@@ -33,7 +33,7 @@ class RoundRobinRouter : public ClientRouter {
                             CodecMessage* request = NULL) override;
   private:
     std::vector<RefClient> clients_;
-    std::atomic_uint32_t round_index_;
+    std::atomic<uint32_t> round_index_;
 };
 
 }}

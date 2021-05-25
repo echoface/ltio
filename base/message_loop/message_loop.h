@@ -49,7 +49,7 @@ enum LoopState {
 class MessageLoop;
 class PersistRunner {
   public:
-    virtual void Sched() = 0;
+    virtual void Run() = 0;
     virtual void LoopGone(MessageLoop* loop) {};
 };
 

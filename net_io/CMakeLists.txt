@@ -67,6 +67,7 @@ set(LTNET_SOURCE
 
 add_library(ltnet_objs OBJECT ${LTNET_SOURCE})
 ltio_default_properties(ltnet_objs)
-target_link_libraries(ltnet_objs
-  PRIVATE fmt::fmt
-  )
+target_include_directories(ltnet_objs
+    PUBLIC
+    $<TARGET_PROPERTY:fmt,INTERFACE_INCLUDE_DIRECTORIES>
+    )

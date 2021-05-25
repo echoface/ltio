@@ -74,7 +74,7 @@ private:
 private:
   EventPump* pump_;
   Delegate* delegate_;
-  std::atomic_uint32_t count_;
+  std::atomic<uint32_t> count_;
   std::list<RefFdEvent> inprogress_list_;
 };
 

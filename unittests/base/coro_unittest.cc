@@ -213,3 +213,23 @@ TEST_CASE("coro.co_sync", "[coroutine braodcast resume]") {
   };
   usleep(500);
 }
+
+TEST_CASE("coro.Sched", "[coroutine sched]") {
+
+  int64_t cnt = 0;
+
+  CO_GO [&]() {
+    auto start = base::time_us();
+    while (base::time_us() - start < 4000) {
+      __co_sched_here__
+    };
+    cnt++;
+  };
+
+  CO_GO [&]() {
+    cnt++;
+    std::cout << "second task run" << std::endl;
+  };
+  usleep(5000);
+  REQUIRE(cnt == 2);
+}

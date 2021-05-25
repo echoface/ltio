@@ -327,7 +327,7 @@ TEST_CASE("client.timer.request", "[fetch resource every interval]") {
   }), 10000);
 
   loop.WaitLoopEnd();
-  LOG(INFO) << "system co count:" << base::SystemCoroutineCount();
+  LOG(INFO) << "system co count:" << base::CoroBase::SystemCoroutineCount();
 
   LOG(INFO) << " end test client.timer.request, raw client send request";
 }
@@ -371,12 +371,12 @@ TEST_CASE("client.raw.bench", "[raw client send request benchmark]") {
   raw_router.SetDelegate(&router_delegate);
   raw_router.Initialize(config);
 
-  std::atomic_int64_t  total_task;
+  std::atomic<int64_t>  total_task;
   total_task = bench_count;
 
-  std::atomic_int64_t failed_request;
+  std::atomic<int64_t> failed_request;
   failed_request = 0;
-  std::atomic_int64_t success_request;
+  std::atomic<int64_t> success_request;
   success_request = 0;
 
   auto raw_request_task = [&]() {
@@ -447,12 +447,12 @@ TEST_CASE("client.http.bench", "[http client send request benchmark]") {
   http_client.SetDelegate(&router_delegate);
   http_client.Initialize(config);
 
-  std::atomic_int64_t  total_task;
+  std::atomic<int64_t>  total_task;
   total_task = bench_count;
 
-  std::atomic_int64_t failed_request;
+  std::atomic<int64_t> failed_request;
   failed_request = 0;
-  std::atomic_int64_t success_request;
+  std::atomic<int64_t> success_request;
   success_request = 0;
 
   auto request_task = [&]() {

@@ -129,7 +129,7 @@ protected:
 #if defined SO_REUSEPORT && defined NET_ENABLE_REUSER_PORT
     return MessageLoop::Current();
 #else
-    static std::atomic_uint32_t index = 0;
+    static std::atomic<uint32_t> index = 0;
     return io_loops_[index.fetch_add(1) % io_loops_.size()];
 #endif
   };
@@ -182,7 +182,7 @@ private:
 
   base::ClosureCallback closed_callback_;
   std::atomic<bool> serving_flag_;
-  std::atomic_uint32_t client_count_;
+  std::atomic<uint32_t> client_count_;
   DISALLOW_COPY_AND_ASSIGN(BaseServer);
 };
 

@@ -18,10 +18,12 @@
 #ifndef COROUTINE_H_H_
 #define COROUTINE_H_H_
 
+#include <atomic>
 #include <memory>
 #include <functional>
 
 #include <base/base_micro.h>
+#include "base/time/time_utils.h"
 
 
 #if not defined(COROUTINE_STACK_SIZE)
@@ -37,8 +39,44 @@ enum class CoroState {
   kDone    = 3
 };
 
-int64_t SystemCoroutineCount();
 std::string StateToString(CoroState st);
+class CoroBase {
+public:
+  static size_t SystemCoroutineCount();
+
+protected:
+  friend class CoroRunner;
+
+  CoroBase() :
+    state_(CoroState::kInit), resume_cnt_(0){}
+
+  void ResetElapsedTime() {timestamp_us_ = base::time_us(); }
+  uint64_t ElapsedTime() const {return time_us() - timestamp_us_;}
+
+  inline void IncrResumeID() {resume_cnt_++;}
+  inline bool CanResume(int64_t resume_id) {
+    return IsPaused() && resume_cnt_ == resume_id;
+  }
+  inline uint64_t ResumeID() const { return resume_cnt_; }
+
+  inline CoroState Status() const {return state_;}
+  inline void SetState(CoroState st) {state_ = st;}
+  inline bool IsPaused() const {return state_ == CoroState::kPaused;}
+  inline bool IsRunning() const {return state_ == CoroState::kRunning;}
+
+  CoroState state_;
+
+  /* resume_cnt_ here use to resume correctly when
+   * yielded context be resumed multi times */
+  uint64_t resume_cnt_;
+
+  /* a timestamp record for every coro task 'continuous'
+   * time consume, it will reset every yield action*/
+  int64_t timestamp_us_;
+
+  /* a global coro counter*/
+  static std::atomic<int64_t> coro_counter_;
+};
 
 class Coroutine;
 typedef std::weak_ptr<Coroutine> WeakCoroutine;

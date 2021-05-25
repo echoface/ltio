@@ -27,19 +27,11 @@
 #include <base/closure/closure_task.h>
 #include <thirdparty/libaco/aco.h>
 
-namespace {
-  std::atomic<int64_t> g_counter = {0};
-}
-
 namespace base {
-
-int64_t SystemCoroutineCount() {
-  return g_counter.load();
-}
 
 typedef void (*CoroEntry)();
 
-class Coroutine :public EnableShared(Coroutine) {
+class Coroutine : public CoroBase, public EnableShared(Coroutine) {
 public:
   friend class CoroRunner;
 
@@ -53,7 +45,7 @@ public:
   ~Coroutine() {
 
     VLOG(GLOG_VTRACE) << "coroutine gone!"
-      << " count:" << g_counter.load()
+      << " count:" << SystemCoroutineCount()
       << " state:" << StateToString(state_)
       << " main:" << (is_main() ? "True" : "False");
 
@@ -62,25 +54,17 @@ public:
 
     if (sstk_) {
       CHECK(!IsRunning());
-      g_counter.fetch_sub(1);
+      coro_counter_.fetch_sub(1);
       aco_share_stack_destroy(sstk_);
       sstk_ = nullptr;
     }
   }
 
-  CoroState Status() const {return state_;}
-
-  uint64_t ResumeId() const {return resume_cnt_;}
-
-  inline bool IsPaused() const {return state_ == CoroState::kPaused;}
-
-  inline bool IsRunning() const {return state_ == CoroState::kRunning;}
-
   /*NOTE: this will switch to main coro, be care for call this
    * must ensure call it when coro_fn finish, can't use return*/
   void Exit() {
     CHECK(!is_main());
-    SetCoroState(CoroState::kDone);
+    SetState(CoroState::kDone);
     aco_exit();
   }
 
@@ -88,9 +72,11 @@ public:
   void TransferTo(Coroutine* next) {
     CHECK(this != next);
 
-    SetCoroState(CoroState::kPaused);
-    next->resume_cnt_++;
-    next->SetCoroState(CoroState::kRunning);
+    ResetElapsedTime();
+    SetState(CoroState::kPaused);
+
+    next->IncrResumeID();
+    next->SetState(CoroState::kRunning);
     if (is_main()) {
       aco_resume(next->coro_);
     } else {
@@ -98,29 +84,24 @@ public:
     }
   }
 
-  bool CanResume(int64_t resume_id) {
-    return IsPaused() && resume_cnt_ == resume_id;
-  }
-
 private:
-  Coroutine()
-    : resume_cnt_(0) {
+  friend class CoroRunner;
+
+  Coroutine() {
     aco_thread_init(NULL);
-    state_ = CoroState::kRunning;
     coro_ = aco_create(NULL, NULL, 0, NULL, NULL);
   }
 
-  Coroutine(CoroEntry entry, Coroutine* main_co)
-    : resume_cnt_(0) {
+  Coroutine(CoroEntry entry, Coroutine* main_co) {
 
-    state_ = CoroState::kInit;
+    SetState(CoroState::kInit);
     sstk_ = aco_share_stack_new(COROUTINE_STACK_SIZE);
     coro_ = aco_create(main_co->coro_, sstk_, 0, entry, this);
 
-    g_counter.fetch_add(1);
+    coro_counter_.fetch_add(1);
 
     VLOG(GLOG_VTRACE) << "coroutine born!"
-      << " count:" << g_counter.load()
+      << " count:" << coro_counter_.load()
       << " state:" << StateToString(state_)
       << " main:" << (is_main() ? "True" : "False");
   }
@@ -130,17 +111,12 @@ private:
     self_holder_ = self;
   }
 
-  void SetCoroState(CoroState st) {state_ = st;}
-
   void ReleaseSelfHolder() {self_holder_.reset();};
 
   WeakCoroutine AsWeakPtr() {return shared_from_this();}
 
   bool is_main() const {return sstk_ == nullptr;}
 private:
-  CoroState state_;
-  uint64_t resume_cnt_;
-
   aco_t* coro_ = nullptr;
   aco_share_stack_t* sstk_ = nullptr;
 

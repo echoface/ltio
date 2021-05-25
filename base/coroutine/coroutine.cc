@@ -35,4 +35,10 @@ std::string StateToString(CoroState st) {
   return "Unknown";
 }
 
+//static
+std::atomic<int64_t> CoroBase::coro_counter_ = {0};
+
+//static
+size_t CoroBase::SystemCoroutineCount() { return coro_counter_.load(); }
+
 } // end base

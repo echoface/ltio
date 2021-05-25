@@ -142,7 +142,7 @@ private:
 
   //full list for manager purpose, once changed
   //a copy of update set to in_use_channels_;
-  std::atomic_uint32_t channels_count_;
+  std::atomic<uint32_t> channels_count_;
   std::list<RefClientChannel> channels_;
 
   /* reset to zero when a success connected
