@@ -2,19 +2,19 @@
 
 namespace component {
 
-void KSizeIndexes::AddEntry(const Attr& attr, EntryId id) {
+void KSizePostingEntries::AddEntry(const Attr& attr, EntryId id) {
   index_map_[attr].emplace_back(id);
 }
 
 
-void KSizeIndexes::MakeIndexSorted() {
+void KSizePostingEntries::MakeIndexSorted() {
   for (auto& attr_entries : index_map_) {
-    EntryIdList& entries = attr_entries.second;
+    Entries& entries = attr_entries.second;
     std::sort(entries.begin(), entries.end());
   }
 }
 
-const EntryIdList* KSizeIndexes::GetEntryList(const Attr& attr) const {
+const Entries* KSizePostingEntries::GetEntryList(const Attr& attr) const {
   auto iter = index_map_.find(attr);
   if (iter == index_map_.end()) {
     return nullptr;
@@ -23,10 +23,10 @@ const EntryIdList* KSizeIndexes::GetEntryList(const Attr& attr) const {
 }
 
 
-void KSizeIndexes::DumpAttrEntries(std::ostringstream& oss) {
+void KSizePostingEntries::DumpAttrEntries(std::ostringstream& oss) {
   for (auto& attr_entries : index_map_) {
     const Attr& attr = attr_entries.first;
-    EntryIdList& entries = attr_entries.second;
+    Entries& entries = attr_entries.second;
 
     oss << attr.first << "#" << attr.second << ":[";
     bool is_first = true;
@@ -51,25 +51,25 @@ BooleanIndexer::BooleanIndexer(const size_t max_ksize)
 BooleanIndexer::~BooleanIndexer() {
 }
 
-KSizeIndexes* BooleanIndexer::MutableIndexes(size_t k) {
+KSizePostingEntries* BooleanIndexer::MutableIndexes(size_t k) {
   assert(k <=  max_ksize_);
   return &ksize_indexes_[k];
 }
 
 void BooleanIndexer::CompleteIndex() {
-  for (KSizeIndexes& indexes : ksize_indexes_) {
+  for (KSizePostingEntries& indexes : ksize_indexes_) {
     indexes.MakeIndexSorted();
   }
   Attr attr("__wildcard__", GetUniqueID("__wildcard__"));
-  const KSizeIndexes& zero_indexes = GetIndexes(0);
-  const EntryIdList* wildcard_list = zero_indexes.GetEntryList(attr);
+  const KSizePostingEntries& zero_indexes = GetIndexes(0);
+  const Entries* wildcard_list = zero_indexes.GetEntryList(attr);
   wildcard_list_ = wildcard_list;
 }
 
 void BooleanIndexer::DumpIndex() {
   std::ostringstream oss;
   size_t size = 0;
-  for (KSizeIndexes& indexes : ksize_indexes_) {
+  for (KSizePostingEntries& indexes : ksize_indexes_) {
     oss << ">>>>>>> K:" << size++ << " index >>>>>>>>>>\n";
     indexes.DumpAttrEntries(oss);
     oss << "\n";
@@ -97,7 +97,7 @@ size_t BooleanIndexer::GetPostingLists(const size_t k_size,
     out->emplace_back(group);
   }
 
-  const KSizeIndexes& index_data = GetIndexes(k_size);
+  const KSizePostingEntries& index_data = GetIndexes(k_size);
   for (const auto& assign : quries) { // for each {"age": [1, 2, 3, 5, 10]}
 
     PostingListGroup group;
@@ -109,7 +109,7 @@ size_t BooleanIndexer::GetPostingLists(const size_t k_size,
       }
 
       Attr attr(assign.name(), iter->second);
-      const EntryIdList* entrylist = index_data.GetEntryList(attr);
+      const Entries* entrylist = index_data.GetEntryList(attr);
       if (!entrylist) {
         continue;
       }
@@ -141,15 +141,6 @@ int BooleanIndexer::Query(const QueryAssigns& quries,
 
     size_t count = GetPostingLists(k, quries, &plists);
 
-    if (dump_details) {
-      std::ostringstream oss;
-      oss << ">>>dump plist for k_size:" << k << ">>>>>\n";
-      for (auto& grp : plists) {
-        oss << "\t", grp.DumpPostingList(oss);
-      }
-      std::cout << oss.str();
-    }
-
     int temp_k = k;
     if (temp_k == 0) {
       temp_k = 1;
@@ -163,20 +154,10 @@ int BooleanIndexer::Query(const QueryAssigns& quries,
 
     while(plists[temp_k - 1].GetCurEntryID() != NULLENTRY) {
 
-      std::sort(plists.begin(),
-                plists.end(),
+      std::sort(plists.begin(), plists.end(),
                 [](PostingListGroup& l, PostingListGroup& r) -> bool {
                   return l.GetCurEntryID() < r.GetCurEntryID();
                 });
-
-      if (dump_details) {
-        std::ostringstream oss2;
-        oss2 << "after sort plist group\n";
-        for (auto& grp : plists) {
-          oss2 << "\t", grp.DumpPostingList(oss2);
-        }
-        std::cout << oss2.str();
-      }
 
       EntryId id = plists[0].GetCurEntryID();
 

@@ -10,8 +10,8 @@ namespace component {
 #define NULLENTRY 0xFFFFFFFFFFFFFFFF
 
 /* represent a posting list for one Assign */
-struct PostingList {
-  PostingList(const Attr& a, int idx, const EntryIdList* ids)
+struct EntriesIterator {
+  EntriesIterator(const Attr& a, int idx, const Entries* ids)
     : attr(a),
       index(idx),
       id_list(ids) {
@@ -24,7 +24,7 @@ struct PostingList {
 
   Attr attr;            // eg: <age, 15>
   int index;            // current cur index
-  const EntryIdList* id_list; // [conj1, conj2, conj3]
+  const Entries* id_list; // [conj1, conj2, conj3]
 };
 
 class PostingListGroup {
@@ -33,7 +33,7 @@ public:
     : current_(nullptr) {
   }
 
-  void AddPostingList(const Attr& attr, const EntryIdList* entrylist) {
+  void AddPostingList(const Attr& attr, const Entries* entrylist) {
     p_lists_.emplace_back(attr, 0, entrylist);
   }
 
@@ -73,8 +73,8 @@ public:
   // tag_2: [ID5]
   // tag_1: [ID1, ID2, ID7]
   // tag_3: null
-  PostingList* current_;
-  std::vector<PostingList> p_lists_;
+  EntriesIterator* current_;
+  std::vector<EntriesIterator> p_lists_;
 };
 
 

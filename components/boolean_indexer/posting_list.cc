@@ -4,15 +4,15 @@
 
 namespace component {
 
-bool PostingList::ReachEnd() const {
+bool EntriesIterator::ReachEnd() const {
   return id_list == nullptr || id_list->size() <= index;
 }
-EntryId PostingList::GetCurEntryID() const {
+EntryId EntriesIterator::GetCurEntryID() const {
   if (ReachEnd()) return NULLENTRY;
   return id_list->at(index);
 }
 
-EntryId PostingList::Skip(const EntryId id) {
+EntryId EntriesIterator::Skip(const EntryId id) {
   EntryId cur_id = GetCurEntryID();
   if (cur_id > id) {
     return cur_id;
@@ -34,7 +34,7 @@ EntryId PostingList::Skip(const EntryId id) {
   return ReachEnd() ? NULLENTRY : id_list->at(index);
 }
 
-EntryId PostingList::SkipTo(const EntryId id) {
+EntryId EntriesIterator::SkipTo(const EntryId id) {
   EntryId cur_id = GetCurEntryID();
   if (cur_id > id) {
     return cur_id;
@@ -76,7 +76,6 @@ void PostingListGroup::Initialize() {
 }
 
 EntryId PostingListGroup::Skip(const EntryId id) {
-
   EntryId min_id = NULLENTRY;
   for (int i = 0; i < p_lists_.size(); i++) {
     EntryId id = p_lists_[i].SkipTo(id);

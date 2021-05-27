@@ -18,10 +18,10 @@
 #ifndef _BASE_CORO_WAITGROUP_H_
 #define _BASE_CORO_WAITGROUP_H_
 
-#include "base/message_loop/message_loop.h"
 #include <atomic>
 
 #include <base/closure/closure_task.h>
+#include <base/message_loop/message_loop.h>
 #include <base/message_loop/timeout_event.h>
 
 /*
@@ -78,7 +78,7 @@ class WaitGroup : public EnableShared(WaitGroup) {
     std::atomic_flag flag_;
     std::atomic<int64_t> wait_count_;
 
-    base::MessageLoop* loop_ = nullptr;
+    MessageLoop* loop_ = nullptr;
     std::unique_ptr<TimeoutEvent> timeout_;
     DISALLOW_COPY_AND_ASSIGN(WaitGroup);
 };

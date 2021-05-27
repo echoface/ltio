@@ -30,7 +30,7 @@ BooleanIndexerPtr BeIndexerBuilder::BuildIndexer() {
     uint64_t conj_id = conj_kv.first;
     Conjunction* conj = conj_kv.second;
 
-    KSizeIndexes* kindexes = indexer->MutableIndexes(conj->size());
+    KSizePostingEntries* kindexes = indexer->MutableIndexes(conj->size());
 
     if (conj->size() == 0) {
       Attr attr("__wildcard__", indexer->GetUniqueID("__wildcard__"));

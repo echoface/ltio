@@ -13,6 +13,7 @@
 
 namespace component {
 
+class IndexScanner;
 
 struct pair_hash {
 	template <class T1, class T2>
@@ -20,16 +21,16 @@ struct pair_hash {
 		return std::hash<T1>()(pair.first) ^ std::hash<T2>()(pair.second);
 	}
 };
-typedef std::unordered_map<Attr, EntryIdList, pair_hash> IndexMap;
+typedef std::unordered_map<Attr, Entries, pair_hash> IndexMap;
 
-class KSizeIndexes {
+class KSizePostingEntries {
 public:
-  KSizeIndexes() {}
+  KSizePostingEntries() {}
 
   void MakeIndexSorted();
   void AddEntry(const Attr& attr, EntryId id);
 
-  const EntryIdList* GetEntryList(const Attr& attr) const;
+  const Entries* GetEntryList(const Attr& attr) const;
 
   void DumpAttrEntries(std::ostringstream& oss);
 private:
@@ -38,21 +39,22 @@ private:
   IndexMap index_map_;
 };
 
+typedef std::vector<Assigns> QueryAssigns;
+
 class BooleanIndexer {
   public:
-    typedef std::vector<Assigns> QueryAssigns;
 
     BooleanIndexer(const size_t max_ksize);
     ~BooleanIndexer();
 
-    const KSizeIndexes& GetIndexes(size_t k) {
+    const KSizePostingEntries& GetIndexes(size_t k) {
       assert(k <=  max_ksize_);
       return ksize_indexes_[k];
     };
 
     void CompleteIndex();
 
-    KSizeIndexes* MutableIndexes(size_t k);
+    KSizePostingEntries* MutableIndexes(size_t k);
 
     size_t GetPostingLists(const size_t k_size,
                            const QueryAssigns& quries,
@@ -68,14 +70,17 @@ class BooleanIndexer {
 
     uint64_t GetUniqueID(const std::string& value);
   private:
+    friend IndexScanner;
 
     const size_t max_ksize_;
 
     std::unordered_map<std::string, uint64_t> id_gen_;
 
-    std::vector<KSizeIndexes> ksize_indexes_;
-    const EntryIdList* wildcard_list_;
+    std::vector<KSizePostingEntries> ksize_indexes_;
+    const Entries* wildcard_list_;
 };
+
+typedef std::shared_ptr<BooleanIndexer> RefBooleanIndexer;
 
 }
 #endif

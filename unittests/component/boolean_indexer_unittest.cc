@@ -80,7 +80,7 @@ TEST_CASE("be_indexes_dump", "[dump indexes and conjunction id]") {
 
   auto indexer = builder.BuildIndexer();
 
-  std::vector<BooleanIndexer::QueryAssigns> queries = {
+  std::vector<QueryAssigns> queries = {
     {
       {"loc", {"bj"}},
       {"tags", {"15sui", "seg1"}}
@@ -103,11 +103,10 @@ TEST_CASE("be_indexes_dump", "[dump indexes and conjunction id]") {
 }
 
 TEST_CASE("be_posting_list", "[be posting list sort id]") {
-  std::unique_ptr<EntryIdList> entrylist(new EntryIdList());
-  *entrylist= {0, 1, 1, 4, 8, 20};
+  Entries entrylist= {0, 1, 1, 4, 8, 20};
 
   Attr attr("age", 0);
-  PostingList plist(attr, 0, entrylist.get());
+  EntriesIterator plist(attr, 0, &entrylist);
 
   REQUIRE(plist.ReachEnd() == false);
   REQUIRE(plist.GetCurEntryID() == 0);
