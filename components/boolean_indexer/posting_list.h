@@ -1,82 +1,37 @@
 #ifndef _LT_COMPONENT_BOOLEAN_INDEX_PL_H_
 #define _LT_COMPONENT_BOOLEAN_INDEX_PL_H_
 
-#include "id_generator.h"
+#include <unordered_map>
 
-#include <sstream>
+#include "id_generator.h"
 
 namespace component {
 
-#define NULLENTRY 0xFFFFFFFFFFFFFFFF
-
-/* represent a posting list for one Assign */
-struct EntriesIterator {
-  EntriesIterator(const Attr& a, int idx, const Entries* ids)
-    : attr(a),
-      index(idx),
-      id_list(ids) {
-  }
-
-  bool ReachEnd() const;
-  EntryId GetCurEntryID() const;
-  EntryId Skip(const EntryId id);
-  EntryId SkipTo(const EntryId id);
-
-  Attr attr;            // eg: <age, 15>
-  int index;            // current cur index
-  const Entries* id_list; // [conj1, conj2, conj3]
+struct pair_hash {
+	template <class T1, class T2>
+	std::size_t operator() (const std::pair<T1, T2> &pair) const {
+		return std::hash<T1>()(pair.first) ^ std::hash<T2>()(pair.second);
+	}
 };
 
-class PostingListGroup {
+typedef std::unordered_map<Attr, Entries, pair_hash> PostingList;
+
+class KSizePostingEntries {
 public:
-  PostingListGroup()
-    : current_(nullptr) {
-  }
+  KSizePostingEntries() {}
 
-  void AddPostingList(const Attr& attr, const Entries* entrylist) {
-    p_lists_.emplace_back(attr, 0, entrylist);
-  }
+  void MakeEntriesSorted();
 
-  void Initialize();
+  void AddEntry(const Attr& attr, EntryId id);
 
-  EntryId GetCurEntryID() const {
-    return current_->GetCurEntryID();
-  }
-  bool IsCurEntryExclude() const {
-    return EntryUtil::HasExclude(current_->GetCurEntryID());
-  }
-  uint64_t GetCurConjID() const {
-    return EntryUtil::GetConjunctionId(current_->GetCurEntryID());
-  }
+  const Entries* GetEntryList(const Attr& attr) const;
 
-  EntryId Skip(const EntryId id);
-
-  EntryId SkipTo(const EntryId id);
-
-  void DumpPostingList(std::ostringstream& oss) {
-    for (auto& pl : p_lists_) {
-      EntryId cur_id = pl.GetCurEntryID();
-      oss << pl.attr.first << "#" << pl.attr.second
-        << ", cur:" << cur_id
-        << ", doc:" << ConjUtil::GetDocumentID(EntryUtil::GetConjunctionId(cur_id))
-        << ":[";
-      for (auto& id : *pl.id_list) {
-        oss << ConjUtil::GetDocumentID(EntryUtil::GetConjunctionId(id))
-          << ", ";
-      }
-      oss << "]\n";
-    }
-  }
-
-  //eg: assign {"tag", "in", [1, 2, 3]}
-  //out:
-  // tag_2: [ID5]
-  // tag_1: [ID1, ID2, ID7]
-  // tag_3: null
-  EntriesIterator* current_;
-  std::vector<EntriesIterator> p_lists_;
+  void DumpPostingEntries(std::ostringstream& oss) const;
+private:
+  // Attr=>EntryIdList
+  // eg: (age, 15) => [1, 2, 5, 9]
+  PostingList posting_entries_;
 };
 
-
-}
+}// component
 #endif

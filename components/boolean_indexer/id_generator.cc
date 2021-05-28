@@ -1,4 +1,7 @@
+#include <sstream>
+
 #include "id_generator.h"
+#include "posting_list.h"
 
 namespace component {
 
@@ -24,12 +27,40 @@ EntryId EntryUtil::GenEntryID(uint64_t conj_id, bool exclude) {
   return exclude ? entry_id : (entry_id | 0x01);
 }
 
-bool EntryUtil::HasExclude(const EntryId id) {
+bool EntryUtil::IsInclude(const EntryId id) {
+  return (id & 0x01) > 0;
+}
+
+bool EntryUtil::IsExclude(const EntryId id) {
   return (id & 0x01) == 0x00;
 }
 
 uint64_t EntryUtil::GetConjunctionId(const EntryId id) {
   return id >> 16;
+}
+
+uint32_t EntryUtil::GetDocID(const EntryId id) {
+  return ConjUtil::GetDocumentID(GetConjunctionId(id));
+}
+
+size_t EntryUtil::GetConjSize(const EntryId id) {
+  return ConjUtil::GetConjunctionSize(GetConjunctionId(id));
+}
+
+std::string EntryUtil::ToString(const EntryId id) {
+  std::ostringstream oss;
+  if (id == NULLENTRY) {
+    oss << "<null>";
+  } else {
+    oss << "<" << GetDocID(id) << "," << (id & 0x01) << ">"; 
+  }
+  return oss.str();
+}
+
+std::string EntryUtil::ToString(const Attr& attr) {
+  std::ostringstream oss;
+  oss << "<" << attr.first << "," << attr.second << ">"; 
+  return oss.str();
 }
 
 }

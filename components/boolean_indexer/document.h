@@ -16,10 +16,14 @@ class Assigns {
     typedef std::set<ExprValue> ValueContainer;
     typedef std::initializer_list<ExprValue> ValueInitList;
 
-    Assigns(const std::string& name,
-            const ValueInitList& values)
+    Assigns(const std::string& name, const ValueInitList& values)
       : name_(name),
-        values_(values) {
+      values_(values) {
+    }
+
+    Assigns(const std::string& name, const ValueContainer& values)
+      : name_(name),
+      values_(values) {
     }
 
     void SetValue(const ValueInitList& values) {
@@ -44,13 +48,19 @@ class Assigns {
 
 class BooleanExpr : public Assigns {
   public:
+    typedef std::initializer_list<BooleanExpr> BEInitializer;
+
     BooleanExpr(const std::string& name,
                 const ValueInitList& values,
+                bool exclude = false);
+    BooleanExpr(const std::string& name,
+                const ValueContainer& values,
                 bool exclude = false);
 
     ~BooleanExpr() {};
 
     bool exclude() const {return exclude_;}
+    bool include() const {return !exclude_;}
   private:
     friend std::ostream& operator<< (std::ostream& os, const BooleanExpr& expr);
 
@@ -63,14 +73,22 @@ std::ostream& operator<< (std::ostream& os, const BooleanExpr& expr);
 class Conjunction {
   public:
     Conjunction(){};
-    Conjunction(const std::initializer_list<BooleanExpr>& exprs){
+    Conjunction(const BooleanExpr::BEInitializer& exprs){
       AddExpression(exprs);
     };
     ~Conjunction() {};
 
     void SetConjunctionId(uint64_t id);
+
     void AddExpression(const BooleanExpr& expr);
-    void AddExpression(const std::initializer_list<BooleanExpr>& exprs);
+
+    void AddExpression(const BooleanExpr::BEInitializer& exprs);
+
+    Conjunction* Include(const std::string& field,
+                         const Assigns::ValueInitList& values);
+
+    Conjunction* Exclude(const std::string& field,
+                         const Assigns::ValueInitList& values);
 
     std::map<std::string, BooleanExpr> ExpressionAssigns() const {
         return assigns_;
@@ -92,10 +110,17 @@ std::ostream& operator<< (std::ostream& os, const Conjunction& expr);
 class Document {
   public:
     Document(int32_t doc_id);
+
     Document(Document&& doc)
       : doc_id_(doc.doc_id_),
         conjunctions_(std::move(doc.conjunctions_)) {
     }
+
+    Document(int32_t doc_id, Conjunction* conj)
+      : doc_id_(doc_id) {
+        AddConjunction(conj);
+    }
+
     ~Document();
 
     Document& operator=(Document&& doc) {
@@ -104,19 +129,22 @@ class Document {
       }
       doc_id_ = doc.doc_id_;
       conjunctions_ = std::move(doc.conjunctions_);
+
+      doc.doc_id_ = 0;
+      doc.conjunctions_.clear();
       return *this;
     }
 
     int32_t doc_id() const {return doc_id_;}
+
     const std::vector<Conjunction*>& conjunctions() const {
       return conjunctions_;
     };
 
-    size_t ConjunctionCount() const {return conjunctions_.size();}
-
     void AddConjunction(Conjunction* con);
   private:
     std::int32_t doc_id_;
+
     std::vector<Conjunction*> conjunctions_;
 };
 

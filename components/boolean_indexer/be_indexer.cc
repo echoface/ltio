@@ -1,80 +1,52 @@
 #include "be_indexer.h"
+#include "index_scanner.h"
 
 namespace component {
 
-void KSizePostingEntries::AddEntry(const Attr& attr, EntryId id) {
-  index_map_[attr].emplace_back(id);
+namespace {
+  static std::string wildcard_field("__z__");
+  static Attr wildcard_attr(wildcard_field, 0);
+}
+const Attr& BooleanIndexer::WildcardAttr() {
+  return wildcard_attr;
 }
 
-
-void KSizePostingEntries::MakeIndexSorted() {
-  for (auto& attr_entries : index_map_) {
-    Entries& entries = attr_entries.second;
-    std::sort(entries.begin(), entries.end());
-  }
-}
-
-const Entries* KSizePostingEntries::GetEntryList(const Attr& attr) const {
-  auto iter = index_map_.find(attr);
-  if (iter == index_map_.end()) {
-    return nullptr;
-  }
-  return &(iter->second);
-}
-
-
-void KSizePostingEntries::DumpAttrEntries(std::ostringstream& oss) {
-  for (auto& attr_entries : index_map_) {
-    const Attr& attr = attr_entries.first;
-    Entries& entries = attr_entries.second;
-
-    oss << attr.first << "#" << attr.second << ":[";
-    bool is_first = true;
-    for (auto& entry_id : entries) {
-      uint64_t conj_id = EntryUtil::GetConjunctionId(entry_id);
-      if (!is_first) {
-        oss << ",";
-      }
-      oss << "("<< ConjUtil::GetDocumentID(conj_id)
-        << "," << (EntryUtil::HasExclude(entry_id) ? "ex)" : "in)");
-      is_first = false;
-    }
-    oss << "]\n";
-  }
-};
-
-BooleanIndexer::BooleanIndexer(const size_t max_ksize)
-  : max_ksize_(max_ksize),
-    ksize_indexes_(max_ksize + 1) {
+BooleanIndexer::BooleanIndexer()
+  : wildcard_list_(nullptr){
 }
 
 BooleanIndexer::~BooleanIndexer() {
 }
 
+const KSizePostingEntries* BooleanIndexer::GetPostEntries(size_t k) const {
+  if (k >= ksize_entries_.size()) {
+    return nullptr;
+  }
+  return &(ksize_entries_[k]);
+}
+
 KSizePostingEntries* BooleanIndexer::MutableIndexes(size_t k) {
-  assert(k <=  max_ksize_);
-  return &ksize_indexes_[k];
+  while(ksize_entries_.size() < k + 1) {
+    ksize_entries_.resize(k + 1);
+  }
+  return &ksize_entries_[k];
 }
 
 void BooleanIndexer::CompleteIndex() {
-  for (KSizePostingEntries& indexes : ksize_indexes_) {
-    indexes.MakeIndexSorted();
+  for (KSizePostingEntries& pl : ksize_entries_) {
+    pl.MakeEntriesSorted();
   }
-  Attr attr("__wildcard__", GetUniqueID("__wildcard__"));
-  const KSizePostingEntries& zero_indexes = GetIndexes(0);
-  const Entries* wildcard_list = zero_indexes.GetEntryList(attr);
-  wildcard_list_ = wildcard_list;
+  const auto zero_pl = GetPostEntries(0);
+  wildcard_list_ = zero_pl->GetEntryList(wildcard_attr);
 }
 
-void BooleanIndexer::DumpIndex() {
-  std::ostringstream oss;
+void BooleanIndexer::DumpIndex(std::ostringstream& oss) const {
   size_t size = 0;
-  for (KSizePostingEntries& indexes : ksize_indexes_) {
+  for (const KSizePostingEntries& pl : ksize_entries_) {
     oss << ">>>>>>> K:" << size++ << " index >>>>>>>>>>\n";
-    indexes.DumpAttrEntries(oss);
+    pl.DumpPostingEntries(oss);
     oss << "\n";
   }
-  printf("%s", oss.str().data());
 }
 
 uint64_t BooleanIndexer::GetUniqueID(const std::string& value) {
@@ -86,117 +58,59 @@ uint64_t BooleanIndexer::GetUniqueID(const std::string& value) {
   return iter->second;
 }
 
-size_t BooleanIndexer::GetPostingLists(const size_t k_size,
-                                       const QueryAssigns& quries,
-                                       std::vector<PostingListGroup>* out) {
+std::vector<FieldCursor>
+BooleanIndexer::BuildFieldIterators(const size_t k_size,
+                                    const FieldQueryValues &assigns) const {
 
-  if (k_size == 0 && wildcard_list_) {
-    static const Attr wildcard_attr("__wildcard__", 0);
-    PostingListGroup group;
-    group.AddPostingList(wildcard_attr, wildcard_list_);
-    out->emplace_back(group);
+  std::vector<FieldCursor> result;
+
+  if (k_size == 0 && wildcard_list_ && wildcard_list_->size()) {
+    FieldCursor field_iter;
+    field_iter.AddEntries(wildcard_attr, wildcard_list_);
+    result.push_back(field_iter);
   }
 
-  const KSizePostingEntries& index_data = GetIndexes(k_size);
-  for (const auto& assign : quries) { // for each {"age": [1, 2, 3, 5, 10]}
+  assert(k_size <= ksize_entries_.size());
+  const KSizePostingEntries* pl = GetPostEntries(k_size);
 
-    PostingListGroup group;
+  for (const auto& field_attrs : assigns) {
 
-    for (const std::string& value : assign.Values()) {
-      auto iter = id_gen_.find(value);
+    FieldCursor field_iter;
+
+    for (const ValueID& id : field_attrs.second) {
+      Attr attr(field_attrs.first, id);
+      field_iter.AddEntries(attr, pl->GetEntryList(attr));
+    }
+
+    if (field_iter.Size() > 0) {
+      result.push_back(std::move(field_iter));
+    }
+  }
+  for (auto& iter : result) {
+    iter.Initialize();
+  }
+  return result;
+}
+
+FieldQueryValues BooleanIndexer::ParseAssigns(const QueryAssigns& queries) const {
+  FieldQueryValues assigns;
+
+  for (const auto& assign : queries) {
+
+    ValueList ids;
+    for (const std::string &value : assign.Values()) {
+      // parse value to id
+      const auto& iter = id_gen_.find(value);
       if (iter == id_gen_.end()) {
         continue;
       }
-
-      Attr attr(assign.name(), iter->second);
-      const Entries* entrylist = index_data.GetEntryList(attr);
-      if (!entrylist) {
-        continue;
-      }
-      group.AddPostingList(attr, entrylist);
+      ids.push_back(iter->second);
     }
-
-    if (group.p_lists_.size()) {
-      out->emplace_back(std::move(group));
+    if (ids.size()) {
+      assigns[assign.name()] = ids;
     }
   }
-  return out->size();
+  return assigns;
 }
-
-// init current and sort by order
-void BooleanIndexer::InitPostingListGroup(std::vector<PostingListGroup>& plists) {
-  for (auto& group : plists) {
-    group.Initialize();
-  }
-}
-
-int BooleanIndexer::Query(const QueryAssigns& quries,
-                          std::set<int32_t>* result,
-                          const bool dump_details) {
-
-  int k = std::min(max_ksize_, quries.size());
-  for (; k >= 0; k--) {
-
-    std::vector<PostingListGroup> plists;
-
-    size_t count = GetPostingLists(k, quries, &plists);
-
-    int temp_k = k;
-    if (temp_k == 0) {
-      temp_k = 1;
-    }
-
-    if (count < temp_k) {
-      continue;
-    }
-
-    InitPostingListGroup(plists);
-
-    while(plists[temp_k - 1].GetCurEntryID() != NULLENTRY) {
-
-      std::sort(plists.begin(), plists.end(),
-                [](PostingListGroup& l, PostingListGroup& r) -> bool {
-                  return l.GetCurEntryID() < r.GetCurEntryID();
-                });
-
-      EntryId id = plists[0].GetCurEntryID();
-
-      //skip to k-1's entry id
-      if (plists[0].GetCurConjID() != plists[temp_k - 1].GetCurConjID()) {
-        EntryId skip_id = plists[temp_k - 1].GetCurEntryID();
-        for (int l = 0; l < temp_k; l++) {
-          plists[l].SkipTo(skip_id);
-        }
-        continue;
-      }
-
-      EntryId next_id = id + 1;
-      // entry[0] == entry[k-1]
-      if (EntryUtil::HasExclude(id)) { //is exclude
-        uint64_t rejected_id = plists[0].GetCurConjID();
-        for (int l = temp_k; l < plists.size(); l++) {
-          if (plists[l].GetCurConjID() != rejected_id) {
-            break;
-          }
-          plists[l].Skip(id);
-        }
-
-      } else { //hit, push to result set
-
-        uint64_t conj_id = EntryUtil::GetConjunctionId(id);
-        result->insert(ConjUtil::GetDocumentID(conj_id));
-      }
-
-      for (int l = 0; l < temp_k; l++) {
-        plists[l].SkipTo(next_id); //to next smallest entry id
-      }
-      //end handle of "include/exclude"
-
-    }// end while
-
-  }// to k = k-1
-  return 0;
-}
-
 
 }

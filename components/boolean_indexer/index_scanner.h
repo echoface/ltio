@@ -2,6 +2,7 @@
 #define _LT_COMPONENT_BE_INDEXER_H_
 
 #include "be_indexer.h"
+#include <vector>
 
 namespace component {
 
@@ -10,12 +11,21 @@ public:
     struct Option {
         bool dump_detail;
     };
+    struct Result {
+        std::string to_string() const;
+        int error_code;
+        std::vector<uint32_t> result;
+    };
     IndexScanner(BooleanIndexer* index);
 
-    std::set<uint32_t> Retrieve(QueryAssigns queries, Option opt);
+    static const Option& DefaultOption();
+
+    Result Retrieve(const QueryAssigns& queries,
+                    const Option* opt = nullptr) const;
 private:
     BooleanIndexer* index_;
 };
+
 }
 
 

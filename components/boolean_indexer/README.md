@@ -64,14 +64,26 @@ ref:[Indexing-Boolean-Expressions](./doc/Indexing-Boolean-Expressions.pdf)
 
 - PostingList:
 ```text
-  Attr: EntryIdList
+  map<Attr, EntryIdList>
 eg:
   <age, 15>: [entry_id_01, entry_id_11, entry_id_15]
+  <tag, 11>: [entry_id_02, entry_id_09, entry_id_11]
+  ...
 ```
 
-- PostingListGroup:
+- EntriesCursor
+a cursor walk on matched entries pick from PostingList(PostEntries)
+```
+EntriesCursor:
+  attr    eg: <age, 15>
+  index   // current cursor pos
+  entries // a point to specific entry id list
+```
+
+- FieldCursor:
 ```text
-  PostingList list group by field
+FieldCursor include multi EntriesCursor group by field, based on
+this, BEIndex can support multi value queries
   eg:
     ip:
     <ip, 127.0.0.1>: [entry_id_11, entry_id_15]
