@@ -13,6 +13,8 @@
 #include "components/boolean_indexer/builder/be_indexer_builder.h"
 #include "components/boolean_indexer/index_scanner.h"
 
+#include "google/profiler.h"
+
 #include <thirdparty/catch/catch.hpp>
 
 using namespace component;
@@ -245,7 +247,7 @@ TEST_CASE("index_rand_bench", "[be posting list sort id]") {
     };
     queries.emplace_back(assigns);
   }
-
+  ProfilerStart("profile.prof");
   for (int i = 0; i < queries.size(); i++) {
 
     auto scanner = IndexScanner(index.get());
@@ -269,5 +271,6 @@ TEST_CASE("index_rand_bench", "[be posting list sort id]") {
     //}
     //REQUIRE(index_result == force_match_result);
   }
+  ProfilerStop();
   std::cout << "spend:" << (base::time_us() - start) / 1000 << "(ms)" << std::endl;
 }
