@@ -49,25 +49,38 @@ void BooleanIndexer::DumpIndex(std::ostringstream& oss) const {
   }
 }
 
-uint64_t BooleanIndexer::GetUniqueID(const std::string& value) {
+void BooleanIndexer::DumpIDMapping(std::ostringstream& oss) const {
+  oss << "{\n";
+  for (auto& kv : id_gen_) {
+    oss << kv.first << " ==> " << kv.second << ",\n";
+  }
+  oss << "}\n";
+}
+
+uint64_t BooleanIndexer::GenUniqueID(const std::string& value) {
   auto iter = id_gen_.find(value);
   if (iter == id_gen_.end()) {
-    id_gen_[value] = id_gen_.size() + 1;
+    /* bug here: why
+    id_gen_[value] = (id_gen_.size() + 1);
     return id_gen_.size();
+    */
+    uint64_t value_id = id_gen_.size() + 1;
+    id_gen_[value] = value_id;
+    return value_id;
   }
   return iter->second;
 }
 
-std::vector<FieldCursor>
+std::vector<FieldCursorPtr>
 BooleanIndexer::BuildFieldIterators(const size_t k_size,
                                     const FieldQueryValues &assigns) const {
 
-  std::vector<FieldCursor> result;
+  std::vector<FieldCursorPtr> result;
 
   if (k_size == 0 && wildcard_list_ && wildcard_list_->size()) {
-    FieldCursor field_iter;
-    field_iter.AddEntries(wildcard_attr, wildcard_list_);
-    result.push_back(field_iter);
+    FieldCursorPtr field_iter(new FieldCursor());
+    field_iter->AddEntries(wildcard_attr, wildcard_list_);
+    result.emplace_back(std::move(field_iter));
   }
 
   assert(k_size <= ksize_entries_.size());
@@ -75,19 +88,19 @@ BooleanIndexer::BuildFieldIterators(const size_t k_size,
 
   for (const auto& field_attrs : assigns) {
 
-    FieldCursor field_iter;
+    FieldCursorPtr field_iter(new FieldCursor());
 
     for (const ValueID& id : field_attrs.second) {
       Attr attr(field_attrs.first, id);
-      field_iter.AddEntries(attr, pl->GetEntryList(attr));
+      field_iter->AddEntries(attr, pl->GetEntryList(attr));
     }
 
-    if (field_iter.Size() > 0) {
-      result.push_back(std::move(field_iter));
+    if (field_iter->Size() > 0) {
+      result.emplace_back(std::move(field_iter));
     }
   }
-  for (auto& iter : result) {
-    iter.Initialize();
+  for (FieldCursorPtr& iter : result) {
+    iter->Initialize();
   }
   return result;
 }

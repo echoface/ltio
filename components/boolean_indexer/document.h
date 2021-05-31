@@ -45,6 +45,7 @@ class Assigns {
     std::string name_;
     ValueContainer values_;
 };
+typedef std::vector<Assigns> QueryAssigns;
 
 class BooleanExpr : public Assigns {
   public:

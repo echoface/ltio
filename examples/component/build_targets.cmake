@@ -11,3 +11,12 @@ TARGET_LINK_LIBRARIES(log_metrics_test
   ${LIBUNWIND_LIBRARIES}
 )
 
+ADD_EXECUTABLE(be_index_bench
+  component/be_index_bench.cc
+)
+
+TARGET_LINK_LIBRARIES(be_index_bench
+  PUBLIC ltio
+  #PUBLIC profiler
+)
+

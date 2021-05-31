@@ -21,7 +21,7 @@ RefBooleanIndexer BeIndexerBuilder::BuildIndexer() {
   RefBooleanIndexer indexer(new BooleanIndexer());
 
   for (const auto& doc : documents_) {
-    for (auto conj : doc.second.conjunctions()) {
+    for (Conjunction* conj : doc.second.conjunctions()) {
       uint64_t conj_id = conj->id();
 
       auto kindexes = indexer->MutableIndexes(conj->size());
@@ -38,7 +38,7 @@ RefBooleanIndexer BeIndexerBuilder::BuildIndexer() {
 
         //TODO: to do parser ExpressionsValue to values
         for (const auto& value : expr.Values()) {
-          Attr attr(assin_name, indexer->GetUniqueID(value));
+          Attr attr(assin_name, indexer->GenUniqueID(value));
           kindexes->AddEntry(attr, EntryUtil::GenEntryID(conj->id(), expr.exclude()));
         }
       }

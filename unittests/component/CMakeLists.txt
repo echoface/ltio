@@ -6,5 +6,4 @@ ADD_EXECUTABLE(component_unittest
 
 TARGET_LINK_LIBRARIES(component_unittest
   PUBLIC ltio
-  PUBLIC profiler
   )

@@ -15,8 +15,6 @@
 namespace component {
 
 class IndexScanner;
-typedef std::vector<Assigns> QueryAssigns;
-
 class BooleanIndexer {
   public:
     static const Attr& WildcardAttr();
@@ -29,16 +27,18 @@ class BooleanIndexer {
 
     void DumpIndex(std::ostringstream& oss) const;
 
+    void DumpIDMapping(std::ostringstream& oss) const;
+
     KSizePostingEntries* MutableIndexes(size_t k);
     const KSizePostingEntries* GetPostEntries(size_t k) const;
 
     FieldQueryValues ParseAssigns(const QueryAssigns& queries) const;
 
-    std::vector<FieldCursor>
+    std::vector<FieldCursorPtr>
     BuildFieldIterators(const size_t k_size,
                         const FieldQueryValues &assigns) const;
 
-    uint64_t GetUniqueID(const std::string& value);
+    uint64_t GenUniqueID(const std::string& value);
 
     const size_t MaxKSize() const {
       return ksize_entries_.size();

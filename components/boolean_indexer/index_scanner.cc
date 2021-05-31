@@ -40,7 +40,7 @@ IndexScanner::Retrieve(const QueryAssigns& queries, const Option* opt) const{
   int k = std::min(index_->MaxKSize(), field_values.size());
   for (; k >= 0; k--) {
 
-    std::vector<FieldCursor> plists
+    std::vector<FieldCursorPtr> plists
       = index_->BuildFieldIterators(k, field_values);
 
     int temp_k = k;
@@ -48,28 +48,46 @@ IndexScanner::Retrieve(const QueryAssigns& queries, const Option* opt) const{
       temp_k = 1;
     }
 
+    if (opt->dump_detail) {
+      std::ostringstream oss;
+      oss << "\nretrive k:" << k << " >>>>>\n";
+      for (auto& c : plists) {
+        c->DumpEntries(oss);
+      }
+      std::cout << oss.str();
+    }
+
     if (plists.size() < temp_k) {
       continue;
     }
 
     std::sort(plists.begin(), plists.end(),
-              [](FieldCursor& l, FieldCursor& r) -> bool {
-                return l.GetCurEntryID() < r.GetCurEntryID();
+              [](FieldCursorPtr& l, FieldCursorPtr& r) -> bool {
+                return l->GetCurEntryID() < r->GetCurEntryID();
               });
+    EntryId end_eid = plists[temp_k - 1]->GetCurEntryID();
 
+    while (end_eid != NULLENTRY) {
 
-    while(plists[temp_k - 1].GetCurEntryID() != NULLENTRY) {
-
-      EntryId eid = plists[0].GetCurEntryID();
+      EntryId eid = plists[0]->GetCurEntryID();
       uint64_t conj_id = EntryUtil::GetConjunctionId(eid);
+      EntryId next_id =
+        EntryUtil::IsInclude(end_eid) ? end_eid - 1 : end_eid;
 
-      EntryId end_eid = plists[temp_k - 1].GetCurEntryID();
-
-      EntryId next_id = EntryUtil::IsInclude(end_eid) ? end_eid - 1 : end_eid;
+      if (opt->dump_detail) {
+        std::ostringstream oss;
+        oss << "[" << EntryUtil::ToString(eid) << "..."
+          << EntryUtil::ToString(end_eid) << "]\ncursors:[";
+        for (auto& c : plists) {
+          oss << EntryUtil::ToString(c->GetCurEntryID()) << ",";
+        }
+        oss << "]\n";
+        std::cout << oss.str();
+      }
 
       if (conj_id == EntryUtil::GetConjunctionId(end_eid)) {
 
-        next_id = end_eid + 0x02;
+        next_id = end_eid + 1;
 
         if (EntryUtil::IsInclude(eid)) {
 
@@ -77,23 +95,23 @@ IndexScanner::Retrieve(const QueryAssigns& queries, const Option* opt) const{
 
         } else { //exclude
           for (auto& iter : plists) {
-            if (iter.GetCurConjID() != conj_id) {
+            if (iter->GetCurConjID() != conj_id) {
               break;
             }
-            iter.Skip(next_id);
+            iter->Skip(next_id);
           }
         } //end exclude
       }
       // 推进游标
       for (int i = 0; i < temp_k; i++) {
-        plists[i].SkipTo(next_id);
+        plists[i]->SkipTo(next_id);
       }
 
       std::sort(plists.begin(), plists.end(),
-                [](FieldCursor& l, FieldCursor& r) -> bool {
-                  return l.GetCurEntryID() < r.GetCurEntryID();
+                [](FieldCursorPtr& l, FieldCursorPtr& r) -> bool {
+                  return l->GetCurEntryID() < r->GetCurEntryID();
                 });
-
+      end_eid = plists[temp_k - 1]->GetCurEntryID();
     }// end while
 
   }// to k = k-1

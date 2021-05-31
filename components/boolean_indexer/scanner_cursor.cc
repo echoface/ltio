@@ -1,38 +1,28 @@
 #include "scanner_cursor.h"
 
 namespace component {
-
-
-EntriesCursor::EntriesCursor(const Attr &a, const Entries *ids)
-      : attr_(a), index_(0), id_list_(ids) {}
-
-bool EntriesCursor::ReachEnd() const {
-  return id_list_ == nullptr || id_list_->size() <= index_;
+namespace {
+  static const int linear_skip_distance = 64;
 }
 
-EntryId EntriesCursor::GetCurEntryID() const {
-  if (ReachEnd()) return NULLENTRY;
-  return id_list_->at(index_);
-}
+EntriesCursor::EntriesCursor(const Attr& a, const Entries& ids)
+    : attr_(a), index_(0), size_(ids.size()), id_list_(ids) {}
 
 EntryId EntriesCursor::Skip(const EntryId id) {
-  EntryId cur_id = GetCurEntryID();
-  if (cur_id > id) {
-    return cur_id;
-  }
-
-  size_t size = id_list_->size();
-  int right_idx = size;
+  int right_idx = size_;
   int mid;
-  while(index_ < right_idx) {
+  while (index_ < right_idx) {
+    if (right_idx - index_ < linear_skip_distance) {
+      return LinearSkip(id);
+    }
     mid = (index_ + right_idx) >> 1;
 
-    if ((*id_list_)[mid] <= id) {
+    if (id_list_[mid] <= id) {
       index_ = mid + 1;
     } else {
       right_idx = mid;
     }
-    if (index_ >= size || (*id_list_)[index_] > id) {
+    if (index_ >= size_ || id_list_[index_] > id) {
       break;
     }
   }
@@ -40,23 +30,20 @@ EntryId EntriesCursor::Skip(const EntryId id) {
 }
 
 EntryId EntriesCursor::SkipTo(const EntryId id) {
-  EntryId cur_id = GetCurEntryID();
-  if (cur_id >= id) {
-    return cur_id;
-  }
-
-  size_t size = id_list_->size();
-  int right_idx = size;
+  int right_idx = size_;
 
   int mid;
   while(index_ < right_idx) {
+    if (right_idx - index_ < linear_skip_distance) {
+      return LinearSkipTo(id);
+    }
     mid = (index_ + right_idx) >> 1;
-    if ((*id_list_)[mid] >= id) {
+    if ((id_list_)[mid] >= id) {
       right_idx = mid;
     } else {
       index_ = mid + 1;
     }
-    if (index_ >= size || (*id_list_)[index_] >= id) {
+    if (index_ >= size_ || (id_list_)[index_] >= id) {
       break;
     }
   }
@@ -67,61 +54,54 @@ void FieldCursor::AddEntries(const Attr& attr, const Entries* entrylist) {
   if (nullptr == entrylist) {
     return;
   }
-  cursors_.emplace_back(attr, entrylist);
-  current_ = &cursors_.front();
+  cursors_.emplace_back(attr, *entrylist);
 }
 
 void FieldCursor::Initialize() {
   current_ = &cursors_[0];
-  EntryId min_id = NULLENTRY;
-
+  current_id_ = current_->GetCurEntryID();
   for (auto& pl : cursors_) {
     EntryId id = pl.GetCurEntryID();
-    if (id < min_id) {
-      min_id = id;
+    if (id < current_id_) {
       current_ = &pl;
+      current_id_ = id;
     }
   }
 }
 
-EntryId FieldCursor::GetCurEntryID() const {
-    return current_->GetCurEntryID();
-}
-
 uint64_t FieldCursor::GetCurConjID() const {
-  return EntryUtil::GetConjunctionId(current_->GetCurEntryID());
+  return EntryUtil::GetConjunctionId(current_id_);
 }
 
 EntryId FieldCursor::Skip(const EntryId id) {
   EntryId min_id = NULLENTRY;
-  for (int i = 0; i < cursors_.size(); i++) {
-    EntryId eid = cursors_[i].SkipTo(id);
+  for (auto& cursor : cursors_) {
+    EntryId eid = cursor.Skip(id);
     if (eid < min_id) {
       min_id = eid;
-      current_ = &cursors_[i];
+      current_ = &cursor;
     }
   }
-  return min_id;
+  return current_id_ = current_->GetCurEntryID();
 }
 
 EntryId FieldCursor::SkipTo(const EntryId id) {
-  uint64_t cur = current_->GetCurEntryID();
   EntryId min_id = NULLENTRY;
-  for (int i = 0; i < cursors_.size(); i++) {
-    EntryId eid = cursors_[i].SkipTo(id);
+  for (auto& cursor : cursors_) {
+    EntryId eid = cursor.SkipTo(id);
     if (eid < min_id) {
       min_id = eid;
-      current_ = &cursors_[i];
+      current_ = &cursor;
     }
   }
-  return min_id;
+  return current_id_ = current_->GetCurEntryID();
 }
 
 void EntriesCursor::DumpEntries(std::ostringstream& oss) const {
   oss << "atrr:" << EntryUtil::ToString(attr_)
     << ", cur:" << EntryUtil::ToString(GetCurEntryID())
     << ", eids:[";
-  for (const auto& id : *id_list_) {
+  for (const EntryId id : id_list_) {
     oss << EntryUtil::ToString(id) << "," ;
   }
   oss << "]\n";

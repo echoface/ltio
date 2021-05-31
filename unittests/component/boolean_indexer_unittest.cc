@@ -12,9 +12,9 @@
 #include "components/boolean_indexer/id_generator.h"
 #include "components/boolean_indexer/builder/be_indexer_builder.h"
 #include "components/boolean_indexer/index_scanner.h"
+#include "components//boolean_indexer/mock//mock_target.h"
 
-#include "google/profiler.h"
-
+#include "gperftools/profiler.h"
 #include <thirdparty/catch/catch.hpp>
 
 using namespace component;
@@ -90,16 +90,11 @@ TEST_CASE("be_indexes_dump", "[dump indexes and conjunction id]") {
   std::cout << "pl detail:\n" << oss.str() << std::endl;
 
   std::vector<QueryAssigns> queries = {
-    {
-      {"loc", {"bj"}},
-      {"tags", {"15sui", "seg1"}}
-    }, //=> 10
-    {
-      {"loc", {"wh"}},
-      {"tags", {"15sui", "seg1"}}
-    }, //=> 100
+      {{"loc", {"bj"}}, {"tags", {"15sui", "seg1"}}},  //=> 10
+      {{"loc", {"wh"}}, {"tags", {"15sui", "seg1"}}},  //=> 100
   };
 
+  std::cout << "start query" << std::endl;
   for (auto& query : queries) {
     auto scanner = component::IndexScanner(indexer.get());
     auto r = scanner.Retrieve(query);
@@ -116,7 +111,7 @@ TEST_CASE("be_posting_list", "[be posting list sort id]") {
   Entries entrylist= {0, 1, 1, 4, 8, 20};
 
   Attr attr("age", 0);
-  EntriesCursor cursor(attr, &entrylist);
+  EntriesCursor cursor(attr, entrylist);
 
   REQUIRE(cursor.ReachEnd() == false);
   REQUIRE(cursor.GetCurEntryID() == 0);
@@ -131,80 +126,30 @@ TEST_CASE("be_posting_list", "[be posting list sort id]") {
   REQUIRE(cursor.ReachEnd());
 }
 
-component::Assigns::ValueContainer rand_assigns(int n, int min, int max) {
-  component::Assigns::ValueContainer expr_assigns;
-  while(n-- >= 0) {
-    int v = base::RandInt(min, max);
-    expr_assigns.insert(std::to_string(v));
-  };
-  return expr_assigns;
+TEST_CASE("entries_cursor", "[skip posting list sort id]") {
+  Entries ids = {1, 18, 24 ,57, 70};
+  Attr attr("test", 0);
+
+  EntriesCursor curosr(attr, ids);
+
+  EntriesCursor c2 = curosr;
 }
-
-bool EvalBoolExpression(const BooleanExpr& expr, Assigns ass) {
-  if (expr.Values().empty()) {
-    return true;
-  }
-  bool contain = false;
-  for (const auto& v : expr.Values()) {
-    for (const auto& qv : ass.Values()) {
-      if (v == qv) {
-        contain = true;
-        goto outer;
-      }
-    }
-  }
-outer:
-  if ((expr.exclude() && !contain) || (expr.include() && contain)) {
-    return true;
-  }
-  return false;
-}
-
-struct T {
-  int id;
-  BooleanExpr a;
-  BooleanExpr b;
-  BooleanExpr c;
-  bool match(QueryAssigns assigns) const {
-    for (auto& assign : assigns) {
-      if (assign.name() == "a" && !EvalBoolExpression(a, assign)) {
-        return false;
-      }
-      if (assign.name() == "b" && !EvalBoolExpression(b, assign)) {
-        return false;
-      }
-      if (assign.name() == "c" && !EvalBoolExpression(c, assign)) {
-        return false;
-      }
-    }
-    return true;
-  }
-};
-
-std::ostream& operator<<(std::ostream& os, const T& t) {
-  os << ">>>>>>>>>t:" << t.id
-    << "\na:" << t.a
-    << "\nb:" << t.b
-    << "\nc:" << t.c << "\n";
-  return os;
-}
-
 
 TEST_CASE("skipto_test", "[skip posting list sort id]") {
   //[<1,1>,<18,1>,<24,1>,<57,1>,<70,1>,]
-  Entries ids = {1, 18, 24 ,57, 70}; 
+  Entries ids = {1, 18, 24 ,57, 70};
   Attr attr("test", 0);
-  EntriesCursor iter(attr, &ids);
+  EntriesCursor iter(attr, ids);
 
   int res = iter.SkipTo(2);
   REQUIRE(res == 18);
 }
 
-TEST_CASE("index_rand_bench", "[be posting list sort id]") {
+TEST_CASE("index_result_check", "[be posting list correction check]") {
   std::map<int, T*> targets;
   component::BeIndexerBuilder builder;
 
-  for (int i=1; i< 100000; i++) {
+  for (int i=1; i< 10000; i++) {
     auto a = rand_assigns(10, 0, 100);
     T* t = new T({
       .id = i,
@@ -220,10 +165,6 @@ TEST_CASE("index_rand_bench", "[be posting list sort id]") {
   }
   auto index = builder.BuildIndexer();
 
-  //std::ostringstream oss;
-  //index->DumpIndex(oss);
-  //std::cout << "posting list detail:" << oss.str() << std::endl;
-
   auto none_index_match = [&](QueryAssigns& assigns)-> std::set<int32_t> {
     std::set<int32_t> result;
     for (const auto& t : targets) {
@@ -234,43 +175,102 @@ TEST_CASE("index_rand_bench", "[be posting list sort id]") {
     }
     return result;
   };
-
   std::cout << "finish index build" << std::endl;
 
-  uint64_t start = base::time_us();
   std::vector<QueryAssigns> queries;
-  for (int i; i < 1000; i++) {
+  for (int i; i < 10000; i++) {
     QueryAssigns assigns = {
       {"a", rand_assigns(1, 50, 100)},
       {"b", rand_assigns(2, 0, 100)},
       {"c", rand_assigns(3, 10, 70)},
     };
-    queries.emplace_back(assigns);
+    queries.push_back(assigns);
   }
-  ProfilerStart("profile.prof");
   for (int i = 0; i < queries.size(); i++) {
 
     auto scanner = IndexScanner(index.get());
 
     auto result = scanner.Retrieve(queries[i]);
-    //auto force_match_result = none_index_match(assigns);
-    //std::ostringstream oss;
-    //oss << "[";
-    //for (auto x : force_match_result) {
-    //  oss << x << ",";
-    //}
-    //oss << "]";
-    //std::cout << "force:" << oss.str() << std::endl;
-    //std::cout << "index:" << result.to_string() << std::endl;
+    auto force_match_result = none_index_match(queries[i]);
 
-    //std::set<int32_t> index_result(result.result.begin(), result.result.end());
-    //if (index_result != force_match_result) {
-    //  std::ostringstream oss;
-    //  index->DumpIndex(oss);
-    //  std::cout << "pl:" << oss.str();
-    //}
-    //REQUIRE(index_result == force_match_result);
+    std::set<int32_t> index_result(result.result.begin(),
+                                   result.result.end());
+    std::set<int32_t> diff;
+    std::set_difference(index_result.begin(), index_result.end(),
+                        force_match_result.begin(), force_match_result.end(),
+                        std::inserter(diff, diff.end()));
+    std::set<int32_t> diff2;
+    std::set_difference(force_match_result.begin(), force_match_result.end(),
+                        index_result.begin(), index_result.end(),
+                        std::inserter(diff2, diff2.end()));
+
+    if (diff.size() || diff2.size()) {
+
+      std::ostringstream oss;
+      index->DumpIndex(oss);
+      index->DumpIDMapping(oss);
+
+      IndexScanner::Option option;
+      option.dump_detail = true;
+      scanner.Retrieve(queries[i], &option);
+
+      oss << "more:[\n";
+      for (auto x : diff) {
+        oss << *targets[x] << ",\n";
+      }
+      oss << "] less:[\n";
+      for (auto x : diff2) {oss << *targets[x] << ",\n";}
+      oss << "]\nquery:\n";
+      for (auto& q : queries[i]) {
+        oss << "{name:" << q.name() << " values:";
+        for (auto& v : q.Values()) {
+          oss << v << ",";
+        }
+        oss << "}\n";
+      }
+      std::cout << oss.str() << std::endl;
+      REQUIRE(false);
+    }
   }
-  ProfilerStop();
-  std::cout << "spend:" << (base::time_us() - start) / 1000 << "(ms)" << std::endl;
 }
+
+TEST_CASE("index_build", "[build posting list correction check]") {
+  /*
+   * >>>>>>>>>t:8
+a:{a inc [55, 56, 65, 76, 92, 93, ]}
+b:{b inc [15, 18, 46, 47, 68, 75, 84, 93, 97, ]}
+c:{c exc [14, 16, 30, 31, 39, 51, 58, 66, ]}
+query:
+{name:a values:67,70,}
+{name:b values:30,46,82,}
+{name:c values:42,55,63,67,}
+   * */
+  std::ostringstream oss;
+  T* t = new T({
+      .id = 8,
+      .a = {"a", {"55", "56", "65", "76", "92", "93"}, false},
+      .b = {"b", {"15", "18", "46", "47", "68", "75", "84", "93", "97"}, false},
+      .c = {"c", {"14", "16", "30", "31", "39", "51", "58", "66"}, true},
+  });
+
+  BeIndexerBuilder builder;
+  Document doc(8);
+  doc.AddConjunction(new Conjunction({t->a, t->b, t->c}));
+  builder.AddDocument(std::move(doc));
+
+  auto index = builder.BuildIndexer();
+  index->DumpIndex(oss);
+  index->DumpIDMapping(oss);
+
+  IndexScanner::Option option;
+  option.dump_detail = true;
+  IndexScanner scanner(index.get());
+  auto r = scanner.Retrieve({
+      {"a", {"67", "70"}},
+      {"b", {"30", "46", "82"}},
+      {"c", {"42", "55", "63", "67"}},
+    }, &option);
+  oss << r.to_string();
+  std::cout << oss.str();
+}
+

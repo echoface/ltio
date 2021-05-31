@@ -13,7 +13,7 @@ public:
     };
     struct Result {
         std::string to_string() const;
-        int error_code;
+        int error_code = 0;
         std::vector<uint32_t> result;
     };
     IndexScanner(BooleanIndexer* index);
