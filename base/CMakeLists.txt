@@ -1,17 +1,34 @@
 SET(BASE_SOURCES
+  # chromium numerics
+  numerics/checked_math_impl.h
+  numerics/clamped_math_impl.h
+  numerics/safe_conversions_impl.h
+  numerics/safe_conversions_arm_impl.h
+  numerics/safe_math_arm_impl.h
+  numerics/safe_math_shared_impl.h
+  numerics/safe_math_clang_gcc_impl.h
+
+  # simple time utils
+  time/time.cc
+  time/time_delta.cc
+  time/time_ticks.cc
   time/timestamp.cc
   time/time_utils.cc
+  time/nspr/prtime.cc
 
+  # posix-unix utils
   utils/sys_error.cc
   utils/rand_util.cc
   utils/rand_util_posix.cc
   utils/ns_convertor.cc
   utils/string/str_utils.cc
+
   #coroutine
   coroutine/coroutine.cc
   coroutine/wait_group.cc
   coroutine/coroutine_runner.cc
-  #new eventloop
+
+  # task eventloop
   message_loop/event.cc
   message_loop/fd_event.cc
   message_loop/event_pump.cc
@@ -23,16 +40,23 @@ SET(BASE_SOURCES
   message_loop/message_loop.cc
   message_loop/timeout_event.cc
   message_loop/repeating_timer.cc
-  #spin lock
+
   #memory
   memory/spin_lock.cc
   memory/lazy_instance.cc
+
   # gzip compression utils
   utils/gzip/gzip_utils.cc
+
   # closure
   closure/location.cc
   )
 
 add_library(ltbase_objs OBJECT ${BASE_SOURCES})
-add_dependencies(ltbase_objs ${CORO_LIBRARY})
+
 ltio_default_properties(ltbase_objs)
+add_dependencies(ltbase_objs ${CORO_LIBRARY})
+target_include_directories(ltbase_objs
+    PUBLIC
+    $<TARGET_PROPERTY:fmt,INTERFACE_INCLUDE_DIRECTORIES>
+)

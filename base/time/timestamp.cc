@@ -18,6 +18,7 @@
 #include <string>
 
 #include "timestamp.h"
+
 namespace base {
 
 Timestamp::Timestamp(const timeval tv) {

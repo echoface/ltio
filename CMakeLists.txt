@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.5)
 project(LightingIO VERSION 0.2.1 LANGUAGES C CXX)
 
 # for generate ycm complete database
-SET(CMAKE_CXX_STANDARD 11)
+SET(CMAKE_CXX_STANDARD 14)
 SET(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 SET(CMAKE_CONFIG_DIR ${LightingIO_SOURCE_DIR}/cmake)
