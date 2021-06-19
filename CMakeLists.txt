@@ -25,5 +25,3 @@ include(${CMAKE_CONFIG_DIR}/include.cmake)
 #include(${CMAKE_CONFIG_DIR}/googletest.cmake)
 include(${CMAKE_CONFIG_DIR}/targets.cmake)
 
-
-

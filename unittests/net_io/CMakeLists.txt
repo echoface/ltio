@@ -7,5 +7,5 @@ ADD_EXECUTABLE(net_unittest
   )
 
 TARGET_LINK_LIBRARIES(net_unittest
-  PUBLIC ltio
-  )
+  ltio
+)

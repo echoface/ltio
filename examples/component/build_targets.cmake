@@ -5,10 +5,7 @@ ADD_EXECUTABLE(log_metrics_test
 )
 
 TARGET_LINK_LIBRARIES(log_metrics_test
-  PUBLIC ltio
-  ${LINK_DEP_LIBS}
-  ${LtIO_LINKER_LIBS}
-  ${LIBUNWIND_LIBRARIES}
+  ltio
 )
 
 ADD_EXECUTABLE(be_index_bench
@@ -16,7 +13,7 @@ ADD_EXECUTABLE(be_index_bench
 )
 
 TARGET_LINK_LIBRARIES(be_index_bench
-  PUBLIC ltio
-  #PUBLIC profiler
+  ltio
+  profiler
 )
 

@@ -21,8 +21,8 @@ if (NOT __GLOG_INCLUDED)
       set(GLOG_EXTRA_COMPILER_FLAGS "-fPIC")
     endif()
 
-    set(GLOG_CXX_FLAGS ${CMAKE_CXX_FLAGS} ${GLOG_EXTRA_COMPILER_FLAGS})
     set(GLOG_C_FLAGS ${CMAKE_C_FLAGS} ${GLOG_EXTRA_COMPILER_FLAGS})
+    set(GLOG_CXX_FLAGS ${CMAKE_CXX_FLAGS} ${GLOG_EXTRA_COMPILER_FLAGS})
 
     # depend on gflags if we're also building it
     if (GFLAGS_EXTERNAL)
@@ -50,7 +50,7 @@ if (NOT __GLOG_INCLUDED)
     set(GLOG_FOUND TRUE)
     set(GLOG_INCLUDE_DIRS ${glog_INSTALL}/include)
     set(GLOG_LIBRARY ${glog_INSTALL}/lib/libglog.so)
-    set(GLOG_LIBRARIES ${glog_INSTALL}/lib/libglog.so ${GFLAGS_LIBRARIES})
+    set(GLOG_LIBRARIES ${glog_INSTALL}/lib/libglog.so)
     set(GLOG_LIBRARY_DIRS ${glog_INSTALL}/lib)
     set(GLOG_EXTERNAL TRUE)
 
@@ -65,7 +65,8 @@ set_property(TARGET glog::glog
     )
 
 #
-#GLOG_LIBRARIESif(GLOG_FOUND AND NOT TARGET glog::glog)
+#GLOG_LIBRARIES
+#if(GLOG_FOUND AND NOT TARGET glog::glog)
 #  add_library(glog::glog SHARED IMPORTED)
 #  set_target_properties(glog::glog PROPERTIES IMPORTED_LOCATION ${GLOG_LIBRARY})
 #  set_property(TARGET glog::glog PROPERTY INTERFACE_LINK_LIBRARIES ${GFLAGS_LIBRARIES})

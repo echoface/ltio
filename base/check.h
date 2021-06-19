@@ -1,7 +1,7 @@
 #ifndef _LT_BASE_CHECK_H_H
 #define _LT_BASE_CHECK_H_H
 
-#define CHECK(x)                                     \
+#define LTCHECK(x)                                   \
   do {                                               \
     if (!(x)) {                                      \
       fprintf(stderr, "%s:%d: ", __func__, __LINE__);\
@@ -10,6 +10,6 @@
     }                                                \
   } while (0)
 
-#define CHECK_NE(x, y) CHECK((x != y))                                     \
+#define LTCHECK_NE(x, y) LTCHECK((x != y))
 
 #endif

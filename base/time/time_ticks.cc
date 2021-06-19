@@ -27,7 +27,7 @@ int64_t ConvertTimespecToMicros(const struct timespec& ts) {
 //static
 TimeTicks TimeTicks::Now() {
   struct timespec ts;
-  CHECK(clock_gettime(CLOCK_MONOTONIC, &ts) == 0);
+  LTCHECK(clock_gettime(CLOCK_MONOTONIC, &ts) == 0);
   int64_t now_ticks = ConvertTimespecToMicros(ts);
   return TimeTicks() + TimeDelta::FromMicroseconds(now_ticks);
 }

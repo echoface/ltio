@@ -16,7 +16,7 @@ namespace {
   Time TimeNowIgnoringOverride() {
     struct timeval tv;
     struct timezone tz = {0, 0};  // UTC
-    CHECK(gettimeofday(&tv, &tz) == 0);
+    LTCHECK(gettimeofday(&tv, &tz) == 0);
     // Combine seconds and microseconds in a 64-bit field containing microseconds
     // since the epoch.  That's enough for nearly 600 centuries.  Adjust from
     // Unix (1970) to Windows (1601) epoch.
@@ -98,8 +98,8 @@ Time Time::FromTimeSpec(const timespec& ts) {
 
 // static
 Time Time::FromTimeVal(struct timeval t) {
-  CHECK(t.tv_usec > 0);
-  CHECK(t.tv_usec < static_cast<int>(TimeDelta::kMicrosecondsPerSecond));
+  LTCHECK(t.tv_usec > 0);
+  LTCHECK(t.tv_usec < static_cast<int>(TimeDelta::kMicrosecondsPerSecond));
 
   if (t.tv_usec == 0 && t.tv_sec == 0) {
     return Time();
@@ -146,10 +146,10 @@ Time Time::Midnight(bool is_local) const {
   // Reaching here means 00:00:00am of the current day does not exist (due to
   // Daylight Saving Time in some countries where clocks are shifted at
   // midnight). In this case, midnight should be defined as 01:00:00am.
-  CHECK(is_local);
+  LTCHECK(is_local);
   exploded.hour = 1;
   const bool result = FromExploded(is_local, exploded, &out_time);
-  CHECK(result);  // This function must not fail.
+  LTCHECK(result);  // This function must not fail.
   return out_time;
 }
 
@@ -315,8 +315,8 @@ bool Time::FromExploded(bool is_local, const Exploded& exploded, Time* time) {
 bool Time::FromStringInternal(const char* time_string,
                               bool is_local,
                               Time* parsed_time) {
-  CHECK(time_string);
-  CHECK(parsed_time);
+  LTCHECK(time_string);
+  LTCHECK(parsed_time);
 
   if (time_string[0] == '\0')
     return false;

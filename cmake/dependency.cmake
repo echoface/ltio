@@ -1,23 +1,12 @@
-
 find_package(Tcmalloc REQUIRED)
 list(APPEND LtIO_LINKER_LIBS PUBLIC ${Tcmalloc_LIBRARY})
 
-# ---[ Google-glog
-include("cmake/External/glog.cmake")
+## ---[ Google-gflags
+include("cmake/External/glog_gflags.cmake")
+list(APPEND LtIO_LINKER_LIBS PUBLIC glog::glog)
+list(APPEND LtIO_LINKER_LIBS PUBLIC gflags::gflags)
 list(APPEND LtIO_INCLUDE_DIRS PUBLIC ${GLOG_INCLUDE_DIRS})
-list(APPEND LtIO_LINKER_LIBS PUBLIC ${GLOG_LIBRARIES})
-
-# ---[ Google-gflags
-include("cmake/External/gflags.cmake")
 list(APPEND LtIO_INCLUDE_DIRS PUBLIC ${GFLAGS_INCLUDE_DIRS})
-list(APPEND LtIO_LINKER_LIBS PUBLIC ${GFLAGS_LIBRARIES})
-
-# ---[ LevelDB
-#if(USE_LEVELDB)
-#  find_package(LevelDB REQUIRED)
-#  list(APPEND LtIO_INCLUDE_DIRS PUBLIC ${LevelDB_INCLUDES})
-#  list(APPEND LtIO_LINKER_LIBS PUBLIC ${LevelDB_LIBRARIES})
-#endif()
 
 find_package(Unwind REQUIRED)
 list(APPEND LtIO_LINKER_LIBS PUBLIC ${LIBUNWIND_LIBRARIES})
@@ -25,14 +14,13 @@ list(APPEND LtIO_LINKER_LIBS PUBLIC ${LIBUNWIND_LIBRARIES})
 find_package(ZLIB REQUIRED)
 list(APPEND LtIO_LINKER_LIBS PUBLIC ${ZLIB_LIBRARIES})
 
-#find_package(PROFILER REQUIRED)
-#list(APPEND LtIO_LINKER_LIBS PUBLIC ${PROFILER_LIBRARIES})
-
 # ---[ Threads
 find_package(Threads REQUIRED)
 list(APPEND LtIO_LINKER_LIBS PRIVATE ${CMAKE_THREAD_LIBS_INIT})
 
-#list(REMOVE_DUPLICATES LtIO_LINKER_LIBS)
+#find_package(PROFILER REQUIRED)
+#list(APPEND LtIO_LINKER_LIBS PUBLIC ${PROFILER_LIBRARIES})
+
 list(REMOVE_DUPLICATES LtIO_INCLUDE_DIRS)
 
 # ---[ ccache

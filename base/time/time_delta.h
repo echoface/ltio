@@ -191,8 +191,8 @@ class TimeDelta {
     // (they are almost certainly not intentional, and result in NaN, which
     // turns into 0 if clamped to an integer; this makes introducing subtle bugs
     // too easy).
-    CHECK(!is_zero() || !a.is_zero());
-    CHECK(!is_inf() || !a.is_inf());
+    LTCHECK(!is_zero() || !a.is_zero());
+    LTCHECK(!is_inf() || !a.is_inf());
     return ToDouble() / a.ToDouble();
   }
 
@@ -201,8 +201,8 @@ class TimeDelta {
       return delta_ / a.delta_;
     // For consistency, use the same edge case 
     // CHECKs and behavior as the code above.
-    CHECK(!is_zero() || !a.is_zero());
-    CHECK(!is_inf() || !a.is_inf());
+    LTCHECK(!is_zero() || !a.is_zero());
+    LTCHECK(!is_inf() || !a.is_inf());
     return ((delta_ < 0) == (a.delta_ < 0))
                ? std::numeric_limits<int64_t>::max()
                : std::numeric_limits<int64_t>::min();
@@ -267,7 +267,7 @@ constexpr TimeDelta TimeDelta::operator+(TimeDelta other) const {
     return TimeDelta(int64_t{base::ClampAdd(delta_, other.delta_)});
 
   // Additions involving two infinities are only valid if signs match.
-  CHECK(!is_inf() || (delta_ == other.delta_));
+  LTCHECK(!is_inf() || (delta_ == other.delta_));
   return other;
 }
 
@@ -276,7 +276,7 @@ constexpr TimeDelta TimeDelta::operator-(TimeDelta other) const {
     return TimeDelta(int64_t{base::ClampSub(delta_, other.delta_)});
 
   // Subtractions involving two infinities are only valid if signs differ.
-  CHECK_NE(delta_, other.delta_);
+  LTCHECK_NE(delta_, other.delta_);
   return (other.delta_ < 0) ? Max() : Min();
 }
 
