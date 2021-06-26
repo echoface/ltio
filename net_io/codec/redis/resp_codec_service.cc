@@ -122,7 +122,7 @@ void RespCodecService::OnChannelReady(const SocketChannel* ch) {
     return CodecService::OnChannelReady(ch);
   }
 
-  if (!EncodeToChannel(request.get())) {
+  if (!SendRequest(request.get())) {
     init_wait_res_flags_ = InitWaitFlags::kWaitNone;
     return CloseService();
   }
@@ -140,7 +140,7 @@ const RefCodecMessage RespCodecService::NewHeartbeat() {
   return RefCast(CodecMessage, request);
 }
 
-bool RespCodecService::EncodeToChannel(CodecMessage* message) {
+bool RespCodecService::SendRequest(CodecMessage* message) {
   if (message->GetMessageType() != MessageType::kRequest) {
     LOG(ERROR) << __FUNCTION__ << " only client side supported";
     return false;
@@ -156,7 +156,7 @@ bool RespCodecService::EncodeToChannel(CodecMessage* message) {
   return false;
 }
 
-bool RespCodecService::EncodeResponseToChannel(const CodecMessage* req, CodecMessage* res) {
+bool RespCodecService::SendResponse(const CodecMessage* req, CodecMessage* res) {
 	LOG(FATAL) << __FUNCTION__ << " resp only client service supported";
   return false;
 };

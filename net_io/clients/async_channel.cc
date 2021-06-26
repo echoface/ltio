@@ -44,7 +44,7 @@ void AsyncChannel::SendRequest(RefCodecMessage request)  {
   // A -> b -> c -> call something it delete this Channel --> Back to A
   request->SetIOCtx(codec_);
 
-  bool success = codec_->EncodeToChannel(request.get());
+  bool success = codec_->SendRequest(request.get());
   if (!success) {
     request->SetFailCode(MessageCode::kConnBroken);
     HandleResponse(request, CodecMessage::kNullMessage);

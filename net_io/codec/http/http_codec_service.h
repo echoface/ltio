@@ -46,10 +46,10 @@ public:
   static bool ResponseToBuffer(const HttpResponse*, IOBuffer*);
 
   void BeforeSendRequest(HttpRequest*);
-  bool EncodeToChannel(CodecMessage* message) override;
+  bool SendRequest(CodecMessage* message) override;
 
   bool BeforeSendResponseMessage(const HttpRequest*, HttpResponse*);
-  bool EncodeResponseToChannel(const CodecMessage* req, CodecMessage* res) override;
+  bool SendResponse(const CodecMessage* req, CodecMessage* res) override;
 
   const RefCodecMessage NewResponse(const CodecMessage*) override;
 private:

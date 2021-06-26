@@ -54,7 +54,7 @@ class RawCodecService : public CodecService {
         auto response = NewHeartbeat();
         response->SetAsyncId(message->AsyncId());
         if (response) {
-          EncodeResponseToChannel(message.get(), response.get());
+          SendResponse(message.get(), response.get());
         }
       } else if (delegate_) {
         delegate_->OnCodecMessage(RefCast(CodecMessage, message));
@@ -79,7 +79,7 @@ class RawCodecService : public CodecService {
   bool KeepSequence() override { return RawMessageType::KeepQueue();};
   bool KeepHeartBeat() override {return RawMessageType::WithHeartbeat();}
 
-  bool EncodeToChannel(CodecMessage* message) override {
+  bool SendRequest(CodecMessage* message) override {
     RawMessageType* request = static_cast<RawMessageType*>(message);
     CHECK(request->GetMessageType() == MessageType::kRequest);
 
@@ -87,7 +87,7 @@ class RawCodecService : public CodecService {
     return request->EncodeTo(channel_.get());
   };
 
-  bool EncodeResponseToChannel(const CodecMessage* req, CodecMessage* res) override {
+  bool SendResponse(const CodecMessage* req, CodecMessage* res) override {
     auto raw_response = static_cast<RawMessageType*>(res);
     auto raw_request = static_cast<const RawMessageType*>(req);
     CHECK(raw_request->AsyncId() == raw_response->AsyncId());

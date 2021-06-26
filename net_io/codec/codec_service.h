@@ -75,8 +75,9 @@ public:
   virtual bool KeepSequence() {return true;};
   virtual bool KeepHeartBeat() {return false;}
 
-  virtual bool EncodeToChannel(CodecMessage* message) = 0;
-  virtual bool EncodeResponseToChannel(const CodecMessage* req, CodecMessage* res) = 0;
+  virtual bool SendRequest(CodecMessage* message) = 0;
+
+  virtual bool SendResponse(const CodecMessage* req, CodecMessage* res) = 0;
 
   virtual const RefCodecMessage NewHeartbeat() {return NULL;}
   virtual const RefCodecMessage NewResponse(const CodecMessage*) {return NULL;}

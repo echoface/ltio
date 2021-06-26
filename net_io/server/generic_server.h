@@ -27,6 +27,7 @@
 #include <functional>
 
 #include "base/base_micro.h"
+#include "base/coroutine/coroutine_runner.h"
 #include "net_io/io_service.h"
 #include "net_io/codec/codec_factory.h"
 #include "base/message_loop/message_loop.h"
@@ -37,33 +38,43 @@ namespace net {
 using base::MessageLoop;
 
 typedef struct DefaultConfigurator {
+  static const bool coro_process = true;
   static const uint64_t kClientConnLimit = 65536;
   static const uint64_t kRequestQpsLimit = 100000;
 }DefaultConfigurator;
 
-template<class Context, class T>
+/*
+ * Context need implement follow interface
+ *
+ * Context::New(RefCodecMessage request);
+ * */
+template <typename Context,
+          typename Configurator = DefaultConfigurator>
 class BaseServer : public IOServiceDelegate {
-public:
-  typedef BaseServer<Context, T> Server;
-  typedef std::shared_ptr<Context> ContextPtr;
-  typedef std::vector<MessageLoop*> MessageLoopList;
+ public:
+  typedef BaseServer<Context, Configurator> Server;
+  typedef std::shared_ptr<Context> RefContext;
   typedef std::list<RefIOService> RefIOServiceList;
-  typedef std::function<void(ContextPtr context)> Handler;
+  typedef std::vector<MessageLoop*> MessageLoopList;
 
-  BaseServer()
-    : dispatcher_(nullptr),
-      serving_flag_(false),
-      client_count_(0) {
-  }
+  typedef std::function<void(const std::shared_ptr<Context>&)> Handler;
+
+  BaseServer() : serving_flag_(false), client_count_(0) {}
 
   Server& WithIOLoops(MessageLoopList& loops) {
     io_loops_ = loops;
     return *this;
   }
-  Server& WithDispatcher(Dispatcher* dispatcher) {
-    dispatcher_ = dispatcher;
+
+  Server& WithAddress(const std::string& addr) {
+    address_ = addr;
     return *this;
-  };
+  }
+
+  std::string ServerInfo() const {
+    return uri_.protocol + ":" + endpoint_.ToString();
+  }
+
   const IPEndPoint& Endpoint() const {
     return endpoint_;
   };
@@ -71,16 +82,20 @@ public:
     return uri_;
   }
 
-  void ServeAddress(const std::string& address, Handler&& handler) {
-    bool served = serving_flag_.exchange(true);
-    CHECK(!served);
-    CHECK(handler);
-    CHECK(!io_loops_.empty());
+  void ServeAddress(const Handler& handler) {
+    ServeAddress(address_, handler);
+  }
 
+  void ServeAddress(const std::string& address, const Handler& handler) {
+    CHECK(handler);
+    CHECK(io_loops_.size());
+    CHECK(!serving_flag_.exchange(true));
+
+    address_ = address;
     handler_ = handler;
 
     if (!url::ParseURI(address, uri_)) {
-      LOG(ERROR) << "uri parse error,eg:[raw://xx.xx.xx.xx:port]";
+      LOG(ERROR) << "error address,required format:[scheme://host:port]";
       CHECK(false);
     }
     if (!CodecFactory::HasCreator(uri_.protocol)) {
@@ -97,7 +112,7 @@ public:
     }
 #else
     base::MessageLoop* loop = io_loops_.front();
-    RefIOService service(new IOService(addr, uri_.protocol, loop, this));
+    RefIOService service(new IOService(endpoint_, uri_.protocol, loop, this));
     service->StartIOService();
     ioservices_.push_back(std::move(service));
 #endif
@@ -113,10 +128,11 @@ public:
       io->PostTask(FROM_HERE, &IOService::StopIOService, service);
     }
   }
+
 protected:
   //override from ioservice delegate
   bool CanCreateNewChannel() override {
-    bool can = client_count_ < T::kClientConnLimit;
+    bool can = client_count_ < Configurator::kClientConnLimit;
     LOG_IF(INFO, !can) << " max client limit reach";
     return can;
   };
@@ -134,7 +150,7 @@ protected:
 #endif
   };
 
-  void IOServiceStarted(const IOService* service) {
+  void IOServiceStarted(const IOService* service) override {
     std::unique_lock<std::mutex> lck(mtx_);
     for (const RefIOService& io_service : ioservices_) {
       if (!io_service->IsRunning()) {
@@ -157,35 +173,40 @@ protected:
   }
 
   void OnRequestMessage(const RefCodecMessage& request) override {
-    if (!dispatcher_) {
-      this->handler_(std::make_shared<Context>(std::move(request)));
+    if (!Configurator::coro_process) {
+      return handler_(Context::New(request));
     }
-
-    bool success = dispatcher_->Dispatch([=](){
-      this->handler_(std::make_shared<Context>(std::move(request)));
-    });
-    CHECK(success);
+    base::MessageLoop* io_loop = base::MessageLoop::Current();
+    CO_GO io_loop << std::bind(handler_, Context::New(request));
   }
 
-  std::string ServerInfo() const {
-    return uri_.protocol + ":" + endpoint_.ToString();
-  }
 private:
   Handler handler_;
-  Dispatcher* dispatcher_;
+
+  bool coro_handler_ = true;
 
   std::mutex mtx_;
+
+  std::string address_;
+
   IPEndPoint endpoint_;
+
   url::SchemeIpPort uri_;
+
   MessageLoopList io_loops_;
+
   RefIOServiceList ioservices_;
 
-  base::ClosureCallback closed_callback_;
   std::atomic<bool> serving_flag_;
+
   std::atomic<uint32_t> client_count_;
+
+  base::ClosureCallback closed_callback_;
+
   DISALLOW_COPY_AND_ASSIGN(BaseServer);
 };
 
-}}
+}  // namespace net
+}  // namespace lt
 #endif
 

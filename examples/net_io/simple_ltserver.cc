@@ -13,7 +13,6 @@
 #include "base/message_loop/message_loop.h"
 
 #include "net_io/server/generic_server.h"
-#include "net_io/server/request_context.h"
 
 #include <csignal>
 
@@ -32,9 +31,6 @@ DEFINE_bool(raw_client, false, "wheather enable self connected http client");
 DEFINE_bool(http_client, true, "wheather enable self connected raw client");
 DEFINE_int32(loops, 4, "how many loops use for handle message and io");
 
-class SampleApp;
-
-void DumpRedisResponse(RedisResponse* redis_response);
 net::ClientConfig DeafaultClientConfig(int count = 2) {
   net::ClientConfig config;
   config.connections = count;
@@ -89,21 +85,12 @@ void DumpRedisResponse(RedisResponse* redis_response) {
 
 base::MessageLoop main_loop;
 
-typedef BaseServer<CommonRequestContext, DefaultConfigurator> GenericServer;
-class SampleApp: public net::ClientDelegate {
+class SimpleApp: public net::ClientDelegate {
 public:
-  SampleApp() {
+  SimpleApp() {}
 
-#ifdef USE_CORO_DISPATCH
-    dispatcher_ = new net::CoroDispatcher(true);
-#else
-    dispatcher_ = new net::Dispatcher(true);
-#endif
-  }
-
-  ~SampleApp() {
+  ~SimpleApp() {
     LOG(INFO) << __func__ << " close app";
-    delete dispatcher_;
     if (FLAGS_raw_client) {
       delete raw_client;
     }
@@ -124,31 +111,30 @@ public:
       loop->Start();
       loops.push_back(loop);
     }
-    dispatcher_->SetWorkerLoops(loops);
 
-    raw_server.WithIOLoops(loops);
-    raw_server.WithDispatcher(dispatcher_);
-    raw_server.ServeAddress(base::StrUtil::Concat("raw://", FLAGS_raw),
-                            std::bind(&SampleApp::HandleRawRequest, this, std::placeholders::_1));
+    raw_server
+      .WithIOLoops(loops)
+      .WithAddress(base::StrUtil::Concat("raw://", FLAGS_raw))
+      .ServeAddress(std::bind(&SimpleApp::HandleRawRequest, this, std::placeholders::_1));
 
-    http_server.WithIOLoops(loops);
-    http_server.WithDispatcher(dispatcher_);
-    http_server.ServeAddress(base::StrUtil::Concat("http://", FLAGS_http),
-                             std::bind(&SampleApp::HandleHttpRequest, this, std::placeholders::_1));
+    http_server
+      .WithIOLoops(loops)
+      .WithAddress(base::StrUtil::Concat("http://", FLAGS_http))
+      .ServeAddress(std::bind(&SimpleApp::HandleHttpRequest, this, std::placeholders::_1));
 
   }
 
-  void HandleRawRequest(GenericServer::ContextPtr context) {
+  void HandleRawRequest(RefRawRequestContext context) {
     const LtRawMessage* req = context->GetRequest<LtRawMessage>();
     LOG_EVERY_N(INFO, 10000) << " got request:" << req->Dump();
 
     auto res = LtRawMessage::CreateResponse(req);
     res->SetContent(req->Content());
-    return context->Send(res);
+    return context->Response(res);
   }
 
-  void HandleHttpRequest(GenericServer::ContextPtr context) {
-    const HttpRequest* req = context->GetRequest<HttpRequest>();
+  void HandleHttpRequest(RefHttpRequestCtx context) {
+    const HttpRequest* req = context->Request();
     LOG_EVERY_N(INFO, 10000) << " got 1w Http request, body:" << req->Dump();
 
     RefHttpResponse response = HttpResponse::CreateWithCode(200);
@@ -162,20 +148,24 @@ public:
     }
 #endif
 
-    if (req->RequestUrl() == "/raw" && FLAGS_raw_client) {
+    if (FLAGS_raw_client && req->RequestUrl() == "/raw") {
+
       SendRawRequest();
       response->MutableBody() = "proxy a raw request";
     } else if (req->RequestUrl() == "/http") {
+
       SendHttpRequest();
       response->MutableBody() = "proxy a http request";
     } else if (req->RequestUrl() == "/ping") {
+
       response->MutableBody() = "PONG";
     } else {
+
       static const std::string kresponse(3650, 'c');
       response->MutableBody() = kresponse;
     }
 
-    return context->Send(std::move(response));
+    return context->Response(response);
   }
 
   base::MessageLoop* NextIOLoopForClient() {
@@ -309,54 +299,19 @@ public:
   static std::atomic_int io_round_count;
   std::vector<base::MessageLoop*> loops;
 
-#ifdef USE_CORO_DISPATCH
-  CoroDispatcher* dispatcher_ = NULL;
-#else
-  Dispatcher* dispatcher_ = NULL;
-#endif
-  GenericServer raw_server;
-  GenericServer http_server;
-  //net::RawServer raw_server;
-  //net::HttpServer http_server;
+  RawCoroServer raw_server;
+  HttpCoroServer http_server;
 };
-std::atomic_int SampleApp::io_round_count = {0};
+std::atomic_int SimpleApp::io_round_count = {0};
 
-SampleApp app;
-
-void HandleHttp(SampleApp* app, net::HttpContext* context) {
-  net::HttpRequest* req = context->Request();
-  VLOG(1) << " GOT Http request, body:" << req->Dump();
-  LOG_EVERY_N(INFO, 10000) << " got 1w Http request, body:" << req->Dump();
-
-  if (req->RequestUrl() == "/raw" && FLAGS_raw_client) {
-    app->SendRawRequest();
-    return context->ReplyString("do raw request.");
-  }
-
-#ifdef ENBALE_RDS_CLIENT
-  if (req->RequestUrl() == "/rds") {
-    app.SendRedisMessage();
-    return context->ReplyString("do rds request.");
-  }
-#endif
-
-  if (req->RequestUrl() == "/http") {
-    app->SendHttpRequest();
-    return context->ReplyString("do http request.");
-  } else if (req->RequestUrl() == "/ping") {
-    return context->ReplyString("pong");
-  }
-  static const std::string kresponse(3650, 'c');
-  context->ReplyString(kresponse);
-}
+SimpleApp app;
 
 void signalHandler( int signum ){
   LOG(INFO) << "sighandler sig:" << signum;
-  CO_GO &main_loop << std::bind(&SampleApp::StopAllService, &app);
+  CO_GO std::bind(&SimpleApp::StopAllService, &app);
 }
 
 int main(int argc, char* argv[]) {
-  //google::InstallFailureSignalHandler();
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   gflags::SetUsageMessage("usage: exec --http=ip:port --raw=ip:port --noredis_client ...");
 
@@ -367,7 +322,6 @@ int main(int argc, char* argv[]) {
   main_loop.Start();
 
   app.Initialize();
-
 
   app.StartHttpClients(base::StrUtil::Concat("http://", FLAGS_http));
 

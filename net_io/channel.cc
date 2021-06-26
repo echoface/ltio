@@ -35,6 +35,7 @@ SocketChannel::SocketChannel(int socket_fd,
                              const IPEndPoint& peer,
                              base::EventPump* pump)
   : pump_(pump),
+    schedule_shutdown_(false),
     local_ep_(loc),
     remote_ep_(peer),
     name_(loc.ToString()) {

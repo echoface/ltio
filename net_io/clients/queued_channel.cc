@@ -58,7 +58,7 @@ bool QueuedChannel::TrySendNext() {
   while(!success && waiting_list_.size()) {
 
     RefCodecMessage& next = waiting_list_.front();
-    success = codec_->EncodeToChannel(next.get());
+    success = codec_->SendRequest(next.get());
     waiting_list_.pop_front();
     if (success) {
       ing_request_ = next;

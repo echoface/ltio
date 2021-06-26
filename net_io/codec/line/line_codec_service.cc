@@ -62,7 +62,7 @@ void LineCodecService::OnDataReceived(const SocketChannel*, IOBuffer *buf) {
   }
 }
 
-bool LineCodecService::EncodeToChannel(CodecMessage* message) {
+bool LineCodecService::SendMessage(CodecMessage* message) {
   static const std::string kCRCN("\r\n");
   const LineMessage* line_msg = static_cast<const LineMessage*>(message);
   int ret = channel_->Send(line_msg->Body().data(), line_msg->Body().size());
@@ -73,8 +73,12 @@ bool LineCodecService::EncodeToChannel(CodecMessage* message) {
   return ret >= 0;
 }
 
-bool LineCodecService::EncodeResponseToChannel(const CodecMessage* req, CodecMessage* res) {
-  return EncodeToChannel(res);
+bool LineCodecService::SendRequest(CodecMessage* req) {
+  return SendMessage(req);
+}
+
+bool LineCodecService::SendResponse(const CodecMessage* req, CodecMessage* res) {
+  return SendMessage(res);
 };
 
 }}//end of file

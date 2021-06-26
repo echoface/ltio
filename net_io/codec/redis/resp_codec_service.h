@@ -47,8 +47,8 @@ public:
 
   void OnDataReceived(const SocketChannel*, IOBuffer *) override;
 
-	bool EncodeToChannel(CodecMessage* message) override;
-	bool EncodeResponseToChannel(const CodecMessage* req, CodecMessage* res) override;
+	bool SendRequest(CodecMessage* message) override;
+	bool SendResponse(const CodecMessage* req, CodecMessage* res) override;
 
   bool KeepHeartBeat() override {return true;}
   const RefCodecMessage NewHeartbeat() override;

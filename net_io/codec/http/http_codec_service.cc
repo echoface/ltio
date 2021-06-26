@@ -224,7 +224,7 @@ bool HttpCodecService::RequestToBuffer(const HttpRequest* request, IOBuffer* buf
   return true;
 }
 
-bool HttpCodecService::EncodeToChannel(CodecMessage* message) {
+bool HttpCodecService::SendRequest(CodecMessage* message) {
 	CHECK(message->GetMessageType() == MessageType::kRequest);
 
   auto request = static_cast<HttpRequest*>(message);
@@ -236,7 +236,7 @@ bool HttpCodecService::EncodeToChannel(CodecMessage* message) {
   return channel_->TryFlush();
 }
 
-bool HttpCodecService::EncodeResponseToChannel(const CodecMessage* req, CodecMessage* res) {
+bool HttpCodecService::SendResponse(const CodecMessage* req, CodecMessage* res) {
   HttpResponse* response = static_cast<HttpResponse*>(res);
   const HttpRequest* request = static_cast<const HttpRequest*>(req);
 

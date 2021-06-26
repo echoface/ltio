@@ -70,7 +70,7 @@ public:
   void SetRemoteHost(const std::string& h) {remote_host_ = h;}
   const std::string& RemoteHost() const {return remote_host_;}
 
-  IOContext& GetIOCtx() {return io_context_;}
+  const IOContext& GetIOCtx() const {return io_context_;}
   void SetIOCtx(const RefCodecService& service);
 
   WorkContext& GetWorkCtx() {return work_context_;}

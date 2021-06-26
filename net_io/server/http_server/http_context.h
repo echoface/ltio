@@ -23,25 +23,35 @@
 namespace lt {
 namespace net {
 
-class HttpContext {
+class HttpRequestCtx;
+using RefHttpRequestCtx = std::shared_ptr<HttpRequestCtx>;
+
+class HttpRequestCtx {
   public:
-    HttpContext(const RefHttpRequest& request);
+    static RefHttpRequestCtx New(const RefCodecMessage& req);
 
-    HttpRequest* Request() {return (HttpRequest*)request_.get();}
+    const HttpRequest* Request() {
+      return (HttpRequest*)request_.get();
+    }
 
-    void ReplyFile(const std::string&, uint16_t code = 200);
+    void File(const std::string&, uint16_t code = 200);
 
-    void ReplyJson(const std::string& json, uint16_t code = 200);
+    void Json(const std::string& json, uint16_t code = 200);
 
-    void ReplyString(const char* content, uint16_t code = 200);
-    void ReplyString(const std::string& content, uint16_t code = 200);
+    void String(const char* content, uint16_t code = 200);
 
-    void DoReplyResponse(RefHttpResponse& response);
+    void String(const std::string& content, uint16_t code = 200);
 
-    bool DidReply() const {return did_reply_;};
+    void Response(RefHttpResponse& response);
+
+    bool Responsed() const {return did_reply_;};
   private:
-    RefHttpRequest request_;
+    HttpRequestCtx (const RefCodecMessage& request);
+
+    RefCodecMessage request_;
+
     bool did_reply_ = false;
+
     base::MessageLoop* io_loop_ = NULL;
 };
 

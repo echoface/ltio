@@ -16,10 +16,10 @@ public:
   }
   ~TcpCodecService() {
   }
-  bool EncodeToChannel(CodecMessage* message) override {
+  bool SendRequest(CodecMessage* message) override {
     return true;
   };
-  bool EncodeResponseToChannel(const CodecMessage* req, CodecMessage* res) override {
+  bool SendResponse(const CodecMessage* req, CodecMessage* res) override {
     return true;
   };
 

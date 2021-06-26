@@ -30,55 +30,22 @@
 #include "net_io/codec/codec_message.h"
 #include "net_io/codec/http/http_request.h"
 #include "net_io/codec/http/http_response.h"
+#include "net_io/server/generic_server.h"
 
 namespace lt {
 namespace net {
 
-typedef std::function<void(HttpContext* context)> HttpMessageHandler;
-
-//?? use traits replace IOserviceDelegate override?
-class HttpServer : public IOServiceDelegate {
-public:
-  HttpServer();
-  ~HttpServer();
-
-  void SetDispatcher(Dispatcher* dispatcher);
-  void SetIOLoops(std::vector<base::MessageLoop*>& loops);
-
-  void ServeAddress(const std::string&, HttpMessageHandler);
-  void SetCloseCallback(const base::ClosureCallback& callback);
-
-  void StopServer();
-protected:
-  //override from ioservice delegate
-  bool CanCreateNewChannel() override;
-  void IncreaseChannelCount() override;
-  void DecreaseChannelCount() override;
-  base::MessageLoop* GetNextIOWorkLoop() override;
-  void IOServiceStarted(const IOService* ioservice) override;
-  void IOServiceStoped(const IOService* ioservice) override;
-  void OnRequestMessage(const RefCodecMessage& request) override;
-
-  // handle http request in target loop
-  void HandleHttpRequest(HttpContext* context);
-
-  base::MessageLoop* NextWorkerLoop();
-private:
-  Dispatcher* dispatcher_ = NULL;
-  HttpMessageHandler message_handler_;
-
-  std::vector<base::MessageLoop*> io_loops_;
-  std::list<RefIOService> ioservices_;
-  base::LtClosure closed_callback_;
-
-  std::mutex mtx_;
-  std::atomic_bool serving_flag_;
-
-  std::atomic<uint32_t> connection_count_;
-
-  std::atomic<uint32_t> worker_index_;
-  DISALLOW_COPY_AND_ASSIGN(HttpServer);
+struct NoneHttpCoroServerTraits {
+  static const bool coro_process = false;
+  static const uint64_t kClientConnLimit = 65536;
+  static const uint64_t kRequestQpsLimit = 100000;
 };
+
+using HttpCoroServer =
+  BaseServer<HttpRequestCtx, DefaultConfigurator>;
+
+using HttpServer =
+  BaseServer<HttpRequestCtx, NoneHttpCoroServerTraits>;
 
 }}
 #endif

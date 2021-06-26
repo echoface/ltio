@@ -42,9 +42,7 @@ set(LTNET_SOURCE
 
   #server
   server/generic_server.h
-  server/request_context.cc
   server/raw_server/raw_server.cc
-  server/http_server/http_server.cc
   server/http_server/http_context.cc
 
   #clients source

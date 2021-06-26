@@ -33,8 +33,10 @@ public:
   void OnDataFinishSend(const SocketChannel*) override;
   void OnDataReceived(const SocketChannel*, IOBuffer *) override;
 
-  bool EncodeToChannel(CodecMessage* message) override;
-  bool EncodeResponseToChannel(const CodecMessage* req, CodecMessage* res) override;
+  bool SendRequest(CodecMessage* request) override;
+  bool SendResponse(const CodecMessage* req, CodecMessage* res) override;
+private:
+  bool SendMessage(CodecMessage* message);
 };
 
 }}

@@ -47,6 +47,7 @@ bool CodecService::IsConnected() const {
 bool CodecService::BindToSocket(int fd,
                                 const IPEndPoint& local,
                                 const IPEndPoint& peer) {
+  //TODO: FreeList and reset may boost alot
   channel_ = TcpChannel::Create(fd, local, peer, Pump());
 	channel_->SetReciever(this);
   return true;
