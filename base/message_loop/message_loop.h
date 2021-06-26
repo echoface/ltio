@@ -65,7 +65,6 @@ class MessageLoop : public PumpDelegate,
       TaskTypeCtrl    = 2
     } ScheduledTaskType;
 
-
     MessageLoop();
     virtual ~MessageLoop();
 
