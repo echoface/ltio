@@ -13,8 +13,7 @@ struct FreeListNode {
 // but simple and correct (assuming nodes are never freed until after the free list is destroyed),
 // and fairly speedy under low contention.
 template<typename N>    // N must inherit FreeListNode or have the same fields (and initialization)
-struct FreeList
-{
+struct FreeList {
     FreeList() : freeListHead(nullptr) { }
 
     inline void add(N* node) {
