@@ -43,5 +43,6 @@ struct HttpConstant {
   static const char* StatusCodeCStr(int32_t code);
 };
 
-}} //end net::HttpConstant
+}  // namespace net
+}  // namespace lt
 #endif

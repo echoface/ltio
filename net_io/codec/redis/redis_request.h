@@ -20,10 +20,10 @@
 
 #include "redis_response.h"
 
-#include <vector>
 #include <base/base_micro.h>
-#include <thirdparty/resp/resp/all.hpp>
 #include <net_io/codec/codec_message.h>
+#include <thirdparty/resp/resp/all.hpp>
+#include <vector>
 
 namespace lt {
 namespace net {
@@ -32,17 +32,18 @@ class RespCodecService;
 class RedisRequest;
 typedef std::shared_ptr<RedisRequest> RefRedisRequest;
 
-
 class RedisRequest : public CodecMessage {
 public:
   typedef RedisResponse ResponseType;
   typedef resp::encoder<resp::buffer> RespEncoder;
 
   struct __detail__ {
-    static void cmd_concat(RespEncoder::command&) { /* do nothing */ }
-    template<typename T, typename ...Args>
+    static void cmd_concat(RespEncoder::command&) { /* do nothing */
+    }
+    template <typename T, typename... Args>
     static void cmd_concat(RespEncoder::command& cmd,
-                            const T& v, Args&&... args) {
+                           const T& v,
+                           Args&&... args) {
       cmd.arg(v);
       cmd_concat(cmd, std::forward<Args>(args)...);
     }
@@ -54,7 +55,7 @@ public:
   void Get(const std::string& key);
   void MGet(const std::vector<std::string>& keys);
 
-  template<typename T>
+  template <typename T>
   void MGet(std::initializer_list<T> list) {
     std::vector<resp::buffer> buffers;
     encoder_.begin(buffers);
@@ -65,13 +66,13 @@ public:
     cmder.end();
     encoder_.end();
 
-    for (auto& buffer :  buffers) {
+    for (auto& buffer : buffers) {
       body_.append(buffer.data(), buffer.size());
     }
     cmd_counter_++;
   }
 
-  template<typename ...Args>
+  template <typename... Args>
   void MGet(Args&&... args) {
     std::vector<resp::buffer> buffers;
     encoder_.begin(buffers);
@@ -81,7 +82,7 @@ public:
 
     cmder.end();
     encoder_.end();
-    for (auto& buffer :  buffers) {
+    for (auto& buffer : buffers) {
       body_.append(buffer.data(), buffer.size());
     }
     cmd_counter_++;
@@ -90,7 +91,9 @@ public:
   void Set(const std::string& key, const std::string& value);
   void MSet(const std::vector<std::pair<std::string, std::string>> kvs);
 
-  void SetWithExpire(const std::string& key, const std::string& value, uint32_t second);
+  void SetWithExpire(const std::string& key,
+                     const std::string& value,
+                     uint32_t second);
 
   void Exists(const std::string& key);
   void Delete(const std::string& key);
@@ -108,32 +111,35 @@ public:
   void TTL(const std::string& key);
   void Persist(const std::string& key);
   void Expire(const std::string& key, uint64_t second);
-/*
-  void HDel(const std::string& hash_container, const std::string& field);
-  void HSet(const std::string& hash_container, const std::string& field, const std::string& value);
-  void HGet(const std::string& hash_container, const std::string& field);
-  void HGetAll(const std::string& hash_container);
-  void HExisit(const std::string& hash_container, const std::string& field);
-  void HIncrBy(const std::string& hash_container, const std::string& field);
-  void HIncrByFloat(const std::string& hash_container, const std::string& field);
-  void HKeys(const std::string& hash_container);
-  void HLen(const std::string& hash_container);
-  void HMGet(const std::string& hash_container, std::vector<std::string> fields);
-  void HMSet(const std::string& hash_container, std::vector<std::pair<std::string, std::string>> kvs);
-  void HSetNotExist(const std::string& hash_container, const std::string& field, const std::string& value);
-  //HScan
-  //
+  /*
+    void HDel(const std::string& hash_container, const std::string& field);
+    void HSet(const std::string& hash_container, const std::string& field, const
+    std::string& value); void HGet(const std::string& hash_container, const
+    std::string& field); void HGetAll(const std::string& hash_container); void
+    HExisit(const std::string& hash_container, const std::string& field); void
+    HIncrBy(const std::string& hash_container, const std::string& field); void
+    HIncrByFloat(const std::string& hash_container, const std::string& field);
+    void HKeys(const std::string& hash_container);
+    void HLen(const std::string& hash_container);
+    void HMGet(const std::string& hash_container, std::vector<std::string>
+    fields); void HMSet(const std::string& hash_container,
+    std::vector<std::pair<std::string, std::string>> kvs); void
+    HSetNotExist(const std::string& hash_container, const std::string& field,
+    const std::string& value);
+    //HScan
+    //
 
-  void SAdd(const std::string& set, const std::vector<std::string>& fields);
-  void SMembers(const std::string& set, const std::string& field);
-  void SDiff(const std::string& set1, const std::string& set2);
-  void SIsMember(const std::string& set, const std::string& field);
-*/
+    void SAdd(const std::string& set, const std::vector<std::string>& fields);
+    void SMembers(const std::string& set, const std::string& field);
+    void SDiff(const std::string& set1, const std::string& set2);
+    void SIsMember(const std::string& set, const std::string& field);
+  */
 
-  inline uint32_t CmdCount() const {return cmd_counter_;}
+  inline uint32_t CmdCount() const { return cmd_counter_; }
 
   bool AsHeartbeat() override;
   bool IsHeartbeat() const override;
+
 private:
   friend class RespCodecService;
 
@@ -142,5 +148,6 @@ private:
   resp::encoder<resp::buffer> encoder_;
 };
 
-}} //end namesapce
+}  // namespace net
+}  // namespace lt
 #endif

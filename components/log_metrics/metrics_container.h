@@ -1,13 +1,12 @@
 #ifndef _COMPONENT_LOG_METRICS_CONTAINER_H
 #define _COMPONENT_LOG_METRICS_CONTAINER_H
 
-#include <vector>
+#include <initializer_list>
+#include <nlohmann/json_fwd.hpp>
 #include <string>
 #include <unordered_map>
+#include <vector>
 #include "metrics_item.h"
-#include <nlohmann/json_fwd.hpp>
-#include <initializer_list>
-
 
 using Json = nlohmann::json;
 
@@ -20,10 +19,10 @@ typedef struct MetricDistArgs {
 } MetricDistArgs;
 
 struct MetricBase {
-  MetricBase(uint32_t ts, MetricsType t):type(t), start_ts(ts){}
+  MetricBase(uint32_t ts, MetricsType t) : type(t), start_ts(ts) {}
   virtual ~MetricBase(){};
   void UpdateMinMax(int64_t v);
-  MetricsType Type() const {return type;};
+  MetricsType Type() const { return type; };
   virtual bool Merge(const MetricBase* other) = 0;
 
   MetricsType type;
@@ -54,7 +53,7 @@ struct MetricDist : MetricBase {
   uint32_t Duration() const;
   uint32_t CalculatePecentile(uint32_t percent) const;
   std::vector<uint32_t> CalculatePecentile(std::vector<uint32_t> percent) const;
-  size_t BucketSize() const {return percentile_bucket.size();};
+  size_t BucketSize() const { return percentile_bucket.size(); };
 
   std::vector<uint32_t> percentile_bucket;
   const MetricDistArgs args;
@@ -77,6 +76,7 @@ public:
   bool GenerateJsonReport(Json& report);
   bool GenerateJsonLineReport(std::ostringstream& oss);
   bool GenerateFileReport(const std::string full_paht);
+
 private:
   /* craete new dist item and insert to map, return null
    * when failed insert to map*/
@@ -88,5 +88,5 @@ private:
   std::unordered_map<std::string, MetricBase*> datas_;
 };
 
-}
+}  // namespace component
 #endif

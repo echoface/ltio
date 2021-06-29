@@ -1,9 +1,9 @@
 
-#include <math.h>
+#include "count_min_sketch.h"
 #include <inttypes.h>
+#include <math.h>
 #include <string.h>
 #include <iostream>
-#include "count_min_sketch.h"
 #include "thirdparty/murmurhash/MurmurHash3.h"
 
 namespace component {
@@ -15,17 +15,15 @@ static CreateWithErrorRateAndCertainty(uint64_t w, uint32_t d);
 */
 
 /* d=[ln(1−certainty)/ln(1/2)] */
-CountMinSketch::CountMinSketch(double err, double certainty) :
-  certainty_(certainty),
-  error_rate_(err),
-  distinct_count_(0) {
-
+CountMinSketch::CountMinSketch(double err, double certainty)
+  : certainty_(certainty), error_rate_(err), distinct_count_(0) {
   width_ = static_cast<uint64_t>(std::ceil(2.0 / err));
-  depth_ = static_cast<uint64_t>(std::ceil(std::log(1.0 - certainty_) / std::log(1.0 / 2.0)));
+  depth_ = static_cast<uint64_t>(
+      std::ceil(std::log(1.0 - certainty_) / std::log(1.0 / 2.0)));
 
-  for (uint32_t i = 0 ; i < depth_; i++) {
+  for (uint32_t i = 0; i < depth_; i++) {
     CountType* d = (CountType*)malloc(width_ * sizeof(CountType));
-    memset(d, 0, width_*sizeof(CountType));
+    memset(d, 0, width_ * sizeof(CountType));
     matrix_.push_back(d);
   }
 }
@@ -46,11 +44,15 @@ void CountMinSketch::Increase(const void* data, size_t len, int32_t count) {
   bool brand_new = false;
   for (uint32_t depth = 0; depth < depth_;) {
     MurmurHash3_x64_128(data, len, depth << 0x1F | depth, result);
-    if (0 == __sync_fetch_and_add(&matrix_[depth++][result[0] % width_], count) && !brand_new) {
+    if (0 == __sync_fetch_and_add(&matrix_[depth++][result[0] % width_],
+                                  count) &&
+        !brand_new) {
       brand_new = true;
     };
     if (depth < depth_) {
-      if (0 == __sync_fetch_and_add(&matrix_[depth++][result[1] % width_], count) && !brand_new) {
+      if (0 == __sync_fetch_and_add(&matrix_[depth++][result[1] % width_],
+                                    count) &&
+          !brand_new) {
         brand_new = true;
       };
     }
@@ -78,4 +80,4 @@ uint64_t CountMinSketch::Estimate(const void* data, size_t len) {
   return result;
 }
 
-} //end component
+}  // namespace component

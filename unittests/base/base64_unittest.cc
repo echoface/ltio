@@ -1,22 +1,23 @@
-#include <unistd.h>
-#include <iostream>
-#include <unistd.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <atomic>
+#include <iostream>
 
-#include "glog/logging.h"
 #include <base/time/time_utils.h>
 #include <base/utils/base64/base64.hpp>
+#include "glog/logging.h"
 
 #include <thirdparty/catch/catch.hpp>
 
 /*
 TEST_CASE("base64.base", "[base64 basic test]") {
-   REQUIRE("U2VuZCByZWluZm9yY2VtZW50cw==" == base::base64_encode("Send reinforcements"));
-   REQUIRE("Send reinforcements" == base::base64_decode("U2VuZCByZWluZm9yY2VtZW50cw=="));
-   REQUIRE("VGhpcyBpcyBsaW5lIG9uZQpUaGlzIGlzIGxpbmUgdHdvClRoaXMgaXMgbGlu\nZSB0aHJlZQpBbmQgc28gb24uLi4K" == 
-           base::base64_encode("This is line one\nThis is line two\nThis is line three\nAnd so on..."));
-   REQUIRE("This is line one\nThis is line two\nThis is line three\nAnd so on..." == 
+   REQUIRE("U2VuZCByZWluZm9yY2VtZW50cw==" == base::base64_encode("Send
+reinforcements")); REQUIRE("Send reinforcements" ==
+base::base64_decode("U2VuZCByZWluZm9yY2VtZW50cw=="));
+   REQUIRE("VGhpcyBpcyBsaW5lIG9uZQpUaGlzIGlzIGxpbmUgdHdvClRoaXMgaXMgbGlu\nZSB0aHJlZQpBbmQgc28gb24uLi4K"
+== base::base64_encode("This is line one\nThis is line two\nThis is line
+three\nAnd so on...")); REQUIRE("This is line one\nThis is line two\nThis is
+line three\nAnd so on..." ==
            base::base64_decode("VGhpcyBpcyBsaW5lIG9uZQpUaGlzIGlzIGxpbmUgdHdvClRoaXMgaXMgbGluZSB0aHJlZQpBbmQgc28gb24uLi4K"));
 }
 

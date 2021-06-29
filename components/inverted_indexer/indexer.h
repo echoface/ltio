@@ -42,6 +42,7 @@ public:
 
 protected:
   Field* GetPostingListField(const std::string& field);
+
 private:
   Delegate* delegate_ = NULL;
   bool build_finished_ = false;
@@ -60,11 +61,11 @@ public:
 
   const std::set<std::string> AllRegisterFields() const override;
   FieldPtr CreatePostinglistField(const std::string& name) override;
+
 private:
   FieldsSet indexer_fields_;
   std::unordered_map<std::string, FieldCreator> creators_;
 };
-
 
 }  // namespace component
 #endif

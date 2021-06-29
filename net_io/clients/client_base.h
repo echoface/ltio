@@ -35,6 +35,6 @@ typedef struct ClientConfig {
   uint32_t message_timeout = 5000;
 } ClientConfig;
 
-}}//end lt::net
+}  // namespace net
+}  // namespace lt
 #endif
-

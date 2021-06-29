@@ -28,31 +28,33 @@ constexpr uint32_t kHashSeed2 = 42;
 constexpr uint32_t kHashSeed3 = 2718281828;
 
 using Endpoint = lt::net::lb::Endpoint;
-using IndexIdList = std::vector<uint32_t>; 
+using IndexIdList = std::vector<uint32_t>;
 
 void GenMaglevPermutation(IndexIdList& permutation,
                           const Endpoint& endpoint,
                           const uint32_t ep_index,
                           const uint32_t ring_size) {
-
 #ifdef MAGLEVE_USE_128BIT_HASH
-  uint64_t hash_result[2] = {0}; //[offsethash << 64 | skip_hash]
-  MurmurHash3_x64_128(&endpoint.hash, sizeof(endpoint.hash), kHashSeed3, hash_result);
+  uint64_t hash_result[2] = {0};  //[offsethash << 64 | skip_hash]
+  MurmurHash3_x64_128(&endpoint.hash, sizeof(endpoint.hash), kHashSeed3,
+                      hash_result);
   auto offset = hash_result[0] % ring_size;
-  auto skip   = (hash_result[1] % (ring_size - 1)) + 1;
+  auto skip = (hash_result[1] % (ring_size - 1)) + 1;
 #else
   uint32_t offset_hash = 0;
-  MurmurHash3_x86_32(&endpoint.hash, sizeof(endpoint.hash), kHashSeed2, &offset_hash);
+  MurmurHash3_x86_32(&endpoint.hash, sizeof(endpoint.hash), kHashSeed2,
+                     &offset_hash);
   auto offset = offset_hash % ring_size;
   uint32_t skip_hash = 0;
-  MurmurHash3_x86_32(&endpoint.hash, sizeof(endpoint.hash), kHashSeed3, &skip_hash);
+  MurmurHash3_x86_32(&endpoint.hash, sizeof(endpoint.hash), kHashSeed3,
+                     &skip_hash);
   auto skip = (skip_hash % (ring_size - 1)) + 1;
 #endif
   permutation[2 * ep_index] = offset;
   permutation[2 * ep_index + 1] = skip;
 }
 
-}
+}  // namespace
 
 namespace lt {
 namespace net {
@@ -60,8 +62,6 @@ namespace lb {
 
 LookupTable MaglevV2::GenerateHashRing(EndpointList endpoints,
                                        const uint32_t ring_size) {
-
-
   if (endpoints.size() == 0) {
     return LookupTable(ring_size, -1);
   } else if (endpoints.size() == 1) {
@@ -113,6 +113,6 @@ LookupTable MaglevV2::GenerateHashRing(EndpointList endpoints,
   return LookupTable(ring_size, -1);
 }
 
-}}} //end namespace lt::net::lb 
-
-
+}  // namespace lb
+}  // namespace net
+}  // namespace lt

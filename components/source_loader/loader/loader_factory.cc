@@ -9,14 +9,13 @@
 namespace component {
 namespace sl {
 
-
 static base::LazyInstance<LoaderFactory> loader_instance = LAZY_INSTANCE_INIT;
-//static
+// static
 LoaderFactory& LoaderFactory::Instance() {
   return loader_instance.get();
 }
 
-Loader* LoaderFactory::CreateLoader(LoaderDelegate* d,const Json& conf) {
+Loader* LoaderFactory::CreateLoader(LoaderDelegate* d, const Json& conf) {
   const std::string& type = conf.at("type").get<std::string>();
   if (type == "file") {
     return new FileLoader(d, conf);
@@ -27,6 +26,5 @@ Loader* LoaderFactory::CreateLoader(LoaderDelegate* d,const Json& conf) {
   return nullptr;
 }
 
-}} //end namespace
-
-
+}  // namespace sl
+}  // namespace component

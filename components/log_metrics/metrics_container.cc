@@ -1,15 +1,13 @@
+#include "metrics_container.h"
 #include <glog/logging.h>
 #include <time.h>
-#include "metrics_container.h"
 #include <nlohmann/json.hpp>
 
 namespace component {
 
-const static MetricDistArgs kDefaultDistArgs = {
-  .dist_precise = 100,
-  .dist_range_min = 0,
-  .dist_range_max = 1000000
-};
+const static MetricDistArgs kDefaultDistArgs = {.dist_precise = 100,
+                                                .dist_range_min = 0,
+                                                .dist_range_max = 1000000};
 
 void MetricBase::UpdateMinMax(int64_t v) {
   min_value = std::min(min_value, v);
@@ -18,17 +16,14 @@ void MetricBase::UpdateMinMax(int64_t v) {
 
 // >> code for metric guage
 MetricGuage::MetricGuage()
-  : MetricBase(::time(NULL), MetricsType::kGauge),
-    latest_value(0) {
-}
+  : MetricBase(::time(NULL), MetricsType::kGauge), latest_value(0) {}
 MetricGuage::MetricGuage(uint32_t ts)
-  : MetricBase(ts, MetricsType::kGauge),
-    latest_value(0) {
-}
+  : MetricBase(ts, MetricsType::kGauge), latest_value(0) {}
 
 bool MetricGuage::Merge(const MetricBase* other) {
   MetricGuage* guage = (MetricGuage*)other;
-  if (!guage) return false;
+  if (!guage)
+    return false;
 
   counter += other->counter;
   total_value += other->total_value;
@@ -47,25 +42,22 @@ void to_json(Json& j, const MetricGuage& guage) {
 
 // >>>> code of metric distribution
 MetricDist::MetricDist()
-  : MetricBase(::time(NULL), MetricsType::kHistogram),
-    args(kDefaultDistArgs) {
-
+  : MetricBase(::time(NULL), MetricsType::kHistogram), args(kDefaultDistArgs) {
   double range = args.dist_range_max - args.dist_range_min;
   uint32_t buckets = std::ceil(range / args.dist_precise);
   percentile_bucket.resize(buckets);
 }
 
 MetricDist::MetricDist(uint32_t start, const MetricDistArgs& args)
-  : MetricBase(start, MetricsType::kHistogram),
-    args(args) {
-
+  : MetricBase(start, MetricsType::kHistogram), args(args) {
   double range = args.dist_range_max - args.dist_range_min;
   uint32_t buckets = std::ceil(range / args.dist_precise);
   percentile_bucket.resize(buckets);
 }
 
 bool MetricDist::Merge(const MetricBase* item) {
-  if (!item) return false;
+  if (!item)
+    return false;
 
   MetricDist* other = (MetricDist*)item;
 
@@ -76,7 +68,7 @@ bool MetricDist::Merge(const MetricBase* item) {
   total_value += other->total_value;
   min_value = std::min(other->min_value, min_value);
   max_value = std::max(other->max_value, max_value);
-  //uint32_t start_ts will not merge
+  // uint32_t start_ts will not merge
   for (size_t i = 0; i < BucketSize(); i++) {
     percentile_bucket[i] += other->percentile_bucket[i];
   }
@@ -107,13 +99,14 @@ uint32_t MetricDist::CalculatePecentile(uint32_t percent) const {
   uint32_t count = counter * percent / 100;
   uint64_t sum = 0;
   uint32_t i = 0;
-  for (;sum < count && i < BucketSize(); i++) {
+  for (; sum < count && i < BucketSize(); i++) {
     sum += percentile_bucket[i];
   }
   return args.dist_precise * i;
 }
 
-std::vector<uint32_t> MetricDist::CalculatePecentile(std::vector<uint32_t> percent) const {
+std::vector<uint32_t> MetricDist::CalculatePecentile(
+    std::vector<uint32_t> percent) const {
   std::vector<uint32_t> result(percent.size());
   std::sort(percent.begin(), percent.end());
 
@@ -131,14 +124,11 @@ std::vector<uint32_t> MetricDist::CalculatePecentile(std::vector<uint32_t> perce
 }
 
 void to_json(Json& j, const MetricDist& dist) {
-
   auto percentiles = dist.CalculatePecentile({50, 80, 90, 95, 99});
   std::ostringstream oss;
-  oss << 50 << ":" << percentiles[0] << ", "
-      << 80 << ":" << percentiles[1] << ", "
-      << 90 << ":" << percentiles[2] << ", "
-      << 95 << ":" << percentiles[3] << ", "
-      << 99 << ":" << percentiles[4];
+  oss << 50 << ":" << percentiles[0] << ", " << 80 << ":" << percentiles[1]
+      << ", " << 90 << ":" << percentiles[2] << ", " << 95 << ":"
+      << percentiles[3] << ", " << 99 << ":" << percentiles[4];
   j["dist"] = oss.str();
 
   j["qps"] = dist.Qps();
@@ -152,9 +142,7 @@ void to_json(Json& j, const MetricDist& dist) {
 // >>>> code of matric distribution
 
 MetricContainer::MetricContainer(Provider* provider)
-  : start_time(::time(NULL)),
-    provider_(provider) {
-}
+  : start_time(::time(NULL)), provider_(provider) {}
 MetricContainer::~MetricContainer() {
   for (auto kv : datas_) {
     delete kv.second;
@@ -164,7 +152,7 @@ MetricContainer::~MetricContainer() {
 
 void MetricContainer::Merge(const MetricContainer& other) {
   for (auto& pair : other.datas_) {
-    switch(pair.second->Type()) {
+    switch (pair.second->Type()) {
       case MetricsType::kGauge:
         GetGuage(pair.first)->Merge(pair.second);
         break;
@@ -211,7 +199,7 @@ void MetricContainer::HandleHistogram(const MetricsItem* item) {
 
 bool MetricContainer::GenerateJsonReport(Json& report) {
   for (auto& pair : datas_) {
-    switch(pair.second->Type()) {
+    switch (pair.second->Type()) {
       case MetricsType::kGauge:
         report[pair.first] = *(MetricGuage*)(pair.second);
         break;
@@ -229,14 +217,14 @@ bool MetricContainer::GenerateJsonLineReport(std::ostringstream& oss) {
   oss << "[Metrics] start: metrics report >>>>> @" << ::time(NULL) << "\n";
   for (auto& pair : datas_) {
     Json json_data;
-    switch(pair.second->Type()) {
+    switch (pair.second->Type()) {
       case MetricsType::kGauge:
         json_data = *(MetricGuage*)(pair.second);
         oss << pair.first << ":" << json_data << "\n";
-        //report[pair.first] = *(MetricGuage*)(pair.second);
+        // report[pair.first] = *(MetricGuage*)(pair.second);
         break;
       case MetricsType::kHistogram:
-        //report[pair.first] = *(MetricDist*)(pair.second);
+        // report[pair.first] = *(MetricDist*)(pair.second);
         json_data = *(MetricDist*)(pair.second);
         oss << pair.first << ":" << json_data << "\n";
         break;
@@ -280,4 +268,4 @@ MetricDist* MetricContainer::GetHistogram(const std::string& name) {
   return dist;
 }
 
-};
+};  // namespace component

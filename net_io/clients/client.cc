@@ -14,15 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #include "client.h"
 
+#include <algorithm>
+
 #include "base/base_constants.h"
-#include "base/utils/string/str_utils.h"
 #include "base/coroutine/coroutine_runner.h"
+#include "base/utils/string/str_utils.h"
 #include "client_channel.h"
 #include "glog/logging.h"
-#include <algorithm>
+#include "net_io/tcp_channel.h"
+
+#ifdef LTIO_WITH_OPENSSL
+#include "net_io/tcp_channel_ssl.h"
+#endif
 
 namespace lt {
 namespace net {
@@ -36,7 +41,6 @@ Client::Client(base::MessageLoop* loop, const url::RemoteInfo& info)
     work_loop_(loop),
     stopping_(false),
     delegate_(NULL) {
-
   next_index_ = 0;
   CHECK(work_loop_);
 
@@ -86,18 +90,19 @@ void Client::OnConnectFailed(uint32_t count) {
     return;
   }
 
-  //re-connct
+  // re-connct
   next_reconnect_interval_ += 10;
-
 
   if (connector_->InprocessCount() > kConnetBatchCount) {
     VLOG(GLOG_VERROR) << RemoteIpPort() << ", giveup reconnect"
-      << ", inprogress connection:"<< connector_->InprocessCount();
+                      << ", inprogress connection:"
+                      << connector_->InprocessCount();
   } else {
     int32_t delay = std::min(next_reconnect_interval_, kMaxReconInterval);
     auto functor = std::bind(&Connector::Launch, connector_, address_);
     work_loop_->PostDelayTask(NewClosure(functor), delay);
-    VLOG(GLOG_VERROR) << "reconnect:"<< RemoteIpPort() << " after " << delay << "(ms)";
+    VLOG(GLOG_VERROR) << "reconnect:" << RemoteIpPort() << " after " << delay
+                      << "(ms)";
   }
 }
 
@@ -116,7 +121,7 @@ uint32_t Client::required_count() const {
 void Client::launch_next_if_need() {
   CHECK(work_loop_->IsInLoopThread());
 
-  uint64_t connected =  ConnectedCount();
+  uint64_t connected = ConnectedCount();
   uint32_t inprocess_cnt = connector_->InprocessCount();
   if (stopping_ || required_count() <= connected + inprocess_cnt) {
     return;
@@ -126,9 +131,9 @@ void Client::launch_next_if_need() {
 }
 
 RefClientChannel Client::get_ready_channel() {
-
   auto channels = std::atomic_load(&in_use_channels_);
-  if (!channels || channels->size() == 0) return NULL;
+  if (!channels || channels->size() == 0)
+    return NULL;
 
   int32_t max_step = std::min(10, int(channels->size()));
   do {
@@ -137,7 +142,7 @@ RefClientChannel Client::get_ready_channel() {
     if (ch && ch->Ready()) {
       return ch;
     }
-  } while(max_step--);
+  } while (max_step--);
   return NULL;
 }
 
@@ -148,59 +153,75 @@ void Client::OnConnected(int socket_fd, IPEndPoint& local, IPEndPoint& remote) {
   base::MessageLoop* io_loop = next_client_io_loop();
 
   RefCodecService codec_service =
-    CodecFactory::NewClientService(remote_info_.protocol, io_loop);
+      CodecFactory::NewClientService(remote_info_.protocol, io_loop);
 
-  codec_service->BindToSocket(socket_fd, local, remote);
+#ifdef LTIO_WITH_OPENSSL
+  SocketChannelPtr channel;
+  if (codec_service->UseSSLChannel()) {
+    channel = TCPSSLChannel::Create(socket_fd, local, remote, io_loop->Pump());
+  } else {
+    channel = TcpChannel::Create(socket_fd, local, remote, io_loop->Pump());
+  }
+#else
+  channel = TcpChannel::Create(socket_fd, local, remote, io_loop->Pump());
+#endif
+  codec_service->BindSocket(std::move(channel));
 
   RefClientChannel client_channel = CreateClientChannel(this, codec_service);
   client_channel->SetRequestTimeout(config_.message_timeout);
 
   channels_.push_back(client_channel);
-  io_loop->PostTask(FROM_HERE, &ClientChannel::StartClientChannel, client_channel);
+  io_loop->PostTask(FROM_HERE, &ClientChannel::StartClientChannel,
+                    client_channel);
 
   RefClientChannelList new_list(
-    new ClientChannelList(channels_.begin(), channels_.end()));
+      new ClientChannelList(channels_.begin(), channels_.end()));
   channels_count_.store(new_list->size());
   std::atomic_store(&in_use_channels_, new_list);
-  VLOG(GLOG_VINFO) << __FUNCTION__ << ClientInfo() << " connected, initializing...";
+  VLOG(GLOG_VINFO) << __FUNCTION__ << ClientInfo()
+                   << " connected, initializing...";
 
   launch_next_if_need();
 }
 
 void Client::OnClientChannelInited(const ClientChannel* channel) {
   if (!stopping_ && !work_loop_->IsInLoopThread()) {
-    work_loop_->PostTask(FROM_HERE, &Client::OnClientChannelInited, this, channel);
+    work_loop_->PostTask(FROM_HERE, &Client::OnClientChannelInited, this,
+                         channel);
     return;
   }
 
   if (delegate_) {
     delegate_->OnClientChannelReady(channel);
   }
-  VLOG(GLOG_VINFO) << __FUNCTION__ << ClientInfo() << "@" << channel << " ready for use";
+  VLOG(GLOG_VINFO) << __FUNCTION__ << ClientInfo() << "@" << channel
+                   << " ready for use";
 }
 
 /*on the loop of client IO, need managed by connector loop*/
 void Client::OnClientChannelClosed(const RefClientChannel& channel) {
   if (!work_loop_->IsInLoopThread() && !stopping_) {
-    work_loop_->PostTask(FROM_HERE, &Client::OnClientChannelClosed, this, channel);
+    work_loop_->PostTask(FROM_HERE, &Client::OnClientChannelClosed, this,
+                         channel);
     return;
   }
 
-  VLOG(GLOG_VINFO) << __FUNCTION__ << ClientInfo() << "@" << channel.get() << " closed";
+  VLOG(GLOG_VINFO) << __FUNCTION__ << ClientInfo() << "@" << channel.get()
+                   << " closed";
 
   do {
-    channels_.remove_if([&](const RefClientChannel& ch) ->bool {
+    channels_.remove_if([&](const RefClientChannel& ch) -> bool {
       return ch == NULL || ch == channel;
     });
 
     RefClientChannelList new_list(
-      new ClientChannelList(channels_.begin(), channels_.end()));
+        new ClientChannelList(channels_.begin(), channels_.end()));
     channels_count_.store(new_list->size());
 
     std::atomic_store(&in_use_channels_, new_list);
-  }while(0);
+  } while (0);
 
-  //reconnect
+  // reconnect
   launch_next_if_need();
 
   uint32_t connected_count = channels_.size();
@@ -219,7 +240,7 @@ bool Client::AsyncDoRequest(RefCodecMessage& req, AsyncCallBack callback) {
   base::MessageLoop* worker = base::MessageLoop::Current();
   CHECK(worker);
 
-  //IMPORTANT: avoid self holder for capture list
+  // IMPORTANT: avoid self holder for capture list
   CodecMessage* request = req.get();
   base::LtClosure resumer = [=]() {
     if (worker->IsInLoopThread()) {
@@ -251,12 +272,14 @@ CodecMessage* Client::DoRequest(RefCodecMessage& message) {
   auto channel = get_ready_channel();
   if (!channel) {
     message->SetFailCode(MessageCode::kNotConnected);
-    LOG_EVERY_N(ERROR, 1000) << ClientInfo() << ", no inited/established client";
+    LOG_EVERY_N(ERROR, 1000)
+        << ClientInfo() << ", no inited/established client";
     return NULL;
   }
 
   base::MessageLoop* io_loop = channel->IOLoop();
-  if (!io_loop->PostTask(FROM_HERE, &ClientChannel::SendRequest, channel, message)) {
+  if (!io_loop->PostTask(FROM_HERE, &ClientChannel::SendRequest, channel,
+                         message)) {
     message->SetFailCode(MessageCode::kConnBroken);
     return NULL;
   }
@@ -272,8 +295,7 @@ uint64_t Client::ConnectedCount() const {
 
 std::string Client::ClientInfo() const {
   std::ostringstream oss;
-  oss << "[remote:" << RemoteIpPort()
-      << ", in_use:" << ConnectedCount()
+  oss << "[remote:" << RemoteIpPort() << ", in_use:" << ConnectedCount()
       << ", connecting:" << connector_->InprocessCount() << "]";
   return oss.str();
 }
@@ -282,4 +304,5 @@ std::string Client::RemoteIpPort() const {
   return base::StrUtil::Concat(remote_info_.host_ip, ":", remote_info_.port);
 }
 
-}}//end namespace lt::net
+}  // namespace net
+}  // namespace lt

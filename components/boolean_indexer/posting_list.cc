@@ -24,10 +24,8 @@ const Entries* KSizePostingEntries::GetEntryList(const Attr& attr) const {
   return &(iter->second);
 }
 
-
 void KSizePostingEntries::DumpPostingEntries(std::ostringstream& oss) const {
   for (auto& attr_entries : posting_entries_) {
-
     const Attr& attr = attr_entries.first;
     const Entries& entries = attr_entries.second;
 
@@ -39,11 +37,10 @@ void KSizePostingEntries::DumpPostingEntries(std::ostringstream& oss) const {
         oss << ",";
       }
       oss << EntryUtil::ToString(entry_id);
-      is_first =  false;
+      is_first = false;
     }
     oss << "]\n";
   }
 };
 
-
-}
+}  // namespace component

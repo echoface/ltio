@@ -21,12 +21,10 @@
 #include <stddef.h>  // For size_t.
 
 // Put this in the declarations for a class to be uncopyable.
-#define DISALLOW_COPY(TypeName) \
-  TypeName(const TypeName&) = delete
+#define DISALLOW_COPY(TypeName) TypeName(const TypeName&) = delete
 
 // Put this in the declarations for a class to be unassignable.
-#define DISALLOW_ASSIGN(TypeName) \
-  void operator=(const TypeName&) = delete
+#define DISALLOW_ASSIGN(TypeName) void operator=(const TypeName&) = delete
 
 // A macro to disallow the copy constructor and operator= functions.
 // This should be used in the private: declarations for a class.
@@ -53,7 +51,8 @@
 // This template function declaration is used in defining arraysize.
 // Note that the function doesn't need an implementation, as we only
 // use its type.
-template <typename T, size_t N> char (&ArraySizeHelper(T (&array)[N]))[N];
+template <typename T, size_t N>
+char (&ArraySizeHelper(T (&array)[N]))[N];
 #define arraysize(array) (sizeof(ArraySizeHelper(array)))
 
 // Used to explicitly mark the return value of a function as unused. If you are
@@ -64,15 +63,13 @@ template <typename T, size_t N> char (&ArraySizeHelper(T (&array)[N]))[N];
 //   if (TakeOwnership(my_var.get()) == SUCCESS)
 //     ignore_result(my_var.release());
 //
-template<typename T>
-inline void ignore_result(const T&) {
-}
+template <typename T>
+inline void ignore_result(const T&) {}
 
 // dummy define use for indicate need call at coroutine context
 #define __CO_WAIT__
 
-#define EnableShared(type) \
-  std::enable_shared_from_this<type>
+#define EnableShared(type) std::enable_shared_from_this<type>
 
 #define REF_TYPEDEFINE(Type) typedef std::shared_ptr<Type> Ref##Type
 
@@ -104,6 +101,6 @@ enum LinkerInitialized { LINKER_INITIALIZED };
 #define CR_DEFINE_STATIC_LOCAL(type, name, arguments) \
   static type& name = *new type arguments
 
-}  // base
+}  // namespace base
 
 #endif  // BASE_MACROS_H_

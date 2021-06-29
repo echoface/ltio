@@ -6,9 +6,9 @@
 namespace component {
 
 Indexer::Indexer(Delegate* d)
-    : delegate_(d),
-      entitys_meta_(new EntitysMeta),
-      pl_manager_(new PostingListManager) {}
+  : delegate_(d),
+    entitys_meta_(new EntitysMeta),
+    pl_manager_(new PostingListManager) {}
 
 std::set<int64_t> Indexer::UnifyQuery(const IndexerQuerys& query) {
   BitMapMerger merger(pl_manager_.get());

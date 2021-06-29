@@ -5,8 +5,8 @@
 #ifndef LIGHTINGIO_MYSQL_LOADER_H
 #define LIGHTINGIO_MYSQL_LOADER_H
 
-#include "loader.h"
 #include "../json_class_meta.h"
+#include "loader.h"
 /*
  * "loader": {
  *    "type": "file",
@@ -25,12 +25,12 @@ namespace component {
 namespace sl {
 
 struct MysqlConfig : public JsonClassMeta {
-	int32_t port;
-	std::string host;
-	std::string db;
-	std::string user;
-	std::string password;
-	std::string query;
+  int32_t port;
+  std::string host;
+  std::string db;
+  std::string user;
+  std::string password;
+  std::string query;
 };
 
 void to_json(const MysqlConfig& c, Json& out);
@@ -38,14 +38,16 @@ void from_json(const Json& j, MysqlConfig& c);
 
 class MysqlLoader : public Loader {
 public:
-	MysqlLoader(LoaderDelegate* watcher, Json& reader_config);
-	~MysqlLoader();
+  MysqlLoader(LoaderDelegate* watcher, Json& reader_config);
+  ~MysqlLoader();
 
-	int Initialize() override;
-	int Load() override;
+  int Initialize() override;
+  int Load() override;
+
 private:
-	std::vector<MysqlConfig> mysql_sources;
+  std::vector<MysqlConfig> mysql_sources;
 };
 
-}}
-#endif //LIGHTINGIO_MYSQL_LOADER_H
+}  // namespace sl
+}  // namespace component
+#endif  // LIGHTINGIO_MYSQL_LOADER_H

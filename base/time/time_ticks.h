@@ -9,8 +9,7 @@ namespace base {
 
 // Represents monotonically non-decreasing clock time.
 class TimeTicks : public time_internal::TimeBase<TimeTicks> {
- public:
-
+public:
   constexpr TimeTicks() : TimeBase(0) {}
 
   // Platform-dependent tick count representing "right now." When
@@ -69,7 +68,7 @@ class TimeTicks : public time_internal::TimeBase<TimeTicks> {
     return TimeTicks(us);
   }
 
- private:
+private:
   friend class time_internal::TimeBase<TimeTicks>;
 
   // Please use Now() to create a new object. This is for internal use
@@ -79,5 +78,5 @@ class TimeTicks : public time_internal::TimeBase<TimeTicks> {
 
 std::ostream& operator<<(std::ostream& os, TimeTicks time_ticks);
 
-} //namespace base
+}  // namespace base
 #endif

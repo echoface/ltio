@@ -23,9 +23,9 @@
 #include <set>
 #include <vector>
 
-#include "coroutine.h"
 #include <base/base_micro.h>
 #include <base/message_loop/message_loop.h>
+#include "coroutine.h"
 
 namespace base {
 
@@ -44,13 +44,11 @@ namespace base {
  * M to excute the task
  * */
 
-class CoroRunner : public PersistRunner{
+class CoroRunner : public PersistRunner {
 public:
   typedef struct _go {
     _go(const char* func, const char* file, int line)
-      : location_(func, file, line),
-        target_loop_(_go::loop()) {
-    }
+      : location_(func, file, line), target_loop_(_go::loop()) {}
 
     /* specific a loop for this task*/
     inline _go& operator-(MessageLoop* loop) {
@@ -73,21 +71,21 @@ public:
     // becuase __go object will destruction before task closure run
     template <typename Functor>
     inline void operator<<(Functor closure_fn) {
-    	auto func = [=](MessageLoop* loop, const Location& location) {
+      auto func = [=](MessageLoop* loop, const Location& location) {
         CoroRunner& runner = CoroRunner::instance();
         runner.AppendTask(CreateClosure(location, closure_fn));
         // loop->WakeUpIfNeeded(); //see message loop nested task sequence
-    	};
+      };
       target_loop_->PostTask(location_, func, target_loop_, location_);
     }
 
     inline static MessageLoop* loop() {
       MessageLoop* current = MessageLoop::Current();
-      return  current ? current : CoroRunner::backgroup();
+      return current ? current : CoroRunner::backgroup();
     }
     Location location_;
     MessageLoop* target_loop_ = nullptr;
-  }_go;
+  } _go;
 
 public:
   friend class _go;
@@ -112,11 +110,12 @@ public:
   static void RegisteAsCoroWorker(MessageLoop*);
 
   static bool ScheduleTask(TaskBasePtr&& task);
+
 protected:
 #ifdef USE_LIBACO_CORO_IMPL
   static void CoroutineEntry();
 #else
-  static void CoroutineEntry(void *coro);
+  static void CoroutineEntry(void* coro);
 #endif
 
   static CoroRunner& instance();
@@ -142,9 +141,7 @@ protected:
   void GcAllCachedCoroutine();
 
   /* append to a cached-list waiting for gc */
-  void Append2GCCache(Coroutine* co) {
-    cached_gc_coros_.emplace_back(co);
-  };
+  void Append2GCCache(Coroutine* co) { cached_gc_coros_.emplace_back(co); };
 
   bool StealingTasks();
 
@@ -163,13 +160,9 @@ protected:
     return coro_tasks_.size() + remote_queue_.size_approx();
   }
 
-  size_t InQueueTaskCount() const {
-    return sched_tasks_.size();
-  }
+  size_t InQueueTaskCount() const { return sched_tasks_.size(); }
 
-  size_t NoneRemoteTaskCount() const {
-    return coro_tasks_.size();
-  }
+  size_t NoneRemoteTaskCount() const { return coro_tasks_.size(); }
 
   /* retrieve task from inloop queue or public task pool*/
   bool GetTask(TaskBasePtr& task);
@@ -183,12 +176,13 @@ protected:
   /* do resume a coroutine from main_coro*/
   void DoResume(WeakCoroutine& coro, uint64_t id);
 
-  bool IsMain() const {return main_coro_ == current_;}
+  bool IsMain() const { return main_coro_ == current_; }
 
   /* switch call stack from different coroutine*/
-  void SwapCurrentAndTransferTo(Coroutine *next);
+  void SwapCurrentAndTransferTo(Coroutine* next);
 
   std::string RunnerInfo() const;
+
 private:
   Coroutine* current_;
   RefCoroutine main_;
@@ -213,23 +207,24 @@ private:
   DISALLOW_COPY_AND_ASSIGN(CoroRunner);
 };
 
-}// end base
+}  // namespace base
 
-//NOTE: co_yield,co_await,co_resume has been a part of keywords in c++20,
+// NOTE: co_yield,co_await,co_resume has been a part of keywords in c++20,
 // crying!!! so rename co_xxx.... to avoid conflicting
-#define CO_GO         ::base::CoroRunner::_go(__FUNCTION__, __FILE__, __LINE__)-
-#define CO_YIELD      ::base::CoroRunner::Yield()
-#define CO_RESUMER    ::base::CoroRunner::MakeResumer()
-#define CO_CANYIELD   ::base::CoroRunner::Yieldable()
-#define CO_SLEEP(ms)  ::base::CoroRunner::Sleep(ms)
-#define __co_sched_here__  ::base::CoroRunner::Sched();
+#define CO_GO ::base::CoroRunner::_go(__FUNCTION__, __FILE__, __LINE__) -
+#define CO_YIELD ::base::CoroRunner::Yield()
+#define CO_RESUMER ::base::CoroRunner::MakeResumer()
+#define CO_CANYIELD ::base::CoroRunner::Yieldable()
+#define CO_SLEEP(ms) ::base::CoroRunner::Sleep(ms)
+#define __co_sched_here__ ::base::CoroRunner::Sched();
 
 // sync task in coroutine context
-#define CO_SYNC(func)                                                           \
-  do {                                                                          \
-    auto loop = ::base::MessageLoop::Current();                                 \
-    loop->PostTask(::base::CreateTaskWithCallback(FROM_HERE, func, CO_RESUMER));\
-    ::base::CoroRunner::Yield();                                                \
-  } while(0)
+#define CO_SYNC(func)                                                 \
+  do {                                                                \
+    auto loop = ::base::MessageLoop::Current();                       \
+    loop->PostTask(                                                   \
+        ::base::CreateTaskWithCallback(FROM_HERE, func, CO_RESUMER)); \
+    ::base::CoroRunner::Yield();                                      \
+  } while (0)
 
 #endif

@@ -18,8 +18,8 @@
 #ifndef _NET_PROTOCOL_RESP_SERVICE_H_H
 #define _NET_PROTOCOL_RESP_SERVICE_H_H
 
-#include "redis_response.h"
 #include <net_io/codec/codec_service.h>
+#include "redis_response.h"
 
 namespace lt {
 namespace net {
@@ -35,8 +35,8 @@ class RedisResponse;
 class RespCodecService : public CodecService {
 public:
   typedef enum _ {
-    kWaitNone     = 0x0,
-    kWaitAuth     = 0x01,
+    kWaitNone = 0x0,
+    kWaitAuth = 0x01,
     kWaitSelectDB = 0x01 << 1,
   } InitWaitFlags;
 
@@ -45,23 +45,25 @@ public:
 
   void OnDataFinishSend(const SocketChannel*) override;
 
-  void OnDataReceived(const SocketChannel*, IOBuffer *) override;
+  void OnDataReceived(const SocketChannel*, IOBuffer*) override;
 
-	bool SendRequest(CodecMessage* message) override;
-	bool SendResponse(const CodecMessage* req, CodecMessage* res) override;
+  bool SendRequest(CodecMessage* message) override;
+  bool SendResponse(const CodecMessage* req, CodecMessage* res) override;
 
-  bool KeepHeartBeat() override {return true;}
+  bool KeepHeartBeat() override { return true; }
   const RefCodecMessage NewHeartbeat() override;
+
 protected:
   void OnChannelReady(const SocketChannel*) override;
 
 private:
   void HandleInitResponse(RedisResponse* response);
-  uint8_t  init_wait_res_flags_ = 0;
+  uint8_t init_wait_res_flags_ = 0;
   uint32_t next_incoming_count_ = 0;
-  RefRedisResponse current_response;// = std::make_shared<RedisResponse>();
+  RefRedisResponse current_response;  // = std::make_shared<RedisResponse>();
   resp::decoder decoder_;
 };
 
-}}// end namespace
+}  // namespace net
+}  // namespace lt
 #endif

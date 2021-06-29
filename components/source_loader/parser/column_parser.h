@@ -7,35 +7,37 @@
 
 #include <map>
 #include <string>
-#include "parser.h"
 #include "../json_class_meta.h"
+#include "parser.h"
 
 namespace component {
-namespace sl{
+namespace sl {
 
 struct ColumnInfo : public JsonClassMeta {
-	std::string name;
+  std::string name;
   bool allow_null;
   Json default_value;
-	SourceValueType type;
+  SourceValueType type;
 };
 void to_json(Json& j, const ColumnInfo& info);
 void from_json(const Json& j, ColumnInfo& info);
 
 class ColumnParser : public Parser {
 public:
-	~ColumnParser();
+  ~ColumnParser();
 
-  //override parser
+  // override parser
   bool Initialize(const Json& config) override;
   bool ParseContent(const std::string& content) override;
+
 private:
-	bool HanleColumn(const ColumnInfo& info, const std::string& data, Json& out);
+  bool HanleColumn(const ColumnInfo& info, const std::string& data, Json& out);
   std::string delimiter_;
   bool ignore_header_line_;
   std::vector<std::string> header_;
   std::map<std::string, ColumnInfo> columns_;
 };
 
-}}
-#endif //LIGHTINGIO_COLUMN_PARSER_H
+}  // namespace sl
+}  // namespace component
+#endif  // LIGHTINGIO_COLUMN_PARSER_H

@@ -18,8 +18,8 @@
 #ifndef _BASE_EVENTLOOP_TIMER_QUEUE_H_
 #define _BASE_EVENTLOOP_TIMER_QUEUE_H_
 
-#include <vector>
 #include <stack>
+#include <vector>
 #include "timer_event.h"
 
 namespace base {
@@ -39,7 +39,7 @@ public:
 
 class TimerTaskQueue {
 public:
-  TimerTaskQueue() {};
+  TimerTaskQueue(){};
   ~TimerTaskQueue();
 
   /*return the timer_index as identify for cancel*/
@@ -51,15 +51,15 @@ public:
   /* return the duration(millsecond) for next timerevent triggle*/
   uint64_t HandleExpiredTimer();
   void TestingPriorityQueue();
-  uint64_t InexacTimeMillsecond() {return inexact_time_us_;}
-private:
+  uint64_t InexacTimeMillsecond() { return inexact_time_us_; }
 
+private:
   void InvokeAndReScheduleIfNeed(uint32_t timerid);
   int64_t CalculateNextTimerDuration();
 
-  typedef std::priority_queue<TimerEntry,
-                              std::vector<TimerEntry>,
-                              TimerEntryCompare> TimerIndexHeap;
+  typedef std::
+      priority_queue<TimerEntry, std::vector<TimerEntry>, TimerEntryCompare>
+          TimerIndexHeap;
 
   TimerIndexHeap timer_heap_;
   std::vector<RefTimerEvent> timer_events_;
@@ -67,5 +67,5 @@ private:
   uint64_t inexact_time_us_ = 0;
 };
 
-}
+}  // namespace base
 #endif

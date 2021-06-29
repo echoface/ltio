@@ -19,25 +19,27 @@ namespace {
 
 #if defined(NDEBUG)
 
-#define HANDLE_EINTR(x) ({ \
-  decltype(x) eintr_wrapper_result; \
-  do { \
-    eintr_wrapper_result = (x); \
-  } while (eintr_wrapper_result == -1 && errno == EINTR); \
-  eintr_wrapper_result; \
-})
+#define HANDLE_EINTR(x)                                     \
+  ({                                                        \
+    decltype(x) eintr_wrapper_result;                       \
+    do {                                                    \
+      eintr_wrapper_result = (x);                           \
+    } while (eintr_wrapper_result == -1 && errno == EINTR); \
+    eintr_wrapper_result;                                   \
+  })
 
 #else
 
-#define HANDLE_EINTR(x) ({ \
-  int eintr_wrapper_counter = 0; \
-  decltype(x) eintr_wrapper_result; \
-  do { \
-    eintr_wrapper_result = (x); \
-  } while (eintr_wrapper_result == -1 && errno == EINTR && \
-           eintr_wrapper_counter++ < 100); \
-  eintr_wrapper_result; \
-})
+#define HANDLE_EINTR(x)                                      \
+  ({                                                         \
+    int eintr_wrapper_counter = 0;                           \
+    decltype(x) eintr_wrapper_result;                        \
+    do {                                                     \
+      eintr_wrapper_result = (x);                            \
+    } while (eintr_wrapper_result == -1 && errno == EINTR && \
+             eintr_wrapper_counter++ < 100);                 \
+    eintr_wrapper_result;                                    \
+  })
 
 #endif  // NDEBUG
 
@@ -46,7 +48,7 @@ namespace {
 // it if we are later put in a sandbox. This class wraps the file descriptor so
 // we can use a static-local variable to handle opening it on the first access.
 class URandomFd {
- public:
+public:
 #if defined(OS_AIX)
   // AIX has no 64-bit support for open falgs such as -
   //  O_CLOEXEC, O_NOFOLLOW and O_TTY_INIT
@@ -63,7 +65,7 @@ class URandomFd {
 
   int fd() const { return fd_; }
 
- private:
+private:
   const int fd_;
 };
 

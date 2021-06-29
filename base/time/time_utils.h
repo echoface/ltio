@@ -20,29 +20,29 @@
 
 #include <ctype.h>
 #include <stdint.h>
-#include <unistd.h>
-#include <time.h>
 #include <sys/time.h>
+#include <time.h>
+#include <unistd.h>
 
 namespace base {
 
-//millseconds ms  1000
-//microseconds us 1000000
-//nanoseconds  ns 1000000000
+// millseconds ms  1000
+// microseconds us 1000000
+// nanoseconds  ns 1000000000
 static const int64_t kNumMillisecsPerSec = INT64_C(1000);
 static const int64_t kNumMicrosecsPerSec = INT64_C(1000000);
 static const int64_t kNumNanosecsPerSec = INT64_C(1000000000);
 
 static const int64_t kNumMicrosecsPerMillisec =
-      kNumMicrosecsPerSec / kNumMillisecsPerSec;
+    kNumMicrosecsPerSec / kNumMillisecsPerSec;
 static const int64_t kNumNanosecsPerMillisec =
-      kNumNanosecsPerSec / kNumMillisecsPerSec;
+    kNumNanosecsPerSec / kNumMillisecsPerSec;
 static const int64_t kNumNanosecsPerMicrosec =
-        kNumNanosecsPerSec / kNumMicrosecsPerSec;
+    kNumNanosecsPerSec / kNumMicrosecsPerSec;
 
-//us
+// us
 int64_t time_us();
-//ms
+// ms
 int64_t time_ms();
 
 int64_t delta_ms(const int64_t before_ms);
@@ -51,5 +51,5 @@ int64_t delta_us(const int64_t before_us);
 
 struct timeval ms_to_timeval(uint32_t ms);
 
-}
+}  // namespace base
 #endif

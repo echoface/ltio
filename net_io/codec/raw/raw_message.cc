@@ -15,7 +15,6 @@
  * limitations under the License.
  */
 
-
 #include <endian.h>
 
 #include "raw_message.h"
@@ -53,7 +52,8 @@ LtRawMessage::RefRawMessage RawMessage::Create(bool request) {
   return std::make_shared<RawMessage>(t);
 }
 
-RawMessage::RefRawMessage RawMessage::CreateResponse(const RawMessage* request) {
+RawMessage::RefRawMessage RawMessage::CreateResponse(
+    const RawMessage* request) {
   auto response = Create(false);
   response->header_.code = 0;
   response->header_.content_size_ = 0;
@@ -62,7 +62,8 @@ RawMessage::RefRawMessage RawMessage::CreateResponse(const RawMessage* request) 
   return response;
 }
 
-RawMessage::RefRawMessage RawMessage::Decode(IOBuffer* buffer, bool server_side) {
+RawMessage::RefRawMessage RawMessage::Decode(IOBuffer* buffer,
+                                             bool server_side) {
   if (buffer->CanReadSize() < LtRawHeader::kHeaderSize) {
     return NULL;
   }
@@ -71,7 +72,7 @@ RawMessage::RefRawMessage RawMessage::Decode(IOBuffer* buffer, bool server_side)
     return NULL;
   }
 
-  //decode
+  // decode
   auto message = Create(server_side);
   ::memcpy(&message->header_, buffer->GetRead(), LtRawHeader::kHeaderSize);
   buffer->Consume(LtRawHeader::kHeaderSize);
@@ -84,9 +85,7 @@ RawMessage::RefRawMessage RawMessage::Decode(IOBuffer* buffer, bool server_side)
   return message;
 }
 
-RawMessage::RawMessage(MessageType t) :
-  CodecMessage(t) {
-}
+RawMessage::RawMessage(MessageType t) : CodecMessage(t) {}
 
 bool RawMessage::EncodeTo(SocketChannel* ch) {
   CHECK(content_.size() == header_.payload_size());
@@ -124,9 +123,9 @@ void RawMessage::AppendContent(const char* c, uint64_t len) {
 const std::string RawMessage::Dump() const {
   std::ostringstream oss;
   oss << "{\"type\": \"" << TypeAsStr() << "\","
-    << "\"header\": " << header_.Dump() << ","
-    << "\"content\": \"" << content_ << "\""
-    << "}";
+      << "\"header\": " << header_.Dump() << ","
+      << "\"content\": \"" << content_ << "\""
+      << "}";
   return std::move(oss.str());
 }
 

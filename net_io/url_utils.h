@@ -18,8 +18,8 @@
 #ifndef NET_URL_STRING_HELPER_H_H
 #define NET_URL_STRING_HELPER_H_H
 
-#include <string>
 #include <inttypes.h>
+#include <string>
 #include <unordered_map>
 
 namespace lt {
@@ -39,7 +39,7 @@ bool ParseURI(const std::string, SchemeIpPort& out);
 bool HostResolve(const std::string& host, std::string& host_ip);
 
 typedef std::unordered_map<std::string, std::string> QueryMap;
-typedef struct RemoteInfo{
+typedef struct RemoteInfo {
   uint16_t port = 0;
   std::string user;
   std::string passwd;
@@ -62,5 +62,7 @@ typedef struct RemoteInfo{
  * protocol://user:password@hots:port?query_string*/
 bool ParseRemote(const std::string& in, RemoteInfo& out, bool resolve = true);
 
-}}}
+}  // namespace url
+}  // namespace net
+}  // namespace lt
 #endif

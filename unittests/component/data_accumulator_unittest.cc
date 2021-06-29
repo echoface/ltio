@@ -1,12 +1,11 @@
-#include <unistd.h>
-#include <iostream>
-#include <unistd.h>
-#include <stdlib.h>
-#include <atomic>
-#include <thread>
-#include "glog/logging.h"
 #include <base/time/time_utils.h>
 #include <components/utils/data_accumulator.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <atomic>
+#include <iostream>
+#include <thread>
+#include "glog/logging.h"
 
 #include <catch/catch.hpp>
 
@@ -24,8 +23,8 @@ TEST_CASE("data.accumulator", "[acc data]") {
   for (uint32_t i = 0; i < std::thread::hardware_concurrency(); i++) {
     threads.push_back(new std::thread([&, i]() {
       int num = 100000000;
-      while(num--) {
-        collector.Collect(std::to_string(num%10), num%3);
+      while (num--) {
+        collector.Collect(std::to_string(num % 10), num % 3);
       }
     }));
   }

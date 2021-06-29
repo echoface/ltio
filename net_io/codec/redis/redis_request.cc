@@ -20,12 +20,9 @@
 namespace lt {
 namespace net {
 
-RedisRequest::RedisRequest() :
-  CodecMessage(MessageType::kRequest) {
-}
+RedisRequest::RedisRequest() : CodecMessage(MessageType::kRequest) {}
 
-RedisRequest::~RedisRequest() {
-}
+RedisRequest::~RedisRequest() {}
 
 void RedisRequest::Get(const std::string& key) {
   std::vector<resp::buffer> buffers = encoder_.encode("GET", key);
@@ -36,7 +33,6 @@ void RedisRequest::Get(const std::string& key) {
 }
 
 void RedisRequest::MGet(const std::vector<std::string>& keys) {
-
   std::vector<resp::buffer> buffers;
   encoder_.begin(buffers);
   auto cmder = encoder_.cmd("MGET");
@@ -46,7 +42,7 @@ void RedisRequest::MGet(const std::vector<std::string>& keys) {
   cmder.end();
   encoder_.end();
 
-  for (auto& buffer :  buffers) {
+  for (auto& buffer : buffers) {
     body_.append(buffer.data(), buffer.size());
   }
   cmd_counter_++;
@@ -60,19 +56,21 @@ void RedisRequest::Set(const std::string& key, const std::string& value) {
   cmd_counter_++;
 }
 
-void RedisRequest::SetWithExpire(const std::string& key, const std::string& value, uint32_t second) {
-
-  std::vector<resp::buffer> buffers = encoder_.encode("SET", key, value, "EX", std::to_string(second));
+void RedisRequest::SetWithExpire(const std::string& key,
+                                 const std::string& value,
+                                 uint32_t second) {
+  std::vector<resp::buffer> buffers =
+      encoder_.encode("SET", key, value, "EX", std::to_string(second));
 
   for (auto& buffer : buffers) {
     body_.append(buffer.data(), buffer.size());
   }
-  //LOG(INFO) << __FUNCTION__ << " body:" << body_;
+  // LOG(INFO) << __FUNCTION__ << " body:" << body_;
   cmd_counter_++;
 }
 
-void RedisRequest::MSet(const std::vector<std::pair<std::string, std::string>> kvs) {
-
+void RedisRequest::MSet(
+    const std::vector<std::pair<std::string, std::string>> kvs) {
   std::vector<resp::buffer> buffers;
   encoder_.begin(buffers);
   auto cmder = encoder_.cmd("MSET");
@@ -82,7 +80,7 @@ void RedisRequest::MSet(const std::vector<std::pair<std::string, std::string>> k
   cmder.end();
   encoder_.end();
 
-  for (auto& buffer :  buffers) {
+  for (auto& buffer : buffers) {
     body_.append(buffer.data(), buffer.size());
   }
   cmd_counter_++;
@@ -113,7 +111,8 @@ void RedisRequest::Incr(const std::string& key) {
 }
 
 void RedisRequest::IncrBy(const std::string& key, uint64_t by) {
-  std::vector<resp::buffer> buffers = encoder_.encode("INCRBY", key, std::to_string(by));
+  std::vector<resp::buffer> buffers =
+      encoder_.encode("INCRBY", key, std::to_string(by));
   for (auto& buffer : buffers) {
     body_.append(buffer.data(), buffer.size());
   }
@@ -121,7 +120,8 @@ void RedisRequest::IncrBy(const std::string& key, uint64_t by) {
 }
 
 void RedisRequest::IncrByFloat(const std::string& key, float by) {
-  std::vector<resp::buffer> buffers = encoder_.encode("INCRBYFLOAT", key, std::to_string(by));
+  std::vector<resp::buffer> buffers =
+      encoder_.encode("INCRBYFLOAT", key, std::to_string(by));
   for (auto& buffer : buffers) {
     body_.append(buffer.data(), buffer.size());
   }
@@ -137,7 +137,8 @@ void RedisRequest::Decr(const std::string& key) {
 }
 
 void RedisRequest::DecrBy(const std::string& key, uint64_t by) {
-  std::vector<resp::buffer> buffers = encoder_.encode("DECRBY", key, std::to_string(by));
+  std::vector<resp::buffer> buffers =
+      encoder_.encode("DECRBY", key, std::to_string(by));
   for (auto& buffer : buffers) {
     body_.append(buffer.data(), buffer.size());
   }
@@ -176,7 +177,8 @@ void RedisRequest::Persist(const std::string& key) {
 }
 
 void RedisRequest::Expire(const std::string& key, uint64_t second) {
-  std::vector<resp::buffer> buffers = encoder_.encode("EXPIRE", key, std::to_string(second));
+  std::vector<resp::buffer> buffers =
+      encoder_.encode("EXPIRE", key, std::to_string(second));
   for (auto& buffer : buffers) {
     body_.append(buffer.data(), buffer.size());
   }
@@ -197,8 +199,10 @@ bool RedisRequest::AsHeartbeat() {
   return true;
 }
 
-bool RedisRequest::IsHeartbeat() const {;
+bool RedisRequest::IsHeartbeat() const {
+  ;
   return body_ == "PING";
 }
 
-}} //end namespace
+}  // namespace net
+}  // namespace lt

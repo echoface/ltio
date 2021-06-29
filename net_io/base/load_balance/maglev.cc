@@ -24,14 +24,15 @@ namespace net {
 static const uint32_t kHashSeed3 = 2718281828;
 
 void MaglevHelper::genMaglevPermuation(IdList& permutation,
-                                    const Endpoint endpoint,
-                                    const uint32_t pos, 
-                                    const uint32_t ring_size) {
+                                       const Endpoint endpoint,
+                                       const uint32_t pos,
+                                       const uint32_t ring_size) {
 #if 1
-  uint64_t hash_result[2] = {0}; //[offsethash << 64 | skip_hash]
-  MurmurHash3_x64_128(&endpoint.hash, sizeof(endpoint.hash), kHashSeed3, hash_result);
+  uint64_t hash_result[2] = {0};  //[offsethash << 64 | skip_hash]
+  MurmurHash3_x64_128(&endpoint.hash, sizeof(endpoint.hash), kHashSeed3,
+                      hash_result);
   auto offset = hash_result[0] % ring_size;
-  auto skip   = (hash_result[1] % (ring_size - 1)) + 1;
+  auto skip = (hash_result[1] % (ring_size - 1)) + 1;
 #else
   auto offset_hash = MurmurHash3_x64_64(endpoint.hash, kHashSeed2, kHashSeed0);
   auto offset = offset_hash % ring_size;
@@ -46,7 +47,7 @@ LookupTable MaglevHelper::GenerateMaglevHash(NodeList endpoints,
                                              const uint32_t ring_size) {
   LookupTable result(ring_size, -1);
 
-  switch(endpoints.size()) {
+  switch (endpoints.size()) {
     case 0:
       return result;
     case 1:
@@ -87,4 +88,5 @@ LookupTable MaglevHelper::GenerateMaglevHash(NodeList endpoints,
   return result;
 }
 
-}} //end lt::net
+}  // namespace net
+}  // namespace lt

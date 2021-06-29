@@ -18,24 +18,23 @@
 #ifndef SIGNAL_H
 #define SIGNAL_H
 
-#include <functional>
-#include <initializer_list>
-#include <sys/types.h>
 #include <signal.h>
 #include <sys/signalfd.h>
+#include <sys/types.h>
+#include <functional>
+#include <initializer_list>
 
 namespace base {
 
-//signal(SIGPIPE, SIG_IGN);
+// signal(SIGPIPE, SIG_IGN);
 void IgnoreSigPipeSignalOnCurrentThread();
 
 int CreateNoneBlockingSignalFd(std::initializer_list<int> signals);
 
 struct Signal {
-    static void signal(int sig, const std::function<void()>& handler);
+  static void signal(int sig, const std::function<void()>& handler);
 };
 
+}  // namespace base
 
-} //namespace
-
-#endif // SIGNAL_H
+#endif  // SIGNAL_H

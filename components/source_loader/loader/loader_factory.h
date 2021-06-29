@@ -5,18 +5,19 @@
 #ifndef LIGHTINGIO_READER_FACTORY_H
 #define LIGHTINGIO_READER_FACTORY_H
 
-#include "components/source_loader/loader/loader.h"
-#include <string>
 #include <base/memory/lazy_instance.h>
+#include <string>
+#include "components/source_loader/loader/loader.h"
 
 namespace component {
 namespace sl {
 
-class LoaderFactory{
+class LoaderFactory {
 public:
   static LoaderFactory& Instance();
   Loader* CreateLoader(LoaderDelegate*, const Json&);
 };
 
-}}
-#endif //LIGHTINGIO_READER_FACTORY_H
+}  // namespace sl
+}  // namespace component
+#endif  // LIGHTINGIO_READER_FACTORY_H

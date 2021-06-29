@@ -8,18 +8,14 @@ namespace component {
 BooleanExpr::BooleanExpr(const std::string& name,
                          const ValueInitList& values,
                          bool exclude)
-  : Assigns(name, values),
-    exclude_(exclude) {
-}
+  : Assigns(name, values), exclude_(exclude) {}
 
 BooleanExpr::BooleanExpr(const std::string& name,
                          const ValueContainer& values,
                          bool exclude)
-  : Assigns(name, values),
-    exclude_(exclude) {
-}
+  : Assigns(name, values), exclude_(exclude) {}
 
-std::ostream& operator<< (std::ostream& os, const BooleanExpr& expr) {
+std::ostream& operator<<(std::ostream& os, const BooleanExpr& expr) {
   os << "{" << expr.name() << (expr.exclude() ? " exc [" : " inc [");
 
   const Assigns::ValueContainer& values = expr.Values();
@@ -36,7 +32,7 @@ void Conjunction::SetConjunctionId(uint64_t id) {
 
 void Conjunction::AddExpression(const BooleanExpr& expr) {
   auto result = assigns_.insert(std::make_pair(expr.name(), expr));
-  //not allow dumplicated assign
+  // not allow dumplicated assign
   assert(result.second);
   size_ += (expr.exclude() ? 0 : 1);
 }
@@ -57,13 +53,11 @@ Conjunction* Conjunction::Exclude(const std::string& field,
   return this;
 }
 
-std::ostream& operator<< (std::ostream& os, const Conjunction& conj) {
+std::ostream& operator<<(std::ostream& os, const Conjunction& conj) {
   os << ">>>>>"
-    << " id:" << conj.id()
-    << " (size:" << conj.size()
-    << ", doc:" << ConjUtil::GetDocumentID(conj.id())
-    << ", idx:" << ConjUtil::GetIndexInDoc(conj.id())
-    << ") >>>>> \n";
+     << " id:" << conj.id() << " (size:" << conj.size()
+     << ", doc:" << ConjUtil::GetDocumentID(conj.id())
+     << ", idx:" << ConjUtil::GetIndexInDoc(conj.id()) << ") >>>>> \n";
   for (const auto& name_expr : conj.assigns_) {
     os << name_expr.second << "\n";
   }
@@ -71,12 +65,10 @@ std::ostream& operator<< (std::ostream& os, const Conjunction& conj) {
   return os;
 }
 
-Document::Document(int32_t doc_id)
-  : doc_id_(doc_id) {
-}
+Document::Document(int32_t doc_id) : doc_id_(doc_id) {}
 
 Document::~Document() {
-  for (Conjunction* &conj : conjunctions_) {
+  for (Conjunction*& conj : conjunctions_) {
     delete conj;
     conj = nullptr;
   }
@@ -84,14 +76,14 @@ Document::~Document() {
 
 void Document::AddConjunction(Conjunction* conj) {
   uint64_t conj_id =
-    ConjUtil::GenConjID(doc_id(), conjunctions_.size(), conj->size());
+      ConjUtil::GenConjID(doc_id(), conjunctions_.size(), conj->size());
 
   conj->SetConjunctionId(conj_id);
 
   conjunctions_.push_back(conj);
 }
 
-std::ostream& operator<< (std::ostream& os, const Document& doc) {
+std::ostream& operator<<(std::ostream& os, const Document& doc) {
   os << ">>>>> doc:" << doc.doc_id() << ">>>>>>\n";
   for (const auto& conj : doc.conjunctions()) {
     os << *conj;
@@ -100,4 +92,4 @@ std::ostream& operator<< (std::ostream& os, const Document& doc) {
   return os;
 }
 
-}
+}  // namespace component

@@ -18,29 +18,28 @@
 #ifndef _BASE_DOUBLELINKED_LIST_H_
 #define _BASE_DOUBLELINKED_LIST_H_
 
-#include <cstdio>
-#include <memory>
-#include <inttypes.h>
-#include <functional>
 #include <base/base_micro.h>
+#include <inttypes.h>
+#include <cstdio>
+#include <functional>
+#include <memory>
 
 namespace base {
 
 namespace __detail__ {
 
-struct Holder {
-};
+struct Holder {};
 
-}
+}  // namespace __detail__
 
-template<class T>
+template <class T>
 struct EnableDoubleLinked {
   EnableDoubleLinked<T>* pre_ = NULL;
   EnableDoubleLinked<T>* next_ = NULL;
   __detail__::Holder* holder_ = NULL;
 };
 
-template<class T>
+template <class T>
 class DoubleLinkedList : public __detail__::Holder {
 public:
   DoubleLinkedList() : size_(0) {
@@ -54,7 +53,6 @@ public:
   }
 
   ~DoubleLinkedList() {
-
     EnableDoubleLinked<T>* node = head_->next_;
     for (; node != tail_; node = node->next_) {
       Remove((T*)node);
@@ -64,7 +62,7 @@ public:
     delete head_;
   }
 
-  inline uint64_t Size() const {return size_;}
+  inline uint64_t Size() const { return size_; }
 
   inline bool Attatched(T* node) {
     return node->holder_ == (__detail__::Holder*)this;
@@ -83,13 +81,9 @@ public:
     return true;
   }
 
-  T* Back() {
-    return size_ > 0 ? (T*)tail_->pre_ : nullptr;
-  }
+  T* Back() { return size_ > 0 ? (T*)tail_->pre_ : nullptr; }
 
-  T* Front() {
-    return size_ > 0 ? (T*)head_->next_ : nullptr;
-  }
+  T* Front() { return size_ > 0 ? (T*)head_->next_ : nullptr; }
 
   bool Remove(T* node) {
     if (size_ <= 0 || !Attatched(node)) {
@@ -131,5 +125,5 @@ private:
   DISALLOW_COPY_AND_ASSIGN(DoubleLinkedList);
 };
 
-} // namesapce base end
+}  // namespace base
 #endif

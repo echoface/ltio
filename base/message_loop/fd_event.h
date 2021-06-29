@@ -43,7 +43,8 @@ public:
     virtual ~Watcher() {}
     virtual void UpdateFdEvent(FdEvent* fd_event) = 0;
   };
-  class Handler { //fd owner should implement those
+
+  class Handler {  // fd owner should implement those
   public:
     virtual ~Handler() {}
     // operator api, return false to block event popup
@@ -60,32 +61,39 @@ public:
   ~FdEvent();
 
   void SetFdWatcher(Watcher* watcher);
-  Watcher* EventWatcher() {return watcher_;}
+  Watcher* EventWatcher() { return watcher_; }
 
   void HandleEvent(LtEvent event);
 
-  //the event we take care about
+  // the event we take care about
   LtEvent MonitorEvents() const;
 
   void EnableReading();
   void EnableWriting();
   void DisableReading();
   void DisableWriting();
-  void SetEvent(const LtEv& lt_ev) {events_ = lt_ev; notify_watcher();}
-  void DisableAll() { events_ = LtEv::LT_EVENT_NONE; notify_watcher();}
-  inline bool IsReadEnable() const {return events_ & LtEv::LT_EVENT_READ;}
-  inline bool IsWriteEnable() const {return events_ & LtEv::LT_EVENT_WRITE;}
-  inline bool EdgeTriggerMode() const {return enable_et_;}
-  inline void SetEdgeTrigger(bool edge) {enable_et_ = edge;}
+  void SetEvent(const LtEv& lt_ev) {
+    events_ = lt_ev;
+    notify_watcher();
+  }
+  void DisableAll() {
+    events_ = LtEv::LT_EVENT_NONE;
+    notify_watcher();
+  }
+  inline bool IsReadEnable() const { return events_ & LtEv::LT_EVENT_READ; }
+  inline bool IsWriteEnable() const { return events_ & LtEv::LT_EVENT_WRITE; }
+  inline bool EdgeTriggerMode() const { return enable_et_; }
+  inline void SetEdgeTrigger(bool edge) { enable_et_ = edge; }
 
-  inline int fd() const {return fd_;};
-  inline int GetFd() const {return fd_;};
-  inline void ReleaseOwnership() {owner_fd_ = false;}
+  inline int fd() const { return fd_; };
+  inline int GetFd() const { return fd_; };
+  inline void ReleaseOwnership() { owner_fd_ = false; }
 
   std::string EventInfo() const;
-  LtEvent ActivedEvent() const {return revents_;};
+  LtEvent ActivedEvent() const { return revents_; };
   std::string RcvEventAsString() const;
   std::string MonitorEventAsString() const;
+
 private:
   void notify_watcher();
 
@@ -101,5 +109,5 @@ private:
   DISALLOW_COPY_AND_ASSIGN(FdEvent);
 };
 
-} // namespace
-#endif // EVENT_H
+}  // namespace base
+#endif  // EVENT_H

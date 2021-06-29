@@ -1,30 +1,30 @@
 #include "time.h"
 
-#include <mutex>
 #include <sys/time.h>
+#include <mutex>
 
-#include "nspr/prtime.h"
 #include "fmt/printf.h"
+#include "nspr/prtime.h"
 
 namespace base {
 
 typedef time_t SysTime;
 
 namespace {
-  static std::mutex lock_;
+static std::mutex lock_;
 
-  Time TimeNowIgnoringOverride() {
-    struct timeval tv;
-    struct timezone tz = {0, 0};  // UTC
-    LTCHECK(gettimeofday(&tv, &tz) == 0);
-    // Combine seconds and microseconds in a 64-bit field containing microseconds
-    // since the epoch.  That's enough for nearly 600 centuries.  Adjust from
-    // Unix (1970) to Windows (1601) epoch.
-    return Time() + TimeDelta::FromMicroseconds(
-      (tv.tv_sec * TimeDelta::kMicrosecondsPerSecond + tv.tv_usec)
-      + Time::kTimeTToMicrosecondsOffset);
-  }
-
+Time TimeNowIgnoringOverride() {
+  struct timeval tv;
+  struct timezone tz = {0, 0};  // UTC
+  LTCHECK(gettimeofday(&tv, &tz) == 0);
+  // Combine seconds and microseconds in a 64-bit field containing microseconds
+  // since the epoch.  That's enough for nearly 600 centuries.  Adjust from
+  // Unix (1970) to Windows (1601) epoch.
+  return Time() +
+         TimeDelta::FromMicroseconds(
+             (tv.tv_sec * TimeDelta::kMicrosecondsPerSecond + tv.tv_usec) +
+             Time::kTimeTToMicrosecondsOffset);
+}
 
 SysTime SysTimeFromTimeStruct(struct tm* timestruct, bool is_local) {
   std::lock_guard<std::mutex> guard(lock_);
@@ -39,19 +39,19 @@ void SysTimeToTimeStruct(SysTime t, struct tm* timestruct, bool is_local) {
     gmtime_r(&t, timestruct);
 }
 
-} //end namespace
+}  // end namespace
 
-//static
+// static
 Time Time::UnixEpoch() {
   return Time(kTimeTToMicrosecondsOffset);
 }
 
-//static
+// static
 Time Time::Now() {
   return TimeNowIgnoringOverride();
 }
 
-//static
+// static
 Time Time::NowFromSystemTime() {
   return TimeNowIgnoringOverride();
 }
@@ -60,8 +60,9 @@ Time Time::NowFromSystemTime() {
 Time Time::FromTimeT(time_t tt) {
   if (tt == 0)
     return Time();  // Preserve 0 so we can tell it doesn't exist.
-  return (tt == std::numeric_limits<time_t>::max()) ?
-    Max() : (UnixEpoch() + TimeDelta::FromSeconds(tt));
+  return (tt == std::numeric_limits<time_t>::max())
+             ? Max()
+             : (UnixEpoch() + TimeDelta::FromSeconds(tt));
 }
 
 time_t Time::ToTimeT() const {
@@ -71,15 +72,15 @@ time_t Time::ToTimeT() const {
                      kTimeTToMicrosecondsOffset) > us_))
     return (*this - UnixEpoch()).InSeconds();
   return (us_ < 0) ? std::numeric_limits<time_t>::min()
-    : std::numeric_limits<time_t>::max();
+                   : std::numeric_limits<time_t>::max();
 }
-
 
 // static
 Time Time::FromDoubleT(double dt) {
   // Preserve 0 so we can tell it doesn't exist.
   return (dt == 0 || std::isnan(dt))
-    ? Time() : (UnixEpoch() + TimeDelta::FromSecondsD(dt));
+             ? Time()
+             : (UnixEpoch() + TimeDelta::FromSecondsD(dt));
 }
 
 double Time::ToDoubleT() const {
@@ -93,7 +94,8 @@ double Time::ToDoubleT() const {
 
 // static
 Time Time::FromTimeSpec(const timespec& ts) {
-  return FromDoubleT(ts.tv_sec + double(ts.tv_nsec) / TimeDelta::kNanosecondsPerSecond);
+  return FromDoubleT(ts.tv_sec +
+                     double(ts.tv_nsec) / TimeDelta::kNanosecondsPerSecond);
 }
 
 // static
@@ -105,12 +107,14 @@ Time Time::FromTimeVal(struct timeval t) {
     return Time();
   }
 
-  if (t.tv_usec == static_cast<suseconds_t>(TimeDelta::kMicrosecondsPerSecond) - 1 &&
+  if (t.tv_usec ==
+          static_cast<suseconds_t>(TimeDelta::kMicrosecondsPerSecond) - 1 &&
       t.tv_sec == std::numeric_limits<time_t>::max()) {
     return Max();
   }
-  return Time((static_cast<int64_t>(t.tv_sec) * TimeDelta::kMicrosecondsPerSecond) +
-              t.tv_usec + kTimeTToMicrosecondsOffset);
+  return Time(
+      (static_cast<int64_t>(t.tv_sec) * TimeDelta::kMicrosecondsPerSecond) +
+      t.tv_usec + kTimeTToMicrosecondsOffset);
 }
 
 struct timeval Time::ToTimeVal() const {
@@ -122,7 +126,8 @@ struct timeval Time::ToTimeVal() const {
   }
   if (is_max()) {
     result.tv_sec = std::numeric_limits<time_t>::max();
-    result.tv_usec = static_cast<suseconds_t>(TimeDelta::kMicrosecondsPerSecond) - 1;
+    result.tv_usec =
+        static_cast<suseconds_t>(TimeDelta::kMicrosecondsPerSecond) - 1;
     return result;
   }
   int64_t us = us_ - kTimeTToMicrosecondsOffset;
@@ -130,7 +135,6 @@ struct timeval Time::ToTimeVal() const {
   result.tv_usec = us % TimeDelta::kMicrosecondsPerSecond;
   return result;
 }
-
 
 Time Time::Midnight(bool is_local) const {
   Exploded exploded;
@@ -161,7 +165,8 @@ void Time::Explode(bool is_local, Exploded* exploded) const {
   // components because the platform calendar-explode operates at one-second
   // granularity.
   SysTime seconds = millis_since_unix_epoch / TimeDelta::kMillisecondsPerSecond;
-  int64_t millisecond = millis_since_unix_epoch % TimeDelta::kMillisecondsPerSecond;
+  int64_t millisecond =
+      millis_since_unix_epoch % TimeDelta::kMillisecondsPerSecond;
   if (millisecond < 0) {
     // Make the the |millisecond| component positive, within the range [0,999],
     // by transferring 1000 ms from |seconds|.
@@ -204,7 +209,7 @@ bool Time::FromExploded(bool is_local, const Exploded& exploded, Time* time) {
   timestruct.tm_yday = 0;                     // mktime/timegm ignore this
   timestruct.tm_isdst = -1;                   // attempt to figure it out
 #if !defined(OS_NACL) && !defined(OS_SOLARIS) && !defined(OS_AIX)
-  timestruct.tm_gmtoff = 0;   // not a POSIX field, so mktime/timegm ignore
+  timestruct.tm_gmtoff = 0;      // not a POSIX field, so mktime/timegm ignore
   timestruct.tm_zone = nullptr;  // not a POSIX field, so mktime/timegm ignore
 #endif
 
@@ -322,9 +327,8 @@ bool Time::FromStringInternal(const char* time_string,
     return false;
 
   PRTime result_time = 0;
-  PRStatus result = PR_ParseTimeString(time_string,
-                                       is_local ? PR_FALSE : PR_TRUE,
-                                       &result_time);
+  PRStatus result = PR_ParseTimeString(
+      time_string, is_local ? PR_FALSE : PR_TRUE, &result_time);
   if (result != PR_SUCCESS)
     return false;
 
@@ -336,10 +340,9 @@ bool Time::FromStringInternal(const char* time_string,
 bool Time::ExplodedMostlyEquals(const Exploded& lhs, const Exploded& rhs) {
   return std::tie(lhs.year, lhs.month, lhs.day_of_month, lhs.hour, lhs.minute,
                   lhs.second, lhs.millisecond) ==
-    std::tie(rhs.year, rhs.month, rhs.day_of_month, rhs.hour, rhs.minute,
-             rhs.second, rhs.millisecond);
+         std::tie(rhs.year, rhs.month, rhs.day_of_month, rhs.hour, rhs.minute,
+                  rhs.second, rhs.millisecond);
 }
-
 
 // static
 bool Time::FromMillisecondsSinceUnixEpoch(int64_t unix_milliseconds,
@@ -353,12 +356,12 @@ bool Time::FromMillisecondsSinceUnixEpoch(int64_t unix_milliseconds,
   return checked_microseconds_win_epoch.IsValid();
 }
 
-
 int64_t Time::ToRoundedDownMillisecondsSinceUnixEpoch() const {
   constexpr int64_t kEpochOffsetMillis =
       kTimeTToMicrosecondsOffset / TimeDelta::kMicrosecondsPerMillisecond;
-  static_assert(kTimeTToMicrosecondsOffset % TimeDelta::kMicrosecondsPerMillisecond == 0,
-                "assumption: no epoch offset sub-milliseconds");
+  static_assert(
+      kTimeTToMicrosecondsOffset % TimeDelta::kMicrosecondsPerMillisecond == 0,
+      "assumption: no epoch offset sub-milliseconds");
 
   // Compute the milliseconds since UNIX epoch without the possibility of
   // under/overflow. Round the result towards -infinity.
@@ -375,15 +378,10 @@ std::ostream& operator<<(std::ostream& os, Time time) {
   Time::Exploded exploded;
   time.UTCExplode(&exploded);
   // Use StringPrintf because iostreams formatting is painful.
-  return os << fmt::sprintf("%04d-%02d-%02d %02d:%02d:%02d.%03d UTC",
-                            exploded.year,
-                            exploded.month,
-                            exploded.day_of_month,
-                            exploded.hour,
-                            exploded.minute,
-                            exploded.second,
-                            exploded.millisecond);
+  return os << fmt::sprintf(
+             "%04d-%02d-%02d %02d:%02d:%02d.%03d UTC", exploded.year,
+             exploded.month, exploded.day_of_month, exploded.hour,
+             exploded.minute, exploded.second, exploded.millisecond);
 }
 
-
-} //end base
+}  // namespace base

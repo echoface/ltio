@@ -1,14 +1,13 @@
 
-#include "glog/logging.h"
 #include "components/source_loader/parser/parser.h"
+#include "glog/logging.h"
 
 namespace component {
-namespace sl{
+namespace sl {
 
 const std::string& ValueTypeToString(SourceValueType t) {
   static std::vector<std::string> mapping_vector = {
-      "null", "int", "double", "string", "bool", "json", "invalid"
-  };
+      "null", "int", "double", "string", "bool", "json", "invalid"};
   if (t > SourceValueType::ValueTypeInvalid || t < 0) {
     return mapping_vector[SourceValueType::ValueTypeInvalid];
   }
@@ -32,7 +31,7 @@ SourceValueType ToSourceValueType(const std::string& str) {
   return r;
 }
 
-Parser::~Parser() {};
+Parser::~Parser(){};
 
 bool Parser::Initialize(const Json& config) {
   const static Json nil_value;
@@ -44,7 +43,7 @@ bool Parser::Initialize(const Json& config) {
   primary_ = config.value("primary", "");
   content_mode_ = config.value("content_mode", "line");
 
-  return (!type_.empty()) &&  (!primary_.empty());
+  return (!type_.empty()) && (!primary_.empty());
 };
 
 void Parser::SetDelegate(ParserDelegate* d) {
@@ -64,11 +63,12 @@ bool Parser::CheckDefault(SourceValueType t, Json& default_value) {
     case ValueTypeString:
       return default_value.is_string();
     case ValueTypeJsonObj:
-      return true; 
+      return true;
     default:
       break;
   }
   return false;
 }
 
-}} //end namespace
+}  // namespace sl
+}  // namespace component

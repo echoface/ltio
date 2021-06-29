@@ -18,7 +18,7 @@
 #ifndef _LT_NET_RINGHASH_ROUTER_H_H
 #define _LT_NET_RINGHASH_ROUTER_H_H
 
-#include <zlib.h> //crc32
+#include <zlib.h>  //crc32
 
 #include "client_router.h"
 #include "murmurhash/MurmurHash3.h"
@@ -42,18 +42,21 @@ public:
   };
 
   typedef lb::ConsistentHashMap<ClientNode, NodeHasher> NodeContainer;
-public:
-    RingHashRouter(uint32_t vnode_count);
-    RingHashRouter() : RingHashRouter(50) {};
-    ~RingHashRouter() {};
 
-    void AddClient(RefClient&& client) override;
-    RefClient GetNextClient(const std::string& key,
-                            CodecMessage* request = NULL) override;
-  private:
-    NodeContainer clients_;
-    const uint32_t vnode_count_ = 50;
+public:
+  RingHashRouter(uint32_t vnode_count);
+  RingHashRouter() : RingHashRouter(50){};
+  ~RingHashRouter(){};
+
+  void AddClient(RefClient&& client) override;
+  RefClient GetNextClient(const std::string& key,
+                          CodecMessage* request = NULL) override;
+
+private:
+  NodeContainer clients_;
+  const uint32_t vnode_count_ = 50;
 };
 
-}} //lt::net
+}  // namespace net
+}  // namespace lt
 #endif

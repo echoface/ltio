@@ -18,13 +18,13 @@
 #ifndef _NET_IO_BUFFER_H_H
 #define _NET_IO_BUFFER_H_H
 
-#include <type_traits>
-#include <vector>
+#include <string.h>
 #include <algorithm>
 #include <cinttypes>
 #include <iostream>
 #include <string>
-#include <string.h>
+#include <type_traits>
+#include <vector>
 
 namespace lt {
 namespace net {
@@ -43,15 +43,15 @@ public:
 
   char* GetWrite();
   const char* GetRead();
-  inline uint64_t Empty() const {return CanReadSize() == 0;}
-  inline uint64_t CanReadSize() const {return write_index_ - read_index_;}
-  inline uint64_t CanWriteSize() const {return data_.size() - write_index_;}
+  inline uint64_t Empty() const { return CanReadSize() == 0; }
+  inline uint64_t CanReadSize() const { return write_index_ - read_index_; }
+  inline uint64_t CanWriteSize() const { return data_.size() - write_index_; }
 
   void WriteString(const std::string& str);
   void WriteRawData(const void* data, size_t len);
 
   template <typename T,
-           typename = typename std::enable_if<std::is_pod<T>::value>::type>
+            typename = typename std::enable_if<std::is_pod<T>::value>::type>
   void Append(T data) {
     union __X {
       T _data;
@@ -66,7 +66,8 @@ public:
   std::string AsString();
 
   void Consume(uint64_t len);
-  inline void Produce(uint64_t len) {write_index_ += len;}
+  inline void Produce(uint64_t len) { write_index_ += len; }
+
 private:
   char* MutableRead();
   char* MutableWrite();
@@ -76,5 +77,6 @@ private:
   std::vector<char> data_;
 };
 
-}}
+}  // namespace net
+}  // namespace lt
 #endif

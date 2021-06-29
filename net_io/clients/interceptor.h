@@ -28,13 +28,12 @@ class CodecMessage;
 
 class Interceptor {
 public:
-  Interceptor() {};
-  virtual ~Interceptor() {};
-  virtual CodecMessage*
-    Intercept(const Client* c, const CodecMessage* req) = 0;
+  Interceptor(){};
+  virtual ~Interceptor(){};
+  virtual CodecMessage* Intercept(const Client* c, const CodecMessage* req) = 0;
 };
 typedef std::initializer_list<Interceptor*> InterceptArgList;
 
-
-}} //end lt::net
+}  // namespace net
+}  // namespace lt
 #endif

@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "address_family.h"
 #include "ip_address.h"
 #include "sys_addrinfo.h"
-#include "address_family.h"
 
 namespace lt {
 namespace net {
@@ -31,5 +31,5 @@ int ConvertAddressFamily(AddressFamily address_family) {
   return AF_UNSPEC;
 }
 
-}}  // namespace net
-
+}  // namespace net
+}  // namespace lt

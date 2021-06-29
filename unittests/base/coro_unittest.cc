@@ -1,15 +1,14 @@
-#include <unistd.h>
-#include <iostream>
-#include <unistd.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <atomic>
+#include <iostream>
 
 #include "glog/logging.h"
 
 #include <base/coroutine/coroutine_runner.h>
 #include <base/coroutine/wait_group.h>
-#include <base/message_loop/message_loop.h>
 #include <base/memory/scoped_guard.h>
+#include <base/message_loop/message_loop.h>
 #include <base/time/time_utils.h>
 
 #include <thirdparty/catch/catch.hpp>
@@ -38,8 +37,8 @@ TEST_CASE("coro.check", "[run task as coro not working task]") {
 TEST_CASE("coro.background", "[run task as coro task in background]") {
   LOG(INFO) << " start test go flag enter";
   bool background_ok = false;
-  CO_GO [&]() {
-    LOG(INFO) << " run lambda in coroutine" ;
+  CO_GO[&]() {
+    LOG(INFO) << " run lambda in coroutine";
     background_ok = true;
   };
   sleep(1);
@@ -59,19 +58,17 @@ TEST_CASE("coro.go", "[go flag call coroutine]") {
 
   CO_GO std::bind(&coro_fun, "tag_from_go_synatax");
 
-  CO_GO [&]() {
+  CO_GO[&]() {
     lambda_ok = true;
-    LOG(INFO) << " run lambda in coroutine" ;
+    LOG(INFO) << " run lambda in coroutine";
   };
 
-  CO_GO &loop << [&]() {
+  CO_GO& loop << [&]() {
     withloop_ok = true;
     LOG(INFO) << "go coroutine with loop ok!!!";
   };
 
-  loop.PostDelayTask(NewClosure([&](){
-    loop.QuitLoop();
-  }), 2000);
+  loop.PostDelayTask(NewClosure([&]() { loop.QuitLoop(); }), 2000);
   loop.WaitLoopEnd();
   REQUIRE(lambda_ok);
   REQUIRE(withloop_ok);
@@ -83,24 +80,21 @@ TEST_CASE("coro.resumer", "[coroutine resumer with loop reply task]") {
 
   bool looptask_ok = false;
   bool gogo_task_ok = false;
-  CO_GO [&]() {
+  CO_GO[&]() {
     auto loop = base::MessageLoop::Current();
-    loop->PostTaskAndReply(FROM_HERE, [](){}, CO_RESUMER);
+    loop->PostTaskAndReply(FROM_HERE, []() {}, CO_RESUMER);
     CO_YIELD;
     looptask_ok = true;
 
     auto resumer = CO_RESUMER;
     CHECK(resumer);
-    CO_GO [&]() {
-      resumer();
-    };
+    CO_GO[&]() { resumer(); };
     CO_YIELD;
     gogo_task_ok = true;
   };
 
-  loop.PostDelayTask(NewClosure([](){
-    base::MessageLoop::Current()->QuitLoop();
-  }), 2000);
+  loop.PostDelayTask(
+      NewClosure([]() { base::MessageLoop::Current()->QuitLoop(); }), 2000);
   loop.WaitLoopEnd();
 
   REQUIRE(looptask_ok);
@@ -112,21 +106,21 @@ TEST_CASE("coro.co_sleep", "[coroutine sleep]") {
   loop.Start();
 
   bool co_sleep_resumed = false;
-  CO_GO &loop << [&]() {
+  CO_GO& loop << [&]() {
     CO_SLEEP(50);
     co_sleep_resumed = true;
   };
 
-  loop.PostDelayTask(NewClosure([&]() {
-    loop.QuitLoop();
-  }), 500); // exit ater 5s
+  loop.PostDelayTask(NewClosure([&]() { loop.QuitLoop(); }),
+                     500);  // exit ater 5s
 
   loop.WaitLoopEnd();
   REQUIRE(co_sleep_resumed == true);
 }
 
 TEST_CASE("coro.multi_resume", "[coroutine resume twice]") {
-  base::MessageLoop loop; loop.Start();
+  base::MessageLoop loop;
+  loop.Start();
 
   auto stack_sensitive_fn = []() {
     LOG(INFO) << "normal task start...";
@@ -135,7 +129,7 @@ TEST_CASE("coro.multi_resume", "[coroutine resume twice]") {
 
   bool resuer_ok = false;
 
-  CO_GO &loop << [&]() { //main
+  CO_GO& loop << [&]() {  // main
     LOG(INFO) << "coro run start...";
 
     loop.PostTask(NewClosure(CO_RESUMER));
@@ -148,24 +142,23 @@ TEST_CASE("coro.multi_resume", "[coroutine resume twice]") {
     resuer_ok = true;
   };
 
-  loop.PostDelayTask(NewClosure([&]() {
-    loop.QuitLoop();
-  }), 500); // exit ater 5s
+  loop.PostDelayTask(NewClosure([&]() { loop.QuitLoop(); }),
+                     500);  // exit ater 5s
   loop.WaitLoopEnd();
   REQUIRE(resuer_ok);
 }
 
 TEST_CASE("coro.wg_timeout", "[coroutine resume twice]") {
-  //FLAGS_v = 25;
+  // FLAGS_v = 25;
 
-  CO_GO [&]() { //main
+  CO_GO[&]() {  // main
     LOG(INFO) << "waig group broadcast coro test start...";
 
     auto wg = base::WaitGroup::New();
 
     wg->Add(1);
-    CO_GO [wg]() {
-      base::ScopedGuard done([wg]() {wg->Done();});
+    CO_GO[wg]() {
+      base::ScopedGuard done([wg]() { wg->Done(); });
       CO_SLEEP(500);
     };
 
@@ -178,15 +171,14 @@ TEST_CASE("coro.wg_timeout", "[coroutine resume twice]") {
 }
 
 TEST_CASE("coro.wg_broadcast", "[coroutine braodcast resume]") {
-  CO_GO [&]() { //main
+  CO_GO[&]() {  // main
     LOG(INFO) << "waig group broadcast coro test start...";
 
     auto wg = base::WaitGroup::New();
     for (int i = 0; i < 10; i++) {
-
       wg->Add(1);
 
-      CO_GO [wg]() {
+      CO_GO[wg]() {
         CO_SLEEP(5);
         wg->Done();
       };
@@ -200,8 +192,7 @@ TEST_CASE("coro.wg_broadcast", "[coroutine braodcast resume]") {
 }
 
 TEST_CASE("coro.co_sync", "[coroutine braodcast resume]") {
-
-  CO_GO []() {
+  CO_GO[]() {
     int result = 0;
 
     CO_SYNC([&]() {
@@ -215,10 +206,9 @@ TEST_CASE("coro.co_sync", "[coroutine braodcast resume]") {
 }
 
 TEST_CASE("coro.Sched", "[coroutine sched]") {
-
   int64_t cnt = 0;
 
-  CO_GO [&]() {
+  CO_GO[&]() {
     auto start = base::time_us();
     while (base::time_us() - start < 4000) {
       __co_sched_here__
@@ -226,7 +216,7 @@ TEST_CASE("coro.Sched", "[coroutine sched]") {
     cnt++;
   };
 
-  CO_GO [&]() {
+  CO_GO[&]() {
     cnt++;
     std::cout << "second task run" << std::endl;
   };

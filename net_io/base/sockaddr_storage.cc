@@ -25,13 +25,11 @@
 namespace lt {
 namespace net {
 
-SockaddrStorage::SockaddrStorage()
-  : addr_len(sizeof(addr_storage)) {
-}
+SockaddrStorage::SockaddrStorage() : addr_len(sizeof(addr_storage)) {}
 
 SockaddrStorage::SockaddrStorage(const SockaddrStorage& other)
   : addr_len(other.addr_len) {
-    memcpy(&addr_storage, &(other.addr_storage), addr_len);
+  memcpy(&addr_storage, &(other.addr_storage), addr_len);
 }
 
 struct sockaddr* SockaddrStorage::AsSockAddr() {
@@ -50,4 +48,5 @@ void SockaddrStorage::operator=(const SockaddrStorage& other) {
   memcpy(&addr_storage, &(other.addr_storage), addr_len);
 }
 
-}}  // namespace net
+}  // namespace net
+}  // namespace lt

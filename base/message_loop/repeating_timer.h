@@ -18,11 +18,11 @@
 #ifndef BASE_REPEATING_TIMER_H_H
 #define BASE_REPEATING_TIMER_H_H
 
-#include <mutex>
-#include <atomic>
-#include <memory>
 #include <inttypes.h>
+#include <atomic>
 #include <condition_variable>
+#include <memory>
+#include <mutex>
 
 #include <base/base_micro.h>
 #include <base/closure/closure_task.h>
@@ -62,6 +62,7 @@ public:
   void Stop();
 
   bool Running() const;
+
 private:
   void OnTimeout();
 
@@ -76,5 +77,5 @@ private:
   DISALLOW_COPY_AND_ASSIGN(RepeatingTimer);
 };
 
-}
+}  // namespace base
 #endif

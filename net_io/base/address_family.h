@@ -13,9 +13,9 @@ class IPAddress;
 // Enum wrapper around the address family types supported by host resolver
 // procedures.
 enum AddressFamily {
-  ADDRESS_FAMILY_UNSPECIFIED,   // AF_UNSPEC
-  ADDRESS_FAMILY_IPV4,          // AF_INET
-  ADDRESS_FAMILY_IPV6,          // AF_INET6
+  ADDRESS_FAMILY_UNSPECIFIED,  // AF_UNSPEC
+  ADDRESS_FAMILY_IPV4,         // AF_INET
+  ADDRESS_FAMILY_IPV6,         // AF_INET6
   ADDRESS_FAMILY_LAST = ADDRESS_FAMILY_IPV6
 };
 
@@ -39,7 +39,7 @@ AddressFamily GetAddressFamily(const IPAddress& address);
 // Maps the given AddressFamily to either AF_INET, AF_INET6 or AF_UNSPEC.
 int ConvertAddressFamily(AddressFamily address_family);
 
-}}  // namespace net
+}  // namespace net
+}  // namespace lt
 
 #endif  // NET_BASE_ADDRESS_FAMILY_H_
-

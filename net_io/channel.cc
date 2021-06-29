@@ -19,10 +19,12 @@
 // Created by gh on 18-12-5.
 //
 #include "channel.h"
+#include "glog/logging.h"
 #include "socket_utils.h"
+
+#include <base/utils/sys_error.h>
 #include "base/base_constants.h"
 #include "base/message_loop/event_pump.h"
-#include "glog/logging.h"
 
 // socket chennel interface and base class
 using base::FdEvent;
@@ -34,15 +36,8 @@ SocketChannel::SocketChannel(int socket_fd,
                              const IPEndPoint& loc,
                              const IPEndPoint& peer,
                              base::EventPump* pump)
-  : pump_(pump),
-    schedule_shutdown_(false),
-    local_ep_(loc),
-    remote_ep_(peer),
-    name_(loc.ToString()) {
-
-    fd_event_ = FdEvent::Create(this,
-                                socket_fd,
-                                base::LtEv::LT_EVENT_NONE);
+  : name_(loc.ToString()), pump_(pump), local_ep_(loc), remote_ep_(peer) {
+  fd_event_ = FdEvent::Create(this, socket_fd, base::LtEv::LT_EVENT_NONE);
 }
 
 void SocketChannel::SetReciever(SocketChannel::Reciever* rec) {
@@ -51,11 +46,32 @@ void SocketChannel::SetReciever(SocketChannel::Reciever* rec) {
 }
 
 void SocketChannel::StartChannel() {
-  CHECK(fd_event_ &&
-        reciever_ &&
-        pump_->IsInLoopThread() &&
-        status_ == Status::CONNECTING);
+  CHECK(reciever_ && pump_->IsInLoopThread() && status_ == Status::CONNECTING);
   setup_channel();
+}
+
+void SocketChannel::ShutdownChannel(bool half_close) {
+  DCHECK(pump_->IsInLoopThread());
+
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
+  schedule_shutdown_ = true;
+  if (half_close) {
+    if (!fd_event_->IsWriteEnable()) {
+      fd_event_->EnableWriting();
+    }
+    SetChannelStatus(Status::CLOSING);
+    return;
+  }
+
+  HandleClose(fd_event_.get());
+}
+
+void SocketChannel::ShutdownWithoutNotify() {
+  DCHECK(pump_->IsInLoopThread());
+
+  if (IsConnected()) {
+    close_channel();
+  }
 }
 
 bool SocketChannel::TryFlush() {
@@ -63,8 +79,24 @@ bool SocketChannel::TryFlush() {
   return true;
 }
 
-void SocketChannel::setup_channel() {
+bool SocketChannel::HandleError(base::FdEvent* event) {
+  int err = socketutils::GetSocketError(fd_event_->fd());
+  VLOG(GLOG_VERROR) << "socket error:" << base::StrError(err);
+  return HandleClose(event);
+}
 
+bool SocketChannel::HandleClose(base::FdEvent* event) {
+  DCHECK(pump_->IsInLoopThread());
+  VLOG(GLOG_VTRACE) << "socket close, " << ChannelInfo();
+
+  if (status_ != Status::CLOSED) {
+    close_channel();
+  }
+  reciever_->OnChannelClosed(this);
+  return false;  // disable next event
+}
+
+void SocketChannel::setup_channel() {
   fd_event_->EnableReading();
   pump_->InstallFdEvent(fd_event_.get());
 
@@ -92,21 +124,18 @@ std::string SocketChannel::remote_name() const {
 
 std::string SocketChannel::ChannelInfo() const {
   std::ostringstream oss;
-  oss << "[fd:" << binded_fd()
-    << ", this:" << this
-    << ", local:" << local_name()
-    << ", remote:" << remote_name()
-    << ", status:" << StatusAsString() << "]";
+  oss << "[fd:" << binded_fd() << ", this:" << this
+      << ", local:" << local_name() << ", remote:" << remote_name()
+      << ", status:" << StatusAsString() << "]";
   return oss.str();
 }
-
 
 void SocketChannel::SetChannelStatus(Status st) {
   status_ = st;
 }
 
 const std::string SocketChannel::StatusAsString() const {
-  switch(status_) {
+  switch (status_) {
     case Status::CONNECTING:
       return "CONNECTING";
     case Status::CONNECTED:
@@ -116,9 +145,10 @@ const std::string SocketChannel::StatusAsString() const {
     case Status::CLOSED:
       return "CLOSED";
     default:
-    	break;
+      break;
   }
   return "UNKNOWN";
 }
 
-}}
+}  // namespace net
+}  // namespace lt

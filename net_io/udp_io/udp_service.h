@@ -18,16 +18,16 @@
 #ifndef _NET_IO_UDP_SERVICE_H_H_
 #define _NET_IO_UDP_SERVICE_H_H_
 
+#include <net_io/base/sockaddr_storage.h>
+#include <sys/socket.h>
 #include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
-#include <sys/socket.h>
 #include <vector>
-#include "udp_context.h"
-#include <net_io/base/sockaddr_storage.h>
 #include "base/message_loop/fd_event.h"
+#include "udp_context.h"
 
 namespace lt {
 namespace net {
@@ -35,28 +35,25 @@ namespace net {
 class UDPService;
 typedef std::shared_ptr<UDPService> RefUDPService;
 
-
-#define LT_UDP_MTU_SIZE (2048-64*2)
+#define LT_UDP_MTU_SIZE (2048 - 64 * 2)
 
 typedef struct IOVecBuffer {
   IOVecBuffer() {
     LOG(INFO) << " construct buffer";
     iovec_.iov_base = buffer_;
-    iovec_.iov_len  = LT_UDP_MTU_SIZE;
+    iovec_.iov_len = LT_UDP_MTU_SIZE;
   }
-  const char* Buffer() const {return buffer_;}
+  const char* Buffer() const { return buffer_; }
 
-  struct iovec  iovec_;
-  char  buffer_[LT_UDP_MTU_SIZE];
+  struct iovec iovec_;
+  char buffer_[LT_UDP_MTU_SIZE];
   SockaddrStorage src_addr_;
-}IOVecBuffer;
+} IOVecBuffer;
 //__attribute__ ((aligned (64)));
 
 typedef struct UDPBufferDetail {
   UDPBufferDetail(struct mmsghdr* hdr, IOVecBuffer* buffer)
-    : mmsg_hdr(hdr),
-      buffer(buffer) {
-  }
+    : mmsg_hdr(hdr), buffer(buffer) {}
   nonstd::string_view data() const {
     if (mmsg_hdr == nullptr || buffer == nullptr) {
       return nonstd::string_view();
@@ -70,15 +67,13 @@ typedef struct UDPBufferDetail {
 
 class UDPPollBuffer final {
 public:
-  UDPPollBuffer(size_t count)
-    : iovec_buf_(count),
-      mmsghdr_(count) {
+  UDPPollBuffer(size_t count) : iovec_buf_(count), mmsghdr_(count) {
     for (int i = 0; i < mmsghdr_.size(); i++) {
-      struct mmsghdr *msg = &mmsghdr_[i];
+      struct mmsghdr* msg = &mmsghdr_[i];
       IOVecBuffer& buffer = iovec_buf_[i];
 
-      msg->msg_hdr.msg_control=0;
-      msg->msg_hdr.msg_controllen=0;
+      msg->msg_hdr.msg_control = 0;
+      msg->msg_hdr.msg_controllen = 0;
       msg->msg_hdr.msg_iovlen = 1;
       msg->msg_hdr.msg_iov = &buffer.iovec_;
       msg->msg_hdr.msg_name = buffer.src_addr_.AsSockAddr();
@@ -86,8 +81,8 @@ public:
     }
   }
 
-  std::size_t Count() const {return mmsghdr_.size();};
-  std::size_t BufferSize() const {return LT_UDP_MTU_SIZE;};
+  std::size_t Count() const { return mmsghdr_.size(); };
+  std::size_t BufferSize() const { return LT_UDP_MTU_SIZE; };
 
   UDPBufferDetail GetBufferDetail(size_t index) {
     return {&(mmsghdr_[index]), &iovec_buf_[index]};
@@ -96,6 +91,7 @@ public:
   struct mmsghdr* GetMmsghdr() {
     return &mmsghdr_[0];
   }
+
 private:
   std::vector<struct mmsghdr> mmsghdr_;
   std::vector<IOVecBuffer> iovec_buf_;
@@ -105,14 +101,13 @@ class UDPService : public EnableShared(UDPService),
                    public base::FdEvent::Handler {
 public:
   class Reciever {
-    public:
-      virtual void OnDataRecieve(UDPIOContextPtr context) = 0;
+  public:
+    virtual void OnDataRecieve(UDPIOContextPtr context) = 0;
   };
 
 public:
-  ~UDPService() {};
-  static RefUDPService Create(base::MessageLoop* io,
-                              const IPEndPoint& ep);
+  ~UDPService(){};
+  static RefUDPService Create(base::MessageLoop* io, const IPEndPoint& ep);
 
   void StartService();
   void StopService();
@@ -120,7 +115,7 @@ public:
 private:
   UDPService(base::MessageLoop* io, const IPEndPoint& ep);
 
-  //override from FdEvent::Handler
+  // override from FdEvent::Handler
   bool HandleRead(base::FdEvent* fd_event) override;
   bool HandleWrite(base::FdEvent* fd_event) override;
   bool HandleError(base::FdEvent* fd_event) override;
@@ -135,5 +130,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(UDPService);
 };
 
-}}
+}  // namespace net
+}  // namespace lt
 #endif

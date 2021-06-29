@@ -1,9 +1,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <atomic>
+#include <fstream>
 #include <iostream>
 #include <sstream>
-#include <fstream>
 #include <string>
 #include "components/inverted_indexer/indexer.h"
 
@@ -87,13 +87,11 @@ TEST_CASE("indexer_file", "[load document from text file]") {
 
   indexer.BuildIndexer();
 
-  //typedef std::map<std::string, std::vector<std::string>> IndexerQuerys;
-  component::IndexerQuerys querys = {
-    {"source", {"2", "desc_unknown"}},
-    {"desc", {"desc01", "desc_unknown"}},
-    //{"name", {"namexx", "name_unknown"}},
-    {"title", {"title01", "title_unknown"}}
-  };
+  // typedef std::map<std::string, std::vector<std::string>> IndexerQuerys;
+  component::IndexerQuerys querys = {{"source", {"2", "desc_unknown"}},
+                                     {"desc", {"desc01", "desc_unknown"}},
+                                     //{"name", {"namexx", "name_unknown"}},
+                                     {"title", {"title01", "title_unknown"}}};
   component::Json query_request = querys;
   component::Json query_result = indexer.UnifyQuery(querys);
 

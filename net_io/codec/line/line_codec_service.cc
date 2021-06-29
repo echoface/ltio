@@ -15,31 +15,29 @@
  * limitations under the License.
  */
 
+#include "line_codec_service.h"
 #include "base/message_loop/message_loop.h"
 #include "line_message.h"
-#include "line_codec_service.h"
 
-#include "glog/logging.h"
 #include <net_io/io_buffer.h>
 #include <net_io/tcp_channel.h>
+#include "glog/logging.h"
 
 namespace lt {
 namespace net {
 
 LineCodecService::LineCodecService(base::MessageLoop* loop)
-  : CodecService(loop) {
-}
+  : CodecService(loop) {}
 
-LineCodecService::~LineCodecService() {
-}
+LineCodecService::~LineCodecService() {}
 
 void LineCodecService::OnDataFinishSend(const SocketChannel* channel) {
   ;
 }
 
-void LineCodecService::OnDataReceived(const SocketChannel*, IOBuffer *buf) {
+void LineCodecService::OnDataReceived(const SocketChannel*, IOBuffer* buf) {
   VLOG(GLOG_VTRACE) << __FUNCTION__ << " enter";
-  const char* line_crlf =  buf->FindCRLF();
+  const char* line_crlf = buf->FindCRLF();
   if (!line_crlf) {
     return;
   }
@@ -54,7 +52,7 @@ void LineCodecService::OnDataReceived(const SocketChannel*, IOBuffer *buf) {
     std::string& body = msg->MutableBody();
     body.assign(start, len);
 
-    buf->Consume(len + 2/*lenth of /r/n*/);
+    buf->Consume(len + 2 /*lenth of /r/n*/);
 
     if (delegate_) {
       delegate_->OnCodecMessage(RefCast(CodecMessage, msg));
@@ -77,8 +75,10 @@ bool LineCodecService::SendRequest(CodecMessage* req) {
   return SendMessage(req);
 }
 
-bool LineCodecService::SendResponse(const CodecMessage* req, CodecMessage* res) {
+bool LineCodecService::SendResponse(const CodecMessage* req,
+                                    CodecMessage* res) {
   return SendMessage(res);
 };
 
-}}//end of file
+}  // namespace net
+}  // namespace lt

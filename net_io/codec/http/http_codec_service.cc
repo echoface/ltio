@@ -15,15 +15,14 @@
  * limitations under the License.
  */
 
-#include "base/message_loop/message_loop.h"
-#include "http_constants.h"
 #include "http_codec_service.h"
-
-#include "glog/logging.h"
+#include <base/utils/gzip/gzip_utils.h>
+#include <net_io/codec/codec_message.h>
 #include <net_io/io_buffer.h>
 #include <net_io/tcp_channel.h>
-#include <net_io/codec/codec_message.h>
-#include <base/utils/gzip/gzip_utils.h>
+#include "base/message_loop/message_loop.h"
+#include "glog/logging.h"
+#include "http_constants.h"
 
 namespace lt {
 namespace net {
@@ -32,38 +31,35 @@ static const int32_t kMeanHeaderSize = 32;
 static const int32_t kHttpMsgReserveSize = 64;
 static const int32_t kCompressionThreshold = 4096;
 
-//static
+// static
 http_parser_settings HttpCodecService::req_parser_settings_ = {
-  .on_message_begin = &ReqParseContext::OnHttpRequestBegin,
-  .on_url = &ReqParseContext::OnUrlParsed,
-  .on_status = &ReqParseContext::OnStatusCodeParsed,
-  .on_header_field = &ReqParseContext::OnHeaderFieldParsed,
-  .on_header_value = &ReqParseContext::OnHeaderValueParsed,
-  .on_headers_complete = &ReqParseContext::OnHeaderFinishParsed,
-  .on_body = &ReqParseContext::OnBodyParsed,
-  .on_message_complete = &ReqParseContext::OnHttpRequestEnd,
-  .on_chunk_header = &ReqParseContext::OnChunkHeader,
-  .on_chunk_complete = &ReqParseContext::OnChunkFinished,
+    .on_message_begin = &ReqParseContext::OnHttpRequestBegin,
+    .on_url = &ReqParseContext::OnUrlParsed,
+    .on_status = &ReqParseContext::OnStatusCodeParsed,
+    .on_header_field = &ReqParseContext::OnHeaderFieldParsed,
+    .on_header_value = &ReqParseContext::OnHeaderValueParsed,
+    .on_headers_complete = &ReqParseContext::OnHeaderFinishParsed,
+    .on_body = &ReqParseContext::OnBodyParsed,
+    .on_message_complete = &ReqParseContext::OnHttpRequestEnd,
+    .on_chunk_header = &ReqParseContext::OnChunkHeader,
+    .on_chunk_complete = &ReqParseContext::OnChunkFinished,
 };
 
 http_parser_settings HttpCodecService::res_parser_settings_ = {
-  .on_message_begin = &ResParseContext::OnHttpResponseBegin,
-  .on_url = &ResParseContext::OnUrlParsed,
-  .on_status = &ResParseContext::OnStatusCodeParsed,
-  .on_header_field = &ResParseContext::OnHeaderFieldParsed,
-  .on_header_value = &ResParseContext::OnHeaderValueParsed,
-  .on_headers_complete = &ResParseContext::OnHeaderFinishParsed,
-  .on_body = &ResParseContext::OnBodyParsed,
-  .on_message_complete = &ResParseContext::OnHttpResponseEnd,
-  .on_chunk_header = &ResParseContext::OnChunkHeader,
-  .on_chunk_complete = &ResParseContext::OnChunkFinished,
+    .on_message_begin = &ResParseContext::OnHttpResponseBegin,
+    .on_url = &ResParseContext::OnUrlParsed,
+    .on_status = &ResParseContext::OnStatusCodeParsed,
+    .on_header_field = &ResParseContext::OnHeaderFieldParsed,
+    .on_header_value = &ResParseContext::OnHeaderValueParsed,
+    .on_headers_complete = &ResParseContext::OnHeaderFinishParsed,
+    .on_body = &ResParseContext::OnBodyParsed,
+    .on_message_complete = &ResParseContext::OnHttpResponseEnd,
+    .on_chunk_header = &ResParseContext::OnChunkHeader,
+    .on_chunk_complete = &ResParseContext::OnChunkFinished,
 };
 
 HttpCodecService::HttpCodecService(base::MessageLoop* loop)
-  : CodecService(loop),
-    request_context_(nullptr),
-    response_context_(nullptr) {
-
+  : CodecService(loop), request_context_(nullptr), response_context_(nullptr) {
   request_context_ = new ReqParseContext();
   response_context_ = new ResParseContext();
 }
@@ -73,54 +69,60 @@ HttpCodecService::~HttpCodecService() {
   delete response_context_;
 }
 
-void HttpCodecService::OnDataFinishSend(const SocketChannel* channel) {
+bool HttpCodecService::UseSSLChannel() const {
+  return protocol_ == "https" ? true : false;
 }
 
-void HttpCodecService::OnDataReceived(const SocketChannel* channel, IOBuffer *buf) {
+void HttpCodecService::OnDataFinishSend(const SocketChannel* channel) {}
+
+void HttpCodecService::OnDataReceived(const SocketChannel* channel,
+                                      IOBuffer* buf) {
   DCHECK(channel == channel_.get());
 
   VLOG(GLOG_VTRACE) << __FUNCTION__ << " buffer_size:" << buf->CanReadSize();
 
-  bool success = IsServerSide() ?
-    ParseHttpRequest(channel_.get(), buf) : ParseHttpResponse(channel_.get(), buf);
+  bool success = IsServerSide() ? ParseHttpRequest(channel_.get(), buf)
+                                : ParseHttpResponse(channel_.get(), buf);
 
   if (!success) {
-  	CloseService();
+    CloseService();
   }
 }
 
-bool HttpCodecService::ParseHttpRequest(TcpChannel* channel, IOBuffer* buf) {
+bool HttpCodecService::ParseHttpRequest(SocketChannel* channel, IOBuffer* buf) {
   size_t buffer_size = buf->CanReadSize();
   const char* buffer_start = (const char*)buf->GetRead();
   http_parser* parser = request_context_->Parser();
 
+  size_t nparsed = http_parser_execute(parser, &req_parser_settings_,
+                                       buffer_start, buffer_size);
 
-  size_t nparsed = http_parser_execute(parser,
-                                       &req_parser_settings_,
-                                       buffer_start,
-                                       buffer_size);
-
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << " http_parser_execute consumed size:" << nparsed;
+  VLOG(GLOG_VTRACE) << __FUNCTION__
+                    << " http_parser_execute consumed size:" << nparsed;
   buf->Consume(nparsed);
 
   if (parser->upgrade) {
     LOG(ERROR) << " Not Supported Now";
 
     request_context_->current_.reset();
-    channel->Send(HttpConstant::kBadRequest.data(), HttpConstant::kBadRequest.size());
+    channel->Send(HttpConstant::kBadRequest.data(),
+                  HttpConstant::kBadRequest.size());
 
     return false;
   } else if (nparsed != buffer_size) {
-    LOG(ERROR) << " Parse Occur ERROR, nparsed" << nparsed << " buffer_size:" << buffer_size;
+    LOG(ERROR) << " Parse Occur ERROR, nparsed" << nparsed
+               << " buffer_size:" << buffer_size;
 
     request_context_->current_.reset();
-    channel->Send(HttpConstant::kBadRequest.data(), HttpConstant::kBadRequest.size());
+    channel->Send(HttpConstant::kBadRequest.data(),
+                  HttpConstant::kBadRequest.size());
 
     return false;
   }
 
   if (!delegate_) {
-    LOG(ERROR) << "No message handler for this http protocol service message, shutdown this channel";
+    LOG(ERROR) << "No message handler for this http protocol service message, "
+                  "shutdown this channel";
     return false;
   }
 
@@ -130,25 +132,25 @@ bool HttpCodecService::ParseHttpRequest(TcpChannel* channel, IOBuffer* buf) {
 
     message->SetIOCtx(shared_from_this());
     CHECK(message->GetMessageType() == MessageType::kRequest);
-    VLOG(GLOG_VTRACE) << " pass message to message reciever" << channel_->ChannelInfo();
+    VLOG(GLOG_VTRACE) << " pass message to message reciever"
+                      << channel_->ChannelInfo();
     delegate_->OnCodecMessage(RefCast(CodecMessage, message));
   }
   return true;
 }
 
-bool HttpCodecService::ParseHttpResponse(TcpChannel* channel, IOBuffer* buf) {
+bool HttpCodecService::ParseHttpResponse(SocketChannel* channel,
+                                         IOBuffer* buf) {
   VLOG(GLOG_VTRACE) << __FUNCTION__ << " enter";
 
   size_t buffer_size = buf->CanReadSize();
   const char* buffer_start = (const char*)buf->GetRead();
   http_parser* parser = response_context_->Parser();
-  size_t nparsed = http_parser_execute(parser,
-                                       &res_parser_settings_,
-                                       buffer_start,
-                                       buffer_size);
+  size_t nparsed = http_parser_execute(parser, &res_parser_settings_,
+                                       buffer_start, buffer_size);
 
   buf->Consume(nparsed);
-  if (parser->upgrade) { //websockt
+  if (parser->upgrade) {  // websockt
     LOG(ERROR) << " Not Supported Now";
     response_context_->current_.reset();
     return false;
@@ -174,8 +176,9 @@ bool HttpCodecService::ParseHttpResponse(TcpChannel* channel, IOBuffer* buf) {
   return true;
 }
 
-//static
-bool HttpCodecService::RequestToBuffer(const HttpRequest* request, IOBuffer* buffer) {
+// static
+bool HttpCodecService::RequestToBuffer(const HttpRequest* request,
+                                       IOBuffer* buffer) {
   CHECK(request && buffer);
   int32_t guess_size = kHttpMsgReserveSize + request->Body().size();
   guess_size += request->Headers().size() * kMeanHeaderSize;
@@ -186,7 +189,7 @@ bool HttpCodecService::RequestToBuffer(const HttpRequest* request, IOBuffer* buf
   buffer->WriteString(request->RequestUrl());
   buffer->WriteString(HttpConstant::kBlankSpace);
 
-  char v[11]; //"HTTP/1.1\r\n"
+  char v[11];  //"HTTP/1.1\r\n"
   snprintf(v, 11, "HTTP/1.%d\r\n", request->VersionMinor() == 1 ? 1 : 0);
   buffer->WriteRawData(v, 10);
 
@@ -198,9 +201,9 @@ bool HttpCodecService::RequestToBuffer(const HttpRequest* request, IOBuffer* buf
   }
 
   if (!request->HasHeaderField(HttpConstant::kConnection)) {
-    buffer->WriteString(request->IsKeepAlive() ?
-                        HttpConstant::kHeaderKeepAlive :
-                        HttpConstant::kHeaderNotKeepAlive);
+    buffer->WriteString(request->IsKeepAlive()
+                            ? HttpConstant::kHeaderKeepAlive
+                            : HttpConstant::kHeaderNotKeepAlive);
   }
 
   if (!request->HasHeaderField(HttpConstant::kAcceptEncoding)) {
@@ -225,7 +228,7 @@ bool HttpCodecService::RequestToBuffer(const HttpRequest* request, IOBuffer* buf
 }
 
 bool HttpCodecService::SendRequest(CodecMessage* message) {
-	CHECK(message->GetMessageType() == MessageType::kRequest);
+  CHECK(message->GetMessageType() == MessageType::kRequest);
 
   auto request = static_cast<HttpRequest*>(message);
   BeforeSendRequest(request);
@@ -236,7 +239,8 @@ bool HttpCodecService::SendRequest(CodecMessage* message) {
   return channel_->TryFlush();
 }
 
-bool HttpCodecService::SendResponse(const CodecMessage* req, CodecMessage* res) {
+bool HttpCodecService::SendResponse(const CodecMessage* req,
+                                    CodecMessage* res) {
   HttpResponse* response = static_cast<HttpResponse*>(res);
   const HttpRequest* request = static_cast<const HttpRequest*>(req);
 
@@ -265,11 +269,14 @@ bool HttpCodecService::SendResponse(const CodecMessage* req, CodecMessage* res) 
   return channel_->TryFlush();
 };
 
-//static
-bool HttpCodecService::ResponseToBuffer(const HttpResponse* response, IOBuffer* buffer) {
+// static
+bool HttpCodecService::ResponseToBuffer(const HttpResponse* response,
+                                        IOBuffer* buffer) {
   CHECK(response && buffer);
 
-  int32_t guess_size = kHttpMsgReserveSize + response->Headers().size() * kMeanHeaderSize + response->Body().size();
+  int32_t guess_size = kHttpMsgReserveSize +
+                       response->Headers().size() * kMeanHeaderSize +
+                       response->Body().size();
   buffer->EnsureWritableSize(guess_size);
 
   std::ostringstream oss;
@@ -286,9 +293,9 @@ bool HttpCodecService::ResponseToBuffer(const HttpResponse* response, IOBuffer* 
   }
 
   if (!response->HasHeaderField(HttpConstant::kConnection)) {
-    buffer->WriteString(response->IsKeepAlive() ?
-                        HttpConstant::kHeaderKeepAlive :
-                        HttpConstant::kHeaderNotKeepAlive);
+    buffer->WriteString(response->IsKeepAlive()
+                            ? HttpConstant::kHeaderKeepAlive
+                            : HttpConstant::kHeaderNotKeepAlive);
   }
 
   if (!response->HasHeaderField(HttpConstant::kContentLength)) {
@@ -308,9 +315,11 @@ bool HttpCodecService::ResponseToBuffer(const HttpResponse* response, IOBuffer* 
   return true;
 }
 
-const RefCodecMessage HttpCodecService::NewResponse(const CodecMessage* request)  {
+const RefCodecMessage HttpCodecService::NewResponse(
+    const CodecMessage* request) {
   CHECK(request && request->GetMessageType() == MessageType::kRequest);
-  const HttpRequest* http_request = (HttpRequest*)request;//static_cast<HttpRequest*>(request);
+  const HttpRequest* http_request =
+      (HttpRequest*)request;  // static_cast<HttpRequest*>(request);
 
   RefHttpResponse http_res = HttpResponse::CreateWithCode(500);
 
@@ -320,15 +329,15 @@ const RefCodecMessage HttpCodecService::NewResponse(const CodecMessage* request)
 }
 
 void HttpCodecService::BeforeSendRequest(HttpRequest* out_message) {
-
   HttpRequest* request = static_cast<HttpRequest*>(out_message);
   if (request->Body().size() > kCompressionThreshold &&
       !request->HasHeaderField(HttpConstant::kContentEncoding)) {
-
     std::string compressed_body;
-    if (0 == base::Gzip::compress_gzip(request->Body(), compressed_body)) { //success
+    if (0 == base::Gzip::compress_gzip(request->Body(),
+                                       compressed_body)) {  // success
       request->InsertHeader(HttpConstant::kContentEncoding, "gzip");
-      request->InsertHeader(HttpConstant::kContentLength, std::to_string(compressed_body.size()));
+      request->InsertHeader(HttpConstant::kContentLength,
+                            std::to_string(compressed_body.size()));
       request->body_ = std::move(compressed_body);
     }
   }
@@ -338,20 +347,23 @@ void HttpCodecService::BeforeSendRequest(HttpRequest* out_message) {
   }
 }
 
-bool HttpCodecService::BeforeSendResponseMessage(const HttpRequest* request, HttpResponse* response) {
-  //response compression if needed
+bool HttpCodecService::BeforeSendResponseMessage(const HttpRequest* request,
+                                                 HttpResponse* response) {
+  // response compression if needed
   if (response->Body().size() > kCompressionThreshold &&
       !response->HasHeaderField(HttpConstant::kContentEncoding)) {
-
-    const std::string& accept = request->GetHeader(HttpConstant::kAcceptEncoding);
+    const std::string& accept =
+        request->GetHeader(HttpConstant::kAcceptEncoding);
     std::string compressed_body;
     if (accept.find("gzip") != std::string::npos) {
-      if (0 == base::Gzip::compress_gzip(response->Body(), compressed_body)) { //success
+      if (0 == base::Gzip::compress_gzip(response->Body(),
+                                         compressed_body)) {  // success
         response->body_ = std::move(compressed_body);
         response->InsertHeader("Content-Encoding", "gzip");
       }
     } else if (accept.find("deflate") != std::string::npos) {
-      if (0 == base::Gzip::compress_deflate(response->Body(), compressed_body)) {
+      if (0 ==
+          base::Gzip::compress_deflate(response->Body(), compressed_body)) {
         response->body_ = std::move(compressed_body);
         response->InsertHeader("Content-Encoding", "deflate");
       }
@@ -360,4 +372,5 @@ bool HttpCodecService::BeforeSendResponseMessage(const HttpRequest* request, Htt
   return true;
 }
 
-}}//end namespace
+}  // namespace net
+}  // namespace lt

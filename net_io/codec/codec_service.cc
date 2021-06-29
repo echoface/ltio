@@ -18,39 +18,35 @@
 #include "codec_service.h"
 #include "codec_message.h"
 
-#include <unistd.h>
 #include <sys/mman.h>
+#include <unistd.h>
 
-#include "glog/logging.h"
-#include <net_io/tcp_channel.h>
 #include <base/message_loop/message_loop.h>
+#include <net_io/tcp_channel.h>
+#include <net_io/tcp_channel_ssl.h>
+#include "glog/logging.h"
 
 namespace lt {
 namespace net {
 
-CodecService::CodecService(base::MessageLoop* loop)
-  : binded_loop_(loop) {
-}
+CodecService::CodecService(base::MessageLoop* loop) : binded_loop_(loop) {}
 
 CodecService::~CodecService() {
   VLOG(GLOG_VTRACE) << __func__ << " this@" << this << " gone";
 };
 
 void CodecService::SetDelegate(CodecService::Delegate* d) {
-	delegate_ = d;
+  delegate_ = d;
+}
+
+void CodecService::BindSocket(SocketChannelPtr&& channel) {
+  DCHECK(!channel_.get());
+  channel_ = std::move(channel);
+  channel_->SetReciever(this);
 }
 
 bool CodecService::IsConnected() const {
-	return channel_ ? channel_->IsConnected() : false;
-}
-
-bool CodecService::BindToSocket(int fd,
-                                const IPEndPoint& local,
-                                const IPEndPoint& peer) {
-  //TODO: FreeList and reset may boost alot
-  channel_ = TcpChannel::Create(fd, local, peer, Pump());
-	channel_->SetReciever(this);
-  return true;
+  return channel_ ? channel_->IsConnected() : false;
 }
 
 void CodecService::StartProtocolService() {
@@ -59,12 +55,12 @@ void CodecService::StartProtocolService() {
 }
 
 void CodecService::CloseService(bool block_callback) {
-	DCHECK(binded_loop_->IsInLoopThread());
+  DCHECK(binded_loop_->IsInLoopThread());
 
-	BeforeCloseService();
+  BeforeCloseService();
 
   if (!block_callback) {
-	  return channel_->ShutdownChannel(false);
+    return channel_->ShutdownChannel(false);
   }
   return channel_->ShutdownWithoutNotify();
 }
@@ -74,12 +70,12 @@ void CodecService::SetIsServerSide(bool server_side) {
 }
 
 void CodecService::OnChannelClosed(const SocketChannel* channel) {
-	CHECK(channel == channel_.get());
+  CHECK(channel == channel_.get());
 
-	VLOG(GLOG_VTRACE) << __FUNCTION__ << channel_->ChannelInfo() << " closed";
-	RefCodecService guard = shared_from_this();
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << channel_->ChannelInfo() << " closed";
+  RefCodecService guard = shared_from_this();
 
-	AfterChannelClosed();
+  AfterChannelClosed();
 
   delegate_->OnProtocolServiceGone(guard);
 }
@@ -89,4 +85,5 @@ void CodecService::OnChannelReady(const SocketChannel*) {
   delegate_->OnProtocolServiceReady(guard);
 }
 
-}}// end namespace
+}  // namespace net
+}  // namespace lt

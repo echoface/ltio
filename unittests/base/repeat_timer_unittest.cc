@@ -12,17 +12,17 @@ TEST_CASE("repeat_timer.normal", "[repeating time test]") {
   int64_t total_time_ms = 30000;
 
   base::RepeatingTimer timer(&loop);
-  timer.Start(interval_ms, [&]() {
-    invoke_count++;
-  });
+  timer.Start(interval_ms, [&]() { invoke_count++; });
 
   loop.PostDelayTask(NewClosure([&]() {
-    timer.Stop();
-    loop.QuitLoop();
-  }), total_time_ms + 300);
+                       timer.Stop();
+                       loop.QuitLoop();
+                     }),
+                     total_time_ms + 300);
 
   loop.WaitLoopEnd();
-  LOG(INFO) << "expect:" << total_time_ms/interval_ms << " actually:" << invoke_count;
+  LOG(INFO) << "expect:" << total_time_ms / interval_ms
+            << " actually:" << invoke_count;
 }
 
 TEST_CASE("repeat_timer.stop", "[repeating time stop test]") {
@@ -33,29 +33,21 @@ TEST_CASE("repeat_timer.stop", "[repeating time stop test]") {
   int64_t interval_ms = 5;
   int64_t total_time_ms = 5000;
 
-  loop.PostDelayTask(NewClosure([&]() {
-    loop.QuitLoop();
-  }), total_time_ms);
+  loop.PostDelayTask(NewClosure([&]() { loop.QuitLoop(); }), total_time_ms);
 
   base::RepeatingTimer timer(&loop);
-  timer.Start(interval_ms, [&]() {
-    invoke_count++;
-  });
+  timer.Start(interval_ms, [&]() { invoke_count++; });
 
   LOG(INFO) << " test stop and start again out of loop call stop<<<<< ";
   sleep(1);
   timer.Stop();
   LOG(INFO) << " timer stoped...";
   bool restart_run = false;
-  timer.Start(10, [&]() {
-    restart_run = true;
-  });
+  timer.Start(10, [&]() { restart_run = true; });
 
   sleep(1);
   LOG(INFO) << " test stop and start again by timer.start call <<<<< ";
-  timer.Start(50, [&]() {
-    restart_run = true;
-  });
+  timer.Start(50, [&]() { restart_run = true; });
 
   sleep(1);
   timer.Stop();

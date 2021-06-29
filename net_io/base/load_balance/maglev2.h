@@ -41,8 +41,8 @@ namespace lb {
  * (it should be unique value per endpoint for CH to work as expected)
  *
  *  0 < num < uint32_t_MAX/2 and unique
- *  0 < weight < uint32_t_MAX/2 //NOTE: v1 need sum(weight) of all node about ring_size
- *  unique(hash) in all endpoints
+ *  0 < weight < uint32_t_MAX/2 //NOTE: v1 need sum(weight) of all node about
+ * ring_size unique(hash) in all endpoints
  */
 struct Endpoint {
   uint32_t num;
@@ -58,18 +58,21 @@ using LookupTable = std::vector<int>;
 using EndpointList = std::vector<Endpoint>;
 
 class MaglevV2 {
- public:
+public:
   /**
    * @param std::vector<Endpoints>& endpoints, which will be used for CH
    * @param uint32_t ring_size size of the CH ring
    * @return std::vector<int> vector, which describe CH ring.
    */
-   static LookupTable GenerateHashRing(EndpointList endpoints,
-                                       const uint32_t ring_size = MAGLEVE_CH_RINGSIZE);
+  static LookupTable GenerateHashRing(
+      EndpointList endpoints,
+      const uint32_t ring_size = MAGLEVE_CH_RINGSIZE);
 
-   static uint32_t RingSize() {return MAGLEVE_CH_RINGSIZE;}
+  static uint32_t RingSize() { return MAGLEVE_CH_RINGSIZE; }
 };
 
-}}}//end namespace lt::net::lb 
+}  // namespace lb
+}  // namespace net
+}  // namespace lt
 
-#endif //LT_NET_BASE_LB_MAGLEVEV2_H_
+#endif  // LT_NET_BASE_LB_MAGLEVEV2_H_

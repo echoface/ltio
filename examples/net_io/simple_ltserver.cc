@@ -13,6 +13,7 @@
 #include "base/message_loop/message_loop.h"
 
 #include "net_io/server/generic_server.h"
+#include "net_io/tcp_channel_ssl.h"
 
 #include <csignal>
 
@@ -21,6 +22,10 @@ using namespace lt;
 using namespace base;
 
 #define USE_CORO_DISPATCH 1
+
+DEFINE_bool(ssl, false, "use ssl");
+DEFINE_string(key, "cert/server.key", "use ssl server key file");
+DEFINE_string(cert, "cert/server.crt", "use ssl server cert file");
 
 DEFINE_string(raw, "0.0.0.0:5005", "host:port used for raw service listen on");
 DEFINE_string(http, "0.0.0.0:5006", "host:port used for http service listen on");
@@ -117,9 +122,15 @@ public:
       .WithAddress(base::StrUtil::Concat("raw://", FLAGS_raw))
       .ServeAddress(std::bind(&SimpleApp::HandleRawRequest, this, std::placeholders::_1));
 
+    std::string http_address = base::StrUtil::Concat("http://", FLAGS_http);
+    if (FLAGS_ssl) {
+      http_address = base::StrUtil::Concat("https://", FLAGS_http);
+      lt::net::ssl_ctx_init(FLAGS_cert.c_str(), FLAGS_key.c_str());
+    }
+
     http_server
       .WithIOLoops(loops)
-      .WithAddress(base::StrUtil::Concat("http://", FLAGS_http))
+      .WithAddress(http_address)
       .ServeAddress(std::bind(&SimpleApp::HandleHttpRequest, this, std::placeholders::_1));
 
   }
@@ -315,8 +326,11 @@ int main(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   gflags::SetUsageMessage("usage: exec --http=ip:port --raw=ip:port --noredis_client ...");
 
+#ifdef LTIO_WITH_OPENSSL
   //google::InitGoogleLogging(argv[0]);
   //google::SetVLOGLevel(NULL, 26);
+  LOG(INFO) << "simple server compiled with openssl support";
+#endif
 
   main_loop.SetLoopName("main");
   main_loop.Start();

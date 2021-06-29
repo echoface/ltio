@@ -1,17 +1,17 @@
 #ifndef _COMPONENT_BLOOMFILTER_H_H_
 #define _COMPONENT_BLOOMFILTER_H_H_
 
-#include <vector>
-#include <math.h>
 #include <inttypes.h>
+#include <math.h>
 #include <iostream>
+#include <vector>
 
 namespace component {
 
 namespace __detail {
 
 typedef struct {
-  double  p;
+  double p;
   uint64_t n;
   uint64_t m;
   uint32_t k;
@@ -24,7 +24,7 @@ typedef struct {
    k = round((m / n) * log(2));
 */
 BFArgs Calculate(uint64_t n, double p);
-};
+};  // namespace __detail
 
 class BloomFilter {
 public:
@@ -46,5 +46,5 @@ private:
   __detail::BFArgs args;
 };
 
-};
+};  // namespace component
 #endif

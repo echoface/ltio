@@ -18,8 +18,8 @@
 #ifndef NET_COROWORKLOAD_DISPATCHER_H_H
 #define NET_COROWORKLOAD_DISPATCHER_H_H
 
-#include "workload_dispatcher.h"
 #include <base/closure/closure_task.h>
+#include "workload_dispatcher.h"
 
 namespace lt {
 namespace net {
@@ -33,5 +33,6 @@ public:
   bool SetWorkContext(CodecMessage* message) override;
 };
 
-}}
+}  // namespace net
+}  // namespace lt
 #endif

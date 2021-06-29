@@ -22,8 +22,8 @@
 #include <functional>
 #include <memory>
 
-#include <base/base_micro.h>
 #include <base/base_constants.h>
+#include <base/base_micro.h>
 #include <base/closure/closure_task.h>
 #include <thirdparty/libaco/aco.h>
 
@@ -35,19 +35,16 @@ class Coroutine : public CoroBase, public EnableShared(Coroutine) {
 public:
   friend class CoroRunner;
 
-  static RefCoroutine CreateMain() {
-    return RefCoroutine(new Coroutine());
-  }
+  static RefCoroutine CreateMain() { return RefCoroutine(new Coroutine()); }
   static RefCoroutine Create(CoroEntry entry, Coroutine* main_co) {
     return RefCoroutine(new Coroutine(entry, main_co));
   }
 
   ~Coroutine() {
-
     VLOG(GLOG_VTRACE) << "coroutine gone!"
-      << " count:" << SystemCoroutineCount()
-      << " state:" << StateToString(state_)
-      << " main:" << (is_main() ? "True" : "False");
+                      << " count:" << SystemCoroutineCount()
+                      << " state:" << StateToString(state_)
+                      << " main:" << (is_main() ? "True" : "False");
 
     aco_destroy(coro_);
     coro_ = nullptr;
@@ -93,7 +90,6 @@ private:
   }
 
   Coroutine(CoroEntry entry, Coroutine* main_co) {
-
     SetState(CoroState::kInit);
     sstk_ = aco_share_stack_new(COROUTINE_STACK_SIZE);
     coro_ = aco_create(main_co->coro_, sstk_, 0, entry, this);
@@ -101,9 +97,9 @@ private:
     coro_counter_.fetch_add(1);
 
     VLOG(GLOG_VTRACE) << "coroutine born!"
-      << " count:" << coro_counter_.load()
-      << " state:" << StateToString(state_)
-      << " main:" << (is_main() ? "True" : "False");
+                      << " count:" << coro_counter_.load()
+                      << " state:" << StateToString(state_)
+                      << " main:" << (is_main() ? "True" : "False");
   }
 
   void SelfHolder(RefCoroutine& self) {
@@ -111,11 +107,12 @@ private:
     self_holder_ = self;
   }
 
-  void ReleaseSelfHolder() {self_holder_.reset();};
+  void ReleaseSelfHolder() { self_holder_.reset(); };
 
-  WeakCoroutine AsWeakPtr() {return shared_from_this();}
+  WeakCoroutine AsWeakPtr() { return shared_from_this(); }
 
-  bool is_main() const {return sstk_ == nullptr;}
+  bool is_main() const { return sstk_ == nullptr; }
+
 private:
   aco_t* coro_ = nullptr;
   aco_share_stack_t* sstk_ = nullptr;
@@ -124,5 +121,4 @@ private:
   DISALLOW_COPY_AND_ASSIGN(Coroutine);
 };
 
-}//end base
-
+}  // namespace base

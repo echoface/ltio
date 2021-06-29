@@ -1,26 +1,25 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <atomic>
+#include <fstream>
 #include <iostream>
 #include <sstream>
-#include <fstream>
 #include <string>
 
-#include "base/utils//rand_util.h"
 #include "base/time//time_utils.h"
+#include "base/utils//rand_util.h"
+#include "components//boolean_indexer/mock//mock_target.h"
+#include "components/boolean_indexer/builder/be_indexer_builder.h"
 #include "components/boolean_indexer/document.h"
 #include "components/boolean_indexer/id_generator.h"
-#include "components/boolean_indexer/builder/be_indexer_builder.h"
 #include "components/boolean_indexer/index_scanner.h"
-#include "components//boolean_indexer/mock//mock_target.h"
 
-#include "gperftools/profiler.h"
 #include <thirdparty/catch/catch.hpp>
+#include "gperftools/profiler.h"
 
 using namespace component;
 
 TEST_CASE("conjunction_gen_id", "[document and conjunction id]") {
-
   uint64_t conj_id = ConjUtil::GenConjID(120, 0, 5);
   REQUIRE(120 == ConjUtil::GetDocumentID(conj_id));
   REQUIRE(0 == ConjUtil::GetIndexInDoc(conj_id));
@@ -28,7 +27,6 @@ TEST_CASE("conjunction_gen_id", "[document and conjunction id]") {
 }
 
 TEST_CASE("conjunction_dump", "[dump document and conjunction id]") {
-
   component::BooleanExpr expr1("gender", {"man"}, true);
   std::cout << expr1 << std::endl;
 
@@ -44,44 +42,41 @@ TEST_CASE("conjunction_dump", "[dump document and conjunction id]") {
   component::Conjunction conj2;
   conj2.AddExpression(BooleanExpr("iplist", {"15", "20", "25"}));
   conj2.AddExpression(BooleanExpr("seglist", {"110", "157", "man_25_30"}));
-  conj2.AddExpression(BooleanExpr("exclude", {"item", "target", "object"}, true));
+  conj2.AddExpression(
+      BooleanExpr("exclude", {"item", "target", "object"}, true));
   conj2.SetConjunctionId(ConjUtil::GenConjID(120, 1, conj.size()));
   std::cout << conj2 << std::endl;
 }
 
-
 TEST_CASE("be_indexes_dump", "[dump indexes and conjunction id]") {
-
   BeIndexerBuilder builder;
 
   Document doc(1);
   doc.AddConjunction(new Conjunction({
-        {"age", {"15"}},
-        {"loc", {"sh"}},
-        {"sex", {"man"}},
-        {"tags", {"seg2"}},
-      }));
+      {"age", {"15"}},
+      {"loc", {"sh"}},
+      {"sex", {"man"}},
+      {"tags", {"seg2"}},
+  }));
   doc.AddConjunction(new Conjunction({
-        {"age", {"15"}},
-        {"loc", {"sh"}},
-        {"sex", {"female"}, true},
-        {"tags", {"seg1", "seg2"}},
-      }));
+      {"age", {"15"}},
+      {"loc", {"sh"}},
+      {"sex", {"female"}, true},
+      {"tags", {"seg1", "seg2"}},
+  }));
   builder.AddDocument(std::move(doc));
 
   Document doc2(2);
-  doc2.AddConjunction(new Conjunction(
-      {
-        {"loc", {"bj"}},
-        {"tags", {"seg1", "seg2"}},
-      }));
+  doc2.AddConjunction(new Conjunction({
+      {"loc", {"bj"}},
+      {"tags", {"seg1", "seg2"}},
+  }));
   builder.AddDocument(std::move(doc2));
 
   Document doc3(3);
-  doc3.AddConjunction(new Conjunction(
-      {
-        {"loc", {"bj"}, true},
-      }));
+  doc3.AddConjunction(new Conjunction({
+      {"loc", {"bj"}, true},
+  }));
   builder.AddDocument(std::move(doc3));
 
   auto indexer = builder.BuildIndexer();
@@ -108,7 +103,7 @@ TEST_CASE("be_indexes_dump", "[dump indexes and conjunction id]") {
 }
 
 TEST_CASE("be_posting_list", "[be posting list sort id]") {
-  Entries entrylist= {0, 1, 1, 4, 8, 20};
+  Entries entrylist = {0, 1, 1, 4, 8, 20};
 
   Attr attr("age", 0);
   EntriesCursor cursor(attr, entrylist);
@@ -127,7 +122,7 @@ TEST_CASE("be_posting_list", "[be posting list sort id]") {
 }
 
 TEST_CASE("entries_cursor", "[skip posting list sort id]") {
-  Entries ids = {1, 18, 24 ,57, 70};
+  Entries ids = {1, 18, 24, 57, 70};
   Attr attr("test", 0);
 
   EntriesCursor curosr(attr, ids);
@@ -137,7 +132,7 @@ TEST_CASE("entries_cursor", "[skip posting list sort id]") {
 
 TEST_CASE("skipto_test", "[skip posting list sort id]") {
   //[<1,1>,<18,1>,<24,1>,<57,1>,<70,1>,]
-  Entries ids = {1, 18, 24 ,57, 70};
+  Entries ids = {1, 18, 24, 57, 70};
   Attr attr("test", 0);
   EntriesCursor iter(attr, ids);
 
@@ -149,13 +144,13 @@ TEST_CASE("index_result_check", "[be posting list correction check]") {
   std::map<int, T*> targets;
   component::BeIndexerBuilder builder;
 
-  for (int i=1; i< 10000; i++) {
+  for (int i = 1; i < 10000; i++) {
     auto a = rand_assigns(10, 0, 100);
     T* t = new T({
-      .id = i,
-      .a = {"a", rand_assigns(5, 50, 100), base::RandInt(0, 100) > 80},
-      .b = {"b", rand_assigns(10, 0, 100), base::RandInt(0, 100) > 80},
-      .c = {"c", rand_assigns(8, 10, 70), base::RandInt(0, 100) > 80},
+        .id = i,
+        .a = {"a", rand_assigns(5, 50, 100), base::RandInt(0, 100) > 80},
+        .b = {"b", rand_assigns(10, 0, 100), base::RandInt(0, 100) > 80},
+        .c = {"c", rand_assigns(8, 10, 70), base::RandInt(0, 100) > 80},
     });
 
     targets[i] = t;
@@ -165,7 +160,7 @@ TEST_CASE("index_result_check", "[be posting list correction check]") {
   }
   auto index = builder.BuildIndexer();
 
-  auto none_index_match = [&](QueryAssigns& assigns)-> std::set<int32_t> {
+  auto none_index_match = [&](QueryAssigns& assigns) -> std::set<int32_t> {
     std::set<int32_t> result;
     for (const auto& t : targets) {
       int id = t.first;
@@ -180,21 +175,19 @@ TEST_CASE("index_result_check", "[be posting list correction check]") {
   std::vector<QueryAssigns> queries;
   for (int i; i < 10000; i++) {
     QueryAssigns assigns = {
-      {"a", rand_assigns(1, 50, 100)},
-      {"b", rand_assigns(2, 0, 100)},
-      {"c", rand_assigns(3, 10, 70)},
+        {"a", rand_assigns(1, 50, 100)},
+        {"b", rand_assigns(2, 0, 100)},
+        {"c", rand_assigns(3, 10, 70)},
     };
     queries.push_back(assigns);
   }
   for (int i = 0; i < queries.size(); i++) {
-
     auto scanner = IndexScanner(index.get());
 
     auto result = scanner.Retrieve(queries[i]);
     auto force_match_result = none_index_match(queries[i]);
 
-    std::set<int32_t> index_result(result.result.begin(),
-                                   result.result.end());
+    std::set<int32_t> index_result(result.result.begin(), result.result.end());
     std::set<int32_t> diff;
     std::set_difference(index_result.begin(), index_result.end(),
                         force_match_result.begin(), force_match_result.end(),
@@ -205,7 +198,6 @@ TEST_CASE("index_result_check", "[be posting list correction check]") {
                         std::inserter(diff2, diff2.end()));
 
     if (diff.size() || diff2.size()) {
-
       std::ostringstream oss;
       index->DumpIndex(oss);
       index->DumpIDMapping(oss);
@@ -219,7 +211,9 @@ TEST_CASE("index_result_check", "[be posting list correction check]") {
         oss << *targets[x] << ",\n";
       }
       oss << "] less:[\n";
-      for (auto x : diff2) {oss << *targets[x] << ",\n";}
+      for (auto x : diff2) {
+        oss << *targets[x] << ",\n";
+      }
       oss << "]\nquery:\n";
       for (auto& q : queries[i]) {
         oss << "{name:" << q.name() << " values:";
@@ -265,12 +259,13 @@ query:
   IndexScanner::Option option;
   option.dump_detail = true;
   IndexScanner scanner(index.get());
-  auto r = scanner.Retrieve({
-      {"a", {"67", "70"}},
-      {"b", {"30", "46", "82"}},
-      {"c", {"42", "55", "63", "67"}},
-    }, &option);
+  auto r = scanner.Retrieve(
+      {
+          {"a", {"67", "70"}},
+          {"b", {"30", "46", "82"}},
+          {"c", {"42", "55", "63", "67"}},
+      },
+      &option);
   oss << r.to_string();
   std::cout << oss.str();
 }
-

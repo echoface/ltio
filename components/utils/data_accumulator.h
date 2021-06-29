@@ -1,12 +1,12 @@
 #ifndef _COMPONENT_ACCUMULATE_QUEUE_H
 #define _COMPONENT_ACCUMULATE_QUEUE_H
 
-#include <vector>
-#include <thread>
+#include <base/memory/spin_lock.h>
 #include <inttypes.h>
 #include <functional>
+#include <thread>
 #include <unordered_map>
-#include <base/memory/spin_lock.h>
+#include <vector>
 
 namespace component {
 
@@ -28,40 +28,40 @@ namespace component {
  * StopCollector manually or stop with desctructor
  * **/
 
-template<class T>
+template <class T>
 class Accumulator {
-  public:
-    typedef std::unordered_map<std::string, T> AccumulationMap;
-    Accumulator() {}
+public:
+  typedef std::unordered_map<std::string, T> AccumulationMap;
+  Accumulator() {}
 
-    void Acc(const std::string& key, const T& data) {
+  void Acc(const std::string& key, const T& data) {
+    base::SpinLockGuard guard(lock_);
 
-      base::SpinLockGuard guard(lock_);
-
-      auto iter = datas_.find(key);
-      if (iter == datas_.end()) {
-        datas_[key] = data;
-        return;
-      }
-      iter->second += data;
+    auto iter = datas_.find(key);
+    if (iter == datas_.end()) {
+      datas_[key] = data;
+      return;
     }
-    /*return the data count, and clear data*/
-    uint32_t SwapOut(AccumulationMap& out) {
-      lock_.lock();
-      out = std::move(datas_);
-      datas_.clear();
-      lock_.unlock();
-      return out.size();
-    }
-  private:
-    base::SpinLock lock_;
-    AccumulationMap datas_;
+    iter->second += data;
+  }
+  /*return the data count, and clear data*/
+  uint32_t SwapOut(AccumulationMap& out) {
+    lock_.lock();
+    out = std::move(datas_);
+    datas_.clear();
+    lock_.unlock();
+    return out.size();
+  }
+
+private:
+  base::SpinLock lock_;
+  AccumulationMap datas_;
 };
 
 /* suguest count use your producer count, for defualt
  * it will use system thread::hardwareconcurrency()*/
 
-template<class T>
+template <class T>
 class AccumulatorCollector {
 public:
   typedef Accumulator<T> AccumulatorType;
@@ -69,8 +69,9 @@ public:
   typedef std::function<void(const AccumulationMap&)> CallBack;
 
   ~AccumulatorCollector() {
-
-    if (thread_) {Stop();}
+    if (thread_) {
+      Stop();
+    }
 
     for (auto p : accumulators_) {
       delete p;
@@ -91,9 +92,7 @@ public:
     }
   }
 
-  void SetHandler(CallBack handler) {
-    handler_ = handler;
-  }
+  void SetHandler(CallBack handler) { handler_ = handler; }
 
   void Start() {
     running_ = true;
@@ -113,10 +112,10 @@ public:
     AccumulatorType* accumulator = hash_accumulator();
     accumulator->Acc(key, data);
   }
+
 private:
   void ContentMain() {
-
-    while(running_) {
+    while (running_) {
       usleep(submit_interval_us_);
       AccumulationMap all_data;
 
@@ -139,10 +138,10 @@ private:
   bool running_;
   CallBack handler_;
   std::thread* thread_;
-  uint32_t submit_interval_us_; //in second
+  uint32_t submit_interval_us_;  // in second
   std::hash<std::thread::id> hasher_;
   std::vector<AccumulatorType*> accumulators_;
 };
 
-}
+}  // namespace component
 #endif

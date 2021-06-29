@@ -17,37 +17,36 @@
 
 #include "message_loop.h"
 
-#include <sys/types.h>
-#include <sys/time.h>
-#include <fcntl.h>
-#include <stdlib.h>
-#include <stdio.h>
+#include <base/time/time_utils.h>
+#include <base/utils/sys_error.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/eventfd.h>
 #include <sys/stat.h>
+#include <sys/time.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include <chrono>
 #include <csignal>
-#include <limits.h>
-#include <string>
-#include <sstream>
 #include <functional>
 #include <iostream>
-
-#include <sys/eventfd.h>
+#include <sstream>
+#include <string>
 
 #include "base/base_constants.h"
-#include "timeout_event.h"
 #include "file_util_linux.h"
-#include <base/time/time_utils.h>
-#include <base/utils/sys_error.h>
+#include "timeout_event.h"
 
 namespace base {
 
 static const char kQuit = 1;
 static const int64_t kTaskFdCounter = 1;
 
-//static thread safe
+// static thread safe
 static thread_local MessageLoop* threadlocal_current_ = NULL;
 MessageLoop* MessageLoop::Current() {
   return threadlocal_current_;
@@ -63,18 +62,18 @@ public:
       schedule_time_(time_ms()) {}
 
   void Run() override {
-
     uint64_t has_passed_time = time_ms() - schedule_time_;
     int64_t new_delay_ms = delay_ms_ - has_passed_time;
     if (new_delay_ms <= 0) {
       return timeout_fn_->Run();
     }
 
-    VLOG(GLOG_VINFO) <<  "Re-Schedule timer " << new_delay_ms << " ms";
+    VLOG(GLOG_VINFO) << "Re-Schedule timer " << new_delay_ms << " ms";
     TimeoutEvent* timeout_ev = TimeoutEvent::CreateOneShot(new_delay_ms, true);
     timeout_ev->InstallTimerHandler(std::move(timeout_fn_));
     event_pump_->AddTimeoutEvent(timeout_ev);
   }
+
 private:
   TaskBasePtr timeout_fn_;
   EventPump* event_pump_;
@@ -83,10 +82,7 @@ private:
 };
 
 MessageLoop::MessageLoop()
-  : running_(0),
-    wakeup_pipe_in_(0),
-    event_pump_(this) {
-
+  : running_(0), wakeup_pipe_in_(0), event_pump_(this) {
   notify_flag_.clear();
   status_.store(ST_INITING);
   has_join_.store(0);
@@ -111,26 +107,25 @@ MessageLoop::~MessageLoop() {
   WaitLoopEnd();
 
   ::close(wakeup_pipe_in_);
-  VLOG(GLOG_VINFO) << "MessageLoop@" << this << "[name:" << loop_name_ << "] Gone";
+  VLOG(GLOG_VINFO) << "MessageLoop@" << this << "[name:" << loop_name_
+                   << "] Gone";
 }
 
 void MessageLoop::WakeUpIfNeeded() {
   if (notify_flag_.test_and_set()) {
     return;
   }
-  if (Notify(task_event_->GetFd(), &kTaskFdCounter, sizeof(kTaskFdCounter)) <= 0) {
+  if (Notify(task_event_->GetFd(), &kTaskFdCounter, sizeof(kTaskFdCounter)) <=
+      0) {
     notify_flag_.clear();
   }
 }
 
 bool MessageLoop::HandleRead(FdEvent* fd_event) {
-
   if (fd_event == task_event_.get()) {
-
     RunCommandTask(ScheduledTaskType::TaskTypeDefault);
 
   } else if (fd_event == wakeup_event_.get()) {
-
     RunCommandTask(ScheduledTaskType::TaskTypeCtrl);
 
   } else {
@@ -174,8 +169,10 @@ void MessageLoop::Start() {
   thread_ptr_.reset(new std::thread(std::bind(&MessageLoop::ThreadMain, this)));
   {
     std::unique_lock<std::mutex> lk(start_stop_lock_);
-    while(cv_.wait_for(lk, std::chrono::milliseconds(1)) == std::cv_status::timeout) {
-      if (status_.load() == ST_STARTED) break;
+    while (cv_.wait_for(lk, std::chrono::milliseconds(1)) ==
+           std::cv_status::timeout) {
+      if (status_.load() == ST_STARTED)
+        break;
     }
   }
 }
@@ -186,10 +183,10 @@ void MessageLoop::InstallPersistRunner(PersistRunner* runner) {
 }
 
 void MessageLoop::WaitLoopEnd(int32_t ms) {
-  //can't wait stop in loop thread
+  // can't wait stop in loop thread
   CHECK(!IsInLoopThread());
 
-  //first join, others wait util loop end
+  // first join, others wait util loop end
   if (has_join_.exchange(1) == 0 && thread_ptr_->joinable()) {
     VLOG(GLOG_VINFO) << __FUNCTION__ << " join here wait loop end";
     thread_ptr_->join();
@@ -197,8 +194,10 @@ void MessageLoop::WaitLoopEnd(int32_t ms) {
   }
   {
     std::unique_lock<std::mutex> lk(start_stop_lock_);
-    while(cv_.wait_for(lk, std::chrono::milliseconds(100)) == std::cv_status::timeout) {
-      if (status_.load() != ST_STARTED) break;
+    while (cv_.wait_for(lk, std::chrono::milliseconds(100)) ==
+           std::cv_status::timeout) {
+      if (status_.load() != ST_STARTED)
+        break;
     }
   }
 }
@@ -215,13 +214,11 @@ void MessageLoop::PumpStopped() {
 
 uint64_t MessageLoop::PumpTimeout() {
   DCHECK(IsInLoopThread());
-  if (in_loop_tasks_.size() ||
-      scheduled_tasks_.size_approx()) {
+  if (in_loop_tasks_.size() || scheduled_tasks_.size_approx()) {
     return 0;
   }
   return 50;
 };
-
 
 void MessageLoop::ThreadMain() {
   threadlocal_current_ = this;
@@ -231,7 +228,8 @@ void MessageLoop::ThreadMain() {
   event_pump_.InstallFdEvent(task_event_.get());
   event_pump_.InstallFdEvent(wakeup_event_.get());
 
-  VLOG(GLOG_VINFO) << "MessageLoop@" << this << "[name:" << loop_name_ << "] Start";
+  VLOG(GLOG_VINFO) << "MessageLoop@" << this << "[name:" << loop_name_
+                   << "] Start";
 
   event_pump_.Run();
 
@@ -244,14 +242,17 @@ void MessageLoop::ThreadMain() {
 
   threadlocal_current_ = NULL;
   cv_.notify_all();
-  VLOG(GLOG_VINFO) << "MessageLoop@" << this << "[name:" << loop_name_ << "] End";
+  VLOG(GLOG_VINFO) << "MessageLoop@" << this << "[name:" << loop_name_
+                   << "] End";
 }
 
 bool MessageLoop::PostDelayTask(TaskBasePtr task, uint32_t ms) {
-  LOG_IF(ERROR, status_ != ST_STARTED) << "loop not started, loc:" << task->TaskLocation().ToString();
+  LOG_IF(ERROR, status_ != ST_STARTED)
+      << "loop not started, loc:" << task->TaskLocation().ToString();
 
   if (!IsInLoopThread()) {
-    return PostTask(TaskBasePtr(new TimeoutTaskHelper(std::move(task), &event_pump_, ms)));
+    return PostTask(
+        TaskBasePtr(new TimeoutTaskHelper(std::move(task), &event_pump_, ms)));
   }
 
   TimeoutEvent* timeout_ev = TimeoutEvent::CreateOneShot(ms, true);
@@ -272,7 +273,8 @@ bool MessageLoop::PendingNestedTask(TaskBasePtr&& task) {
 }
 
 bool MessageLoop::PostTask(TaskBasePtr&& task) {
-  LOG_IF(ERROR, status_ != ST_STARTED) << "loop not started, loc:" << task->TaskLocation().ToString();
+  LOG_IF(ERROR, status_ != ST_STARTED)
+      << "loop not started, loc:" << task->TaskLocation().ToString();
 
   if (IsInLoopThread()) {
     return PendingNestedTask(std::move(task));
@@ -307,19 +309,19 @@ void MessageLoop::RunNestedTask() {
     task->Run();
   }
 
-  //Note: can't in Sched uninstall runner
+  // Note: can't in Sched uninstall runner
   for (PersistRunner* runner : persist_runner_) {
     runner->Run();
   }
 }
 
 void MessageLoop::RunCommandTask(ScheduledTaskType type) {
-  switch(type) {
+  switch (type) {
     case ScheduledTaskType::TaskTypeDefault: {
-
       uint64_t count = 0;
       int ret = ::read(task_event_->GetFd(), &count, sizeof(count));
-      LOG_IF(ERROR, ret < 0) << " error:" << StrError(errno) << " fd:" << task_event_->GetFd();
+      LOG_IF(ERROR, ret < 0)
+          << " error:" << StrError(errno) << " fd:" << task_event_->GetFd();
 
       // clear must clear after read
       notify_flag_.clear();
@@ -330,14 +332,16 @@ void MessageLoop::RunCommandTask(ScheduledTaskType type) {
     case ScheduledTaskType::TaskTypeCtrl: {
       char buf = 0x7F;
       int ret = ::read(wakeup_event_->GetFd(), &buf, sizeof(buf));
-      LOG_IF(ERROR, ret < 0) << " error:" << StrError(errno) << " fd:" << wakeup_event_->GetFd();
+      LOG_IF(ERROR, ret < 0)
+          << " error:" << StrError(errno) << " fd:" << wakeup_event_->GetFd();
 
       switch (buf) {
         case kQuit: {
           QuitLoop();
         } break;
         default: {
-          LOG(ERROR) << " Should Not Reached Here!!!" << int(buf) << " ret:" << ret;
+          LOG(ERROR) << " Should Not Reached Here!!!" << int(buf)
+                     << " ret:" << ret;
           DCHECK(false);
         } break;
       }
@@ -345,7 +349,7 @@ void MessageLoop::RunCommandTask(ScheduledTaskType type) {
     default:
       DCHECK(false);
       LOG(ERROR) << " Should Not Reached Here!!!";
-    break;
+      break;
   }
 }
 
@@ -359,22 +363,25 @@ int MessageLoop::Notify(int fd, const void* data, size_t count) {
 
   do {
     ret = ::write(fd, data, count);
-    if (ret > 0) {return ret;}
+    if (ret > 0) {
+      return ret;
+    }
 
-    switch(errno) {
+    switch (errno) {
       case EINTR:
       case EAGAIN:
         continue;
       default:
         return ret;
     }
-  } while(retry++ < max_retry_times);
+  } while (retry++ < max_retry_times);
   return ret;
 }
 
 void MessageLoop::SetThreadNativeName() {
-  if (loop_name_.empty()) return;
+  if (loop_name_.empty())
+    return;
   pthread_setname_np(pthread_self(), loop_name_.c_str());
 }
 
-};
+};  // namespace base

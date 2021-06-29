@@ -1,12 +1,11 @@
-#include <iostream>
-#include <unistd.h>
-#include <stdlib.h>
 #include "components/bloomfilter/bloom_filter.h"
+#include <stdlib.h>
+#include <unistd.h>
+#include <iostream>
 
 #include <catch/catch.hpp>
 
 TEST_CASE("base", "[Add New Item To BloomFilter]") {
-
   component::BloomFilter filter(1000000, 0.00001);
 
   for (uint64_t i = 0; i < 1000000; i++) {

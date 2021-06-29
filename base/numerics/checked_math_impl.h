@@ -515,23 +515,23 @@ class CheckedNumericState {};
 // Integrals require quite a bit of additional housekeeping to manage state.
 template <typename T>
 class CheckedNumericState<T, NUMERIC_INTEGER> {
- public:
+public:
   template <typename Src = int>
   constexpr explicit CheckedNumericState(Src value = 0, bool is_valid = true)
-      : is_valid_(is_valid && IsValueInRangeForNumericType<T>(value)),
-        value_(WellDefinedConversionOrZero(value, is_valid_)) {
+    : is_valid_(is_valid && IsValueInRangeForNumericType<T>(value)),
+      value_(WellDefinedConversionOrZero(value, is_valid_)) {
     static_assert(std::is_arithmetic<Src>::value, "Argument must be numeric.");
   }
 
   template <typename Src>
   constexpr CheckedNumericState(const CheckedNumericState<Src>& rhs)
-      : CheckedNumericState(rhs.value(), rhs.is_valid()) {}
+    : CheckedNumericState(rhs.value(), rhs.is_valid()) {}
 
   constexpr bool is_valid() const { return is_valid_; }
 
   constexpr T value() const { return value_; }
 
- private:
+private:
   // Ensures that a type conversion does not trigger undefined behavior.
   template <typename Src>
   static constexpr T WellDefinedConversionOrZero(Src value, bool is_valid) {
@@ -551,16 +551,16 @@ class CheckedNumericState<T, NUMERIC_INTEGER> {
 // Floating points maintain their own validity, but need translation wrappers.
 template <typename T>
 class CheckedNumericState<T, NUMERIC_FLOATING> {
- public:
+public:
   template <typename Src = double>
   constexpr explicit CheckedNumericState(Src value = 0.0, bool is_valid = true)
-      : value_(WellDefinedConversionOrNaN(
-            value,
-            is_valid && IsValueInRangeForNumericType<T>(value))) {}
+    : value_(WellDefinedConversionOrNaN(
+          value,
+          is_valid && IsValueInRangeForNumericType<T>(value))) {}
 
   template <typename Src>
   constexpr CheckedNumericState(const CheckedNumericState<Src>& rhs)
-      : CheckedNumericState(rhs.value(), rhs.is_valid()) {}
+    : CheckedNumericState(rhs.value(), rhs.is_valid()) {}
 
   constexpr bool is_valid() const {
     // Written this way because std::isfinite is not reliably constexpr.
@@ -572,7 +572,7 @@ class CheckedNumericState<T, NUMERIC_FLOATING> {
 
   constexpr T value() const { return value_; }
 
- private:
+private:
   // Ensures that a type conversion does not trigger undefined behavior.
   template <typename Src>
   static constexpr T WellDefinedConversionOrNaN(Src value, bool is_valid) {

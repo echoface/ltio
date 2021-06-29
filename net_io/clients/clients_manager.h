@@ -23,16 +23,16 @@
 namespace lt {
 namespace net {
 
-
 class ClientsManager {
 public:
   ClientsManager();
   ~ClientsManager();
 
   void RegisterClient();
-private:
 
+private:
 };
 
-}} //end net
+}  // namespace net
+}  // namespace lt
 #endif

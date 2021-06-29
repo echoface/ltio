@@ -46,7 +46,7 @@
   }*/
 
 namespace component {
-namespace sl{
+namespace sl {
 
 void to_json(Json& j, const ColumnInfo& info) {
   if (info.IsNull()) {
@@ -73,28 +73,28 @@ void from_json(const Json& j, ColumnInfo& info) {
   }
 }
 
-ColumnParser::~ColumnParser() {
-}
+ColumnParser::~ColumnParser() {}
 
 bool ColumnParser::ParseContent(const std::string& content) {
   VLOG(GLOG_VTRACE) << __FUNCTION__ << " enter";
 
   std::vector<std::string> results = base::StrUtil::Split(content, delimiter_);
   if (results.size() != header_.size()) {
-    LOG(INFO) << __FUNCTION__ << " bad content:" << content << " delemiter:" << delimiter_;
+    LOG(INFO) << __FUNCTION__ << " bad content:" << content
+              << " delemiter:" << delimiter_;
     return false;
   }
 
   Json column_out;
   for (size_t i = 0; i < results.size(); i++) {
-
     auto iter = columns_.find(header_[i]);
     if (iter == columns_.end()) {
       continue;
     }
 
     if (!HanleColumn(iter->second, results[i], column_out)) {
-      LOG(INFO) << __FUNCTION__ << " parse field [" << header_[i] << "] Failed, content:" << results[i];
+      LOG(INFO) << __FUNCTION__ << " parse field [" << header_[i]
+                << "] Failed, content:" << results[i];
       return false;
     }
   }
@@ -106,7 +106,9 @@ bool ColumnParser::ParseContent(const std::string& content) {
   return true;
 }
 
-bool ColumnParser::HanleColumn(const ColumnInfo& info, const std::string& content, Json& out) {
+bool ColumnParser::HanleColumn(const ColumnInfo& info,
+                               const std::string& content,
+                               Json& out) {
   std::string field = info.name;
   switch (info.type) {
     case ValueTypeBoolen:
@@ -148,18 +150,20 @@ bool ColumnParser::Initialize(const Json& config) {
     return false;
   }
 
-  for (Json::const_iterator iter = schemes.begin(); iter != schemes.end(); iter++) {
-  	if (!iter->is_object()) {
+  for (Json::const_iterator iter = schemes.begin(); iter != schemes.end();
+       iter++) {
+    if (!iter->is_object()) {
       LOG(WARNING) << __FUNCTION__ << " bad scheme:" << *iter;
       return false;
-  	}
+    }
     ColumnInfo info = (*iter);
-  	if (info.IsNull()) {
+    if (info.IsNull()) {
       LOG(INFO) << __FUNCTION__ << " bad scheme from_json:" << *iter;
       return false;
-  	}
+    }
     if (!CheckDefault(info.type, info.default_value)) {
-      LOG(INFO) << __FUNCTION__ << " bad scheme default field:" << info.default_value;
+      LOG(INFO) << __FUNCTION__
+                << " bad scheme default field:" << info.default_value;
       return false;
     }
     LOG(INFO) << __FUNCTION__ << " add column scheme:" << info.name;
@@ -192,4 +196,5 @@ bool ColumnParser::Initialize(const Json& config) {
   return true;
 }
 
-}}//end  namespace
+}  // namespace sl
+}  // namespace component

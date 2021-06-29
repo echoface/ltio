@@ -1,19 +1,18 @@
-#include <iostream>
-#include <unistd.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <atomic>
+#include <iostream>
 #include "components/count_min_sketch/count_min_sketch.h"
 
 #include <catch/catch.hpp>
 
 TEST_CASE("cm.calulate", "[estimate and  calculate args]") {
   component::CountMinSketch sketch(0.0000001, 0.99999);
-  std::cout << "w:" << sketch.Width() << " d:" << sketch.Depth() << std::endl; 
+  std::cout << "w:" << sketch.Width() << " d:" << sketch.Depth() << std::endl;
   REQUIRE(sketch.Depth() <= 20);
 }
 
 TEST_CASE("cm.base", "[test the base function]") {
-
   component::CountMinSketch sketch(0.0000001, 0.99999);
   sketch.Increase("name", 5);
   sketch.Increase("age", 111);
@@ -28,7 +27,7 @@ TEST_CASE("cm.base", "[test the base function]") {
 
 TEST_CASE("cm.falserate", "[Add New Item To BloomFilter]") {
   component::CountMinSketch sketch(0.0000001, 0.99999);
-  std::cout << "w:" << sketch.Width() << " d:" << sketch.Depth() << std::endl; 
+  std::cout << "w:" << sketch.Width() << " d:" << sketch.Depth() << std::endl;
 
   for (uint32_t i = 0; i < 2000000; i++) {
     sketch.Increase(&i, sizeof(uint32_t), 5);

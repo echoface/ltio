@@ -20,7 +20,7 @@ class ClampedNumeric {
   static_assert(std::is_arithmetic<T>::value,
                 "ClampedNumeric<T>: T must be a numeric type.");
 
- public:
+public:
   using type = T;
 
   constexpr ClampedNumeric() : value_(0) {}
@@ -28,7 +28,7 @@ class ClampedNumeric {
   // Copy constructor.
   template <typename Src>
   constexpr ClampedNumeric(const ClampedNumeric<Src>& rhs)
-      : value_(saturated_cast<T>(rhs.value_)) {}
+    : value_(saturated_cast<T>(rhs.value_)) {}
 
   template <typename Src>
   friend class ClampedNumeric;
@@ -37,7 +37,7 @@ class ClampedNumeric {
   // numerics to ClampedNumerics to make them easier to use.
   template <typename Src>
   constexpr ClampedNumeric(Src value)  // NOLINT(runtime/explicit)
-      : value_(saturated_cast<T>(value)) {
+    : value_(saturated_cast<T>(value)) {
     static_assert(std::is_arithmetic<Src>::value, "Argument must be numeric.");
   }
 
@@ -46,7 +46,7 @@ class ClampedNumeric {
   template <typename Src>
   constexpr ClampedNumeric(
       StrictNumeric<Src> value)  // NOLINT(runtime/explicit)
-      : value_(saturated_cast<T>(static_cast<Src>(value))) {}
+    : value_(saturated_cast<T>(static_cast<Src>(value))) {}
 
   // Returns a ClampedNumeric of the specified type, cast from the current
   // ClampedNumeric, and saturated to the destination type.
@@ -171,7 +171,7 @@ class ClampedNumeric {
   // e.g. assigning to an auto type or passing as a deduced template parameter.
   constexpr T RawValue() const { return value_; }
 
- private:
+private:
   T value_;
 
   // These wrappers allow us to handle state the same way for both
@@ -243,20 +243,20 @@ BASE_NUMERIC_COMPARISON_OPERATORS(Clamped, IsNotEqual, !=)
 
 }  // namespace internal
 
+using internal::ClampAdd;
+using internal::ClampAnd;
+using internal::ClampDiv;
 using internal::ClampedNumeric;
-using internal::MakeClampedNum;
+using internal::ClampLsh;
 using internal::ClampMax;
 using internal::ClampMin;
-using internal::ClampAdd;
-using internal::ClampSub;
-using internal::ClampMul;
-using internal::ClampDiv;
 using internal::ClampMod;
-using internal::ClampLsh;
-using internal::ClampRsh;
-using internal::ClampAnd;
+using internal::ClampMul;
 using internal::ClampOr;
+using internal::ClampRsh;
+using internal::ClampSub;
 using internal::ClampXor;
+using internal::MakeClampedNum;
 
 }  // namespace base
 

@@ -19,16 +19,16 @@
 
 namespace base {
 
-//static
-TimeoutEvent* TimeoutEvent::CreateOneShot(uint64_t ms, bool delelte_after_invoke) {
+// static
+TimeoutEvent* TimeoutEvent::CreateOneShot(uint64_t ms,
+                                          bool delelte_after_invoke) {
   TimeoutEvent* toe = new TimeoutEvent(ms, false);
   toe->del_after_invoke_ = delelte_after_invoke;
   return toe;
 }
 
-TimeoutEvent::TimeoutEvent(uint64_t ms, bool repeat) :
-  repeat_(repeat),
-  interval_(ms) {
+TimeoutEvent::TimeoutEvent(uint64_t ms, bool repeat)
+  : repeat_(repeat), interval_(ms) {
   ::timeout_init((Timeout*)this, TIMEOUT_ABS);
 }
 
@@ -50,4 +50,4 @@ void TimeoutEvent::InstallTimerHandler(TaskBasePtr&& h) {
   timer_handler_ = std::move(h);
 }
 
-}
+}  // namespace base

@@ -20,7 +20,7 @@
 namespace base {
 
 std::string StateToString(CoroState st) {
-  switch(st) {
+  switch (st) {
     case CoroState::kDone:
       return "Done";
     case CoroState::kPaused:
@@ -35,10 +35,12 @@ std::string StateToString(CoroState st) {
   return "Unknown";
 }
 
-//static
+// static
 std::atomic<int64_t> CoroBase::coro_counter_ = {0};
 
-//static
-size_t CoroBase::SystemCoroutineCount() { return coro_counter_.load(); }
+// static
+size_t CoroBase::SystemCoroutineCount() {
+  return coro_counter_.load();
+}
 
-} // end base
+}  // namespace base

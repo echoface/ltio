@@ -15,7 +15,6 @@
  * limitations under the License.
  */
 
-
 #ifndef _NET_HTTP_PROTO_MESSAGE_H
 #define _NET_HTTP_PROTO_MESSAGE_H
 
@@ -64,12 +63,14 @@ public:
   bool IsKeepAlive() const;
   void SetKeepAlive(bool alive);
 
-  int VersionMajor() const {return http_major_;}
-  int VersionMinor() const {return http_minor_;}
+  int VersionMajor() const { return http_major_; }
+  int VersionMinor() const { return http_minor_; }
 
   const std::string Dump() const override;
+
 private:
   void ParseUrlToParams();
+
 private:
   friend class HttpCodecService;
   friend class ReqParseContext;
@@ -90,6 +91,6 @@ private:
   bool url_param_parsed_;
 };
 
-
-}}
+}  // namespace net
+}  // namespace lt
 #endif

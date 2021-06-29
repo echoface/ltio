@@ -15,9 +15,8 @@
  * limitations under the License.
  */
 
-
-#include <sstream>
 #include "http_request.h"
+#include <sstream>
 #include "http_constants.h"
 
 #include <base/base_constants.h>
@@ -33,11 +32,9 @@ HttpRequest::HttpRequest()
     url_("/"),
     http_major_(1),
     http_minor_(1),
-    url_param_parsed_(false) {
-}
+    url_param_parsed_(false) {}
 
-HttpRequest::~HttpRequest() {
-}
+HttpRequest::~HttpRequest() {}
 
 void HttpRequest::SetRequestURL(const char* url) {
   url_ = url;
@@ -119,15 +116,14 @@ const std::string HttpRequest::Dump() const {
   std::ostringstream oss;
   oss << "{\"type\": \"" << TypeAsStr() << "\""
       << ", \"http_major\": " << (int)http_major_
-      << ", \"http_minor\": " << (int)http_minor_
-      << ", \"method\": \"" << Method() << "\""
+      << ", \"http_minor\": " << (int)http_minor_ << ", \"method\": \""
+      << Method() << "\""
       << ", \"request_url\": \"" << url_ << "\"";
 
   for (const auto& pair : headers_) {
     oss << ", \"header." << pair.first << "\": \"" << pair.second << "\"";
   }
-  oss << ", \"keep_alive\": " << keepalive_
-      << ", \"body\": \"" << body_ << "\""
+  oss << ", \"keep_alive\": " << keepalive_ << ", \"body\": \"" << body_ << "\""
       << "}";
   return std::move(oss.str());
 }
@@ -145,4 +141,5 @@ void HttpRequest::SetKeepAlive(bool alive) {
   keepalive_ = alive;
 }
 
-}};//end namespace net
+}  // namespace net
+};  // namespace lt

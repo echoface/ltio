@@ -18,18 +18,18 @@
 #ifndef NET_HTTP_SERVER_H_H
 #define NET_HTTP_SERVER_H_H
 
+#include <chrono>  // std::chrono::seconds
+#include <functional>
 #include <list>
 #include <vector>
-#include <chrono>             // std::chrono::seconds
-#include <functional>
 
-#include "http_context.h"
 #include "base/base_micro.h"
 #include "base/message_loop/message_loop.h"
-#include "net_io/io_service.h"
+#include "http_context.h"
 #include "net_io/codec/codec_message.h"
 #include "net_io/codec/http/http_request.h"
 #include "net_io/codec/http/http_response.h"
+#include "net_io/io_service.h"
 #include "net_io/server/generic_server.h"
 
 namespace lt {
@@ -41,11 +41,10 @@ struct NoneHttpCoroServerTraits {
   static const uint64_t kRequestQpsLimit = 100000;
 };
 
-using HttpCoroServer =
-  BaseServer<HttpRequestCtx, DefaultConfigurator>;
+using HttpCoroServer = BaseServer<HttpRequestCtx, DefaultConfigurator>;
 
-using HttpServer =
-  BaseServer<HttpRequestCtx, NoneHttpCoroServerTraits>;
+using HttpServer = BaseServer<HttpRequestCtx, NoneHttpCoroServerTraits>;
 
-}}
+}  // namespace net
+}  // namespace lt
 #endif

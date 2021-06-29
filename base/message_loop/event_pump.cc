@@ -18,23 +18,19 @@
 #include "fd_event.h"
 #include "glog/logging.h"
 
+#include <sys/resource.h>
+#include <sys/time.h>
+#include <algorithm>
 #include "event_pump.h"
 #include "io_multiplexer.h"
 #include "io_mux_epoll.h"
 #include "linux_signal.h"
-#include <algorithm>
-#include <sys/time.h>
-#include <sys/resource.h>
 
 namespace base {
 
-EventPump::EventPump() : EventPump(NULL) {
-}
+EventPump::EventPump() : EventPump(NULL) {}
 
-EventPump::EventPump(PumpDelegate *d) :
-  delegate_(d),
-  running_(false) {
-
+EventPump::EventPump(PumpDelegate* d) : delegate_(d), running_(false) {
   struct rlimit limit;
   if (0 != getrlimit(RLIMIT_NOFILE, &limit)) {
     max_fds_ = 65535;
@@ -62,7 +58,6 @@ void EventPump::Run() {
 
   FiredEvent* active_list = new FiredEvent[max_fds_];
   while (running_) {
-
     int count = io_mux_->WaitingIO(active_list, NextTimeout());
 
     ProcessTimerEvent();
@@ -74,7 +69,7 @@ void EventPump::Run() {
     }
   }
   running_ = false;
-  delete []active_list;
+  delete[] active_list;
   FinalizeTimeWheel();
   if (delegate_) {
     delegate_->PumpStopped();
@@ -85,10 +80,11 @@ bool EventPump::IsInLoopThread() const {
   return tid_ == std::this_thread::get_id();
 }
 
-bool EventPump::InstallFdEvent(FdEvent *fd_event) {
+bool EventPump::InstallFdEvent(FdEvent* fd_event) {
   CHECK(IsInLoopThread());
   if (fd_event->EventWatcher()) {
-    LOG(ERROR) << __FUNCTION__ << " event has registered," << fd_event->EventInfo();
+    LOG(ERROR) << __FUNCTION__ << " event has registered,"
+               << fd_event->EventInfo();
     return false;
   }
   fd_event->SetFdWatcher(io_mux_.get());
@@ -96,10 +92,11 @@ bool EventPump::InstallFdEvent(FdEvent *fd_event) {
   return true;
 }
 
-bool EventPump::RemoveFdEvent(FdEvent *fd_event) {
+bool EventPump::RemoveFdEvent(FdEvent* fd_event) {
   CHECK(IsInLoopThread());
   if (!fd_event->EventWatcher()) {
-    LOG(ERROR) << __FUNCTION__ << " event not been registered, " << fd_event->EventInfo();
+    LOG(ERROR) << __FUNCTION__ << " event not been registered, "
+               << fd_event->EventInfo();
     return false;
   }
   fd_event->SetFdWatcher(nullptr);
@@ -108,17 +105,17 @@ bool EventPump::RemoveFdEvent(FdEvent *fd_event) {
   return true;
 }
 
-void EventPump::AddTimeoutEvent(TimeoutEvent *timeout_ev) {
+void EventPump::AddTimeoutEvent(TimeoutEvent* timeout_ev) {
   CHECK(IsInLoopThread());
   add_timer_internal(time_ms(), timeout_ev);
 }
 
-void EventPump::RemoveTimeoutEvent(TimeoutEvent *timeout_ev) {
+void EventPump::RemoveTimeoutEvent(TimeoutEvent* timeout_ev) {
   CHECK(IsInLoopThread());
   ::timeouts_del(timeout_wheel_, timeout_ev);
 }
 
-void EventPump::add_timer_internal(uint64_t now, TimeoutEvent *event) {
+void EventPump::add_timer_internal(uint64_t now, TimeoutEvent* event) {
   ::timeouts_add(timeout_wheel_, event, now + event->Interval());
 }
 
@@ -126,16 +123,16 @@ void EventPump::ProcessTimerEvent() {
   uint64_t now = time_ms();
   ::timeouts_update(timeout_wheel_, now);
 
-  std::vector<TimeoutEvent *> to_be_deleted;
+  std::vector<TimeoutEvent*> to_be_deleted;
 
-  Timeout *expired = NULL;
+  Timeout* expired = NULL;
   while (NULL != (expired = timeouts_get(timeout_wheel_))) {
     // remove first
     ::timeouts_del(timeout_wheel_, expired);
 
-    TimeoutEvent *timeout_ev = static_cast<TimeoutEvent *>(expired);
+    TimeoutEvent* timeout_ev = static_cast<TimeoutEvent*>(expired);
 
-    if (timeout_ev->IsRepeated()) { // re-add to timeout wheel
+    if (timeout_ev->IsRepeated()) {  // re-add to timeout wheel
       add_timer_internal(now, timeout_ev);
     } else if (timeout_ev->DelAfterInvoke()) {
       to_be_deleted.push_back(timeout_ev);
@@ -193,17 +190,17 @@ void EventPump::InitializeTimeWheel() {
 void EventPump::FinalizeTimeWheel() {
   CHECK(timeout_wheel_ != NULL);
 
-  std::vector<TimeoutEvent *> to_be_delete;
-  Timeout *to = NULL;
+  std::vector<TimeoutEvent*> to_be_delete;
+  Timeout* to = NULL;
   TIMEOUTS_FOREACH(to, timeout_wheel_, TIMEOUTS_ALL) {
-    TimeoutEvent *toe = static_cast<TimeoutEvent *>(to);
+    TimeoutEvent* toe = static_cast<TimeoutEvent*>(to);
     ::timeouts_del(timeout_wheel_, to);
     if (toe->DelAfterInvoke()) {
       to_be_delete.push_back(toe);
     }
   }
 
-  for (TimeoutEvent *toe : to_be_delete) {
+  for (TimeoutEvent* toe : to_be_delete) {
     delete toe;
   }
   to_be_delete.clear();
@@ -212,4 +209,4 @@ void EventPump::FinalizeTimeWheel() {
   timeout_wheel_ = NULL;
 }
 
-} // namespace base
+}  // namespace base

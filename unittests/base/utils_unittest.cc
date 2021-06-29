@@ -1,10 +1,9 @@
-#include <vector>
-#include <iostream>
 #include <base/utils/string/str_utils.h>
+#include <iostream>
 #include <thirdparty/catch/catch.hpp>
+#include <vector>
 
 TEST_CASE("string_utils", "[]") {
-
   std::vector<std::string> test_strs = {"742.16", ".123", "123.", "abc"};
   std::vector<double> test_results = {742.16, 0.123, 123.0, 0};
   for (size_t idx = 0; idx < test_strs.size(); idx++) {

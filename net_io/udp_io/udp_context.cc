@@ -25,9 +25,7 @@ UDPIOContextPtr UDPIOContext::Create(base::MessageLoop* io) {
   return context;
 }
 
-UDPIOContext::UDPIOContext(base::MessageLoop* io)
-  : io_(io) {
-}
+UDPIOContext::UDPIOContext(base::MessageLoop* io) : io_(io) {}
 
-
-}}
+}  // namespace net
+}  // namespace lt

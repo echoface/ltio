@@ -18,9 +18,9 @@
 #ifndef BASE_TIMER_EVENT_H_
 #define BASE_TIMER_EVENT_H_
 
-#include <cinttypes>
-#include <base/time/timestamp.h>
 #include <base/closure/closure_task.h>
+#include <base/time/timestamp.h>
+#include <cinttypes>
 
 namespace base {
 
@@ -42,8 +42,9 @@ public:
   void Invoke();
   void SetTimerTask(UniqueTimerTask task);
 
-  bool IsOneShotTimer() const {return once_;}
-  int64_t Interval() const { return interval_;}
+  bool IsOneShotTimer() const { return once_; }
+  int64_t Interval() const { return interval_; }
+
 private:
   bool once_;
 
@@ -62,5 +63,5 @@ public:
   }
 };
 
-}//end base
+}  // namespace base
 #endif

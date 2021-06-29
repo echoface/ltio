@@ -20,8 +20,8 @@
 
 #include <cinttypes>
 
-#include <base/time/timestamp.h>
 #include <base/closure/closure_task.h>
+#include <base/time/timestamp.h>
 #include <thirdparty/timeout/timeout.h>
 
 typedef struct timeout Timeout;
@@ -37,18 +37,19 @@ public:
   void Invoke();
   void UpdateInterval(int64_t ms);
   void InstallTimerHandler(TaskBasePtr&& h);
-  bool IsRepeated() const {return repeat_;}
-  inline bool DelAfterInvoke() const {return del_after_invoke_;}
-  inline bool IsAttached() const {return pending != NULL;}
-  inline uint64_t Interval() const {return interval_;}
-  inline uint64_t IntervalMicroSecond() const {return interval_ * 1000;}
+  bool IsRepeated() const { return repeat_; }
+  inline bool DelAfterInvoke() const { return del_after_invoke_; }
+  inline bool IsAttached() const { return pending != NULL; }
+  inline uint64_t Interval() const { return interval_; }
+  inline uint64_t IntervalMicroSecond() const { return interval_ * 1000; }
+
 private:
   bool repeat_ = false;
   bool use_coro_ = false;
-  uint64_t interval_ = 0; //ms
+  uint64_t interval_ = 0;  // ms
   bool del_after_invoke_ = false;
   TaskBasePtr timer_handler_;
 };
 
-}
+}  // namespace base
 #endif

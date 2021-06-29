@@ -21,6 +21,5 @@
 namespace base {
 
 bool CreateLocalNoneBlockingPipe(int pip[2]);
-
 }
 #endif

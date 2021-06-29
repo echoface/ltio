@@ -7,9 +7,7 @@
 namespace component {
 
 void BeIndexerBuilder::AddDocument(Document&& doc) {
-
-  auto result = documents_.insert(
-    std::make_pair(doc.doc_id(), std::move(doc)));
+  auto result = documents_.insert(std::make_pair(doc.doc_id(), std::move(doc)));
 
   if (!result.second) {
     return;
@@ -17,7 +15,6 @@ void BeIndexerBuilder::AddDocument(Document&& doc) {
 }
 
 RefBooleanIndexer BeIndexerBuilder::BuildIndexer() {
-
   RefBooleanIndexer indexer(new BooleanIndexer());
 
   for (const auto& doc : documents_) {
@@ -36,10 +33,11 @@ RefBooleanIndexer BeIndexerBuilder::BuildIndexer() {
 
         const BooleanExpr& expr = name_expr_kv.second;
 
-        //TODO: to do parser ExpressionsValue to values
+        // TODO: to do parser ExpressionsValue to values
         for (const auto& value : expr.Values()) {
           Attr attr(assin_name, indexer->GenUniqueID(value));
-          kindexes->AddEntry(attr, EntryUtil::GenEntryID(conj->id(), expr.exclude()));
+          kindexes->AddEntry(attr,
+                             EntryUtil::GenEntryID(conj->id(), expr.exclude()));
         }
       }
     }
@@ -50,5 +48,4 @@ RefBooleanIndexer BeIndexerBuilder::BuildIndexer() {
   return indexer;
 }
 
-
-}
+}  // namespace component

@@ -18,8 +18,8 @@
 #ifndef NET_LINE_PROTO_SERVICE_H
 #define NET_LINE_PROTO_SERVICE_H
 
-#include "base/message_loop/message_loop.h"
 #include <net_io/codec/codec_service.h>
+#include "base/message_loop/message_loop.h"
 
 namespace lt {
 namespace net {
@@ -31,13 +31,15 @@ public:
 
   // override from CodecService
   void OnDataFinishSend(const SocketChannel*) override;
-  void OnDataReceived(const SocketChannel*, IOBuffer *) override;
+  void OnDataReceived(const SocketChannel*, IOBuffer*) override;
 
   bool SendRequest(CodecMessage* request) override;
   bool SendResponse(const CodecMessage* req, CodecMessage* res) override;
+
 private:
   bool SendMessage(CodecMessage* message);
 };
 
-}}
+}  // namespace net
+}  // namespace lt
 #endif

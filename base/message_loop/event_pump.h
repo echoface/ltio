@@ -25,10 +25,10 @@
 #include <thread>
 #include <vector>
 
+#include <thirdparty/timeout/timeout.h>
 #include "fd_event.h"
 #include "io_multiplexer.h"
 #include "timeout_event.h"
-#include <thirdparty/timeout/timeout.h>
 
 namespace base {
 
@@ -43,14 +43,15 @@ typedef std::vector<TimeoutEvent*> TimerEventList;
 
 class PumpDelegate {
 public:
-  virtual void PumpStarted() {};
-  virtual void PumpStopped() {};
-  virtual void RunNestedTask() {};
-  virtual uint64_t PumpTimeout() {return 5;}; // ms
-  virtual void RunTimerClosure(const TimerEventList&) {};
+  virtual void PumpStarted(){};
+  virtual void PumpStopped(){};
+  virtual void RunNestedTask(){};
+  virtual uint64_t PumpTimeout() { return 5; };  // ms
+  virtual void RunTimerClosure(const TimerEventList&){};
 };
 
-/* pump fd event and timeout event and pass them to handler by delegate interface*/
+/* pump fd event and timeout event and pass them to handler by delegate
+ * interface*/
 class EventPump {
 public:
   EventPump();
@@ -59,9 +60,9 @@ public:
 
   void Run();
 
-  void Quit() {running_ = false;};
+  void Quit() { running_ = false; };
 
-  bool InstallFdEvent(FdEvent *fd_event);
+  bool InstallFdEvent(FdEvent* fd_event);
 
   bool RemoveFdEvent(FdEvent* fd_event);
 
@@ -73,7 +74,8 @@ public:
 
   bool Running() { return running_; }
 
-  void SetLoopThreadId(std::thread::id id) {tid_ = id;}
+  void SetLoopThreadId(std::thread::id id) { tid_ = id; }
+
 protected:
   /* update the time wheel mononic time and get all expired
    * timeoutevent will be invoke and re shedule if was repeated*/
@@ -91,8 +93,8 @@ protected:
 
   /*calculate abs timeout time and add to timeout wheel*/
   void add_timer_internal(uint64_t now_us, TimeoutEvent* event);
-private:
 
+private:
   PumpDelegate* delegate_;
   bool running_;
 
@@ -108,5 +110,5 @@ private:
   TimeoutWheel* timeout_wheel_ = nullptr;
 };
 
-}
+}  // namespace base
 #endif

@@ -30,8 +30,8 @@
 namespace base {
 
 enum LtEv {
-  LT_EVENT_NONE  = 0x0000,
-  LT_EVENT_READ  = 0x0001,
+  LT_EVENT_NONE = 0x0000,
+  LT_EVENT_READ = 0x0001,
   LT_EVENT_WRITE = 0x0002,
   LT_EVENT_CLOSE = 0x0004,
   LT_EVENT_ERROR = 0x0008,
@@ -41,5 +41,5 @@ typedef uint32_t LtEvent;
 
 std::string events2string(const LtEvent& event);
 
-}
+}  // namespace base
 #endif

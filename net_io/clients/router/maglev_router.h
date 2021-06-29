@@ -30,21 +30,22 @@ namespace lt {
 namespace net {
 
 class MaglevRouter : ClientRouter {
-  public:
-    MaglevRouter() {};
-    ~MaglevRouter() {};
+public:
+  MaglevRouter(){};
+  ~MaglevRouter(){};
 
-    void AddClient(RefClient&& client) override;
+  void AddClient(RefClient&& client) override;
 
-    void StartRouter() override;
+  void StartRouter() override;
 
-    RefClient GetNextClient(const std::string& key,
-                            CodecMessage* request = NULL) override;
+  RefClient GetNextClient(const std::string& key,
+                          CodecMessage* request = NULL) override;
 
-  private:
-    lb::LookupTable lookup_table_;
-    std::vector<RefClient> clients_;
+private:
+  lb::LookupTable lookup_table_;
+  std::vector<RefClient> clients_;
 };
 
-}} // namespace lt::net
+}  // namespace net
+}  // namespace lt
 #endif

@@ -53,7 +53,7 @@ std::string RandBytesAsString(size_t length);
 // An STL UniformRandomBitGenerator backed by RandUint64.
 // TODO(tzik): Consider replacing this with a faster implementation.
 class RandomBitGenerator {
- public:
+public:
   using result_type = uint64_t;
   static constexpr result_type min() { return 0; }
   static constexpr result_type max() { return UINT64_MAX; }

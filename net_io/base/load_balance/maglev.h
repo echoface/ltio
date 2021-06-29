@@ -32,23 +32,23 @@ typedef std::vector<int> LookupTable;
 constexpr uint32_t kDefaultChRingSize = 65537;
 
 class MaglevHelper {
- public:
-   /**
-    * struct which describes backend, each backend would have unique number,
-    * weight (the measurment of how often we would see this endpoint
-    * on CH ring) and hash value, which will be used as a seed value
-    * (it should be unique value per endpoint for CH to work as expected)
-    *
-    * HuanGong: weight 不能大于ring size, 否则排序不对
-    */
-   struct Endpoint {
-     uint32_t num;
-     uint32_t weight;
-     uint64_t hash;
-   };
+public:
+  /**
+   * struct which describes backend, each backend would have unique number,
+   * weight (the measurment of how often we would see this endpoint
+   * on CH ring) and hash value, which will be used as a seed value
+   * (it should be unique value per endpoint for CH to work as expected)
+   *
+   * HuanGong: weight 不能大于ring size, 否则排序不对
+   */
+  struct Endpoint {
+    uint32_t num;
+    uint32_t weight;
+    uint64_t hash;
+  };
 
-   typedef std::vector<uint32_t> IdList;
-   typedef std::vector<Endpoint> NodeList;
+  typedef std::vector<uint32_t> IdList;
+  typedef std::vector<Endpoint> NodeList;
 
   /**
    * @param std::vector<Endpoints>& endpoints, which will be used for CH
@@ -62,9 +62,11 @@ class MaglevHelper {
    * ring_size must be prime number.
    * this function could throw because allocation for vector could fail.
    */
-  static LookupTable GenerateMaglevHash(NodeList endpoints, const uint32_t ring_size = kDefaultChRingSize);
+  static LookupTable GenerateMaglevHash(
+      NodeList endpoints,
+      const uint32_t ring_size = kDefaultChRingSize);
 
- private:
+private:
   /**
    * helper function which will generate Maglev's permutation array for
    * specified endpoint on specified possition
@@ -75,5 +77,6 @@ class MaglevHelper {
                                   const uint32_t ring_size);
 };
 
-}} //end lt::net
+}  // namespace net
+}  // namespace lt
 #endif

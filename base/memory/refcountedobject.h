@@ -24,7 +24,7 @@ namespace base {
 
 template <class T>
 class RefCountedObject : public T {
- public:
+public:
   RefCountedObject() {}
 
   template <class P0>
@@ -32,9 +32,9 @@ class RefCountedObject : public T {
 
   template <class P0, class P1, class... Args>
   RefCountedObject(P0&& p0, P1&& p1, Args&&... args)
-      : T(std::forward<P0>(p0),
-          std::forward<P1>(p1),
-          std::forward<Args>(args)...) {}
+    : T(std::forward<P0>(p0),
+        std::forward<P1>(p1),
+        std::forward<Args>(args)...) {}
 
   virtual int AddRef() const { return __sync_add_and_fetch(&ref_count_, 1); }
 
@@ -50,10 +50,10 @@ class RefCountedObject : public T {
     return 1 == __atomic_load_n(&ref_count_, __ATOMIC_ACQUIRE);
   }
 
- protected:
+protected:
   virtual ~RefCountedObject() {}
   mutable volatile int ref_count_ = 0;
 };
 
-}
+}  // namespace base
 #endif

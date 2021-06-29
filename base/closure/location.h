@@ -27,7 +27,7 @@ public:
   // Constructor should be called with a long-lived char*, such as __FILE__.
   // It assumes the provided value will persist as a global constant, and it
   // will not make a copy of it.
-  Location() {};
+  Location(){};
   Location(const Location& other);
   Location(const char* function_name, const char* file_name, int line_number);
 
@@ -60,6 +60,6 @@ private:
 
 #define FROM_HERE ::base::Location(__func__, __FILE__, __LINE__)
 
-} //end namesapce base
+}  // namespace base
 
 #endif

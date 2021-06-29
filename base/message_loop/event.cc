@@ -36,4 +36,4 @@ std::string events2string(const LtEvent& events) {
   return oss.str().c_str();
 }
 
-};
+};  // namespace base

@@ -20,27 +20,25 @@
 //
 
 #include "client_channel.h"
+#include <base/utils/string/str_utils.h>
 #include "async_channel.h"
 #include "queued_channel.h"
-#include <base/utils/string/str_utils.h>
 
 namespace lt {
 namespace net {
 
-RefClientChannel
-  CreateClientChannel(ClientChannel::Delegate* delegate, RefCodecService service) {
-	if (service->KeepSequence()) {
-		auto client_channel = QueuedChannel::Create(delegate, service);
-		return std::static_pointer_cast<ClientChannel>(client_channel);
-	}
-	auto client_channel = AsyncChannel::Create(delegate, service);
-	return std::static_pointer_cast<ClientChannel>(client_channel);
+RefClientChannel CreateClientChannel(ClientChannel::Delegate* delegate,
+                                     RefCodecService service) {
+  if (service->KeepSequence()) {
+    auto client_channel = QueuedChannel::Create(delegate, service);
+    return std::static_pointer_cast<ClientChannel>(client_channel);
+  }
+  auto client_channel = AsyncChannel::Create(delegate, service);
+  return std::static_pointer_cast<ClientChannel>(client_channel);
 }
 
-
 ClientChannel::ClientChannel(Delegate* d, const RefCodecService& service)
-		: delegate_(d),
-		  codec_(service) {
+  : delegate_(d), codec_(service) {
   codec_->SetDelegate(this);
 }
 
@@ -54,7 +52,7 @@ void ClientChannel::StartClientChannel() {
 }
 
 void ClientChannel::CloseClientChannel() {
-	base::EventPump* pump = EventPump();
+  base::EventPump* pump = EventPump();
   CHECK(pump->IsInLoopThread());
 
   VLOG(GLOG_VTRACE) << __FUNCTION__ << " going to close:" << ConnectionInfo();
@@ -85,7 +83,7 @@ std::string ClientChannel::ConnectionInfo() const {
   return std::string("unknown connection");
 }
 
-//override
+// override
 const url::RemoteInfo* ClientChannel::GetRemoteInfo() const {
   if (delegate_) {
     return &(delegate_->GetRemoteInfo());
@@ -106,7 +104,8 @@ bool ClientChannel::HandleResponse(const RefCodecMessage& req,
                                    const RefCodecMessage& res) {
   if (heartbeat_message_.get() == req.get()) {
     heartbeat_message_.reset();
-    LOG_IF(INFO, !res->IsHeartbeat()) << "heartbeat message go a none heartbeat response";
+    LOG_IF(INFO, !res->IsHeartbeat())
+        << "heartbeat message go a none heartbeat response";
     return true;
   }
 
@@ -118,7 +117,7 @@ bool ClientChannel::HandleResponse(const RefCodecMessage& req,
   return false;
 }
 
-//override
+// override
 void ClientChannel::OnProtocolServiceGone(const RefCodecService& service) {
   VLOG(GLOG_VTRACE) << __FUNCTION__ << " enter";
 
@@ -129,7 +128,7 @@ void ClientChannel::OnProtocolServiceGone(const RefCodecService& service) {
   }
 }
 
-//override
+// override
 void ClientChannel::OnProtocolServiceReady(const RefCodecService& service) {
   state_ = kReady;
   uint32_t heartbeat_ms = 0;
@@ -148,4 +147,5 @@ void ClientChannel::OnProtocolServiceReady(const RefCodecService& service) {
   }
 };
 
-}}
+}  // namespace net
+}  // namespace lt

@@ -19,18 +19,15 @@
 
 #include "glog/logging.h"
 
-#include "io_multiplexer.h"
 #include <base/utils/sys_error.h>
+#include "io_multiplexer.h"
 
 namespace base {
 
 static const int kMax_EPOLL_FD_NUM = 65535;
 
 IOMuxEpoll::IOMuxEpoll(int32_t max_fds)
-  : IOMux(),
-    lt_events_(max_fds, NULL),
-    ep_events_(kMax_EPOLL_FD_NUM) {
-
+  : IOMux(), lt_events_(max_fds, NULL), ep_events_(kMax_EPOLL_FD_NUM) {
   epoll_fd_ = ::epoll_create(kMax_EPOLL_FD_NUM);
 }
 
@@ -39,21 +36,19 @@ IOMuxEpoll::~IOMuxEpoll() {
 }
 
 int IOMuxEpoll::WaitingIO(FiredEvent* active_list, int32_t timeout_ms) {
+  int turn_active_count =
+      ::epoll_wait(epoll_fd_, &ep_events_[0], kMax_EPOLL_FD_NUM, timeout_ms);
 
-  int turn_active_count = ::epoll_wait(epoll_fd_,
-                                       &ep_events_[0],
-                                       kMax_EPOLL_FD_NUM,
-                                       timeout_ms);
-
-  if (turn_active_count < 0) {//error
+  if (turn_active_count < 0) {  // error
     int32_t err = errno;
-    LOG(ERROR) << "epoll fd:" << epoll_fd_ << " epoll_wait error:" << StrError(err);
+    LOG(ERROR) << "epoll fd:" << epoll_fd_
+               << " epoll_wait error:" << StrError(err);
     return 0;
   }
 
   for (int idx = 0; idx < turn_active_count; idx++) {
     struct epoll_event& ev = ep_events_[idx];
-    //DCHECK(fd_ev);
+    // DCHECK(fd_ev);
     DCHECK(lt_events_[ev.data.fd] != NULL);
 
     active_list[idx].fd_id = ev.data.fd;
@@ -66,18 +61,18 @@ LtEvent IOMuxEpoll::ToLtEvent(const uint32_t epoll_ev) {
   LtEvent event = LtEv::LT_EVENT_NONE;
 
   if (epoll_ev & EPOLLERR) {
-    event |=  LtEv::LT_EVENT_ERROR;
+    event |= LtEv::LT_EVENT_ERROR;
   }
-  //case readable:
-  //case hang out: but can read till EOF
+  // case readable:
+  // case hang out: but can read till EOF
   if (epoll_ev & EPOLLHUP || epoll_ev & EPOLLIN) {
-    event |=  LtEv::LT_EVENT_READ;
+    event |= LtEv::LT_EVENT_READ;
   }
-  //writable
+  // writable
   if (epoll_ev & EPOLLOUT) {
-    event |=  LtEv::LT_EVENT_WRITE;
+    event |= LtEv::LT_EVENT_WRITE;
   }
-  //peer close
+  // peer close
   if (epoll_ev & EPOLLRDHUP) {
     event |= LtEv::LT_EVENT_CLOSE;
   }
@@ -114,13 +109,12 @@ void IOMuxEpoll::AddFdEvent(FdEvent* fd_ev) {
   int32_t fd = fd_ev->fd();
   if (lt_events_[fd] != NULL && lt_events_[fd] != fd_ev) {
     LOG(ERROR) << __FUNCTION__ << " override a exsist fdevent"
-      << ", origin:" << lt_events_[fd] << " new:" << fd_ev;
+               << ", origin:" << lt_events_[fd] << " new:" << fd_ev;
   }
   lt_events_[fd] = fd_ev;
 }
 
 void IOMuxEpoll::DelFdEvent(FdEvent* fd_ev) {
-
   EpollCtl(fd_ev, EPOLL_CTL_DEL);
 
   int32_t fd = fd_ev->fd();
@@ -156,14 +150,15 @@ int IOMuxEpoll::EpollCtl(FdEvent* fdev, int opt) {
   int ret = ::epoll_ctl(epoll_fd_, opt, fd, &ev);
 
   LOG_IF(ERROR, ret != 0) << "apply epoll_ctl opt " << EpollOptToString(opt)
-    << " on fd " << fd << " failed, errno:" << StrError(errno)
-    << " events:" << fdev->MonitorEventAsString();
+                          << " on fd " << fd
+                          << " failed, errno:" << StrError(errno)
+                          << " events:" << fdev->MonitorEventAsString();
 
   return ret;
 }
 
 std::string IOMuxEpoll::EpollOptToString(int opt) {
-  switch(opt) {
+  switch (opt) {
     case EPOLL_CTL_ADD:
       return "EPOLL_CTL_ADD";
     case EPOLL_CTL_DEL:
@@ -176,4 +171,4 @@ std::string IOMuxEpoll::EpollOptToString(int opt) {
   return "BAD CTL OPTION";
 }
 
-}
+}  // namespace base

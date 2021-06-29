@@ -4,9 +4,7 @@
 
 namespace component {
 
-static const IndexScanner::Option default_option = {
-  .dump_detail = false
-};
+static const IndexScanner::Option default_option = {.dump_detail = false};
 
 std::string IndexScanner::Result::to_string() const {
   std::ostringstream oss;
@@ -18,17 +16,14 @@ std::string IndexScanner::Result::to_string() const {
   return oss.str();
 }
 
-
-IndexScanner::IndexScanner(BooleanIndexer* index)
-    : index_(index) {
-}
+IndexScanner::IndexScanner(BooleanIndexer* index) : index_(index) {}
 
 const IndexScanner::Option& IndexScanner::DefaultOption() {
-  return  default_option;
+  return default_option;
 }
 
-IndexScanner::Result
-IndexScanner::Retrieve(const QueryAssigns& queries, const Option* opt) const{
+IndexScanner::Result IndexScanner::Retrieve(const QueryAssigns& queries,
+                                            const Option* opt) const {
   if (nullptr == opt) {
     opt = &default_option;
   }
@@ -39,9 +34,8 @@ IndexScanner::Retrieve(const QueryAssigns& queries, const Option* opt) const{
 
   int k = std::min(index_->MaxKSize(), field_values.size());
   for (; k >= 0; k--) {
-
-    std::vector<FieldCursorPtr> plists
-      = index_->BuildFieldIterators(k, field_values);
+    std::vector<FieldCursorPtr> plists =
+        index_->BuildFieldIterators(k, field_values);
 
     int temp_k = k;
     if (temp_k == 0) {
@@ -68,16 +62,14 @@ IndexScanner::Retrieve(const QueryAssigns& queries, const Option* opt) const{
     EntryId end_eid = plists[temp_k - 1]->GetCurEntryID();
 
     while (end_eid != NULLENTRY) {
-
       EntryId eid = plists[0]->GetCurEntryID();
       uint64_t conj_id = EntryUtil::GetConjunctionId(eid);
-      EntryId next_id =
-        EntryUtil::IsInclude(end_eid) ? end_eid - 1 : end_eid;
+      EntryId next_id = EntryUtil::IsInclude(end_eid) ? end_eid - 1 : end_eid;
 
       if (opt->dump_detail) {
         std::ostringstream oss;
         oss << "[" << EntryUtil::ToString(eid) << "..."
-          << EntryUtil::ToString(end_eid) << "]\ncursors:[";
+            << EntryUtil::ToString(end_eid) << "]\ncursors:[";
         for (auto& c : plists) {
           oss << EntryUtil::ToString(c->GetCurEntryID()) << ",";
         }
@@ -86,21 +78,19 @@ IndexScanner::Retrieve(const QueryAssigns& queries, const Option* opt) const{
       }
 
       if (conj_id == EntryUtil::GetConjunctionId(end_eid)) {
-
         next_id = end_eid + 1;
 
         if (EntryUtil::IsInclude(eid)) {
-
           result.result.push_back(EntryUtil::GetDocID(eid));
 
-        } else { //exclude
+        } else {  // exclude
           for (auto& iter : plists) {
             if (iter->GetCurConjID() != conj_id) {
               break;
             }
             iter->Skip(next_id);
           }
-        } //end exclude
+        }  // end exclude
       }
       // 推进游标
       for (int i = 0; i < temp_k; i++) {
@@ -112,11 +102,10 @@ IndexScanner::Retrieve(const QueryAssigns& queries, const Option* opt) const{
                   return l->GetCurEntryID() < r->GetCurEntryID();
                 });
       end_eid = plists[temp_k - 1]->GetCurEntryID();
-    }// end while
+    }  // end while
 
-  }// to k = k-1
+  }  // to k = k-1
   return result;
 }
 
-
-}
+}  // namespace component

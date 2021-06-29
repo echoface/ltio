@@ -15,17 +15,15 @@
  * limitations under the License.
  */
 
-
 #include "workload_dispatcher.h"
 
-#include "glog/logging.h"
 #include <net_io/codec/codec_message.h>
+#include "glog/logging.h"
 
 namespace lt {
 namespace net {
 
-Dispatcher::Dispatcher(bool handle_in_io)
-  : handle_in_io_(handle_in_io) {
+Dispatcher::Dispatcher(bool handle_in_io) : handle_in_io_(handle_in_io) {
   round_robin_counter_.store(0);
 }
 
@@ -56,4 +54,5 @@ bool Dispatcher::Dispatch(const base::LtClosure& clourse) {
   return loop->PostTask(FROM_HERE, clourse);
 }
 
-}}//end namespace net
+}  // namespace net
+}  // namespace lt

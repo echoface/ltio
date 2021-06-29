@@ -15,30 +15,27 @@
  * limitations under the License.
  */
 
-
-#include <cstring>
-#include "redis_request.h"
 #include "resp_codec_service.h"
 #include <base/base_constants.h>
-#include "glog/logging.h"
+#include <net_io/codec/codec_service.h>
 #include <net_io/io_buffer.h>
 #include <net_io/tcp_channel.h>
-#include <net_io/codec/codec_service.h>
+#include <cstring>
+#include "glog/logging.h"
+#include "redis_request.h"
 
 namespace lt {
 namespace net {
 
 RespCodecService::RespCodecService(base::MessageLoop* loop)
-  : CodecService(loop) {
-}
+  : CodecService(loop) {}
 
-RespCodecService::~RespCodecService() {
-}
+RespCodecService::~RespCodecService() {}
 
-void RespCodecService::OnDataFinishSend(const SocketChannel*) {
-}
+void RespCodecService::OnDataFinishSend(const SocketChannel*) {}
 
-void RespCodecService::OnDataReceived(const SocketChannel* channel, IOBuffer *buffer) {
+void RespCodecService::OnDataReceived(const SocketChannel* channel,
+                                      IOBuffer* buffer) {
   VLOG(GLOG_VTRACE) << __FUNCTION__ << " enter";
   CHECK(!IsServerSide());
 
@@ -47,8 +44,8 @@ void RespCodecService::OnDataReceived(const SocketChannel* channel, IOBuffer *bu
   }
 
   do {
-
-    resp::result res = decoder_.decode((const char*)buffer->GetRead(), buffer->CanReadSize());
+    resp::result res =
+        decoder_.decode((const char*)buffer->GetRead(), buffer->CanReadSize());
     if (res != resp::completed) {
       buffer->Consume(res.size());
       break;
@@ -57,10 +54,9 @@ void RespCodecService::OnDataReceived(const SocketChannel* channel, IOBuffer *bu
     next_incoming_count_--;
     buffer->Consume(res.size());
     current_response->AddResult(res);
-  } while(next_incoming_count_ > 0);
+  } while (next_incoming_count_ > 0);
 
   if (next_incoming_count_ == 0) {
-
     current_response->SetIOCtx(shared_from_this());
 
     if (delegate_ && init_wait_res_flags_ == 0) {
@@ -156,9 +152,11 @@ bool RespCodecService::SendRequest(CodecMessage* message) {
   return false;
 }
 
-bool RespCodecService::SendResponse(const CodecMessage* req, CodecMessage* res) {
-	LOG(FATAL) << __FUNCTION__ << " resp only client service supported";
+bool RespCodecService::SendResponse(const CodecMessage* req,
+                                    CodecMessage* res) {
+  LOG(FATAL) << __FUNCTION__ << " resp only client service supported";
   return false;
 };
 
-}} //end namespace
+}  // namespace net
+}  // namespace lt

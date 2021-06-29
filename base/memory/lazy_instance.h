@@ -15,8 +15,8 @@
 #define ANDROID_BASE_MEMORY_LAZY_INSTANCE_H
 #include <new>
 #ifdef _WIN32
-#  define WIN32_LEAN_AND_MEAN 1
-#  include <windows.h>
+#define WIN32_LEAN_AND_MEAN 1
+#include <windows.h>
 #endif
 namespace base {
 namespace internal {
@@ -80,23 +80,23 @@ namespace internal {
 // initialization and access without incurring the full cost of a mutex
 // lock/unlock.
 struct LazyInstanceState {
-    enum {
-        STATE_INIT = 0,
-        STATE_CONSTRUCTING = 1,
-        STATE_DONE = 2,
-    };
-    bool inInitState();
-    bool needConstruction();
-    void doneConstructing();
+  enum {
+    STATE_INIT = 0,
+    STATE_CONSTRUCTING = 1,
+    STATE_DONE = 2,
+  };
+  bool inInitState();
+  bool needConstruction();
+  void doneConstructing();
 #ifdef _WIN32
-    typedef LONG volatile AtomicType;
+  typedef LONG volatile AtomicType;
 #else
-    typedef int volatile AtomicType;
+  typedef int volatile AtomicType;
 #endif
-    volatile AtomicType mState;
+  volatile AtomicType mState;
 };
-#define LAZY_INSTANCE_STATE_INIT  \
-    { ::base::internal::LazyInstanceState::STATE_INIT }
+#define LAZY_INSTANCE_STATE_INIT \
+  { ::base::internal::LazyInstanceState::STATE_INIT }
 }  // namespace internal
 // LazyInstance template definition, see comment above for usage
 // instructions. It is crucial to make this a POD-struct compatible
@@ -106,29 +106,32 @@ struct LazyInstanceState {
 //
 template <class T>
 struct LazyInstance {
-    bool hasInstance() const { return !mState.inInitState(); }
-    T& get() const { return *ptr(); }
-    T* ptr() const;
-    const T* operator->() const { return ptr(); }
-    T* operator->() { return ptr(); }
-    T& operator*() { return get(); }
-    // Really private, do not use.
-    union {
-        mutable internal::LazyInstanceState mState;
-        double mPadding;
-    };
-    mutable char mStorage[sizeof(T)];
+  bool hasInstance() const { return !mState.inInitState(); }
+  T& get() const { return *ptr(); }
+  T* ptr() const;
+  const T* operator->() const { return ptr(); }
+  T* operator->() { return ptr(); }
+  T& operator*() { return get(); }
+  // Really private, do not use.
+  union {
+    mutable internal::LazyInstanceState mState;
+    double mPadding;
+  };
+  mutable char mStorage[sizeof(T)];
 };
 // Initialization value, must resolve to all-0 to ensure the object
 // instance is actually placed in the .bss
-#define LAZY_INSTANCE_INIT  { { LAZY_INSTANCE_STATE_INIT }, { 0 } }
+#define LAZY_INSTANCE_INIT            \
+  {                                   \
+    {LAZY_INSTANCE_STATE_INIT}, { 0 } \
+  }
 template <class T>
 T* LazyInstance<T>::ptr() const {
-    if (mState.needConstruction()) {
-        new (mStorage) T();
-        mState.doneConstructing();
-    }
-    return reinterpret_cast<T*>(mStorage);
+  if (mState.needConstruction()) {
+    new (mStorage) T();
+    mState.doneConstructing();
+  }
+  return reinterpret_cast<T*>(mStorage);
 }
 }  // namespace base
 #endif  // ANDROID_BASE_MEMORY_LAZY_INSTANCE_H

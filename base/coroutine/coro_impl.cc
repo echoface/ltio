@@ -22,8 +22,8 @@
 #include <functional>
 #include <memory>
 
-#include <base/base_micro.h>
 #include <base/base_constants.h>
+#include <base/base_micro.h>
 #include <base/closure/closure_task.h>
 #include <base/memory/spin_lock.h>
 #include <thirdparty/libcoro/coro.h>
@@ -40,19 +40,17 @@ class Coroutine : public coro_context,
                   public CoroBase,
                   public EnableShared(Coroutine) {
 public:
-  static RefCoroutine CreateMain() {
-    return RefCoroutine(new Coroutine());
-  }
+  static RefCoroutine CreateMain() { return RefCoroutine(new Coroutine()); }
   static RefCoroutine Create(CoroEntry entry, Coroutine* main_co) {
     return RefCoroutine(new Coroutine(entry, main_co));
   }
 
   ~Coroutine() {
     VLOG(GLOG_VTRACE) << "coroutine gone!"
-      << " count:" << SystemCoroutineCount() 
-      << " state:" << StateToString(state_)
-      << " main:" << (is_main() ? "True" : "False");
-    //none main coroutine
+                      << " count:" << SystemCoroutineCount()
+                      << " state:" << StateToString(state_)
+                      << " main:" << (is_main() ? "True" : "False");
+    // none main coroutine
     if (stack_.ssze != 0) {
       coro_stack_free(&stack_);
       coro_counter_.fetch_sub(1);
@@ -80,7 +78,7 @@ public:
 private:
   friend class CoroRunner;
 
-  //main coro
+  // main coro
   Coroutine() {
     stack_.ssze = 0;
     stack_.sptr = nullptr;
@@ -93,29 +91,30 @@ private:
   Coroutine(CoroEntry entry, Coroutine* main_co) {
     SetState(CoroState::kInit);
 
-      stack_.ssze = 0;
-      stack_.sptr = nullptr;
-      int r = coro_stack_alloc(&stack_, COROUTINE_STACK_SIZE);
-      LOG_IF(ERROR, r == 0) << "Failed Allocate Coroutine Stack";
-      CHECK(r == 1);
-      memset((coro_context*)this, 0, sizeof(coro_context));
-      {
-        base::SpinLockGuard guard(g_coro_lock);
-        coro_create(this, entry, this, stack_.sptr, stack_.ssze);
-      }
-      coro_counter_.fetch_add(1);
+    stack_.ssze = 0;
+    stack_.sptr = nullptr;
+    int r = coro_stack_alloc(&stack_, COROUTINE_STACK_SIZE);
+    LOG_IF(ERROR, r == 0) << "Failed Allocate Coroutine Stack";
+    CHECK(r == 1);
+    memset((coro_context*)this, 0, sizeof(coro_context));
+    {
+      base::SpinLockGuard guard(g_coro_lock);
+      coro_create(this, entry, this, stack_.sptr, stack_.ssze);
+    }
+    coro_counter_.fetch_add(1);
 
-      VLOG(GLOG_VTRACE) << "coroutine born!"
-        << " count:" << SystemCoroutineCount() 
-        << " state:" << StateToString(state_)
-        << " main:" << (is_main() ? "True" : "False");
+    VLOG(GLOG_VTRACE) << "coroutine born!"
+                      << " count:" << SystemCoroutineCount()
+                      << " state:" << StateToString(state_)
+                      << " main:" << (is_main() ? "True" : "False");
   }
 
-  void ReleaseSelfHolder() {self_holder_.reset();};
+  void ReleaseSelfHolder() { self_holder_.reset(); };
 
-  WeakCoroutine AsWeakPtr() {return shared_from_this();}
+  WeakCoroutine AsWeakPtr() { return shared_from_this(); }
 
-  bool is_main() const {return stack_.ssze == 0;}
+  bool is_main() const { return stack_.ssze == 0; }
+
 private:
   coro_stack stack_;
 
@@ -123,4 +122,4 @@ private:
   DISALLOW_COPY_AND_ASSIGN(Coroutine);
 };
 
-}//end base
+}  // namespace base

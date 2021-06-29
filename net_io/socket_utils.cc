@@ -15,24 +15,24 @@
  * limitations under the License.
  */
 
+#include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <stdio.h>  // snprintf
+#include <netinet/in.h>
+#include <stdio.h>    // snprintf
 #include <strings.h>  // bzero
 #include <sys/socket.h>
 #include <unistd.h>
 #include <string>
-#include <netinet/in.h>
-#include <assert.h>
 
-#include "glog/logging.h"
 #include "base/ip_endpoint.h"
 #include "base/sockaddr_storage.h"
+#include "glog/logging.h"
 
-#include <sys/uio.h>
-#include <sys/types.h>
 #include <arpa/inet.h>
 #include <base/base_constants.h>
+#include <sys/types.h>
+#include <sys/uio.h>
 #include "base/utils/sys_error.h"
 #include "socket_utils.h"
 
@@ -42,26 +42,34 @@ namespace net {
 namespace socketutils {
 
 SocketFd CreateNoneBlockTCP(sa_family_t family, int type) {
-  int sockfd = ::socket(family, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, type);
-  LOG_IF(ERROR, sockfd == -1) << " create tcp socket err:[" << base::StrError() << "]";
+  int sockfd =
+      ::socket(family, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, type);
+  LOG_IF(ERROR, sockfd == -1)
+      << " create tcp socket err:[" << base::StrError() << "]";
   return sockfd;
 }
 
 SocketFd CreateNoneBlockUDP(sa_family_t family, int type) {
-  int sockfd = ::socket(family, SOCK_DGRAM | SOCK_NONBLOCK | SOCK_CLOEXEC, type);
-  LOG_IF(ERROR, sockfd == -1) << " create udp socket err:[" << base::StrError() << "]";
+  int sockfd =
+      ::socket(family, SOCK_DGRAM | SOCK_NONBLOCK | SOCK_CLOEXEC, type);
+  LOG_IF(ERROR, sockfd == -1)
+      << " create udp socket err:[" << base::StrError() << "]";
   return sockfd;
 }
 
 int BindSocketFd(SocketFd sockfd, const struct sockaddr* addr) {
-  int ret = ::bind(sockfd, addr, static_cast<socklen_t>(sizeof(struct sockaddr_in6)));
-  LOG_IF(ERROR, ret < 0) << __FUNCTION__ << " bind err:[" << base::StrError() << "]";
+  int ret =
+      ::bind(sockfd, addr, static_cast<socklen_t>(sizeof(struct sockaddr_in6)));
+  LOG_IF(ERROR, ret < 0) << __FUNCTION__ << " bind err:[" << base::StrError()
+                         << "]";
   return ret;
 }
 
 int SocketConnect(SocketFd fd, const struct sockaddr* addr, int* err) {
-  int ret = ::connect(fd, addr, static_cast<socklen_t>(sizeof(struct sockaddr_in6)));
-  LOG_IF(ERROR, ret < 0 && errno != EINPROGRESS) << __FUNCTION__ << " connect failed, err:[" << base::StrError() << "]";
+  int ret =
+      ::connect(fd, addr, static_cast<socklen_t>(sizeof(struct sockaddr_in6)));
+  LOG_IF(ERROR, ret < 0 && errno != EINPROGRESS)
+      << __FUNCTION__ << " connect failed, err:[" << base::StrError() << "]";
   if (ret < 0 && err != nullptr) {
     *err = errno;
   }
@@ -70,16 +78,14 @@ int SocketConnect(SocketFd fd, const struct sockaddr* addr, int* err) {
 
 int ListenSocket(SocketFd socket_fd) {
   int ret = ::listen(socket_fd, SOMAXCONN);
-  LOG_IF(ERROR, ret < 0) << __FUNCTION__ << " listen fd:[" << socket_fd << "] err:[" << base::StrError() << "]";
+  LOG_IF(ERROR, ret < 0) << __FUNCTION__ << " listen fd:[" << socket_fd
+                         << "] err:[" << base::StrError() << "]";
   return ret;
 }
 
 SocketFd AcceptSocket(SocketFd sockfd, struct sockaddr* addr, int* err) {
   socklen_t addrlen = static_cast<socklen_t>(sizeof *addr);
-  int connfd = ::accept4(sockfd,
-                         addr,
-                         &addrlen,
-                         SOCK_NONBLOCK | SOCK_CLOEXEC);
+  int connfd = ::accept4(sockfd, addr, &addrlen, SOCK_NONBLOCK | SOCK_CLOEXEC);
   int savedErrno = 0;
   if (connfd < 0) {
     savedErrno = errno;
@@ -88,9 +94,9 @@ SocketFd AcceptSocket(SocketFd sockfd, struct sockaddr* addr, int* err) {
       case EAGAIN:
       case ECONNABORTED:
       case EINTR:
-      case EPROTO: // ???
+      case EPROTO:  // ???
       case EPERM:
-      case EMFILE: // per-process lmit of open file desctiptor ???
+      case EMFILE:  // per-process lmit of open file desctiptor ???
         // expected errors
         errno = savedErrno;
         break;
@@ -110,7 +116,9 @@ SocketFd AcceptSocket(SocketFd sockfd, struct sockaddr* addr, int* err) {
         break;
     }
   }
-  if (err) {*err = savedErrno;}
+  if (err) {
+    *err = savedErrno;
+  }
   return connfd;
 }
 
@@ -127,24 +135,20 @@ ssize_t ReadV(SocketFd sockfd, const struct iovec* iov, int iovcnt) {
 }
 
 void CloseSocket(SocketFd sockfd) {
-  LOG_IF(ERROR, (::close(sockfd) < 0)) << __func__
-    << " close socket error:" << base::StrError(errno);
+  LOG_IF(ERROR, (::close(sockfd) < 0))
+      << __func__ << " close socket error:" << base::StrError(errno);
 }
 
 void ShutdownWrite(SocketFd sockfd) {
-  LOG_IF(ERROR, ::shutdown(sockfd, SHUT_WR) < 0) << __FUNCTION__
-    << " shutdown write error:" << base::StrError(errno);
+  LOG_IF(ERROR, ::shutdown(sockfd, SHUT_WR) < 0)
+      << __FUNCTION__ << " shutdown write error:" << base::StrError(errno);
 }
 
 int GetSocketError(SocketFd sockfd) {
   int optval;
   socklen_t optlen = static_cast<socklen_t>(sizeof optval);
 
-  if (::getsockopt(sockfd,
-                   SOL_SOCKET,
-                   SO_ERROR,
-                   &optval,
-                   &optlen) < 0) {
+  if (::getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &optval, &optlen) < 0) {
     return errno;
   }
   return optval;
@@ -195,7 +199,8 @@ struct sockaddr GetPeerAddrIn(int sockfd) {
 }
 
 uint32_t SockAddrFamily(struct sockaddr* addr) {
-  const struct sockaddr_in* laddr4 = reinterpret_cast<struct sockaddr_in*>(addr);
+  const struct sockaddr_in* laddr4 =
+      reinterpret_cast<struct sockaddr_in*>(addr);
   if (laddr4->sin_family == AF_INET) {
     return AF_INET;
   }
@@ -205,7 +210,8 @@ uint32_t SockAddrFamily(struct sockaddr* addr) {
 bool IsSelfConnect(int sockfd) {
   IPEndPoint peer_ep;
   IPEndPoint local_ep;
-  if (!GetLocalEndpoint(sockfd, &local_ep) || !GetPeerEndpoint(sockfd, &peer_ep)) {
+  if (!GetLocalEndpoint(sockfd, &local_ep) ||
+      !GetPeerEndpoint(sockfd, &peer_ep)) {
     return false;
   }
 
@@ -215,25 +221,27 @@ bool IsSelfConnect(int sockfd) {
   }
 
   SockaddrStorage local_storage;
-  if (!local_ep.ToSockAddr(local_storage.AsSockAddr(), local_storage.addr_len)) {
+  if (!local_ep.ToSockAddr(local_storage.AsSockAddr(),
+                           local_storage.addr_len)) {
     return false;
   }
 
-  switch(local_ep.GetSockAddrFamily()) {
-    case AF_INET:  {
+  switch (local_ep.GetSockAddrFamily()) {
+    case AF_INET: {
       const struct sockaddr_in* raddr4 = peer_storage.AsSockAddrIn();
       const struct sockaddr_in* laddr4 = local_storage.AsSockAddrIn();
 
       return laddr4->sin_port == raddr4->sin_port &&
-        laddr4->sin_addr.s_addr == raddr4->sin_addr.s_addr;
+             laddr4->sin_addr.s_addr == raddr4->sin_addr.s_addr;
 
-    }break;
+    } break;
     case AF_INET6: {
       const struct sockaddr_in6* raddr6 = peer_storage.AsSockAddrIn6();
       const struct sockaddr_in6* laddr6 = local_storage.AsSockAddrIn6();
 
       return laddr6->sin6_port == raddr6->sin6_port &&
-        (memcmp(&laddr6->sin6_addr, &raddr6->sin6_addr, sizeof(raddr6->sin6_addr)) == 0);
+             (memcmp(&laddr6->sin6_addr, &raddr6->sin6_addr,
+                     sizeof(raddr6->sin6_addr)) == 0);
     }
     default:
       break;
@@ -243,19 +251,18 @@ bool IsSelfConnect(int sockfd) {
 
 bool ReUseSocketAddress(SocketFd socket_fd, bool reuse) {
   int option = reuse ? 1 : 0;
-  int r = ::setsockopt(socket_fd,
-                       SOL_SOCKET,
-                       SO_REUSEADDR,
-                       &option, static_cast<socklen_t>(sizeof option));
-  LOG_IF(ERROR, r == -1) << " REUSEADDR Failed, fd:" << socket_fd << " Reuse:" << reuse;
+  int r = ::setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &option,
+                       static_cast<socklen_t>(sizeof option));
+  LOG_IF(ERROR, r == -1) << " REUSEADDR Failed, fd:" << socket_fd
+                         << " Reuse:" << reuse;
   return (r == 0);
 }
 
 bool ReUseSocketPort(SocketFd socket_fd, bool reuse) {
 #ifdef SO_REUSEPORT
   int optval = reuse ? 1 : 0;
-  int ret = ::setsockopt(socket_fd, SOL_SOCKET, SO_REUSEPORT,
-                         &optval, static_cast<socklen_t>(sizeof optval));
+  int ret = ::setsockopt(socket_fd, SOL_SOCKET, SO_REUSEPORT, &optval,
+                         static_cast<socklen_t>(sizeof optval));
   LOG_IF(ERROR, ret == -1) << "Set SO_REUSEPORT failed.";
   return ret == 0;
 #else
@@ -265,11 +272,10 @@ bool ReUseSocketPort(SocketFd socket_fd, bool reuse) {
 
 void KeepAlive(SocketFd fd, bool alive) {
   int optval = alive ? 1 : 0;
-  ::setsockopt(fd,
-               SOL_SOCKET,
-               SO_KEEPALIVE,
-               &optval,
+  ::setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &optval,
                static_cast<socklen_t>(sizeof optval));
 }
 
-}}} //end lt::net::socketutils
+}  // namespace socketutils
+}  // namespace net
+}  // namespace lt

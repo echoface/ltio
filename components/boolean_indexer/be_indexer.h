@@ -16,47 +16,43 @@ namespace component {
 
 class IndexScanner;
 class BooleanIndexer {
-  public:
-    static const Attr& WildcardAttr();
+public:
+  static const Attr& WildcardAttr();
 
-    BooleanIndexer();
+  BooleanIndexer();
 
-    ~BooleanIndexer();
+  ~BooleanIndexer();
 
-    void CompleteIndex();
+  void CompleteIndex();
 
-    void DumpIndex(std::ostringstream& oss) const;
+  void DumpIndex(std::ostringstream& oss) const;
 
-    void DumpIDMapping(std::ostringstream& oss) const;
+  void DumpIDMapping(std::ostringstream& oss) const;
 
-    KSizePostingEntries* MutableIndexes(size_t k);
-    const KSizePostingEntries* GetPostEntries(size_t k) const;
+  KSizePostingEntries* MutableIndexes(size_t k);
+  const KSizePostingEntries* GetPostEntries(size_t k) const;
 
-    FieldQueryValues ParseAssigns(const QueryAssigns& queries) const;
+  FieldQueryValues ParseAssigns(const QueryAssigns& queries) const;
 
-    std::vector<FieldCursorPtr>
-    BuildFieldIterators(const size_t k_size,
-                        const FieldQueryValues &assigns) const;
+  std::vector<FieldCursorPtr> BuildFieldIterators(
+      const size_t k_size,
+      const FieldQueryValues& assigns) const;
 
-    uint64_t GenUniqueID(const std::string& value);
+  uint64_t GenUniqueID(const std::string& value);
 
-    const size_t MaxKSize() const {
-      return ksize_entries_.size();
-    }
+  const size_t MaxKSize() const { return ksize_entries_.size(); }
 
-  private:
-    friend IndexScanner;
+private:
+  friend IndexScanner;
 
-    const Entries* wildcard_list_;
+  const Entries* wildcard_list_;
 
-    std::vector<KSizePostingEntries> ksize_entries_;
+  std::vector<KSizePostingEntries> ksize_entries_;
 
-    std::unordered_map<std::string, uint64_t> id_gen_;
+  std::unordered_map<std::string, uint64_t> id_gen_;
 };
 
 typedef std::shared_ptr<BooleanIndexer> RefBooleanIndexer;
 
-}
+}  // namespace component
 #endif
-
-

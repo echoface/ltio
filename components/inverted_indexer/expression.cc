@@ -62,7 +62,8 @@ void from_json(const Json& j, Document& document) {
       document.SetValid(false);
       return;
     }
-    for (Json::const_iterator it = j_conditions.begin(); it != j_conditions.end(); it++) {
+    for (Json::const_iterator it = j_conditions.begin();
+         it != j_conditions.end(); it++) {
       component::Expression exp = *it;
       if (!exp.IsValid() || !document.AddExpression(exp)) {
         document.SetValid(false);

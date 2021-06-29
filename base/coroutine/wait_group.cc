@@ -17,8 +17,8 @@
 
 #include "wait_group.h"
 
-#include "coroutine_runner.h"
 #include <base/message_loop/message_loop.h>
+#include "coroutine_runner.h"
 
 namespace base {
 
@@ -26,17 +26,14 @@ std::shared_ptr<WaitGroup> WaitGroup::New() {
   return std::shared_ptr<WaitGroup>(new WaitGroup());
 }
 
-WaitGroup::WaitGroup()
-  : result_status_(kSuccess),
-    wait_count_(0) {
+WaitGroup::WaitGroup() : result_status_(kSuccess), wait_count_(0) {
   flag_.clear();
 
   loop_ = base::MessageLoop::Current();
   DCHECK(loop_);
 }
 
-WaitGroup::~WaitGroup() {
-}
+WaitGroup::~WaitGroup() {}
 
 void WaitGroup::Done() {
   if (wait_count_.fetch_sub(1) != 1) {
@@ -57,7 +54,8 @@ void WaitGroup::OnTimeOut() {
 }
 
 void WaitGroup::wakeup_internal() {
-  if (resumer_) resumer_();
+  if (resumer_)
+    resumer_();
 }
 
 WaitGroup::Result WaitGroup::Wait(int64_t timeout_ms) {
@@ -89,4 +87,4 @@ WaitGroup::Result WaitGroup::Wait(int64_t timeout_ms) {
   return result_status_;
 }
 
-} //end namespace base
+}  // end namespace base

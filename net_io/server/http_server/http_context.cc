@@ -16,15 +16,15 @@
  */
 
 #include <glog/logging.h>
-#include "net_io/codec/codec_service.h"
 #include "base/message_loop/message_loop.h"
+#include "net_io/codec/codec_service.h"
 
 #include "http_context.h"
 
 namespace lt {
 namespace net {
 
-//static
+// static
 RefHttpRequestCtx HttpRequestCtx::New(const RefCodecMessage& req) {
   return RefHttpRequestCtx(new HttpRequestCtx(req));
 }
@@ -35,12 +35,14 @@ HttpRequestCtx::HttpRequestCtx(const RefCodecMessage& request)
 }
 
 void HttpRequestCtx::File(const std::string& path, uint16_t code) {
-  if (did_reply_) return;
+  if (did_reply_)
+    return;
   CHECK(false);
 }
 
 void HttpRequestCtx::Json(const std::string& json, uint16_t code) {
-  if (did_reply_) return;
+  if (did_reply_)
+    return;
 
   RefHttpResponse response = HttpResponse::CreateWithCode(code);
   response->InsertHeader("Content-Type", "application/json;utf-8");
@@ -50,7 +52,8 @@ void HttpRequestCtx::Json(const std::string& json, uint16_t code) {
 }
 
 void HttpRequestCtx::String(const char* content, uint16_t code) {
-  if (did_reply_) return;
+  if (did_reply_)
+    return;
 
   RefHttpResponse response = HttpResponse::CreateWithCode(code);
   response->MutableBody().append(content);
@@ -59,7 +62,8 @@ void HttpRequestCtx::String(const char* content, uint16_t code) {
 }
 
 void HttpRequestCtx::String(const std::string& content, uint16_t code) {
-  if (did_reply_) return;
+  if (did_reply_)
+    return;
 
   RefHttpResponse response = HttpResponse::CreateWithCode(code);
   response->MutableBody() = std::move(content);
@@ -100,4 +104,5 @@ void HttpRequestCtx::Response(RefHttpResponse& response) {
   }
 }
 
-}}
+}  // namespace net
+}  // namespace lt

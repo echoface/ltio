@@ -18,16 +18,14 @@
 #ifndef LT_NET_CLIENT_ROUTER_H_H
 #define LT_NET_CLIENT_ROUTER_H_H
 
-#include <memory>
-#include <vector>
-#include <atomic>
 #include <net_io/clients/client.h>
 #include <net_io/codec/codec_message.h>
-
+#include <atomic>
+#include <memory>
+#include <vector>
 
 namespace lt {
 namespace net {
-
 
 REF_TYPEDEFINE(Client);
 /**
@@ -38,12 +36,12 @@ REF_TYPEDEFINE(Client);
  * */
 class ClientRouter {
 public:
-  ClientRouter() {};
-  virtual ~ClientRouter() {};
+  ClientRouter(){};
+  virtual ~ClientRouter(){};
 
   //** some of router need re-calculate values and adjustment
   //** after StartRouter, DO NOT AddClient ANY MORE
-  virtual void StartRouter() {};
+  virtual void StartRouter(){};
 
   virtual void AddClient(RefClient&& client) = 0;
 
@@ -51,5 +49,6 @@ public:
                                   CodecMessage* hint_message = NULL) = 0;
 };
 
-}}//lt::net
+}  // namespace net
+}  // namespace lt
 #endif

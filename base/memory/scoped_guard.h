@@ -24,19 +24,18 @@ namespace base {
 
 class ScopedGuard {
 public:
-	ScopedGuard(std::function<void()> func)
-		: func_(func) {
-	}
-	~ScopedGuard() {
-		if (!dismiss_ && func_) {
-			func_();
-		}
-	}
-	void DisMiss() {dismiss_ = true;}
+  ScopedGuard(std::function<void()> func) : func_(func) {}
+  ~ScopedGuard() {
+    if (!dismiss_ && func_) {
+      func_();
+    }
+  }
+  void DisMiss() { dismiss_ = true; }
+
 private:
-	bool dismiss_ = false;
-	std::function<void()> func_;
+  bool dismiss_ = false;
+  std::function<void()> func_;
 };
 
-}
-#endif //LIGHTINGIO_SCOPED_GUARD_H
+}  // namespace base
+#endif  // LIGHTINGIO_SCOPED_GUARD_H

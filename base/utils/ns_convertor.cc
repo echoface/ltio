@@ -15,7 +15,6 @@
  * limitations under the License.
  */
 
-
 #include "ns_convertor.h"
 
 #include <errno.h>
@@ -33,8 +32,8 @@
 namespace base {
 namespace utils {
 
-char *itoa_r(intptr_t i, char *buf, size_t sz, int base, size_t padding) {
-	// Make sure we can write at least one NUL byte.
+char* itoa_r(intptr_t i, char* buf, size_t sz, int base, size_t padding) {
+  // Make sure we can write at least one NUL byte.
   size_t n = 1;
   if (n > sz)
     return NULL;
@@ -94,4 +93,5 @@ char *itoa_r(intptr_t i, char *buf, size_t sz, int base, size_t padding) {
   return buf;
 }
 
-}} //namespace end
+}  // namespace utils
+}  // namespace base

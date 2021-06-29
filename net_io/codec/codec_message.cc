@@ -17,10 +17,10 @@
 
 #include "glog/logging.h"
 
-#include "codec_message.h"
-#include "codec_service.h"
 #include <base/coroutine/coroutine_runner.h>
 #include <base/message_loop/message_loop.h>
+#include "codec_message.h"
+#include "codec_service.h"
 
 namespace lt {
 namespace net {
@@ -28,13 +28,11 @@ namespace net {
 const RefCodecMessage CodecMessage::kNullMessage;
 
 CodecMessage::CodecMessage(MessageType type)
-  : type_(type),
-    fail_code_(kSuccess) {
+  : type_(type), fail_code_(kSuccess) {
   work_context_.loop = NULL;
 }
 
-CodecMessage::~CodecMessage() {
-}
+CodecMessage::~CodecMessage() {}
 
 void CodecMessage::SetFailCode(MessageCode reason) {
   fail_code_ = reason;
@@ -64,7 +62,7 @@ void CodecMessage::SetResponse(const RefCodecMessage& response) {
 }
 
 const char* CodecMessage::TypeAsStr() const {
-  switch(type_) {
+  switch (type_) {
     case MessageType::kRequest:
       return "Request";
     case MessageType::kResponse:
@@ -75,4 +73,5 @@ const char* CodecMessage::TypeAsStr() const {
   return "MessageNone";
 }
 
-}}//end namespace
+}  // namespace net
+}  // namespace lt

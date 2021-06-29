@@ -50,39 +50,40 @@
 namespace base {
 
 class WaitGroup : public EnableShared(WaitGroup) {
-  public:
-    enum Result {
-      kSuccess = 0,
-      kTimeout = 1,
-    };
+public:
+  enum Result {
+    kSuccess = 0,
+    kTimeout = 1,
+  };
 
-    static std::shared_ptr<WaitGroup> New();
+  static std::shared_ptr<WaitGroup> New();
 
-    ~WaitGroup();
+  ~WaitGroup();
 
-    void Add(int64_t count);
+  void Add(int64_t count);
 
-    void Done();
+  void Done();
 
-    Result Wait(int64_t timeout_ms = -1);
-  private:
-    WaitGroup();
+  Result Wait(int64_t timeout_ms = -1);
 
-    void OnTimeOut();
-    void wakeup_internal();
+private:
+  WaitGroup();
 
-    LtClosure resumer_;
+  void OnTimeOut();
+  void wakeup_internal();
 
-    // only rw same loop
-    Result result_status_;
-    std::atomic_flag flag_;
-    std::atomic<int64_t> wait_count_;
+  LtClosure resumer_;
 
-    MessageLoop* loop_ = nullptr;
-    std::unique_ptr<TimeoutEvent> timeout_;
-    DISALLOW_COPY_AND_ASSIGN(WaitGroup);
+  // only rw same loop
+  Result result_status_;
+  std::atomic_flag flag_;
+  std::atomic<int64_t> wait_count_;
+
+  MessageLoop* loop_ = nullptr;
+  std::unique_ptr<TimeoutEvent> timeout_;
+  DISALLOW_COPY_AND_ASSIGN(WaitGroup);
 };
 
-}
+}  // namespace base
 
 #endif

@@ -20,16 +20,17 @@
 
 #include "codec_service.h"
 
-#include <memory>
-#include <functional>
-#include <unordered_map>
 #include <net_io/net_callback.h>
+#include <functional>
+#include <memory>
+#include <unordered_map>
 #include "base/message_loop/message_loop.h"
 
 namespace lt {
 namespace net {
 
-typedef std::function<RefCodecService (base::MessageLoop* loop)> ProtoserviceCreator;
+typedef std::function<RefCodecService(base::MessageLoop* loop)>
+    ProtoserviceCreator;
 
 class CodecFactory {
 public:
@@ -43,8 +44,10 @@ public:
   // not thread safe,
   // this can cover the default protoservice or add new protocol support
   static void RegisterCreator(const std::string, ProtoserviceCreator);
+
 public:
   CodecFactory();
+
 private:
   void InitInnerDefault();
 
@@ -55,5 +58,6 @@ private:
   std::unordered_map<std::string, ProtoserviceCreator> creators_;
 };
 
-}}
+}  // namespace net
+}  // namespace lt
 #endif

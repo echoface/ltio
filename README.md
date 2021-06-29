@@ -1,9 +1,10 @@
+## ltio (LigthingIO)
 
 LigthingIO is a 'light' network IO framework with some `base` impliment for better coding experience;
 
 it has implemnet follow code/component
 
-all of those code ispired by project Chromium/libevent/Qt/NodeJs
+all of those code inspired by project Chromium/libevent/Qt/NodeJs
 
 - base code
 - message loop
@@ -39,6 +40,24 @@ TODO:
 
 About MessageLoop:
   like mostly messageloop implement, all PostTask/PostDelayTask/PostTaskWithReply implemented, it's ispired by chromium messageloop code;
+
+
+## Build And Deploy
+```bash
+sudo apt-get update -yqq
+sudo apt-get install -yqq software-properties-common unzip cmake build-essential libgoogle-perftools-dev git-core
+sudo apt install libgoogle-perftools-dev libssl-dev zlib1g-dev
+
+git clone https://github.com/echoface/ltio.git
+cd ltio
+git submodule update --init
+mkdir build; cd build;
+cmake -DWITH_OPENSSL=ON|OFF  \
+  -DLTIO_BUILD_UNITTESTS=OFF \
+  -DLTIO_USE_ACO_CORO_IMPL=OFF ../
+
+./bin/simple_ltserver
+```
 
 
 ```c++

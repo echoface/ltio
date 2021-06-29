@@ -1,18 +1,15 @@
+#include <thirdparty/catch/catch.hpp>
 #include "base/closure/closure_task.h"
 #include "glog/logging.h"
-#include <thirdparty/catch/catch.hpp>
 
-#include <iostream>
 #include <base/coroutine/coroutine_runner.h>
 #include <base/message_loop/event_pump.h>
 #include <base/message_loop/message_loop.h>
+#include <iostream>
 
 class Stub {
-  public:
-    void func(int a, int b) {
-      LOG(INFO) << __FUNCTION__ << " invoked ";
-    };
-
+public:
+  void func(int a, int b) { LOG(INFO) << __FUNCTION__ << " invoked "; };
 };
 
 Stub stub;
@@ -27,24 +24,16 @@ void cfunc() {
 }
 
 class TaskMock {
-  public:
-    void member_fun() {
-      LOG(INFO) << __func__ << " run";
-    }
-    void member_fun_args(int v) {
-      LOG(INFO) << __func__ << " run, arg:" <<  v;
-    }
-    static void static_member_fun() {
-      LOG(INFO) << __func__ << " run, arg:";
-    }
+public:
+  void member_fun() { LOG(INFO) << __func__ << " run"; }
+  void member_fun_args(int v) { LOG(INFO) << __func__ << " run, arg:" << v; }
+  static void static_member_fun() { LOG(INFO) << __func__ << " run, arg:"; }
 };
 
 TEST_CASE("base.task", "[test event pump timer]") {
   auto f = NewClosure(&cfunc);
   f->Run();
-  auto lambda_task = NewClosure([](){
-    ;
-  });
+  auto lambda_task = NewClosure([]() { ; });
   lambda_task->Run();
 
   TaskMock mock;
@@ -56,7 +45,6 @@ TEST_CASE("base.task", "[test event pump timer]") {
 }
 
 TEST_CASE("event_pump.timer", "[test event pump timer]") {
-
   base::EventPump pump;
   pump.SetLoopThreadId(std::this_thread::get_id());
 
@@ -64,9 +52,7 @@ TEST_CASE("event_pump.timer", "[test event pump timer]") {
   bool oneshot_invoked = false;
 
   base::TimeoutEvent* repeated_toe = new base::TimeoutEvent(5, true);
-  repeated_toe->InstallTimerHandler(NewClosure([&]() {
-    repeated_times++;
-  }));
+  repeated_toe->InstallTimerHandler(NewClosure([&]() { repeated_times++; }));
 
   base::TimeoutEvent* quit_toe = base::TimeoutEvent::CreateOneShot(1000, false);
   quit_toe->InstallTimerHandler(NewClosure([&]() {
@@ -95,14 +81,14 @@ TEST_CASE("messageloop.delaytask", "[run delay task]") {
 
   uint64_t start = base::time_ms();
   loop.PostDelayTask(NewClosure([&]() {
-    uint64_t end = base::time_ms();
-    LOG(INFO) << "delay task run:" << end - start << "(ms), expect 500";
-    REQUIRE(((end - start >= 500) && (end - start <= 505)));
-  }), 500);
+                       uint64_t end = base::time_ms();
+                       LOG(INFO) << "delay task run:" << end - start
+                                 << "(ms), expect 500";
+                       REQUIRE(((end - start >= 500) && (end - start <= 505)));
+                     }),
+                     500);
 
-  loop.PostDelayTask(NewClosure([&]() {
-    loop.QuitLoop();
-  }), 1000);
+  loop.PostDelayTask(NewClosure([&]() { loop.QuitLoop(); }), 1000);
 
   loop.WaitLoopEnd();
 }
@@ -117,31 +103,32 @@ TEST_CASE("messageloop.replytask", "[task with reply function]") {
   int64_t replytask_invoked_times = 0;
 
   loop.PostTaskAndReply(FROM_HERE,
+                        [&]() { LOG(INFO) << " task bind reply in loop run"; },
                         [&]() {
-                          LOG(INFO) << " task bind reply in loop run";
-                        }, [&]() {
                           replytask_invoked_times++;
                           REQUIRE(base::MessageLoop::Current() == &loop);
                         });
 
-  loop.PostTaskAndReply(FROM_HERE,
-                        [&]() {
-                          LOG(INFO) << " task bind reply use another loop run";
-                        }, [&]() {
-                          replytask_invoked_times++;
-                          REQUIRE(base::MessageLoop::Current() == &replyloop);
-                        }, &replyloop);
+  loop.PostTaskAndReply(
+      FROM_HERE,
+      [&]() { LOG(INFO) << " task bind reply use another loop run"; },
+      [&]() {
+        replytask_invoked_times++;
+        REQUIRE(base::MessageLoop::Current() == &replyloop);
+      },
+      &replyloop);
 
-  loop.PostDelayTask(NewClosure([&](){
-    loop.QuitLoop();
-    replyloop.QuitLoop();
-  }), 100);
+  loop.PostDelayTask(NewClosure([&]() {
+                       loop.QuitLoop();
+                       replyloop.QuitLoop();
+                     }),
+                     100);
   loop.WaitLoopEnd();
   REQUIRE(replytask_invoked_times == 2);
 }
 
 int64_t start_time;
-static std::int64_t counter= 0;
+static std::int64_t counter = 0;
 static const std::int64_t kTaskCount = 10000000;
 
 void invoke(base::MessageLoop* loop, bool coro) {
@@ -149,7 +136,7 @@ void invoke(base::MessageLoop* loop, bool coro) {
     int64_t diff = base::time_us() - start_time;
     int64_t task_per_second = kTaskCount * counter / diff;
     LOG(INFO) << "coro task one by one bench:" << (coro ? "true" : "false")
-      << ", total:" << diff << ", " << task_per_second << "/sec";
+              << ", total:" << diff << ", " << task_per_second << "/sec";
     loop->QuitLoop();
     return;
   };
@@ -166,7 +153,7 @@ TEST_CASE("co_task_obo_bench", "[new coro task bench per second one by one]") {
   loop.Start();
   LOG(INFO) << __FUNCTION__ << ", co_task_obo_bench run";
   counter = 0;
-  CO_GO &loop << std::bind(invoke, &loop, true);
+  CO_GO& loop << std::bind(invoke, &loop, true);
   start_time = base::time_us();
 
   loop.WaitLoopEnd();

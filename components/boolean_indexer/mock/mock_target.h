@@ -9,7 +9,7 @@ namespace component {
 
 Assigns::ValueContainer rand_assigns(int n, int min, int max) {
   Assigns::ValueContainer expr_assigns;
-  while(n-- >= 0) {
+  while (n-- >= 0) {
     int v = base::RandInt(min, max);
     expr_assigns.insert(std::to_string(v));
   };
@@ -58,12 +58,10 @@ struct T {
 };
 
 std::ostream& operator<<(std::ostream& os, const T& t) {
-  os << ">>>>>>>>>t:" << t.id
-    << "\na:" << t.a
-    << "\nb:" << t.b
-    << "\nc:" << t.c << "\n";
+  os << ">>>>>>>>>t:" << t.id << "\na:" << t.a << "\nb:" << t.b << "\nc:" << t.c
+     << "\n";
   return os;
 }
 
-};
+};  // namespace component
 #endif

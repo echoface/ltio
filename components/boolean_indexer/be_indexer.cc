@@ -4,19 +4,16 @@
 namespace component {
 
 namespace {
-  static std::string wildcard_field("__z__");
-  static Attr wildcard_attr(wildcard_field, 0);
-}
+static std::string wildcard_field("__z__");
+static Attr wildcard_attr(wildcard_field, 0);
+}  // namespace
 const Attr& BooleanIndexer::WildcardAttr() {
   return wildcard_attr;
 }
 
-BooleanIndexer::BooleanIndexer()
-  : wildcard_list_(nullptr){
-}
+BooleanIndexer::BooleanIndexer() : wildcard_list_(nullptr) {}
 
-BooleanIndexer::~BooleanIndexer() {
-}
+BooleanIndexer::~BooleanIndexer() {}
 
 const KSizePostingEntries* BooleanIndexer::GetPostEntries(size_t k) const {
   if (k >= ksize_entries_.size()) {
@@ -26,7 +23,7 @@ const KSizePostingEntries* BooleanIndexer::GetPostEntries(size_t k) const {
 }
 
 KSizePostingEntries* BooleanIndexer::MutableIndexes(size_t k) {
-  while(ksize_entries_.size() < k + 1) {
+  while (ksize_entries_.size() < k + 1) {
     ksize_entries_.resize(k + 1);
   }
   return &ksize_entries_[k];
@@ -71,10 +68,9 @@ uint64_t BooleanIndexer::GenUniqueID(const std::string& value) {
   return iter->second;
 }
 
-std::vector<FieldCursorPtr>
-BooleanIndexer::BuildFieldIterators(const size_t k_size,
-                                    const FieldQueryValues &assigns) const {
-
+std::vector<FieldCursorPtr> BooleanIndexer::BuildFieldIterators(
+    const size_t k_size,
+    const FieldQueryValues& assigns) const {
   std::vector<FieldCursorPtr> result;
 
   if (k_size == 0 && wildcard_list_ && wildcard_list_->size()) {
@@ -87,7 +83,6 @@ BooleanIndexer::BuildFieldIterators(const size_t k_size,
   const KSizePostingEntries* pl = GetPostEntries(k_size);
 
   for (const auto& field_attrs : assigns) {
-
     FieldCursorPtr field_iter(new FieldCursor());
 
     for (const ValueID& id : field_attrs.second) {
@@ -105,13 +100,13 @@ BooleanIndexer::BuildFieldIterators(const size_t k_size,
   return result;
 }
 
-FieldQueryValues BooleanIndexer::ParseAssigns(const QueryAssigns& queries) const {
+FieldQueryValues BooleanIndexer::ParseAssigns(
+    const QueryAssigns& queries) const {
   FieldQueryValues assigns;
 
   for (const auto& assign : queries) {
-
     ValueList ids;
-    for (const std::string &value : assign.Values()) {
+    for (const std::string& value : assign.Values()) {
       // parse value to id
       const auto& iter = id_gen_.find(value);
       if (iter == id_gen_.end()) {
@@ -126,4 +121,4 @@ FieldQueryValues BooleanIndexer::ParseAssigns(const QueryAssigns& queries) const
   return assigns;
 }
 
-}
+}  // namespace component

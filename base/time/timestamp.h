@@ -22,7 +22,7 @@
 #include "time_utils.h"
 
 namespace base {
-//time ensure the us always less than 1000000
+// time ensure the us always less than 1000000
 class Timestamp {
 public:
   Timestamp(const timeval tv);
@@ -48,5 +48,5 @@ private:
   int64_t microsecond_time_;
 };
 
-}//end base
+}  // namespace base
 #endif

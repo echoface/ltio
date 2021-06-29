@@ -1,12 +1,12 @@
 #ifndef _LT_COMPONENT_INVERTED_INDEX_EXPRESSION_H_H
 #define _LT_COMPONENT_INVERTED_INDEX_EXPRESSION_H_H
 
-#include <set>
 #include <memory>
+#include <set>
 #include <string>
-#include <vector>
-#include <unordered_map>
 #include <thirdparty/nlohmann/json.hpp>
+#include <unordered_map>
+#include <vector>
 
 namespace component {
 
@@ -21,8 +21,9 @@ typedef std::unordered_map<std::string, Expression> ExpConditionMap;
 
 class JsonObject {
 public:
-  void SetValid(bool v) { valid_ = v;}
-  bool IsValid() const { return valid_;}
+  void SetValid(bool v) { valid_ = v; }
+  bool IsValid() const { return valid_; }
+
 private:
   bool valid_ = true;
 };
@@ -30,12 +31,12 @@ private:
 class Expression : public JsonObject {
 public:
   bool IsExclude() const { return exclude_; }
-  void SetExclude(bool exclude) { exclude_ = exclude;};
-  const std::string& FieldName() const { return term_;}
-  void SetFieldName(const std::string& field) {term_ = field;}
-  std::vector<std::string>& MutableValues() { return values_;}
-  const std::vector<std::string>& Values() const { return values_;}
-  void AppendValue(const std::string& value) { values_.push_back(value);};
+  void SetExclude(bool exclude) { exclude_ = exclude; };
+  const std::string& FieldName() const { return term_; }
+  void SetFieldName(const std::string& field) { term_ = field; }
+  std::vector<std::string>& MutableValues() { return values_; }
+  const std::vector<std::string>& Values() const { return values_; }
+  void AppendValue(const std::string& value) { values_.push_back(value); };
 
 private:
   friend void to_json(Json& j, const Expression&);
@@ -52,7 +53,7 @@ class Document : public JsonObject {
 public:
   const int64_t& DocumentId() const { return document_id_; }
   const ExpConditionMap& Conditions() const { return conditions_; }
-  void SetDocumentId(const int64_t id) {document_id_ = id; }
+  void SetDocumentId(const int64_t id) { document_id_ = id; }
   bool AddExpression(const Expression& exp);
   bool HasConditionExpression(const std::string& field);
 

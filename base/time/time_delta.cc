@@ -4,7 +4,6 @@
 
 namespace base {
 
-
 // TimeDelta ------------------------------------------------------------------
 
 // static
@@ -21,8 +20,7 @@ struct timespec TimeDelta::ToTimeSpec() const {
     microseconds -= seconds * kMicrosecondsPerSecond;
   }
   struct timespec result = {
-      seconds,
-      static_cast<long>(microseconds * kNanosecondsPerMicrosecond)};
+      seconds, static_cast<long>(microseconds * kNanosecondsPerMicrosecond)};
   return result;
 }
 
@@ -37,8 +35,7 @@ int TimeDelta::InDaysFloored() const {
   if (!is_inf()) {
     const int result = delta_ / kMicrosecondsPerDay;
     // Convert |result| from truncating to flooring.
-    return (result * kMicrosecondsPerDay > delta_) ? (result - 1)
-                                                         : result;
+    return (result * kMicrosecondsPerDay > delta_) ? (result - 1) : result;
   }
   return (delta_ < 0) ? std::numeric_limits<int>::min()
                       : std::numeric_limits<int>::max();
@@ -62,8 +59,8 @@ int64_t TimeDelta::InMillisecondsRoundedUp() const {
   if (!is_inf()) {
     const int64_t result = delta_ / kMicrosecondsPerMillisecond;
     // Convert |result| from truncating to ceiling.
-    return (delta_ > result * kMicrosecondsPerMillisecond) ?
-      (result + 1) : result;
+    return (delta_ > result * kMicrosecondsPerMillisecond) ? (result + 1)
+                                                           : result;
   }
   return delta_;
 }
@@ -110,4 +107,4 @@ std::ostream& operator<<(std::ostream& os, TimeDelta time_delta) {
   return os << time_delta.InSecondsF() << " s";
 }
 
-}
+}  // namespace base

@@ -63,6 +63,10 @@ set(LTNET_SOURCE
   udp_io/udp_service.cc
 )
 
+if (LTIO_WITH_OPENSSL)
+  list(APPEND LTNET_SOURCE tcp_channel_ssl.cc)
+endif()
+
 add_library(ltnet_objs OBJECT ${LTNET_SOURCE})
 ltio_default_properties(ltnet_objs)
 target_include_directories(ltnet_objs

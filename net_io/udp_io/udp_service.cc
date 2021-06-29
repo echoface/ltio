@@ -17,24 +17,20 @@
 
 #include "udp_service.h"
 
-#include <memory>
-#include <net_io/socket_utils.h>
-#include "net_io/base/sockaddr_storage.h"
 #include <base/message_loop/message_loop.h>
+#include <net_io/socket_utils.h>
+#include <memory>
+#include "net_io/base/sockaddr_storage.h"
 
 namespace lt {
 namespace net {
 
-RefUDPService UDPService::Create(base::MessageLoop* io,
-                                 const IPEndPoint& ep) {
+RefUDPService UDPService::Create(base::MessageLoop* io, const IPEndPoint& ep) {
   return RefUDPService(new UDPService(io, ep));
 }
 
 UDPService::UDPService(base::MessageLoop* io, const IPEndPoint& ep)
-  : io_(io),
-    endpoint_(ep),
-    buffers_(100) {
-}
+  : io_(io), endpoint_(ep), buffers_(100) {}
 
 void UDPService::StartService() {
   if (!io_->IsInLoopThread()) {
@@ -48,7 +44,7 @@ void UDPService::StartService() {
     LOG(ERROR) << "create socket failed, ep:" << endpoint_.ToString();
     return;
   }
-  //reuse socket addr and port if possible
+  // reuse socket addr and port if possible
   socketutils::ReUseSocketPort(socket, true);
   socketutils::ReUseSocketAddress(socket, true);
 
@@ -57,11 +53,13 @@ void UDPService::StartService() {
 
   int ret = socketutils::BindSocketFd(socket, storage.AsSockAddr());
   if (ret < 0) {
-    LOG(ERROR) << "bind socket failed, socket:" << socket << " ep:" << endpoint_.ToString();
+    LOG(ERROR) << "bind socket failed, socket:" << socket
+               << " ep:" << endpoint_.ToString();
     socketutils::CloseSocket(socket);
     return;
   }
-  socket_event_ = base::FdEvent::Create(this, socket, base::LtEv::LT_EVENT_READ);
+  socket_event_ =
+      base::FdEvent::Create(this, socket, base::LtEv::LT_EVENT_READ);
   io_->Pump()->InstallFdEvent(socket_event_.get());
 }
 
@@ -70,16 +68,17 @@ void UDPService::StopService() {
     io_->PostTask(FROM_HERE, &UDPService::StopService, shared_from_this());
     return;
   }
-  if (!socket_event_) return;
+  if (!socket_event_)
+    return;
   socketutils::CloseSocket(socket_event_->fd());
 }
 
-//override from FdEvent::Handler
+// override from FdEvent::Handler
 bool UDPService::HandleRead(base::FdEvent* fd_event) {
-
   do {
     struct mmsghdr* hdr = buffers_.GetMmsghdr();
-    int recv_cnt = recvmmsg(fd_event->fd(), hdr, buffers_.Count(), MSG_WAITFORONE, NULL);
+    int recv_cnt =
+        recvmmsg(fd_event->fd(), hdr, buffers_.Count(), MSG_WAITFORONE, NULL);
     if (recv_cnt <= 0) {
       if (errno == EAGAIN || errno == EINTR) {
         break;
@@ -89,14 +88,16 @@ bool UDPService::HandleRead(base::FdEvent* fd_event) {
     }
 
     for (int i = 0; i < recv_cnt; i++) {
-
       UDPBufferDetail detail = buffers_.GetBufferDetail(i);
       IPEndPoint endpoint;
-      bool ok = endpoint.FromSockAddr(detail.buffer->src_addr_.AsSockAddr(), detail.buffer->src_addr_.Size());
-      LOG_IF(ERROR, !ok) << "send addr can't be parse, check implement, should be a bug";
-      LOG(INFO) << "recv:" << detail.data() << " sender:" << endpoint.ToString();
+      bool ok = endpoint.FromSockAddr(detail.buffer->src_addr_.AsSockAddr(),
+                                      detail.buffer->src_addr_.Size());
+      LOG_IF(ERROR, !ok)
+          << "send addr can't be parse, check implement, should be a bug";
+      LOG(INFO) << "recv:" << detail.data()
+                << " sender:" << endpoint.ToString();
     }
-  } while(true);
+  } while (true);
 
   return true;
 }
@@ -116,5 +117,5 @@ bool UDPService::HandleClose(base::FdEvent* fd_event) {
   return true;
 }
 
-}}
-
+}  // namespace net
+}  // namespace lt

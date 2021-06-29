@@ -18,12 +18,13 @@
 #ifndef LIGHTING_NET_SOCKET_UTILS_H
 #define LIGHTING_NET_SOCKET_UTILS_H
 
-#include "base/ip_endpoint.h"
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <string>
+#include "base/ip_endpoint.h"
 
-/* about this code, a beeter refrence is muduo code, most of this from chenshuo's impliment*/
+/* about this code, a beeter refrence is muduo code, most of this from
+ * chenshuo's impliment*/
 namespace lt {
 namespace net {
 namespace socketutils {
@@ -65,6 +66,7 @@ bool ReUseSocketPort(SocketFd, bool reuse);
 bool ReUseSocketAddress(SocketFd socket_fd, bool reuse);
 
 void KeepAlive(SocketFd, bool alive);
-}}}
+}  // namespace socketutils
+}  // namespace net
+}  // namespace lt
 #endif
-

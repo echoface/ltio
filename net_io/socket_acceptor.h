@@ -18,13 +18,13 @@
 #ifndef _NET_SERVICE_ACCEPTOR_H_H_
 #define _NET_SERVICE_ACCEPTOR_H_H_
 
-#include "socket_utils.h"
 #include "base/ip_endpoint.h"
+#include "socket_utils.h"
 
-#include "net_callback.h"
 #include "base/base_micro.h"
 #include "base/message_loop/fd_event.h"
 #include "base/message_loop/message_loop.h"
+#include "net_callback.h"
 
 namespace lt {
 namespace net {
@@ -40,9 +40,10 @@ public:
 
   void SetNewConnectionCallback(const NewConnectionCallback& cb);
   const IPEndPoint& ListeningAddress() const { return address_; };
+
 private:
   bool InitListener();
-  //override from FdEvent::Handler
+  // override from FdEvent::Handler
   bool HandleRead(base::FdEvent* fd_event) override;
   bool HandleWrite(base::FdEvent* fd_event) override;
   bool HandleError(base::FdEvent* fd_event) override;
@@ -57,6 +58,7 @@ private:
   DISALLOW_COPY_AND_ASSIGN(SocketAcceptor);
 };
 
-}} //end net
+}  // namespace net
+}  // namespace lt
 #endif
-//end of file
+// end of file

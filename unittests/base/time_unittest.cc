@@ -2,11 +2,10 @@
 
 #include <base/time/time.h>
 #include <base/time/time_ticks.h>
-#include <iostream>
 #include <unistd.h>
+#include <iostream>
 
 TEST_CASE("time_delta", "[test time delta]") {
-
   auto delta = base::TimeDelta::FromSeconds(10);
   REQUIRE(delta.ToHz() == 0.1);
   REQUIRE(delta.InMilliseconds() == 10000);
@@ -26,4 +25,3 @@ TEST_CASE("time_delta", "[test time delta]") {
   std::cout << "sizeof(TimeTicks):" << sizeof(base::TimeTicks) << std::endl;
   std::cout << "sizeof(Time):" << sizeof(base::Time) << std::endl;
 }
-

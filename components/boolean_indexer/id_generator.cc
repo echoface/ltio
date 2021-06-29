@@ -52,15 +52,15 @@ std::string EntryUtil::ToString(const EntryId id) {
   if (id == NULLENTRY) {
     oss << "<null>";
   } else {
-    oss << "<" << GetDocID(id) << "," << (id & 0x01) << ">"; 
+    oss << "<" << GetDocID(id) << "," << (id & 0x01) << ">";
   }
   return oss.str();
 }
 
 std::string EntryUtil::ToString(const Attr& attr) {
   std::ostringstream oss;
-  oss << "<" << attr.first << "," << attr.second << ">"; 
+  oss << "<" << attr.first << "," << attr.second << ">";
   return oss.str();
 }
 
-}
+}  // namespace component

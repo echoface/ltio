@@ -15,7 +15,7 @@ namespace base {
 // monotonically non-decreasing and are subject to large amounts of skew.
 // Time is stored internally as microseconds since the Windows epoch (1601).
 class Time : public time_internal::TimeBase<Time> {
- public:
+public:
   // Offset of UNIX epoch (1970-01-01 00:00:00 UTC) from Windows FILETIME epoch
   // (1601-01-01 00:00:00 UTC), in microseconds. This value is derived from the
   // following: ((1970-1601)*365+89)*24*60*60*1000*1000, where 89 is the number
@@ -192,11 +192,11 @@ class Time : public time_internal::TimeBase<Time> {
   // `TimeDelta::FromMiseconds()` for `TimeDelta`. http://crbug.com/634507
   static constexpr Time FromInternalValue(int64_t us) { return Time(us); }
 
- private:
+private:
   friend class time_internal::TimeBase<Time>;
 
   constexpr explicit Time(int64_t microseconds_since_win_epoch)
-      : TimeBase(microseconds_since_win_epoch) {}
+    : TimeBase(microseconds_since_win_epoch) {}
 
   // Explodes the given time to either local time |is_local = true| or UTC
   // |is_local = false|.
@@ -241,6 +241,6 @@ class Time : public time_internal::TimeBase<Time> {
 
 std::ostream& operator<<(std::ostream& os, Time time);
 
-} // namespace base
+}  // namespace base
 
 #endif

@@ -8,11 +8,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <glog/logging.h>
 #include <array>
+#include <base/string/string_view.hpp>
 #include <string>
 #include <vector>
-#include <glog/logging.h>
-#include <base/string/string_view.hpp>
 
 namespace base {
 typedef nonstd::string_view StringPiece;
@@ -25,7 +25,7 @@ namespace net {
 // A vector<uint8_t> would be simpler but incurs heap allocation, so
 // IPAddressBytes uses a fixed size array.
 class IPAddressBytes {
- public:
+public:
   IPAddressBytes();
   IPAddressBytes(const uint8_t* data, size_t data_len);
   IPAddressBytes(const IPAddressBytes& other);
@@ -89,7 +89,7 @@ class IPAddressBytes {
   bool operator!=(const IPAddressBytes& other) const;
   bool operator==(const IPAddressBytes& other) const;
 
- private:
+private:
   // Underlying sequence of bytes
   std::array<uint8_t, 16> bytes_;
 
@@ -99,7 +99,7 @@ class IPAddressBytes {
 };
 
 class IPAddress {
- public:
+public:
   enum : size_t { kIPv4AddressSize = 4, kIPv6AddressSize = 16 };
 
   // Creates a zero-sized, invalid address.
@@ -113,8 +113,7 @@ class IPAddress {
   // Copies the input address to |ip_address_|. The input is expected to be in
   // network byte order.
   template <size_t N>
-  IPAddress(const uint8_t(&address)[N])
-      : IPAddress(address, N) {}
+  IPAddress(const uint8_t (&address)[N]) : IPAddress(address, N) {}
 
   // Copies the input address to |ip_address_| taking an additional length
   // parameter. The input is expected to be in network byte order.
@@ -219,7 +218,7 @@ class IPAddress {
   bool operator!=(const IPAddress& that) const;
   bool operator<(const IPAddress& that) const;
 
- private:
+private:
   IPAddressBytes ip_address_;
 
   // This class is copyable and assignable.
@@ -229,8 +228,7 @@ using IPAddressList = std::vector<IPAddress>;
 
 // Returns the canonical string representation of an IP address along with its
 // port. For example: "192.168.0.1:99" or "[::1]:80".
-std::string IPAddressToStringWithPort(const IPAddress& address,
-                                      uint16_t port);
+std::string IPAddressToStringWithPort(const IPAddress& address, uint16_t port);
 
 // Returns the address as a sequence of bytes in network-byte-order.
 std::string IPAddressToPackedString(const IPAddress& address);
@@ -296,6 +294,7 @@ bool IPAddressStartsWith(const IPAddress& address, const uint8_t (&prefix)[N]) {
   return std::equal(prefix, prefix + N, address.bytes().begin());
 }
 
-}}  // namespace net
+}  // namespace net
+}  // namespace lt
 
 #endif  // NET_BASE_IP_ADDRESS_H_

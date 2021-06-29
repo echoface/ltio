@@ -8,7 +8,7 @@
 namespace component {
 
 RangeField::RangeField(const std::string& field, const std::string& delim)
-    : Field(field), delim_(delim) {}
+  : Field(field), delim_(delim) {}
 
 void RangeField::DumpTo(std::ostringstream& oss) {
   Json out;
@@ -16,7 +16,8 @@ void RangeField::DumpTo(std::ostringstream& oss) {
   oss << out;
 }
 
-void RangeField::ResolveValueWithPostingList(const std::string& v, bool include,
+void RangeField::ResolveValueWithPostingList(const std::string& v,
+                                             bool include,
                                              BitMapPostingList* pl) {
   int32_t start = 0;
   int32_t end = 0;
@@ -63,7 +64,8 @@ std::vector<BitMapPostingList*> RangeField::GetExcludeBitmap(
   return result;
 }
 
-bool RangeField::ParseRange(const std::string& assign, int32_t& start,
+bool RangeField::ParseRange(const std::string& assign,
+                            int32_t& start,
                             int32_t& end) {
   auto range = base::StrUtil::Split(assign, delim_);
   switch (range.size()) {
@@ -78,7 +80,7 @@ bool RangeField::ParseRange(const std::string& assign, int32_t& start,
     } break;
     case 2: {
       return base::StrUtil::ParseTo(range[1], end) &&
-        base::StrUtil::ParseTo(range[0], start);
+             base::StrUtil::ParseTo(range[0], start);
     } break;
     default:
       break;

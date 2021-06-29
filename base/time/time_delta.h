@@ -4,35 +4,35 @@
 #include <limits>
 #include <ostream>
 
-#include "base/check.h"
 #include "base/base_micro.h"
+#include "base/check.h"
 #include "base/numerics/clamped_math.h"
 
 namespace base {
 
 class TimeDelta {
- public:
-   static constexpr int64_t kHoursPerDay = 24;
-   static constexpr int64_t kSecondsPerMinute = 60;
-   static constexpr int64_t kMinutesPerHour = 60;
-   static constexpr int64_t kSecondsPerHour =
-     kSecondsPerMinute * kMinutesPerHour;
-   static constexpr int64_t kMillisecondsPerSecond = 1000;
-   static constexpr int64_t kMillisecondsPerDay =
-     kMillisecondsPerSecond * kSecondsPerHour * kHoursPerDay;
-   static constexpr int64_t kMicrosecondsPerMillisecond = 1000;
-   static constexpr int64_t kMicrosecondsPerSecond =
-     kMicrosecondsPerMillisecond * kMillisecondsPerSecond;
-   static constexpr int64_t kMicrosecondsPerMinute =
-     kMicrosecondsPerSecond * kSecondsPerMinute;
-   static constexpr int64_t kMicrosecondsPerHour =
-     kMicrosecondsPerMinute * kMinutesPerHour;
-   static constexpr int64_t kMicrosecondsPerDay =
-     kMicrosecondsPerHour * kHoursPerDay;
-   static constexpr int64_t kMicrosecondsPerWeek = kMicrosecondsPerDay * 7;
-   static constexpr int64_t kNanosecondsPerMicrosecond = 1000;
-   static constexpr int64_t kNanosecondsPerSecond =
-     kNanosecondsPerMicrosecond * kMicrosecondsPerSecond;
+public:
+  static constexpr int64_t kHoursPerDay = 24;
+  static constexpr int64_t kSecondsPerMinute = 60;
+  static constexpr int64_t kMinutesPerHour = 60;
+  static constexpr int64_t kSecondsPerHour =
+      kSecondsPerMinute * kMinutesPerHour;
+  static constexpr int64_t kMillisecondsPerSecond = 1000;
+  static constexpr int64_t kMillisecondsPerDay =
+      kMillisecondsPerSecond * kSecondsPerHour * kHoursPerDay;
+  static constexpr int64_t kMicrosecondsPerMillisecond = 1000;
+  static constexpr int64_t kMicrosecondsPerSecond =
+      kMicrosecondsPerMillisecond * kMillisecondsPerSecond;
+  static constexpr int64_t kMicrosecondsPerMinute =
+      kMicrosecondsPerSecond * kSecondsPerMinute;
+  static constexpr int64_t kMicrosecondsPerHour =
+      kMicrosecondsPerMinute * kMinutesPerHour;
+  static constexpr int64_t kMicrosecondsPerDay =
+      kMicrosecondsPerHour * kHoursPerDay;
+  static constexpr int64_t kMicrosecondsPerWeek = kMicrosecondsPerDay * 7;
+  static constexpr int64_t kNanosecondsPerMicrosecond = 1000;
+  static constexpr int64_t kNanosecondsPerSecond =
+      kNanosecondsPerMicrosecond * kMicrosecondsPerSecond;
 
   constexpr TimeDelta() = default;
 
@@ -116,7 +116,7 @@ class TimeDelta {
 
   // Returns the frequency in Hertz (cycles per second) that has a period of
   // *this.
-  constexpr double ToHz() const { return FromSeconds(1) / *this;}
+  constexpr double ToHz() const { return FromSeconds(1) / *this; }
 
   // Returns the time delta in some unit. Minimum argument values return as
   // -inf for doubles and min type values otherwise. Maximum ones are treated as
@@ -199,7 +199,7 @@ class TimeDelta {
   constexpr int64_t IntDiv(TimeDelta a) const {
     if (!is_inf() && !a.is_zero())
       return delta_ / a.delta_;
-    // For consistency, use the same edge case 
+    // For consistency, use the same edge case
     // CHECKs and behavior as the code above.
     LTCHECK(!is_zero() || !a.is_zero());
     LTCHECK(!is_inf() || !a.is_inf());
@@ -209,7 +209,7 @@ class TimeDelta {
   }
 
   constexpr TimeDelta operator%(TimeDelta a) const {
-#define _TIME_DELTA_VALID (is_inf() || a.is_zero() || a.is_inf()) 
+#define _TIME_DELTA_VALID (is_inf() || a.is_zero() || a.is_inf())
     return TimeDelta(_TIME_DELTA_VALID ? delta_ : (delta_ % a.delta_));
 #undef _TIME_DELTA_VALID
   }
@@ -243,7 +243,7 @@ class TimeDelta {
   TimeDelta FloorToMultiple(TimeDelta interval) const;
   TimeDelta RoundToMultiple(TimeDelta interval) const;
 
- private:
+private:
   // Constructs a delta given the duration in microseconds. This is private
   // to avoid confusion by callers with an integer constructor. Use
   // FromSeconds, FromMilliseconds, etc. instead.
@@ -292,14 +292,12 @@ constexpr TimeDelta TimeDelta::FromSeconds(int64_t secs) {
 
 // static
 constexpr TimeDelta TimeDelta::FromSecondsD(double secs) {
-  return TimeDelta(
-      saturated_cast<int64_t>(secs * kMicrosecondsPerSecond));
+  return TimeDelta(saturated_cast<int64_t>(secs * kMicrosecondsPerSecond));
 }
 
 // static
 constexpr TimeDelta TimeDelta::FromMilliseconds(int64_t ms) {
-  return TimeDelta(
-      int64_t{base::ClampMul(ms, kMicrosecondsPerMillisecond)});
+  return TimeDelta(int64_t{base::ClampMul(ms, kMicrosecondsPerMillisecond)});
 }
 
 // static
@@ -364,7 +362,5 @@ constexpr TimeDelta TimeDelta::FiniteMin() {
   return TimeDelta(std::numeric_limits<int64_t>::min() + 1);
 }
 
-
-} //end base
+}  // namespace base
 #endif
-

@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
-#include "async_channel.h"
 #include "queued_channel.h"
 #include <base/base_constants.h>
 #include <net_io/codec/codec_service.h>
+#include "async_channel.h"
 
 namespace lt {
 namespace net {
@@ -28,11 +28,9 @@ RefQueuedChannel QueuedChannel::Create(Delegate* d, const RefCodecService& s) {
 }
 
 QueuedChannel::QueuedChannel(Delegate* d, const RefCodecService& service)
-  : ClientChannel(d, service) {
-}
+  : ClientChannel(d, service) {}
 
-QueuedChannel::~QueuedChannel() {
-}
+QueuedChannel::~QueuedChannel() {}
 
 void QueuedChannel::StartClientChannel() {
   ClientChannel::StartClientChannel();
@@ -40,7 +38,7 @@ void QueuedChannel::StartClientChannel() {
   // Do other thing for initialize
 }
 
-void QueuedChannel::SendRequest(RefCodecMessage request)  {
+void QueuedChannel::SendRequest(RefCodecMessage request) {
   CHECK(IOLoop()->IsInLoopThread());
 
   request->SetIOCtx(codec_);
@@ -55,8 +53,7 @@ bool QueuedChannel::TrySendNext() {
   }
 
   bool success = false;
-  while(!success && waiting_list_.size()) {
-
+  while (!success && waiting_list_.size()) {
     RefCodecMessage& next = waiting_list_.front();
     success = codec_->SendRequest(next.get());
     waiting_list_.pop_front();
@@ -70,8 +67,10 @@ bool QueuedChannel::TrySendNext() {
 
   if (success) {
     DCHECK(ing_request_);
-    WeakCodecMessage weak(ing_request_);   // weak ptr must init outside, Take Care of weakptr
-    auto functor = std::bind(&QueuedChannel::OnRequestTimeout, shared_from_this(), weak);
+    WeakCodecMessage weak(
+        ing_request_);  // weak ptr must init outside, Take Care of weakptr
+    auto functor =
+        std::bind(&QueuedChannel::OnRequestTimeout, shared_from_this(), weak);
     IOLoop()->PostDelayTask(NewClosure(functor), request_timeout_);
   }
   return success;
@@ -84,7 +83,7 @@ void QueuedChannel::BeforeCloseChannel() {
     ing_request_.reset();
   }
 
-  while(waiting_list_.size()) {
+  while (waiting_list_.size()) {
     RefCodecMessage& request = waiting_list_.front();
     request->SetFailCode(MessageCode::kConnBroken);
     HandleResponse(request, CodecMessage::kNullMessage);
@@ -93,24 +92,25 @@ void QueuedChannel::BeforeCloseChannel() {
 }
 
 void QueuedChannel::OnRequestTimeout(WeakCodecMessage weak) {
-
   RefCodecMessage request = weak.lock();
-  if (!request) return;
+  if (!request)
+    return;
 
   if (request.get() != ing_request_.get()) {
     return;
   }
 
-  VLOG(GLOG_VINFO) << __FUNCTION__ << codec_->Channel()->ChannelInfo() << " timeout reached";
+  VLOG(GLOG_VINFO) << __FUNCTION__ << codec_->Channel()->ChannelInfo()
+                   << " timeout reached";
 
   request->SetFailCode(MessageCode::kTimeOut);
   HandleResponse(request, CodecMessage::kNullMessage);
   ing_request_.reset();
 
   if (codec_->IsConnected()) {
-  	codec_->CloseService();
+    codec_->CloseService();
   } else {
-  	OnProtocolServiceGone(codec_);
+    OnProtocolServiceGone(codec_);
   }
 }
 
@@ -118,7 +118,7 @@ void QueuedChannel::OnCodecMessage(const RefCodecMessage& res) {
   DCHECK(IOLoop()->IsInLoopThread());
 
   if (!ing_request_) {
-    return ;
+    return;
   }
 
   const RefCodecMessage guard_req(ing_request_);
@@ -130,14 +130,15 @@ void QueuedChannel::OnCodecMessage(const RefCodecMessage& res) {
 }
 
 void QueuedChannel::OnProtocolServiceGone(const RefCodecService& service) {
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << service->Channel()->ChannelInfo() << " protocol service closed";
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << service->Channel()->ChannelInfo()
+                    << " protocol service closed";
   if (ing_request_) {
     ing_request_->SetFailCode(MessageCode::kConnBroken);
     HandleResponse(ing_request_, CodecMessage::kNullMessage);
     ing_request_.reset();
   }
 
-  while(waiting_list_.size()) {
+  while (waiting_list_.size()) {
     RefCodecMessage& request = waiting_list_.front();
     request->SetFailCode(MessageCode::kConnBroken);
     HandleResponse(request, CodecMessage::kNullMessage);
@@ -152,4 +153,5 @@ void QueuedChannel::OnProtocolServiceGone(const RefCodecService& service) {
   ClientChannel::OnProtocolServiceGone(service);
 }
 
-}}//net
+}  // namespace net
+}  // namespace lt

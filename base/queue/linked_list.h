@@ -22,12 +22,12 @@
 
 namespace base {
 
-template<class T>
+template <class T>
 class LinkedNode {
 public:
   LinkedNode() : pre_(nullptr), next_(nullptr) {}
   LinkedNode(LinkedNode<T>* pre, LinkedNode<T>* next)
-      : pre_(pre), next_(next) {}
+    : pre_(pre), next_(next) {}
 
   LinkedNode(LinkedNode<T>&& rhs) {
     next_ = rhs.next_;
@@ -44,9 +44,7 @@ public:
     }
   }
 
-  bool Attatched() const {
-    return pre_ != nullptr && next_ != nullptr;
-  }
+  bool Attatched() const { return pre_ != nullptr && next_ != nullptr; }
 
   // Insert |this| into the linked list, before |e|.
   void InsertBefore(LinkedNode<T>* e) {
@@ -74,21 +72,14 @@ public:
     this->pre_ = nullptr;
   }
 
-  LinkedNode<T>* previous() const {
-    return pre_;
-  }
+  LinkedNode<T>* previous() const { return pre_; }
 
-  LinkedNode<T>* next() const {
-    return next_;
-  }
+  LinkedNode<T>* next() const { return next_; }
 
-  const T* value() const {
-    return static_cast<const T*>(this);
-  }
+  const T* value() const { return static_cast<const T*>(this); }
 
-  T* value() {
-    return static_cast<T*>(this);
-  }
+  T* value() { return static_cast<T*>(this); }
+
 private:
   LinkedNode<T>* pre_ = nullptr;
   LinkedNode<T>* next_ = nullptr;
@@ -97,35 +88,27 @@ private:
 
 template <typename T>
 class LinkedList {
- public:
+public:
   // The "root" node is self-referential, and forms the basis of a circular
   // list (root_.next() will point back to the start of the list,
   // and root_->previous() wraps around to the end of the list).
   LinkedList() : root_(&root_, &root_) {}
 
   // Appends |e| to the end of the linked list.
-  void Append(LinkedNode<T>* e) {
-    e->InsertBefore(&root_);
-  }
+  void Append(LinkedNode<T>* e) { e->InsertBefore(&root_); }
 
-  LinkedNode<T>* head() const {
-    return root_.next();
-  }
+  LinkedNode<T>* head() const { return root_.next(); }
 
-  LinkedNode<T>* tail() const {
-    return root_.previous();
-  }
+  LinkedNode<T>* tail() const { return root_.previous(); }
 
-  const LinkedNode<T>* end() const {
-    return &root_;
-  }
+  const LinkedNode<T>* end() const { return &root_; }
 
   bool empty() const { return head() == end(); }
 
- private:
+private:
   LinkedNode<T> root_;
   DISALLOW_COPY_AND_ASSIGN(LinkedList);
 };
 
-}
+}  // namespace base
 #endif

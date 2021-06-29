@@ -29,5 +29,5 @@ public:
   virtual void AfterMessageLoopRun(base::MessageLoop* l) = 0;
 };
 
-}
+}  // namespace base
 #endif

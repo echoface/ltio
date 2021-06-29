@@ -15,15 +15,12 @@
  * limitations under the License.
  */
 
-
 #include "io_multiplexer.h"
 
 namespace base {
 
-IOMux::IOMux() {
-}
+IOMux::IOMux() {}
 
-IOMux::~IOMux() {
-}
+IOMux::~IOMux() {}
 
-}
+}  // namespace base

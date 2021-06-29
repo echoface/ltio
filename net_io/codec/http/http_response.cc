@@ -15,20 +15,19 @@
  * limitations under the License.
  */
 
-
-#include <sstream>
 #include "http_response.h"
+#include <sstream>
 #include "http_constants.h"
 
-#include "glog/logging.h"
 #include <base/base_constants.h>
 #include <base/utils/string/str_utils.h>
 #include <thirdparty/http_parser/http_parser.h>
+#include "glog/logging.h"
 
 namespace lt {
 namespace net {
 
-//static
+// static
 RefHttpResponse HttpResponse::CreateWithCode(uint16_t code) {
   auto r = std::make_shared<HttpResponse>();
   r->SetResponseCode(code);
@@ -39,11 +38,9 @@ HttpResponse::HttpResponse()
   : CodecMessage(MessageType::kResponse),
     keepalive_(false),
     http_major_(1),
-    http_minor_(1) {
-}
+    http_minor_(1) {}
 
-HttpResponse::~HttpResponse() {
-}
+HttpResponse::~HttpResponse() {}
 
 std::string& HttpResponse::MutableBody() {
   return body_;
@@ -90,8 +87,7 @@ const std::string HttpResponse::Dump() const {
   for (const auto& pair : headers_) {
     oss << ", \"header." << pair.first << "\": \"" << pair.second << "\"";
   }
-  oss << ", \"keep_alive\": " << keepalive_
-      << ", \"body\": \"" << body_ << "\""
+  oss << ", \"keep_alive\": " << keepalive_ << ", \"body\": \"" << body_ << "\""
       << "}";
   return oss.str();
 }
@@ -117,4 +113,5 @@ std::string HttpResponse::StatusCodeInfo() const {
   return desc;
 }
 
-}};//end namespace net
+}  // namespace net
+};  // namespace lt

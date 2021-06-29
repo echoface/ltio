@@ -46,7 +46,7 @@ namespace base {
 // have global scope as that may require a static initializer.
 template <typename T>
 class NoDestructor {
- public:
+public:
   // Not constexpr; just write static constexpr T x = ...; if the value should
   // be a constexpr.
   template <typename... Args>
@@ -73,7 +73,7 @@ class NoDestructor {
   const T* get() const { return reinterpret_cast<const T*>(storage_); }
   T* get() { return reinterpret_cast<T*>(storage_); }
 
- private:
+private:
   alignas(T) char storage_[sizeof(T)];
 
 #if defined(LEAK_SANITIZER)

@@ -190,9 +190,9 @@ struct StaticDstRangeRelationToSrcRange<Dst,
 // This class wraps the range constraints as separate booleans so the compiler
 // can identify constants and eliminate unused code paths.
 class RangeCheck {
- public:
+public:
   constexpr RangeCheck(bool is_in_lower_bound, bool is_in_upper_bound)
-      : is_underflow_(!is_in_lower_bound), is_overflow_(!is_in_upper_bound) {}
+    : is_underflow_(!is_in_lower_bound), is_overflow_(!is_in_upper_bound) {}
   constexpr RangeCheck() : is_underflow_(0), is_overflow_(0) {}
   constexpr bool IsValid() const { return !is_overflow_ && !is_underflow_; }
   constexpr bool IsInvalid() const { return is_overflow_ && is_underflow_; }
@@ -208,7 +208,7 @@ class RangeCheck {
     return !(*this == rhs);
   }
 
- private:
+private:
   // Do not change the order of these member variables. The integral conversion
   // optimization depends on this exact order.
   const bool is_underflow_;
@@ -700,9 +700,8 @@ constexpr bool IsLessImpl(const L lhs,
                           const RangeCheck l_range,
                           const RangeCheck r_range) {
   return l_range.IsUnderflow() || r_range.IsOverflow() ||
-         (l_range == r_range &&
-          static_cast<decltype(lhs + rhs)>(lhs) <
-              static_cast<decltype(lhs + rhs)>(rhs));
+         (l_range == r_range && static_cast<decltype(lhs + rhs)>(lhs) <
+                                    static_cast<decltype(lhs + rhs)>(rhs));
 }
 
 template <typename L, typename R>
@@ -721,9 +720,8 @@ constexpr bool IsLessOrEqualImpl(const L lhs,
                                  const RangeCheck l_range,
                                  const RangeCheck r_range) {
   return l_range.IsUnderflow() || r_range.IsOverflow() ||
-         (l_range == r_range &&
-          static_cast<decltype(lhs + rhs)>(lhs) <=
-              static_cast<decltype(lhs + rhs)>(rhs));
+         (l_range == r_range && static_cast<decltype(lhs + rhs)>(lhs) <=
+                                    static_cast<decltype(lhs + rhs)>(rhs));
 }
 
 template <typename L, typename R>
@@ -742,9 +740,8 @@ constexpr bool IsGreaterImpl(const L lhs,
                              const RangeCheck l_range,
                              const RangeCheck r_range) {
   return l_range.IsOverflow() || r_range.IsUnderflow() ||
-         (l_range == r_range &&
-          static_cast<decltype(lhs + rhs)>(lhs) >
-              static_cast<decltype(lhs + rhs)>(rhs));
+         (l_range == r_range && static_cast<decltype(lhs + rhs)>(lhs) >
+                                    static_cast<decltype(lhs + rhs)>(rhs));
 }
 
 template <typename L, typename R>
@@ -763,9 +760,8 @@ constexpr bool IsGreaterOrEqualImpl(const L lhs,
                                     const RangeCheck l_range,
                                     const RangeCheck r_range) {
   return l_range.IsOverflow() || r_range.IsUnderflow() ||
-         (l_range == r_range &&
-          static_cast<decltype(lhs + rhs)>(lhs) >=
-              static_cast<decltype(lhs + rhs)>(rhs));
+         (l_range == r_range && static_cast<decltype(lhs + rhs)>(lhs) >=
+                                    static_cast<decltype(lhs + rhs)>(rhs));
 }
 
 template <typename L, typename R>

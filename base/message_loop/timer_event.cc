@@ -15,29 +15,28 @@
  * limitations under the License.
  */
 
-
 #include "timer_event.h"
 #include "glog/logging.h"
 
 namespace base {
 
-  //static
-RefTimerEvent TimerEvent::CreateOneShot(int64_t ms_later, UniqueTimerTask task) {
+// static
+RefTimerEvent TimerEvent::CreateOneShot(int64_t ms_later,
+                                        UniqueTimerTask task) {
   RefTimerEvent t(std::make_shared<TimerEvent>(ms_later));
   t->SetTimerTask(std::move(task));
   return std::move(t);
 }
 
-RefTimerEvent TimerEvent::CreateRepeated(int64_t ms_later, UniqueTimerTask task) {
+RefTimerEvent TimerEvent::CreateRepeated(int64_t ms_later,
+                                         UniqueTimerTask task) {
   RefTimerEvent t(std::make_shared<TimerEvent>(ms_later, false));
   t->SetTimerTask(std::move(task));
   return std::move(t);
 }
 
 TimerEvent::TimerEvent(const Timestamp& t, bool once)
-  : once_(once),
-    time_(t),
-    interval_(0) {
+  : once_(once), time_(t), interval_(0) {
   Timestamp now = Timestamp::Now();
 
   interval_ = t.AsMillsecond() - now.AsMillsecond();
@@ -50,13 +49,10 @@ TimerEvent::TimerEvent(const Timestamp& t, bool once)
 }
 
 TimerEvent::TimerEvent(int64_t ms, bool once)
-  : once_(once),
-    time_(Timestamp::NMillisecondLater(ms)),
-    interval_(ms) {
-}
+  : once_(once), time_(Timestamp::NMillisecondLater(ms)), interval_(ms) {}
 
 TimerEvent::~TimerEvent() {
-  //LOG(INFO) << "TimerEvent Gone";
+  // LOG(INFO) << "TimerEvent Gone";
 }
 
 const Timestamp& TimerEvent::Time() const {
@@ -73,4 +69,4 @@ void TimerEvent::Invoke() {
   }
 }
 
-}
+}  // namespace base

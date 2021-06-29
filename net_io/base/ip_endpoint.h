@@ -5,17 +5,17 @@
 #ifndef NET_BASE_IP_ENDPOINT_H_
 #define NET_BASE_IP_ENDPOINT_H_
 
-#include <cstdint>
 #include <stdint.h>
+#include <cstdint>
 
-#include <string>
 #include <unistd.h>
+#include <string>
 
 #include "address_family.h"
 #include "ip_address.h"
+#include "net_export.h"
 #include "sockaddr_storage.h"
 #include "sys_addrinfo.h"
-#include "net_export.h"
 
 struct sockaddr;
 
@@ -26,7 +26,7 @@ namespace net {
 //  * IP address (either v4 or v6)
 //  * Port
 class IPEndPoint {
- public:
+public:
   ~IPEndPoint();
   IPEndPoint();
   IPEndPoint(const base::StringPiece ip, uint16_t port);
@@ -47,7 +47,8 @@ class IPEndPoint {
   //
   // on failure: return zero
   // on success: return size of the addresss that was copied into address
-  socklen_t ToSockAddr(struct sockaddr* address, socklen_t address_length) const;
+  socklen_t ToSockAddr(struct sockaddr* address,
+                       socklen_t address_length) const;
 
   // Convert from a sockaddr struct.
   // |address| is the address.
@@ -67,11 +68,12 @@ class IPEndPoint {
   bool operator==(const IPEndPoint& that) const;
   bool operator!=(const IPEndPoint& that) const;
 
- private:
+private:
   IPAddress address_;
   uint16_t port_;
 };
 
-}}  // namespace net
+}  // namespace net
+}  // namespace lt
 
 #endif  // NET_BASE_IP_ENDPOINT_H_

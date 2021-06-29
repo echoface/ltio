@@ -3,6 +3,7 @@
 #include <glog/logging.h>
 
 #include "net_io/tcp_channel.h"
+#include "net_io/tcp_channel_ssl.h"
 #include "net_io/socket_utils.h"
 #include "net_io/socket_acceptor.h"
 #include "net_io/base/ip_endpoint.h"
@@ -10,7 +11,7 @@
 using namespace lt;
 
 base::MessageLoop loop;
-std::set<net::TcpChannelPtr> connections;
+std::set<net::SocketChannelPtr> connections;
 
 class EchoConsumer : public net::SocketChannel::Reciever {
 public:
@@ -22,25 +23,36 @@ public:
         break;
       }
     }
-    LOG(INFO) << "channel:[" << ch->ChannelName() << "] closed, connections count:" << connections.size();
+    LOG(INFO) << "channel:[" << ch->ChannelInfo()
+      << "] closed, connections count:" << connections.size();
   };
 
   void OnDataReceived(const net::SocketChannel* ch, net::IOBuffer *buf) override {
-    auto iter = std::find_if(connections.begin(),
-                             connections.end(),
-                             [&](const net::TcpChannelPtr& channel) -> bool {
-                               return ch == channel.get();
-                             });
-    net::TcpChannel* channel = iter->get();
-    channel->Send(buf->GetRead(), buf->CanReadSize());
+    auto iter =
+        std::find_if(connections.begin(), connections.end(),
+                     [&](const net::SocketChannelPtr& channel) -> bool {
+                       return ch == channel.get();
+                     });
+
+    (*iter)->Send(buf->GetRead(), buf->CanReadSize());
     buf->Consume(buf->CanReadSize());
   };
+
+  bool IsServerSide() const override {return true;}
 };
 
 EchoConsumer global_consumer;
 
+DEFINE_bool(ssl, false, "use ssl");
+DEFINE_string(cert, "cert/server.crt", "use ssl server cert file");
+DEFINE_string(key, "cert/server.key", "use ssl server private key file");
+
 int main(int argc, char** argv) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
+  if (FLAGS_ssl) {
+    LOG(INFO) << "ssl info\ncert:" << FLAGS_cert << "\nkey:" << FLAGS_key;
+    lt::net::ssl_ctx_init(FLAGS_cert.data(), FLAGS_key.data());
+  }
 
   loop.Start();
 
@@ -48,9 +60,16 @@ int main(int argc, char** argv) {
     net::IPEndPoint local;
     CHECK(net::socketutils::GetLocalEndpoint(fd, &local));
 
-    auto ch = net::TcpChannel::Create(fd, local, peer, loop.Pump());
-    ch->SetReciever(&global_consumer);
+    net::SocketChannelPtr ch;
+    if (FLAGS_ssl) {
+      ch = net::TCPSSLChannel::Create(fd, local, peer, loop.Pump());
+      LOG(INFO) << "use ssl channel for this acceptor";
+    } else {
+      ch = net::TcpChannel::Create(fd, local, peer, loop.Pump());
+      LOG(INFO) << "use tpc channel for this acceptor";
+    }
 
+    ch->SetReciever(&global_consumer);
     if (loop.IsInLoopThread()) {
       ch->StartChannel();
     } else {

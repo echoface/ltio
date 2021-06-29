@@ -15,7 +15,6 @@
  * limitations under the License.
  */
 
-
 #ifndef _NET_HTTP_RESPONSE_MESSAGE_H
 #define _NET_HTTP_RESPONSE_MESSAGE_H
 
@@ -58,8 +57,9 @@ public:
   uint16_t ResponseCode() const;
   void SetResponseCode(uint16_t code);
   std::string StatusCodeInfo() const;
-  int VersionMajor() const {return http_major_;}
-  int VersionMinor() const {return http_minor_;}
+  int VersionMajor() const { return http_major_; }
+  int VersionMinor() const { return http_minor_; }
+
 private:
   friend class HttpCodecService;
   friend class ResParseContext;
@@ -73,6 +73,6 @@ private:
   KeyValMap headers_;
 };
 
-
-}}
+}  // namespace net
+}  // namespace lt
 #endif

@@ -24,17 +24,19 @@ namespace lt {
 namespace net {
 
 class RoundRobinRouter : public ClientRouter {
-  public:
-    RoundRobinRouter() {};
-    ~RoundRobinRouter() {};
+public:
+  RoundRobinRouter(){};
+  ~RoundRobinRouter(){};
 
-    void AddClient(RefClient&& client) override;
-    RefClient GetNextClient(const std::string& key,
-                            CodecMessage* request = NULL) override;
-  private:
-    std::vector<RefClient> clients_;
-    std::atomic<uint32_t> round_index_;
+  void AddClient(RefClient&& client) override;
+  RefClient GetNextClient(const std::string& key,
+                          CodecMessage* request = NULL) override;
+
+private:
+  std::vector<RefClient> clients_;
+  std::atomic<uint32_t> round_index_;
 };
 
-}}
+}  // namespace net
+}  // namespace lt
 #endif

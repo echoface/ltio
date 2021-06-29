@@ -15,13 +15,13 @@
  * limitations under the License.
  */
 
+#include "base/message_loop/linux_signal.h"
 #include "glog/logging.h"
+#include "net_io/codec/codec_factory.h"
+#include "net_io/codec/codec_service.h"
+#include "net_io/io_service.h"
 #include "net_io/tcp_channel.h"
 #include "net_io/url_utils.h"
-#include "net_io/io_service.h"
-#include "net_io/codec/codec_service.h"
-#include "base/message_loop/linux_signal.h"
-#include "net_io/codec/codec_factory.h"
 
 #include <algorithm>
 #include "raw_server.h"
@@ -29,7 +29,7 @@
 namespace lt {
 namespace net {
 
-//static
+// static
 RefRawRequestContext RawRequestContext::New(const RefCodecMessage& request) {
   return RefRawRequestContext(new RawRequestContext(request));
 }

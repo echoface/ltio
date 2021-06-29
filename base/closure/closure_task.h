@@ -15,7 +15,6 @@
  * limitations under the License.
  */
 
-
 #ifndef BASE_CLOSURE_TASK_H_H
 #define BASE_CLOSURE_TASK_H_H
 
@@ -39,8 +38,9 @@ public:
   explicit TaskBase(const Location& location) : location_(location) {}
   virtual ~TaskBase() {}
   virtual void Run() = 0;
-  const Location& TaskLocation() const {return location_;}
-  std::string ClosureInfo() const {return location_.ToString();}
+  const Location& TaskLocation() const { return location_; }
+  std::string ClosureInfo() const { return location_.ToString(); }
+
 private:
   Location location_;
 };
@@ -50,9 +50,7 @@ template <typename Functor>
 class ClosureTask : public TaskBase {
 public:
   explicit ClosureTask(const Location& location, const Functor& closure)
-   : TaskBase(location),
-     closure_task(closure) {
-  }
+    : TaskBase(location), closure_task(closure) {}
   void Run() override {
     try {
       closure_task();
@@ -61,6 +59,7 @@ public:
       abort();
     }
   }
+
 private:
   Functor closure_task;
 };
@@ -71,10 +70,7 @@ public:
   TaskWithCleanup(const Location& location,
                   const Closure& closure,
                   const Cleanup& cleanup)
-    : TaskBase(location),
-      closure_task(closure),
-      cleanup_task(cleanup) {
-  }
+    : TaskBase(location), closure_task(closure), cleanup_task(cleanup) {}
   void Run() override {
     try {
       closure_task();
@@ -89,11 +85,11 @@ public:
       abort();
     }
   }
+
 private:
   Closure closure_task;
   Cleanup cleanup_task;
 };
-
 
 template <class Closure>
 static TaskBasePtr CreateClosure(const Location& location,
@@ -105,13 +101,14 @@ template <class Closure, class Cleanup>
 static TaskBasePtr CreateTaskWithCallback(const Location& location,
                                           const Closure& closure,
                                           const Cleanup& cleanup) {
-  return TaskBasePtr(new TaskWithCleanup<Closure,Cleanup>(location, closure, cleanup));
+  return TaskBasePtr(
+      new TaskWithCleanup<Closure, Cleanup>(location, closure, cleanup));
 }
 
-}// end base namespace
+}  // namespace base
 
 #define NewClosure(Functor) ::base::CreateClosure(FROM_HERE, Functor)
-#define NewClosureWithCleanup(Functor, Cleanup) ::base::CreateClosureWithCallback(Location, Functor, Cleanup)
-
+#define NewClosureWithCleanup(Functor, Cleanup) \
+  ::base::CreateClosureWithCallback(Location, Functor, Cleanup)
 
 #endif

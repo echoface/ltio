@@ -18,19 +18,19 @@
 #ifndef LT_NET_GENERIC_SERVER_H_H
 #define LT_NET_GENERIC_SERVER_H_H
 
+#include <chrono>  // std::chrono::seconds
 #include <cstdint>
+#include <functional>
 #include <list>
 #include <memory>
-#include <mutex>              // std::mutex, std::unique_lock
+#include <mutex>  // std::mutex, std::unique_lock
 #include <vector>
-#include <chrono>             // std::chrono::seconds
-#include <functional>
 
 #include "base/base_micro.h"
 #include "base/coroutine/coroutine_runner.h"
-#include "net_io/io_service.h"
-#include "net_io/codec/codec_factory.h"
 #include "base/message_loop/message_loop.h"
+#include "net_io/codec/codec_factory.h"
+#include "net_io/io_service.h"
 
 namespace lt {
 namespace net {
@@ -41,17 +41,16 @@ typedef struct DefaultConfigurator {
   static const bool coro_process = true;
   static const uint64_t kClientConnLimit = 65536;
   static const uint64_t kRequestQpsLimit = 100000;
-}DefaultConfigurator;
+} DefaultConfigurator;
 
 /*
  * Context need implement follow interface
  *
  * Context::New(RefCodecMessage request);
  * */
-template <typename Context,
-          typename Configurator = DefaultConfigurator>
+template <typename Context, typename Configurator = DefaultConfigurator>
 class BaseServer : public IOServiceDelegate {
- public:
+public:
   typedef BaseServer<Context, Configurator> Server;
   typedef std::shared_ptr<Context> RefContext;
   typedef std::list<RefIOService> RefIOServiceList;
@@ -75,16 +74,10 @@ class BaseServer : public IOServiceDelegate {
     return uri_.protocol + ":" + endpoint_.ToString();
   }
 
-  const IPEndPoint& Endpoint() const {
-    return endpoint_;
-  };
-  const url::SchemeIpPort& ServeURI() const {
-    return uri_;
-  }
+  const IPEndPoint& Endpoint() const { return endpoint_; };
+  const url::SchemeIpPort& ServeURI() const { return uri_; }
 
-  void ServeAddress(const Handler& handler) {
-    ServeAddress(address_, handler);
-  }
+  void ServeAddress(const Handler& handler) { ServeAddress(address_, handler); }
 
   void ServeAddress(const std::string& address, const Handler& handler) {
     CHECK(handler);
@@ -130,16 +123,16 @@ class BaseServer : public IOServiceDelegate {
   }
 
 protected:
-  //override from ioservice delegate
+  // override from ioservice delegate
   bool CanCreateNewChannel() override {
     bool can = client_count_ < Configurator::kClientConnLimit;
     LOG_IF(INFO, !can) << " max client limit reach";
     return can;
   };
 
-  void IncreaseChannelCount() override { client_count_++;}
+  void IncreaseChannelCount() override { client_count_++; }
 
-  void DecreaseChannelCount() override { client_count_--;}
+  void DecreaseChannelCount() override { client_count_--; }
 
   MessageLoop* GetNextIOWorkLoop() override {
 #if defined SO_REUSEPORT && defined NET_ENABLE_REUSER_PORT
@@ -162,9 +155,8 @@ protected:
 
   void IOServiceStoped(const IOService* service) override {
     std::unique_lock<std::mutex> lck(mtx_);
-    ioservices_.remove_if([&](const RefIOService& s) -> bool {
-      return s.get() == service;
-    });
+    ioservices_.remove_if(
+        [&](const RefIOService& s) -> bool { return s.get() == service; });
 
     LOG_IF(INFO, ioservices_.empty()) << "Server:" << ServerInfo() << " Stoped";
     if (ioservices_.empty() && closed_callback_) {
@@ -209,4 +201,3 @@ private:
 }  // namespace net
 }  // namespace lt
 #endif
-

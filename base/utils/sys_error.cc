@@ -15,8 +15,8 @@
  * limitations under the License.
  */
 
-#include <string.h>
 #include "sys_error.h"
+#include <string.h>
 #include <vector>
 
 #include "base/build_config.h"
@@ -32,7 +32,6 @@ std::string StrError() {
 }
 
 std::string StrError(int errnum) {
-
   std::string error_str;
   if (errnum == 0)
     return error_str;
@@ -42,16 +41,17 @@ std::string StrError(int errnum) {
 
   buffer[0] = '\0';
 
-//posix
-#if !defined(_WIN32) && (defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__)))
+// posix
+#if !defined(_WIN32) && (defined(__unix__) || defined(__unix) || \
+                         (defined(__APPLE__) && defined(__MACH__)))
 
 #if defined(__GLIBC__)
-   // glibc defines its own incompatible version of strerror_r
-   // which may not use the buffer supplied.
-   error_str = strerror_r(errnum, &buffer[0], MaxErrStrLen - 1);
+  // glibc defines its own incompatible version of strerror_r
+  // which may not use the buffer supplied.
+  error_str = strerror_r(errnum, &buffer[0], MaxErrStrLen - 1);
 #else
-   strerror_r(errnum, &buffer[0], MaxErrStrLen - 1);
-   error_str = (char*)buffer[0];
+  strerror_r(errnum, &buffer[0], MaxErrStrLen - 1);
+  error_str = (char*)buffer[0];
 #endif
 
 #else
@@ -61,4 +61,4 @@ std::string StrError(int errnum) {
   return error_str;
 }  // namespace base
 
-}
+}  // namespace base

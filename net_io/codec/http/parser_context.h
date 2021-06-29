@@ -15,7 +15,6 @@
  * limitations under the License.
  */
 
-
 #ifndef _NET_HTTP_PROTO_PARSER_CONTEXT_H_
 #define _NET_HTTP_PROTO_PARSER_CONTEXT_H_
 
@@ -30,7 +29,7 @@
 namespace lt {
 namespace net {
 
-//response for build HttpResponse
+// response for build HttpResponse
 class ResParseContext {
 public:
   ResParseContext();
@@ -39,12 +38,22 @@ public:
   http_parser* Parser();
 
   static int OnHttpResponseBegin(http_parser* parser);
-  static int OnUrlParsed(http_parser* parser, const char *url_start, size_t url_len);
-  static int OnStatusCodeParsed(http_parser* parser, const char *start, size_t len);
-  static int OnHeaderFieldParsed(http_parser* parser, const char *header_start, size_t len);
-  static int OnHeaderValueParsed(http_parser* parser, const char *value_start, size_t len);
+  static int OnUrlParsed(http_parser* parser,
+                         const char* url_start,
+                         size_t url_len);
+  static int OnStatusCodeParsed(http_parser* parser,
+                                const char* start,
+                                size_t len);
+  static int OnHeaderFieldParsed(http_parser* parser,
+                                 const char* header_start,
+                                 size_t len);
+  static int OnHeaderValueParsed(http_parser* parser,
+                                 const char* value_start,
+                                 size_t len);
   static int OnHeaderFinishParsed(http_parser* parser);
-  static int OnBodyParsed(http_parser* parser, const char *body_start, size_t len);
+  static int OnBodyParsed(http_parser* parser,
+                          const char* body_start,
+                          size_t len);
   static int OnHttpResponseEnd(http_parser* parser);
   static int OnChunkHeader(http_parser* parser);
   static int OnChunkFinished(http_parser* parser);
@@ -67,15 +76,26 @@ public:
   http_parser* Parser();
 
   static int OnHttpRequestBegin(http_parser* parser);
-  static int OnUrlParsed(http_parser* parser, const char *url_start, size_t url_len);
-  static int OnStatusCodeParsed(http_parser* parser, const char *start, size_t len);
-  static int OnHeaderFieldParsed(http_parser* parser, const char *header_start, size_t len);
-  static int OnHeaderValueParsed(http_parser* parser, const char *value_start, size_t len);
+  static int OnUrlParsed(http_parser* parser,
+                         const char* url_start,
+                         size_t url_len);
+  static int OnStatusCodeParsed(http_parser* parser,
+                                const char* start,
+                                size_t len);
+  static int OnHeaderFieldParsed(http_parser* parser,
+                                 const char* header_start,
+                                 size_t len);
+  static int OnHeaderValueParsed(http_parser* parser,
+                                 const char* value_start,
+                                 size_t len);
   static int OnHeaderFinishParsed(http_parser* parser);
-  static int OnBodyParsed(http_parser* parser, const char *body_start, size_t len);
+  static int OnBodyParsed(http_parser* parser,
+                          const char* body_start,
+                          size_t len);
   static int OnHttpRequestEnd(http_parser* parser);
   static int OnChunkHeader(http_parser* parser);
   static int OnChunkFinished(http_parser* parser);
+
 private:
   friend class HttpCodecService;
   http_parser parser_;
@@ -86,5 +106,6 @@ private:
   std::list<RefHttpRequest> messages_;
 };
 
-}}
+}  // namespace net
+}  // namespace lt
 #endif

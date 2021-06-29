@@ -4,17 +4,17 @@
 
 #include "ip_address.h"
 
-#include <algorithm>
 #include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <algorithm>
 #include <climits>
 #include <cstddef>
 #include <cstdio>
-#include <netinet/in.h>
-#include <sys/socket.h>
 
-#include "fmt/format.h"
-#include "base/utils/arrayutils.h"
 #include <base/utils/string/str_utils.h>
+#include "base/utils/arrayutils.h"
+#include "fmt/format.h"
 
 //#include "base/containers/stack_container.h"
 //#include "base/notreached.h"
@@ -122,7 +122,7 @@ bool IsPubliclyRoutableIPv6(const IPAddressBytes& ip_address) {
   return false;
 }
 
-//NOTE gonghuan modify it remove dependency of chromium URL implement
+// NOTE gonghuan modify it remove dependency of chromium URL implement
 bool ParseIPLiteralToBytes(const base::StringPiece& ip_literal,
                            IPAddressBytes* bytes) {
   // |ip_literal| could be either an IPv4 or an IPv6 literal. If it contains
@@ -130,8 +130,8 @@ bool ParseIPLiteralToBytes(const base::StringPiece& ip_literal,
   if (ip_literal.find(':') != base::StringPiece::npos) {
     bytes->Resize(16);  // 128 bits.
     return inet_pton(AF_INET6, ip_literal.data(), bytes->data()) > 0;
-    //1: success
-    //0: input is invalid
+    // 1: success
+    // 0: input is invalid
     //-1:AF no supported
   }
 
@@ -179,7 +179,7 @@ IPAddress::IPAddress(const IPAddress& other) = default;
 IPAddress::IPAddress(const IPAddressBytes& address) : ip_address_(address) {}
 
 IPAddress::IPAddress(const uint8_t* address, size_t address_len)
-    : ip_address_(address, address_len) {}
+  : ip_address_(address, address_len) {}
 
 IPAddress::IPAddress(uint8_t b0, uint8_t b1, uint8_t b2, uint8_t b3) {
   ip_address_.push_back(b0);
@@ -355,8 +355,8 @@ bool IPAddress::operator<(const IPAddress& that) const {
 std::string IPAddress::ToString() const {
   std::string str;
 
-  int af_type = IsIPv4() ? AF_INET : AF_INET6; 
-  size_t out_len = IsIPv4() ? INET_ADDRSTRLEN : INET6_ADDRSTRLEN; 
+  int af_type = IsIPv4() ? AF_INET : AF_INET6;
+  size_t out_len = IsIPv4() ? INET_ADDRSTRLEN : INET6_ADDRSTRLEN;
 
   char* start = base::AsWriteInto(&str, out_len);
   ::inet_ntop(af_type, ip_address_.data(), start, out_len);
@@ -392,8 +392,7 @@ IPAddress ConvertIPv4ToIPv4MappedIPv6(const IPAddress& address) {
   return IPAddress(bytes->data(), bytes->size());
 #else
   std::vector<uint8_t> bytes;
-  bytes.insert(bytes.end(),
-               std::begin(kIPv4MappedPrefix),
+  bytes.insert(bytes.end(), std::begin(kIPv4MappedPrefix),
                std::end(kIPv4MappedPrefix));
   bytes.insert(bytes.end(), address.bytes().begin(), address.bytes().end());
   return IPAddress(bytes.data(), bytes.size());
@@ -410,9 +409,10 @@ IPAddress ConvertIPv4MappedIPv6ToIPv4(const IPAddress& address) {
   return IPAddress(bytes->data(), bytes->size());
 #else
   std::vector<uint8_t> bytes;
-  bytes.insert(bytes.end(),
-               address.bytes().begin() + base::ArrayUtils::size(kIPv4MappedPrefix),
-               std::end(kIPv4MappedPrefix));
+  bytes.insert(
+      bytes.end(),
+      address.bytes().begin() + base::ArrayUtils::size(kIPv4MappedPrefix),
+      std::end(kIPv4MappedPrefix));
   return IPAddress(bytes.data(), bytes.size());
 #endif
 }
@@ -450,7 +450,7 @@ bool ParseCIDRBlock(const std::string& cidr_literal,
   //   <IPv4-literal> "/" <number of bits>
   //   <IPv6-literal> "/" <number of bits>
   std::vector<std::string> parts = base::StrUtil::Split(cidr_literal, "/");
-  //std::vector<base::StringPiece> parts = base::SplitStringPiece(
+  // std::vector<base::StringPiece> parts = base::SplitStringPiece(
   //    cidr_literal, "/", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
   if (parts.size() != 2)
     return false;
@@ -496,7 +496,7 @@ size_t CommonPrefixLength(const IPAddress& a1, const IPAddress& a2) {
         return i * CHAR_BIT + j;
       diff <<= 1;
     }
-    //NOTREACHED();
+    // NOTREACHED();
   }
   return a1.size() * CHAR_BIT;
 }
@@ -506,4 +506,5 @@ size_t MaskPrefixLength(const IPAddress& mask) {
   return CommonPrefixLength(mask, IPAddress(all_ones.data(), all_ones.size()));
 }
 
-}}  // namespace net
+}  // namespace net
+}  // namespace lt

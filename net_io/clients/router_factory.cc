@@ -15,11 +15,8 @@
  * limitations under the License.
  */
 
-
 #include "router_factory.h"
 
 namespace lt {
-namespace net {
-
-
-}} //end lt::net
+namespace net {}
+}  // namespace lt

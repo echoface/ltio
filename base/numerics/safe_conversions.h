@@ -171,7 +171,9 @@ struct SaturateFastOp<
                             std::is_integral<Dst>::value &&
                             SaturateFastAsmOp<Dst, Src>::is_supported>::type> {
   static constexpr bool is_supported = true;
-  static constexpr Dst Do(Src value) { return SaturateFastAsmOp<Dst, Src>::Do(value); }
+  static constexpr Dst Do(Src value) {
+    return SaturateFastAsmOp<Dst, Src>::Do(value);
+  }
 };
 
 template <typename Dst, typename Src>
@@ -267,7 +269,7 @@ struct IsNumericRangeContained<
 // CheckedNumeric for runtime range checks of the actual value being assigned.
 template <typename T>
 class StrictNumeric {
- public:
+public:
   using type = T;
 
   constexpr StrictNumeric() : value_(0) {}
@@ -275,13 +277,13 @@ class StrictNumeric {
   // Copy constructor.
   template <typename Src>
   constexpr StrictNumeric(const StrictNumeric<Src>& rhs)
-      : value_(strict_cast<T>(rhs.value_)) {}
+    : value_(strict_cast<T>(rhs.value_)) {}
 
   // This is not an explicit constructor because we implicitly upgrade regular
   // numerics to StrictNumerics to make them easier to use.
   template <typename Src>
   constexpr StrictNumeric(Src value)  // NOLINT(runtime/explicit)
-      : value_(strict_cast<T>(value)) {}
+    : value_(strict_cast<T>(value)) {}
 
   // If you got here from a compiler error, it's because you tried to assign
   // from a source type to a destination type that has insufficient range.
@@ -302,7 +304,7 @@ class StrictNumeric {
     return static_cast<typename ArithmeticOrUnderlyingEnum<Dst>::type>(value_);
   }
 
- private:
+private:
   const T value_;
 };
 
@@ -343,14 +345,14 @@ BASE_NUMERIC_COMPARISON_OPERATORS(Strict, IsNotEqual, !=)
 using internal::as_signed;
 using internal::as_unsigned;
 using internal::checked_cast;
-using internal::strict_cast;
-using internal::saturated_cast;
-using internal::SafeUnsignedAbs;
-using internal::StrictNumeric;
-using internal::MakeStrictNum;
-using internal::IsValueInRangeForNumericType;
 using internal::IsTypeInRangeForNumericType;
+using internal::IsValueInRangeForNumericType;
 using internal::IsValueNegative;
+using internal::MakeStrictNum;
+using internal::SafeUnsignedAbs;
+using internal::saturated_cast;
+using internal::strict_cast;
+using internal::StrictNumeric;
 
 // Explicitly make a shorter size_t alias for convenience.
 using SizeT = StrictNumeric<size_t>;

@@ -20,14 +20,14 @@
 
 #include "codec_message.h"
 
-#include <net_io/url_utils.h>
-#include <net_io/net_callback.h>
-#include <net_io/tcp_channel.h>
-#include <net_io/base/ip_endpoint.h>
 #include <base/message_loop/message_loop.h>
+#include <net_io/base/ip_endpoint.h>
+#include <net_io/channel.h>
+#include <net_io/net_callback.h>
+#include <net_io/url_utils.h>
 
 namespace base {
-  class MessageLoop;
+class MessageLoop;
 }
 
 namespace lt {
@@ -39,12 +39,13 @@ class CodecService : public EnableShared(CodecService),
                      public SocketChannel::Reciever {
 public:
   class Delegate {
-    public:
-      virtual void OnCodecMessage(const RefCodecMessage& message) = 0;
-      virtual void OnProtocolServiceReady(const RefCodecService& service) {};
-      virtual void OnProtocolServiceGone(const RefCodecService& service) = 0;
-      //for client side
-      virtual const url::RemoteInfo* GetRemoteInfo() const {return NULL;};
+  public:
+    virtual void OnCodecMessage(const RefCodecMessage& message) = 0;
+    virtual void OnProtocolServiceReady(const RefCodecService& service){};
+    virtual void OnProtocolServiceGone(const RefCodecService& service) = 0;
+
+    // for client side
+    virtual const url::RemoteInfo* GetRemoteInfo() const { return NULL; };
   };
 
 public:
@@ -52,46 +53,49 @@ public:
   virtual ~CodecService();
 
   void SetDelegate(Delegate* d);
-  /* this can be override for create diffrent type SocketChannel,
-   * eg SSLChannel, UdpChannel, ....... */
-  virtual bool BindToSocket(int fd,
-                            const IPEndPoint& local,
-                            const IPEndPoint& peer);
+
+  void SetProtocol(const std::string& protocol) { protocol_ = protocol; };
+
+  void BindSocket(SocketChannelPtr&& channel);
 
   virtual void StartProtocolService();
 
-  TcpChannel* Channel() {return channel_.get();};
-  base::MessageLoop* IOLoop() const { return binded_loop_;}
-  base::EventPump* Pump() const { return binded_loop_->Pump();}
+  SocketChannel* Channel() { return channel_.get(); };
+  base::MessageLoop* IOLoop() const { return binded_loop_; }
+  base::EventPump* Pump() const { return binded_loop_->Pump(); }
 
   void CloseService(bool block_callback = false);
   bool IsConnected() const;
 
-  virtual void BeforeCloseService() {};
-  virtual void AfterChannelClosed() {};
+  virtual void BeforeCloseService(){};
+  virtual void AfterChannelClosed(){};
 
   /* feature indentify*/
-  //async clients request
-  virtual bool KeepSequence() {return true;};
-  virtual bool KeepHeartBeat() {return false;}
+  // async clients request
+  virtual bool KeepSequence() { return true; };
+  virtual bool KeepHeartBeat() { return false; }
 
   virtual bool SendRequest(CodecMessage* message) = 0;
 
   virtual bool SendResponse(const CodecMessage* req, CodecMessage* res) = 0;
 
-  virtual const RefCodecMessage NewHeartbeat() {return NULL;}
-  virtual const RefCodecMessage NewResponse(const CodecMessage*) {return NULL;}
+  virtual const RefCodecMessage NewHeartbeat() { return NULL; }
+  virtual const RefCodecMessage NewResponse(const CodecMessage*) {
+    return NULL;
+  }
 
-  virtual const std::string& protocol() const {
-    const static std::string kEmpty;
-    return kEmpty;
-  };
+  const std::string& protocol() const { return protocol_; };
 
   void SetIsServerSide(bool server_side);
-  bool IsServerSide() const {return server_side_;}
+
+  virtual bool UseSSLChannel() const { return false; };
+
+  bool IsServerSide() const override { return server_side_; }
+
   inline MessageType InComingType() const {
     return server_side_ ? MessageType::kRequest : MessageType::kResponse;
   }
+
 protected:
   // override this do initializing for client side, like set db, auth etc
   virtual void OnChannelReady(const SocketChannel*) override;
@@ -99,11 +103,17 @@ protected:
   void OnChannelClosed(const SocketChannel*) override;
 
   bool server_side_;
-  TcpChannelPtr channel_;
+
+  std::string protocol_;
+
+  SocketChannelPtr channel_;
+
   Delegate* delegate_ = nullptr;
+
   base::MessageLoop* binded_loop_ = nullptr;
   DISALLOW_COPY_AND_ASSIGN(CodecService);
 };
 
-}}
+}  // namespace net
+}  // namespace lt
 #endif

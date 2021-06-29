@@ -27,13 +27,8 @@ RefFdEvent FdEvent::Create(FdEvent::Handler* handler, int fd, LtEvent events) {
   return std::make_shared<FdEvent>(handler, fd, events);
 }
 
-FdEvent::FdEvent(FdEvent::Handler* handler, int fd, LtEvent event):
-  fd_(fd),
-  events_(event),
-  revents_(0),
-  owner_fd_(true),
-  handler_(handler) {
-}
+FdEvent::FdEvent(FdEvent::Handler* handler, int fd, LtEvent event)
+  : fd_(fd), events_(event), revents_(0), owner_fd_(true), handler_(handler) {}
 
 FdEvent::~FdEvent() {
   if (owner_fd_) {
@@ -41,7 +36,7 @@ FdEvent::~FdEvent() {
   }
 }
 
-void FdEvent::SetFdWatcher(Watcher *d) {
+void FdEvent::SetFdWatcher(Watcher* d) {
   watcher_ = d;
 }
 
@@ -66,13 +61,15 @@ void FdEvent::EnableWriting() {
 }
 
 void FdEvent::DisableReading() {
-  if (!IsReadEnable()) return;
+  if (!IsReadEnable())
+    return;
   events_ &= ~LtEv::LT_EVENT_READ;
   notify_watcher();
 }
 
 void FdEvent::DisableWriting() {
-  if (!IsWriteEnable()) return;
+  if (!IsWriteEnable())
+    return;
   events_ &= ~LtEv::LT_EVENT_WRITE;
   notify_watcher();
 }
@@ -106,7 +103,7 @@ void FdEvent::HandleEvent(LtEvent mask) {
         break;
       }
     }
-  } while(0);
+  } while (0);
 }
 
 std::string FdEvent::EventInfo() const {
@@ -123,4 +120,4 @@ std::string FdEvent::MonitorEventAsString() const {
   return events2string(events_);
 }
 
-} //namespace
+}  // namespace base

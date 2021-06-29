@@ -19,17 +19,15 @@
 #include "base/base_constants.h"
 #include "http_constants.h"
 
-#include "glog/logging.h"
 #include <base/utils/gzip/gzip_utils.h>
 #include <net_io/codec/codec_message.h>
 #include <thirdparty/http_parser/http_parser.h>
+#include "glog/logging.h"
 
 namespace lt {
 namespace net {
 
-ResParseContext::ResParseContext()
-  : last_is_header_value(false) {
-
+ResParseContext::ResParseContext() : last_is_header_value(false) {
   http_parser_init(&parser_, HTTP_RESPONSE);
   parser_.data = this;
 }
@@ -44,9 +42,7 @@ http_parser* ResParseContext::Parser() {
   return &parser_;
 }
 
-ReqParseContext::ReqParseContext()
-  : last_is_header_value(false) {
-
+ReqParseContext::ReqParseContext() : last_is_header_value(false) {
   http_parser_init(&parser_, HTTP_REQUEST);
   parser_.data = this;
 }
@@ -62,7 +58,7 @@ http_parser* ReqParseContext::Parser() {
   return &parser_;
 }
 
-//static
+// static
 int ReqParseContext::OnHttpRequestBegin(http_parser* parser) {
   ReqParseContext* context = (ReqParseContext*)parser->data;
   CHECK(context);
@@ -79,7 +75,9 @@ int ReqParseContext::OnHttpRequestBegin(http_parser* parser) {
   return 0;
 }
 
-int ReqParseContext::OnUrlParsed(http_parser* parser, const char *url_start, size_t url_len) {
+int ReqParseContext::OnUrlParsed(http_parser* parser,
+                                 const char* url_start,
+                                 size_t url_len) {
   ReqParseContext* context = (ReqParseContext*)parser->data;
   CHECK(context);
 
@@ -88,19 +86,24 @@ int ReqParseContext::OnUrlParsed(http_parser* parser, const char *url_start, siz
   return 0;
 }
 
-int ReqParseContext::OnStatusCodeParsed(http_parser* parser, const char *start, size_t len) {
+int ReqParseContext::OnStatusCodeParsed(http_parser* parser,
+                                        const char* start,
+                                        size_t len) {
   VLOG(GLOG_VTRACE) << __FUNCTION__ << "request should not reached here";
   return 0;
 }
 
-int ReqParseContext::OnHeaderFieldParsed(http_parser* parser, const char *header_start, size_t len) {
+int ReqParseContext::OnHeaderFieldParsed(http_parser* parser,
+                                         const char* header_start,
+                                         size_t len) {
   ReqParseContext* context = (ReqParseContext*)parser->data;
   CHECK(context);
   VLOG(GLOG_VTRACE) << __FUNCTION__ << "enter";
 
   if (context->last_is_header_value) {
     if (!context->half_header.first.empty()) {
-      context->current_->InsertHeader(context->half_header.first, context->half_header.second);
+      context->current_->InsertHeader(context->half_header.first,
+                                      context->half_header.second);
     }
     context->half_header.first.clear();
     context->half_header.second.clear();
@@ -110,7 +113,9 @@ int ReqParseContext::OnHeaderFieldParsed(http_parser* parser, const char *header
   return 0;
 }
 
-int ReqParseContext::OnHeaderValueParsed(http_parser* parser, const char *value_start, size_t len) {
+int ReqParseContext::OnHeaderValueParsed(http_parser* parser,
+                                         const char* value_start,
+                                         size_t len) {
   ReqParseContext* context = (ReqParseContext*)parser->data;
   CHECK(context);
 
@@ -131,7 +136,8 @@ int ReqParseContext::OnHeaderFinishParsed(http_parser* parser) {
   VLOG(GLOG_VTRACE) << __FUNCTION__ << " enter";
 
   if (!context->half_header.first.empty()) {
-    context->current_->InsertHeader(context->half_header.first, context->half_header.second);
+    context->current_->InsertHeader(context->half_header.first,
+                                    context->half_header.second);
   }
   context->half_header.first.clear();
   context->half_header.second.clear();
@@ -140,7 +146,9 @@ int ReqParseContext::OnHeaderFinishParsed(http_parser* parser) {
   return 0;
 }
 
-int ReqParseContext::OnBodyParsed(http_parser* parser, const char *body_start, size_t len) {
+int ReqParseContext::OnBodyParsed(http_parser* parser,
+                                  const char* body_start,
+                                  size_t len) {
   ReqParseContext* context = (ReqParseContext*)parser->data;
   VLOG(GLOG_VTRACE) << __FUNCTION__ << " enter";
 
@@ -156,38 +164,43 @@ int ReqParseContext::OnHttpRequestEnd(http_parser* parser) {
 
   int type = parser->type;
   if (type != HTTP_REQUEST) {
-    LOG(ERROR) << __FUNCTION__ << "ReqParseContext Parse A NONE-REQUEST Content";
+    LOG(ERROR) << __FUNCTION__
+               << "ReqParseContext Parse A NONE-REQUEST Content";
     context->reset();
     return -1;
   }
 
-  //context->current_->SetMessageType(MessagetType::kRequest);
+  // context->current_->SetMessageType(MessagetType::kRequest);
   context->current_->keepalive_ = http_should_keep_alive(parser);
   context->current_->http_major_ = parser->http_major;
   context->current_->http_minor_ = parser->http_minor;
 
   context->current_->method_ = http_method_str((http_method)parser->method);
-  //gzip, inflat
+  // gzip, inflat
 
   const std::string kgzip("gzip");
-  const std::string& encoding = context->current_->GetHeader(HttpConstant::kContentEncoding);;
+  const std::string& encoding =
+      context->current_->GetHeader(HttpConstant::kContentEncoding);
+  ;
   if (encoding.find(kgzip) != std::string::npos) {
     std::string decompress_body;
-    if (0 != base::Gzip::decompress_gzip(context->current_->body_, decompress_body)) {
+    if (0 != base::Gzip::decompress_gzip(context->current_->body_,
+                                         decompress_body)) {
       LOG(ERROR) << " Decode gzip HttpRequest Body Failed";
       context->current_->body_.clear();
     }
     context->current_->body_ = std::move(decompress_body);
-  } else if (encoding.find("deflate") != std::string::npos){
+  } else if (encoding.find("deflate") != std::string::npos) {
     std::string decompress_body;
-    if (0 != base::Gzip::decompress_deflate(context->current_->body_, decompress_body)) {
+    if (0 != base::Gzip::decompress_deflate(context->current_->body_,
+                                            decompress_body)) {
       LOG(ERROR) << " Decode deflate HttpRequest Body Failed";
       context->current_->body_.clear();
     }
     context->current_->body_ = std::move(decompress_body);
   }
-  //build params
-  //extract host
+  // build params
+  // extract host
 
   VLOG(GLOG_VTRACE) << __FUNCTION__ << " new message born";
   context->messages_.push_back(std::move(context->current_));
@@ -200,10 +213,10 @@ int ReqParseContext::OnHttpRequestEnd(http_parser* parser) {
 int ReqParseContext::OnChunkHeader(http_parser* parser) {
   return 0;
 }
+
 int ReqParseContext::OnChunkFinished(http_parser* parser) {
   return 0;
 }
-
 
 // response
 
@@ -217,22 +230,29 @@ int ResParseContext::OnHttpResponseBegin(http_parser* parser) {
   context->current_ = std::make_shared<HttpResponse>();
   return 0;
 }
-int ResParseContext::OnUrlParsed(http_parser* parser, const char *url_start, size_t url_len) {
+int ResParseContext::OnUrlParsed(http_parser* parser,
+                                 const char* url_start,
+                                 size_t url_len) {
   return 0;
 }
-int ResParseContext::OnStatusCodeParsed(http_parser* parser, const char *start, size_t len) {
+int ResParseContext::OnStatusCodeParsed(http_parser* parser,
+                                        const char* start,
+                                        size_t len) {
   ResParseContext* context = (ResParseContext*)parser->data;
   CHECK(context);
   return 0;
 }
 
-int ResParseContext::OnHeaderFieldParsed(http_parser* parser, const char *header_start, size_t len) {
+int ResParseContext::OnHeaderFieldParsed(http_parser* parser,
+                                         const char* header_start,
+                                         size_t len) {
   ResParseContext* context = (ResParseContext*)parser->data;
   CHECK(context);
 
   if (context->last_is_header_value) {
     if (!context->half_header.first.empty()) {
-      context->current_->InsertHeader(context->half_header.first, context->half_header.second);
+      context->current_->InsertHeader(context->half_header.first,
+                                      context->half_header.second);
     }
     context->half_header.first.clear();
     context->half_header.second.clear();
@@ -243,7 +263,9 @@ int ResParseContext::OnHeaderFieldParsed(http_parser* parser, const char *header
   return 0;
 }
 
-int ResParseContext::OnHeaderValueParsed(http_parser* parser, const char *value_start, size_t len) {
+int ResParseContext::OnHeaderValueParsed(http_parser* parser,
+                                         const char* value_start,
+                                         size_t len) {
   ResParseContext* context = (ResParseContext*)parser->data;
   CHECK(context);
 
@@ -261,7 +283,8 @@ int ResParseContext::OnHeaderFinishParsed(http_parser* parser) {
   CHECK(context);
 
   if (!context->half_header.first.empty()) {
-    context->current_->InsertHeader(context->half_header.first, context->half_header.second);
+    context->current_->InsertHeader(context->half_header.first,
+                                    context->half_header.second);
   }
   context->half_header.first.clear();
   context->half_header.second.clear();
@@ -270,7 +293,9 @@ int ResParseContext::OnHeaderFinishParsed(http_parser* parser) {
   return 0;
 }
 
-int ResParseContext::OnBodyParsed(http_parser* parser, const char *body_start, size_t len) {
+int ResParseContext::OnBodyParsed(http_parser* parser,
+                                  const char* body_start,
+                                  size_t len) {
   ResParseContext* context = (ResParseContext*)parser->data;
   CHECK(context);
 
@@ -287,17 +312,20 @@ int ResParseContext::OnHttpResponseEnd(http_parser* parser) {
   context->current_->http_minor_ = parser->http_minor;
   context->current_->status_code_ = parser->status_code;
 
-  const std::string& encoding = context->current_->GetHeader(HttpConstant::kContentEncoding);;
+  const std::string& encoding =
+      context->current_->GetHeader(HttpConstant::kContentEncoding);
+  ;
   if (encoding.find("gzip") != std::string::npos) {
     std::string decompress_body;
-    if (0 != base::Gzip::decompress_gzip(context->current_->body_, decompress_body)) {
+    if (0 != base::Gzip::decompress_gzip(context->current_->body_,
+                                         decompress_body)) {
       LOG(ERROR) << " Decode gzip HttpRequest Body Failed";
     }
     context->current_->body_ = std::move(decompress_body);
-  }
-  else if (encoding.find("deflate") != std::string::npos) {
+  } else if (encoding.find("deflate") != std::string::npos) {
     std::string decompress_body;
-    if (0 != base::Gzip::decompress_deflate(context->current_->body_, decompress_body)) {
+    if (0 != base::Gzip::decompress_deflate(context->current_->body_,
+                                            decompress_body)) {
       LOG(ERROR) << " Decode deflate HttpRequest Body Failed";
     }
     context->current_->body_ = std::move(decompress_body);
@@ -315,4 +343,5 @@ int ResParseContext::OnChunkFinished(http_parser* parser) {
   return 0;
 }
 
-}}
+}  // namespace net
+}  // namespace lt

@@ -26,16 +26,15 @@
 namespace lt {
 namespace net {
 
-// just work on same endian machine; if not, consider add net-endian convert code
+// just work on same endian machine; if not, consider add net-endian convert
+// code
 template <typename T>
 class RawCodecService : public CodecService {
- public:
+public:
   typedef T RawMessageType;
   typedef std::shared_ptr<T> RawMessageTypePtr;
 
-  RawCodecService(base::MessageLoop* loop)
-    : CodecService(loop) {
-  }
+  RawCodecService(base::MessageLoop* loop) : CodecService(loop) {}
   ~RawCodecService(){};
 
   void AfterChannelClosed() override { ; }
@@ -43,7 +42,8 @@ class RawCodecService : public CodecService {
   void OnDataReceived(const SocketChannel*, IOBuffer* buffer) override {
     VLOG(GLOG_VTRACE) << __FUNCTION__ << " enter";
     do {
-      RawMessageTypePtr message = RawMessageType::Decode(buffer, IsServerSide());
+      RawMessageTypePtr message =
+          RawMessageType::Decode(buffer, IsServerSide());
       if (!message) {
         break;
       }
@@ -75,9 +75,9 @@ class RawCodecService : public CodecService {
     return NULL;
   }
 
-  //feature list
-  bool KeepSequence() override { return RawMessageType::KeepQueue();};
-  bool KeepHeartBeat() override {return RawMessageType::WithHeartbeat();}
+  // feature list
+  bool KeepSequence() override { return RawMessageType::KeepQueue(); };
+  bool KeepHeartBeat() override { return RawMessageType::WithHeartbeat(); }
 
   bool SendRequest(CodecMessage* message) override {
     RawMessageType* request = static_cast<RawMessageType*>(message);
@@ -91,18 +91,17 @@ class RawCodecService : public CodecService {
     auto raw_response = static_cast<RawMessageType*>(res);
     auto raw_request = static_cast<const RawMessageType*>(req);
     CHECK(raw_request->AsyncId() == raw_response->AsyncId());
-    VLOG(GLOG_VTRACE) << __FUNCTION__
-      << " request:" << raw_request->Dump()
-      << " response:" << raw_response->Dump();
+    VLOG(GLOG_VTRACE) << __FUNCTION__ << " request:" << raw_request->Dump()
+                      << " response:" << raw_response->Dump();
     return raw_response->EncodeTo(channel_.get());
   };
- private:
+
+private:
   static std::atomic<uint64_t> sequence_id_;
 };
 
 template <typename T>
 std::atomic<uint64_t> RawCodecService<T>::sequence_id_ = {0};
-
 
 }  // namespace net
 }  // namespace lt

@@ -29,8 +29,11 @@ namespace base {
 typedef struct FiredEvent {
   int fd_id;
   LtEvent event_mask;
-  void reset() {fd_id = -1; event_mask = LT_EVENT_NONE;} 
-}FiredEvent;
+  void reset() {
+    fd_id = -1;
+    event_mask = LT_EVENT_NONE;
+  }
+} FiredEvent;
 
 class IOMux : public FdEvent::Watcher {
 public:
@@ -48,9 +51,10 @@ public:
   /* may return NULL if removed by
    * previous InvokedEvent handler*/
   virtual FdEvent* FindFdEvent(int fd) = 0;
+
 private:
   DISALLOW_COPY_AND_ASSIGN(IOMux);
 };
 
-}
+}  // namespace base
 #endif

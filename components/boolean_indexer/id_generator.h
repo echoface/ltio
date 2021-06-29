@@ -43,8 +43,7 @@ public:
   static uint64_t GetConjunctionId(const EntryId id);
   static std::string ToString(const EntryId id);
   static std::string ToString(const Attr& attr);
-
 };
 
-}
+}  // namespace component
 #endif

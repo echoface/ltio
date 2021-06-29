@@ -4,11 +4,12 @@
 namespace component {
 
 class BooleanExprParser {
-  public:
-    BooleanExprParser();
-    virtual ~BooleanExprParser();
-  private:
+public:
+  BooleanExprParser();
+  virtual ~BooleanExprParser();
+
+private:
 };
 
-}
+}  // namespace component
 #endif

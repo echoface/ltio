@@ -15,20 +15,20 @@
  * limitations under the License.
  */
 
-#include <string>
-#include <inttypes.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <errno.h>
-#include <string.h>
-#include <netdb.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
-#include "glog/logging.h"
-#include <base/string/string_view.hpp>
 #include <base/utils/string/str_utils.h>
+#include <errno.h>
+#include <inttypes.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <base/string/string_view.hpp>
+#include <string>
+#include "glog/logging.h"
 
 #include "url_utils.h"
 
@@ -49,7 +49,6 @@ static std::string scheme_host("://");
 
 /* default protocol: http, default port: 80  */
 bool ParseURI(const std::string uri, SchemeIpPort& out) {
-
   out.port = 0;
   out.protocol = "http";
 
@@ -80,15 +79,14 @@ bool ParseURI(const std::string uri, SchemeIpPort& out) {
 }
 
 bool HostResolve(const std::string& host, std::string& host_ip) {
-
   int status;
   struct addrinfo hints, *p = NULL;
-  struct addrinfo *serv_info = NULL;
+  struct addrinfo* serv_info = NULL;
 
   memset(&hints, 0, sizeof hints);
 
-  hints.ai_family   = AF_UNSPEC;
-  hints.ai_flags    = AI_PASSIVE;
+  hints.ai_family = AF_UNSPEC;
+  hints.ai_flags = AI_PASSIVE;
   hints.ai_socktype = SOCK_STREAM;
 
   status = getaddrinfo(host.c_str(), NULL, &hints, &serv_info);
@@ -98,10 +96,10 @@ bool HostResolve(const std::string& host, std::string& host_ip) {
   }
 
   for (p = serv_info; p != NULL; p = p->ai_next) {
-    struct in_addr  *addr;
-    switch(p->ai_family) {
+    struct in_addr* addr;
+    switch (p->ai_family) {
       case AF_INET: {
-        struct sockaddr_in *ipv = (struct sockaddr_in *)p->ai_addr;
+        struct sockaddr_in* ipv = (struct sockaddr_in*)p->ai_addr;
         addr = &(ipv->sin_addr);
 
         std::vector<char> ip_str(INET_ADDRSTRLEN);
@@ -110,17 +108,15 @@ bool HostResolve(const std::string& host, std::string& host_ip) {
         }
       } break;
       case AF_INET6: {
-        struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *)p->ai_addr;
-        addr = (struct in_addr *) &(ipv6->sin6_addr);
+        struct sockaddr_in6* ipv6 = (struct sockaddr_in6*)p->ai_addr;
+        addr = (struct in_addr*)&(ipv6->sin6_addr);
 
         std::vector<char> ip_str(INET6_ADDRSTRLEN);
         if (inet_ntop(AF_INET6, addr, &ip_str[0], ip_str.size())) {
           host_ip.assign((const char*)&ip_str[0], ip_str.size());
         }
       } break;
-      default:{
-      }break;
-    }
+      default: { } break; }
   }
   freeaddrinfo(serv_info);
   return !host_ip.empty();
@@ -129,7 +125,6 @@ bool HostResolve(const std::string& host, std::string& host_ip) {
 // use c++17 std::string_view avoid memory allocator
 /* protocol://user:password@host:port?query_string*/
 bool ParseRemote(const std::string& str, RemoteInfo& out, bool resolve) {
-
   nonstd::string_view in = nonstd::string_view(str);
 
   std::string::size_type find_start = 0;
@@ -140,9 +135,10 @@ bool ParseRemote(const std::string& str, RemoteInfo& out, bool resolve) {
   }
 
   pos = in.find("@", find_start);
-  if (pos != std::string::npos) {//got user:psd
+  if (pos != std::string::npos) {  // got user:psd
     uint32_t len = pos - find_start;
-    auto user_psd = base::StrUtil::Split(in.substr(find_start, len).to_string(), ":", false);
+    auto user_psd = base::StrUtil::Split(in.substr(find_start, len).to_string(),
+                                         ":", false);
     out.user = user_psd[0];
     if (user_psd.size() > 1) {
       out.passwd = user_psd[1];
@@ -153,7 +149,8 @@ bool ParseRemote(const std::string& str, RemoteInfo& out, bool resolve) {
   pos = in.find("?", find_start);
   {
     uint32_t len = pos - find_start;
-    auto host_port = base::StrUtil::Split(in.substr(find_start, len).to_string(), ":", false);
+    auto host_port = base::StrUtil::Split(
+        in.substr(find_start, len).to_string(), ":", false);
     out.host = host_port.front();
     if (host_port.size() > 1) {
       out.port = base::StrUtil::Parse<uint16_t>(host_port[1]);
@@ -183,4 +180,6 @@ std::string RemoteInfo::HostIpPort() const {
   return base::StrUtil::Concat(host, " [", host_ip, "]:", port);
 }
 
-}}} //net::url
+}  // namespace url
+}  // namespace net
+}  // namespace lt

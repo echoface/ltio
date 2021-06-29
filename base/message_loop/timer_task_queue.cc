@@ -25,7 +25,6 @@ TimerTaskQueue::~TimerTaskQueue() {
 }
 
 uint32_t TimerTaskQueue::AddTimerEvent(RefTimerEvent& timer_event) {
-
   uint32_t timer_id = 0;
 
   const Timestamp& timestamp_ = timer_event->Time();
@@ -60,13 +59,11 @@ bool TimerTaskQueue::CancelTimerEvent(uint32_t timer_index) {
 }
 
 uint64_t TimerTaskQueue::HandleExpiredTimer() {
-
   Timestamp now = Timestamp::Now();
   inexact_time_us_ = now.AsMillsecond();
 
-  while(!timer_heap_.empty() &&
-        timer_heap_.top().time_.AsMillsecond() <= now.AsMillsecond()) {
-
+  while (!timer_heap_.empty() &&
+         timer_heap_.top().time_.AsMillsecond() <= now.AsMillsecond()) {
     const TimerEntry& top = timer_heap_.top();
 
     uint32_t timerid = top.index_;
@@ -75,7 +72,7 @@ uint64_t TimerTaskQueue::HandleExpiredTimer() {
     assert(timer_events_.size() > timerid);
 
     RefTimerEvent& timerevent = timer_events_[timerid];
-    if (timerevent == NULL) { //has been canceled
+    if (timerevent == NULL) {  // has been canceled
       continue;
     }
     InvokeAndReScheduleIfNeed(timerid);
@@ -101,25 +98,25 @@ int64_t TimerTaskQueue::CalculateNextTimerDuration() {
 }
 
 void TimerTaskQueue::InvokeAndReScheduleIfNeed(uint32_t timer_id) {
-  //copy it, must do it, inboke should at the last to avoid be cancel or delete
+  // copy it, must do it, inboke should at the last to avoid be cancel or delete
   RefTimerEvent timerevent = timer_events_[timer_id];
-  //TODO: fix it, if add a timer and reove it, here will crash
+  // TODO: fix it, if add a timer and reove it, here will crash
   assert(timerevent);
 
   if (timerevent->IsOneShotTimer()) {
     //"fake delete" timer from vector
     timer_events_[timer_id].reset();
     assert(timer_events_[timer_id] == NULL);
-    //mark as resusable
+    // mark as resusable
     reusable_timerid_.push(timer_id);
-  } else { //this is a repeat timer, reschedule it again
+  } else {  // this is a repeat timer, reschedule it again
 
     uint64_t interval_ms = timerevent->Interval();
     Timestamp& new_time = timerevent->MutableTime();
 
     new_time = Timestamp::NMillisecondLater(interval_ms);
     assert(new_time > Timestamp::Now());
-    //install to priority queue
+    // install to priority queue
     TimerEntry entry = {new_time, timer_id};
     timer_heap_.push(entry);
   }
@@ -130,7 +127,6 @@ void TimerTaskQueue::InvokeAndReScheduleIfNeed(uint32_t timer_id) {
 }
 
 void TimerTaskQueue::TestingPriorityQueue() {
-
   TimerEntry entry10 = {Timestamp::NMicrosecondLater(10), 1};
   timer_heap_.push(entry10);
 
@@ -144,4 +140,4 @@ void TimerTaskQueue::TestingPriorityQueue() {
   LOG_IF(INFO, entry.time_ != entry10.time_) << "Test Failed";
 }
 
-}// end namespace base
+}  // end namespace base

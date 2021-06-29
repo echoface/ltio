@@ -3,11 +3,11 @@
 #ifndef _BASE_SPIN_LOCK_H_H
 #define _BASE_SPIN_LOCK_H_H
 
-#include <memory>
-#include <unistd.h>
-#include <atomic>
-#include <x86intrin.h>
 #include <base/base_micro.h>
+#include <unistd.h>
+#include <x86intrin.h>
+#include <atomic>
+#include <memory>
 namespace base {
 
 class SpinLock {
@@ -16,21 +16,23 @@ public:
   void lock();
   bool try_lock();
   void unlock();
+
 private:
-  std::atomic<bool>  d_atomic_bool;
+  std::atomic<bool> d_atomic_bool;
   DISALLOW_COPY_AND_ASSIGN(SpinLock);
 };
 
-//be careful use is
+// be careful use is
 class SpinLockGuard {
 public:
   SpinLockGuard(SpinLock& lock);
   ~SpinLockGuard();
+
 private:
   SpinLock& lock_;
   DISALLOW_COPY_AND_ASSIGN(SpinLockGuard);
 };
 
-}
+}  // namespace base
 
 #endif

@@ -27,5 +27,5 @@ std::string StrError();
 // Like the no-argument version above, but uses errnum instead of errno.
 std::string StrError(int errnum);
 
-} // end base
+}  // namespace base
 #endif

@@ -2,11 +2,11 @@
 
 namespace component {
 namespace {
-  static const int linear_skip_distance = 64;
+static const int linear_skip_distance = 64;
 }
 
 EntriesCursor::EntriesCursor(const Attr& a, const Entries& ids)
-    : attr_(a), index_(0), size_(ids.size()), id_list_(ids) {}
+  : attr_(a), index_(0), size_(ids.size()), id_list_(ids) {}
 
 EntryId EntriesCursor::Skip(const EntryId id) {
   int right_idx = size_;
@@ -33,7 +33,7 @@ EntryId EntriesCursor::SkipTo(const EntryId id) {
   int right_idx = size_;
 
   int mid;
-  while(index_ < right_idx) {
+  while (index_ < right_idx) {
     if (right_idx - index_ < linear_skip_distance) {
       return LinearSkipTo(id);
     }
@@ -99,16 +99,15 @@ EntryId FieldCursor::SkipTo(const EntryId id) {
 
 void EntriesCursor::DumpEntries(std::ostringstream& oss) const {
   oss << "atrr:" << EntryUtil::ToString(attr_)
-    << ", cur:" << EntryUtil::ToString(GetCurEntryID())
-    << ", eids:[";
+      << ", cur:" << EntryUtil::ToString(GetCurEntryID()) << ", eids:[";
   for (const EntryId id : id_list_) {
-    oss << EntryUtil::ToString(id) << "," ;
+    oss << EntryUtil::ToString(id) << ",";
   }
   oss << "]\n";
 }
 
 void FieldCursor::DumpEntries(std::ostringstream& oss) const {
-  for (auto& cursor: cursors_) {
+  for (auto& cursor : cursors_) {
     if ((&cursor) == current_) {
       oss << ">";
     }
@@ -116,4 +115,4 @@ void FieldCursor::DumpEntries(std::ostringstream& oss) const {
   }
 }
 
-}//end component
+}  // namespace component

@@ -18,10 +18,10 @@
 #ifndef NET_RAW_SERVER_H_H
 #define NET_RAW_SERVER_H_H
 
+#include "base/message_loop/message_loop.h"
 #include "net_io/codec/codec_message.h"
 #include "net_io/codec/raw/raw_message.h"
 #include "net_io/server/generic_server.h"
-#include "base/message_loop/message_loop.h"
 
 namespace lt {
 namespace net {
@@ -33,14 +33,17 @@ class RawRequestContext {
 public:
   static RefRawRequestContext New(const RefCodecMessage& request);
 
-  template<typename T>
-  const T* GetRequest() const {return (T*)request_.get();}
+  template <typename T>
+  const T* GetRequest() const {
+    return (T*)request_.get();
+  }
 
   void Response(const RefCodecMessage& response);
 
-  bool Responded() const {return did_reply_;}
+  bool Responded() const { return did_reply_; }
+
 private:
-  RawRequestContext(const RefCodecMessage& req) : request_(req) {};
+  RawRequestContext(const RefCodecMessage& req) : request_(req){};
 
   void do_response(const RefCodecMessage& response);
 
@@ -59,5 +62,6 @@ using RawCoroServer = BaseServer<RawRequestContext, DefaultConfigurator>;
 
 using RawServer = BaseServer<RawRequestContext, DefaultRawNoneCoroConfigrator>;
 
-}}
+}  // namespace net
+}  // namespace lt
 #endif

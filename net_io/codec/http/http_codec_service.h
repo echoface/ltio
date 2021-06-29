@@ -18,12 +18,12 @@
 #ifndef NET_HTTP_PROTO_SERVICE_H
 #define NET_HTTP_PROTO_SERVICE_H
 
-#include <vector>
 #include <string>
+#include <vector>
 
-#include "parser_context.h"
-#include "net_io/net_callback.h"
 #include "net_io/codec/codec_service.h"
+#include "net_io/net_callback.h"
+#include "parser_context.h"
 
 struct http_parser_settings;
 
@@ -40,7 +40,7 @@ public:
 
   // override from CodecService
   void OnDataFinishSend(const SocketChannel*) override;
-  void OnDataReceived(const SocketChannel*, IOBuffer *) override;
+  void OnDataReceived(const SocketChannel*, IOBuffer*) override;
 
   static bool RequestToBuffer(const HttpRequest*, IOBuffer*);
   static bool ResponseToBuffer(const HttpResponse*, IOBuffer*);
@@ -52,9 +52,11 @@ public:
   bool SendResponse(const CodecMessage* req, CodecMessage* res) override;
 
   const RefCodecMessage NewResponse(const CodecMessage*) override;
+
 private:
-  bool ParseHttpRequest(TcpChannel* channel, IOBuffer*);
-  bool ParseHttpResponse(TcpChannel* channel, IOBuffer*);
+  bool UseSSLChannel() const override;
+  bool ParseHttpRequest(SocketChannel* channel, IOBuffer*);
+  bool ParseHttpResponse(SocketChannel* channel, IOBuffer*);
 
   ReqParseContext* request_context_;
   ResParseContext* response_context_;
@@ -62,5 +64,6 @@ private:
   static http_parser_settings res_parser_settings_;
 };
 
-}}
+}  // namespace net
+}  // namespace lt
 #endif

@@ -15,7 +15,6 @@
  * limitations under the License.
  */
 
-
 #include "roundrobin_router.h"
 
 namespace lt {
@@ -31,4 +30,5 @@ RefClient RoundRobinRouter::GetNextClient(const std::string& key,
   return clients_[idx];
 }
 
-}}//end lt::net
+}  // namespace net
+}  // namespace lt

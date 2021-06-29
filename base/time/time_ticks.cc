@@ -1,5 +1,5 @@
-#include "time.h"
 #include "base/memory//no_destructor.h"
+#include "time.h"
 
 #include "time_ticks.h"
 
@@ -22,9 +22,9 @@ int64_t ConvertTimespecToMicros(const struct timespec& ts) {
   return result.ValueOrDie();
 }
 
-} //end namespace
+}  // end namespace
 
-//static
+// static
 TimeTicks TimeTicks::Now() {
   struct timespec ts;
   LTCHECK(clock_gettime(CLOCK_MONOTONIC, &ts) == 0);
@@ -32,21 +32,20 @@ TimeTicks TimeTicks::Now() {
   return TimeTicks() + TimeDelta::FromMicroseconds(now_ticks);
 }
 
-//static
+// static
 bool TimeTicks::IsHighResolution() {
   return true;
 }
 
-//static
+// static
 bool TimeTicks::IsConsistentAcrossProcesses() {
   return true;
 }
 
 // static
 TimeTicks TimeTicks::UnixEpoch() {
-  static const NoDestructor<TimeTicks> epoch([]() {
-    return TimeTicks::Now() - (Time::Now() - Time::UnixEpoch());
-  }());
+  static const NoDestructor<TimeTicks> epoch(
+      []() { return TimeTicks::Now() - (Time::Now() - Time::UnixEpoch()); }());
   return *epoch;
 }
 
@@ -60,4 +59,4 @@ std::ostream& operator<<(std::ostream& os, TimeTicks time_ticks) {
   const TimeDelta as_time_delta = time_ticks - TimeTicks();
   return os << as_time_delta.InMicroseconds() << " bogo-microseconds";
 }
-}
+}  // namespace base
