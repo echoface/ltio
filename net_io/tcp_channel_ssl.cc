@@ -131,7 +131,7 @@ void TCPSSLChannel::StartChannel() {
 }
 
 int32_t TCPSSLChannel::Send(const char* data, const int32_t len) {
-  DCHECK(pump_->IsInLoopThread());
+  DCHECK(pump_->IsInLoop());
 
   if (!IsConnected()) {
     return -1;
@@ -196,7 +196,7 @@ int32_t TCPSSLChannel::Send(const char* data, const int32_t len) {
 }
 
 void TCPSSLChannel::ShutdownChannel(bool half_close) {
-  DCHECK(pump_->IsInLoopThread());
+  DCHECK(pump_->IsInLoop());
 
   VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
 
@@ -211,7 +211,7 @@ void TCPSSLChannel::ShutdownChannel(bool half_close) {
 }
 
 void TCPSSLChannel::ShutdownWithoutNotify() {
-  DCHECK(pump_->IsInLoopThread());
+  DCHECK(pump_->IsInLoop());
   if (IsConnected()) {
     close_channel();
   }

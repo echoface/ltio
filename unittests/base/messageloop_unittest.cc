@@ -30,6 +30,20 @@ public:
   static void static_member_fun() { LOG(INFO) << __func__ << " run, arg:"; }
 };
 
+TEST_CASE("loop.benchStart", "[test event start]") {
+  for (int i = 0; i < 10; i++) {
+    base::MessageLoop loop;
+    loop.SetLoopName("ut_" + std::to_string(i));
+    loop.Start();
+
+    loop.PostTask(FROM_HERE, &base::MessageLoop::QuitLoop, &loop);
+
+    loop.WaitLoopEnd();
+    break;
+  }
+  sleep(1);
+}
+
 TEST_CASE("base.task", "[test event pump timer]") {
   auto f = NewClosure(&cfunc);
   f->Run();
@@ -46,7 +60,8 @@ TEST_CASE("base.task", "[test event pump timer]") {
 
 TEST_CASE("event_pump.timer", "[test event pump timer]") {
   base::EventPump pump;
-  pump.SetLoopThreadId(std::this_thread::get_id());
+  pump.SetLoopId(11);
+  pump.PrepareRun();
 
   size_t repeated_times = 0;
   bool oneshot_invoked = false;

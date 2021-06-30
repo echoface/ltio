@@ -67,7 +67,7 @@ bool SocketAcceptor::InitListener() {
 }
 
 bool SocketAcceptor::StartListen() {
-  CHECK(event_pump_->IsInLoopThread());
+  CHECK(event_pump_->IsInLoop());
 
   if (listening_) {
     LOG(ERROR) << " Aready Listen on:" << address_.ToString();
@@ -90,7 +90,7 @@ bool SocketAcceptor::StartListen() {
 }
 
 void SocketAcceptor::StopListen() {
-  CHECK(event_pump_->IsInLoopThread());
+  CHECK(event_pump_->IsInLoop());
   if (!listening_) {
     return;
   }

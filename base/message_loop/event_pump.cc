@@ -28,6 +28,12 @@
 
 namespace base {
 
+namespace {
+
+thread_local uint64_t tid_ = 0;  // assign with current run loop
+
+}
+
 EventPump::EventPump() : EventPump(NULL) {}
 
 EventPump::EventPump(PumpDelegate* d) : delegate_(d), running_(false) {
@@ -46,15 +52,18 @@ EventPump::~EventPump() {
   if (timeout_wheel_) {
     FinalizeTimeWheel();
   }
+  loop_id_ = 0;
+}
+
+void EventPump::PrepareRun() {
+  tid_ = loop_id_;
+  CHECK(loop_id_);
 }
 
 void EventPump::Run() {
-  IgnoreSigPipeSignalOnCurrentThread();
-
   running_ = true;
-  if (delegate_) {
-    delegate_->PumpStarted();
-  }
+
+  IgnoreSigPipeSignalOnCurrentThread();
 
   FiredEvent* active_list = new FiredEvent[max_fds_];
   while (running_) {
@@ -71,20 +80,17 @@ void EventPump::Run() {
   running_ = false;
   delete[] active_list;
   FinalizeTimeWheel();
-  if (delegate_) {
-    delegate_->PumpStopped();
-  }
 }
 
-bool EventPump::IsInLoopThread() const {
-  return tid_ == std::this_thread::get_id();
+bool EventPump::IsInLoop() const {
+  return loop_id_ == tid_;
 }
 
 bool EventPump::InstallFdEvent(FdEvent* fd_event) {
-  CHECK(IsInLoopThread());
+  CHECK(IsInLoop());
+
   if (fd_event->EventWatcher()) {
-    LOG(ERROR) << __FUNCTION__ << " event has registered,"
-               << fd_event->EventInfo();
+    LOG(ERROR) << " event has registered," << fd_event->EventInfo();
     return false;
   }
   fd_event->SetFdWatcher(io_mux_.get());
@@ -93,7 +99,7 @@ bool EventPump::InstallFdEvent(FdEvent* fd_event) {
 }
 
 bool EventPump::RemoveFdEvent(FdEvent* fd_event) {
-  CHECK(IsInLoopThread());
+  CHECK(IsInLoop());
   if (!fd_event->EventWatcher()) {
     LOG(ERROR) << __FUNCTION__ << " event not been registered, "
                << fd_event->EventInfo();
@@ -106,12 +112,12 @@ bool EventPump::RemoveFdEvent(FdEvent* fd_event) {
 }
 
 void EventPump::AddTimeoutEvent(TimeoutEvent* timeout_ev) {
-  CHECK(IsInLoopThread());
+  CHECK(IsInLoop());
   add_timer_internal(time_ms(), timeout_ev);
 }
 
 void EventPump::RemoveTimeoutEvent(TimeoutEvent* timeout_ev) {
-  CHECK(IsInLoopThread());
+  CHECK(IsInLoop());
   ::timeouts_del(timeout_wheel_, timeout_ev);
 }
 

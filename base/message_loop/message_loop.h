@@ -112,8 +112,6 @@ public:
   void QuitLoop();
   EventPump* Pump() { return &event_pump_; }
 
-  void PumpStarted() override;
-  void PumpStopped() override;
   uint64_t PumpTimeout() override;
 
 private:

@@ -43,8 +43,6 @@ typedef std::vector<TimeoutEvent*> TimerEventList;
 
 class PumpDelegate {
 public:
-  virtual void PumpStarted(){};
-  virtual void PumpStopped(){};
   virtual void RunNestedTask(){};
   virtual uint64_t PumpTimeout() { return 5; };  // ms
   virtual void RunTimerClosure(const TimerEventList&){};
@@ -60,6 +58,10 @@ public:
 
   void Run();
 
+  void PrepareRun();
+
+  bool Running() { return running_; }
+
   void Quit() { running_ = false; };
 
   bool InstallFdEvent(FdEvent* fd_event);
@@ -70,11 +72,9 @@ public:
 
   void RemoveTimeoutEvent(TimeoutEvent* timeout_ev);
 
-  bool IsInLoopThread() const;
+  bool IsInLoop() const;
 
-  bool Running() { return running_; }
-
-  void SetLoopThreadId(std::thread::id id) { tid_ = id; }
+  void SetLoopId(uint64_t id) { loop_id_ = id; }
 
 protected:
   /* update the time wheel mononic time and get all expired
@@ -105,8 +105,11 @@ private:
   //TimerTaskQueue timer_queue_;
 #endif
   int32_t max_fds_;
-  std::thread::id tid_;
+
   int32_t timestamp_;
+
+  uint64_t loop_id_ = 0;
+
   TimeoutWheel* timeout_wheel_ = nullptr;
 };
 

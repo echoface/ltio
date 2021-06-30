@@ -46,8 +46,18 @@ namespace base {
 static const char kQuit = 1;
 static const int64_t kTaskFdCounter = 1;
 
-// static thread safe
-static thread_local MessageLoop* threadlocal_current_ = NULL;
+namespace {
+  // thread safe
+  thread_local MessageLoop* threadlocal_current_ = NULL;
+
+  uint64_t generate_loop_id() {
+    static std::atomic<uint64_t> _id = {0};
+    uint64_t next = _id.fetch_add(1);
+    return next == 0 ? _id.fetch_add(1) : next;
+  }
+
+}
+
 MessageLoop* MessageLoop::Current() {
   return threadlocal_current_;
 }
@@ -97,6 +107,8 @@ MessageLoop::MessageLoop()
   task_event_ = FdEvent::Create(this, ev_fd, LtEv::LT_EVENT_READ);
 
   running_.clear();
+
+  event_pump_.SetLoopId(generate_loop_id());
 }
 
 MessageLoop::~MessageLoop() {
@@ -154,10 +166,7 @@ void MessageLoop::SetLoopName(std::string name) {
 }
 
 bool MessageLoop::IsInLoopThread() const {
-  if (!thread_ptr_) {
-    return false;
-  }
-  return thread_ptr_->get_id() == std::this_thread::get_id();
+  return ST_STARTED == status_.load() && event_pump_.IsInLoop();
 }
 
 void MessageLoop::Start() {
@@ -202,16 +211,6 @@ void MessageLoop::WaitLoopEnd(int32_t ms) {
   }
 }
 
-void MessageLoop::PumpStarted() {
-  status_.store(ST_STARTED);
-  cv_.notify_all();
-}
-
-void MessageLoop::PumpStopped() {
-  status_.store(ST_STOPED);
-  running_.clear();
-}
-
 uint64_t MessageLoop::PumpTimeout() {
   DCHECK(IsInLoopThread());
   if (in_loop_tasks_.size() || scheduled_tasks_.size_approx()) {
@@ -221,15 +220,22 @@ uint64_t MessageLoop::PumpTimeout() {
 };
 
 void MessageLoop::ThreadMain() {
-  threadlocal_current_ = this;
   SetThreadNativeName();
-  event_pump_.SetLoopThreadId(std::this_thread::get_id());
+  {
+    status_.store(ST_STARTED);
+    cv_.notify_all();
+  }
+
+  event_pump_.PrepareRun();
+  CHECK(IsInLoopThread());
+
+  threadlocal_current_ = this;
 
   event_pump_.InstallFdEvent(task_event_.get());
   event_pump_.InstallFdEvent(wakeup_event_.get());
 
-  VLOG(GLOG_VINFO) << "MessageLoop@" << this << "[name:" << loop_name_
-                   << "] Start";
+  VLOG(GLOG_VINFO) << "MessageLoop@" << this
+    << "[name:" << loop_name_ << "] Start";
 
   event_pump_.Run();
 
@@ -240,10 +246,13 @@ void MessageLoop::ThreadMain() {
   event_pump_.RemoveFdEvent(wakeup_event_.get());
   event_pump_.RemoveFdEvent(task_event_.get());
 
+  running_.clear();
+  status_.store(ST_STOPED);
   threadlocal_current_ = NULL;
+
+  VLOG(GLOG_VINFO) << "MessageLoop@" << this
+    << "[name:" << loop_name_ << "] End";
   cv_.notify_all();
-  VLOG(GLOG_VINFO) << "MessageLoop@" << this << "[name:" << loop_name_
-                   << "] End";
 }
 
 bool MessageLoop::PostDelayTask(TaskBasePtr task, uint32_t ms) {

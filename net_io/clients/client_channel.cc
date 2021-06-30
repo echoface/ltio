@@ -53,7 +53,7 @@ void ClientChannel::StartClientChannel() {
 
 void ClientChannel::CloseClientChannel() {
   base::EventPump* pump = EventPump();
-  CHECK(pump->IsInLoopThread());
+  CHECK(pump->IsInLoop());
 
   VLOG(GLOG_VTRACE) << __FUNCTION__ << " going to close:" << ConnectionInfo();
 

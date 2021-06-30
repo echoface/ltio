@@ -31,7 +31,7 @@ Connector::Connector(EventPump* pump, Delegate* d) : pump_(pump), delegate_(d) {
 }
 
 void Connector::Launch(const IPEndPoint& address) {
-  CHECK(pump_->IsInLoopThread() && delegate_);
+  CHECK(pump_->IsInLoop() && delegate_);
 
   int sock_fd = socketutils::CreateNoneBlockTCP(address.GetSockAddrFamily());
   if (sock_fd == -1) {
@@ -146,7 +146,7 @@ bool Connector::HandleClose(base::FdEvent* fd_event) {
 }
 
 void Connector::Stop() {
-  CHECK(pump_->IsInLoopThread());
+  CHECK(pump_->IsInLoop());
 
   delegate_ = NULL;
   for (auto& event : inprogress_list_) {

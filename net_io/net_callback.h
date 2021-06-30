@@ -34,9 +34,6 @@ class IOService;
 class CodecService;
 class CodecMessage;
 
-/* ============ connection channel relative =========*/
-typedef std::unique_ptr<TcpChannel> TcpChannelPtr;
-
 /* ============= Service Acceptor relative ===========*/
 typedef std::shared_ptr<SocketAcceptor> RefSocketAcceptor;
 typedef std::unique_ptr<SocketAcceptor> SocketAcceptorPtr;

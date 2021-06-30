@@ -46,12 +46,12 @@ void SocketChannel::SetReciever(SocketChannel::Reciever* rec) {
 }
 
 void SocketChannel::StartChannel() {
-  CHECK(reciever_ && pump_->IsInLoopThread() && status_ == Status::CONNECTING);
+  CHECK(reciever_ && pump_->IsInLoop() && status_ == Status::CONNECTING);
   setup_channel();
 }
 
 void SocketChannel::ShutdownChannel(bool half_close) {
-  DCHECK(pump_->IsInLoopThread());
+  DCHECK(pump_->IsInLoop());
 
   VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
   schedule_shutdown_ = true;
@@ -67,7 +67,7 @@ void SocketChannel::ShutdownChannel(bool half_close) {
 }
 
 void SocketChannel::ShutdownWithoutNotify() {
-  DCHECK(pump_->IsInLoopThread());
+  DCHECK(pump_->IsInLoop());
 
   if (IsConnected()) {
     close_channel();
@@ -86,7 +86,7 @@ bool SocketChannel::HandleError(base::FdEvent* event) {
 }
 
 bool SocketChannel::HandleClose(base::FdEvent* event) {
-  DCHECK(pump_->IsInLoopThread());
+  DCHECK(pump_->IsInLoop());
   VLOG(GLOG_VTRACE) << "socket close, " << ChannelInfo();
 
   if (status_ != Status::CLOSED) {

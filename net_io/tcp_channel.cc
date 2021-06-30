@@ -129,7 +129,7 @@ bool TcpChannel::HandleWrite(base::FdEvent* event) {
 }
 
 int32_t TcpChannel::Send(const char* data, const int32_t len) {
-  DCHECK(pump_->IsInLoopThread());
+  DCHECK(pump_->IsInLoop());
 
   if (!IsConnected()) {
     return -1;
