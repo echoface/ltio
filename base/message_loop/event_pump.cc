@@ -52,7 +52,6 @@ EventPump::~EventPump() {
   if (timeout_wheel_) {
     FinalizeTimeWheel();
   }
-  loop_id_ = 0;
 }
 
 void EventPump::PrepareRun() {
@@ -62,12 +61,13 @@ void EventPump::PrepareRun() {
 
 void EventPump::Run() {
   running_ = true;
-
   IgnoreSigPipeSignalOnCurrentThread();
 
+  timeout_t next_timeout = 0;
   FiredEvent* active_list = new FiredEvent[max_fds_];
   while (running_) {
-    int count = io_mux_->WaitingIO(active_list, NextTimeout());
+    next_timeout = NextTimeout();
+    int count = io_mux_->WaitingIO(active_list, next_timeout);
 
     ProcessTimerEvent();
 
@@ -76,6 +76,7 @@ void EventPump::Run() {
     if (delegate_) {
       delegate_->RunNestedTask();
     }
+    ProcessTimerEvent();
   }
   running_ = false;
   delete[] active_list;
@@ -83,7 +84,16 @@ void EventPump::Run() {
 }
 
 bool EventPump::IsInLoop() const {
-  return loop_id_ == tid_;
+  return loop_id_ == tid_ && loop_id_ > 0;
+}
+
+void EventPump::SetLoopId(uint64_t id) {
+  loop_id_ = id;
+}
+
+//static
+uint64_t EventPump::CurrentThreadLoopID() {
+  return tid_;
 }
 
 bool EventPump::InstallFdEvent(FdEvent* fd_event) {
@@ -122,29 +132,23 @@ void EventPump::RemoveTimeoutEvent(TimeoutEvent* timeout_ev) {
 }
 
 void EventPump::add_timer_internal(uint64_t now, TimeoutEvent* event) {
-  ::timeouts_add(timeout_wheel_, event, now + event->Interval());
+  timeout_t t = event->IsRepeated() ? event->Interval() : now + event->Interval();
+  ::timeouts_add(timeout_wheel_, event, t);
 }
 
 void EventPump::ProcessTimerEvent() {
-  uint64_t now = time_ms();
-  ::timeouts_update(timeout_wheel_, now);
+  ::timeouts_update(timeout_wheel_, time_ms());
 
   std::vector<TimeoutEvent*> to_be_deleted;
 
   Timeout* expired = NULL;
   while (NULL != (expired = timeouts_get(timeout_wheel_))) {
-    // remove first
-    ::timeouts_del(timeout_wheel_, expired);
 
     TimeoutEvent* timeout_ev = static_cast<TimeoutEvent*>(expired);
 
-    if (timeout_ev->IsRepeated()) {  // re-add to timeout wheel
-      add_timer_internal(now, timeout_ev);
-    } else if (timeout_ev->DelAfterInvoke()) {
+    if (!timeout_ev->IsRepeated() && timeout_ev->DelAfterInvoke()) {
       to_be_deleted.push_back(timeout_ev);
     }
-    // Must at end; avoid case: ABA
-    // timer A invoke -> delete A -> new A'(in same memory) -> free A'
     timeout_ev->Invoke();
   }
 

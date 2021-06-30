@@ -48,7 +48,6 @@ int IOMuxEpoll::WaitingIO(FiredEvent* active_list, int32_t timeout_ms) {
 
   for (int idx = 0; idx < turn_active_count; idx++) {
     struct epoll_event& ev = ep_events_[idx];
-    // DCHECK(fd_ev);
     DCHECK(lt_events_[ev.data.fd] != NULL);
 
     active_list[idx].fd_id = ev.data.fd;

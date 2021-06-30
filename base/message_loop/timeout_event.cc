@@ -27,9 +27,9 @@ TimeoutEvent* TimeoutEvent::CreateOneShot(uint64_t ms,
   return toe;
 }
 
-TimeoutEvent::TimeoutEvent(uint64_t ms, bool repeat)
-  : repeat_(repeat), interval_(ms) {
-  ::timeout_init((Timeout*)this, TIMEOUT_ABS);
+TimeoutEvent::TimeoutEvent(uint64_t ms, bool repeat) {
+  ::timeout_init((Timeout*)this, (repeat ? TIMEOUT_INT : TIMEOUT_ABS));
+  this->interval = ms;
 }
 
 TimeoutEvent::~TimeoutEvent() {
@@ -37,7 +37,7 @@ TimeoutEvent::~TimeoutEvent() {
 }
 
 void TimeoutEvent::UpdateInterval(int64_t ms) {
-  interval_ = ms;
+  interval = ms;
 }
 
 void TimeoutEvent::Invoke() {

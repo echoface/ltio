@@ -91,11 +91,15 @@ private:
   const uint64_t schedule_time_;
 };
 
+//static
+uint64_t MessageLoop::GenLoopID() {
+  return generate_loop_id();
+}
+
 MessageLoop::MessageLoop()
   : running_(0), wakeup_pipe_in_(0), event_pump_(this) {
   notify_flag_.clear();
   status_.store(ST_INITING);
-  has_join_.store(0);
 
   int fds[2];
   CHECK(CreateLocalNoneBlockingPipe(fds));
@@ -108,13 +112,19 @@ MessageLoop::MessageLoop()
 
   running_.clear();
 
-  event_pump_.SetLoopId(generate_loop_id());
+  event_pump_.SetLoopId(GenLoopID());
 }
 
 MessageLoop::~MessageLoop() {
   CHECK(status_.load() != ST_STARTED || !IsInLoopThread());
 
   QuitLoop(), Notify(wakeup_pipe_in_, &kQuit, sizeof(kQuit));
+
+  // first join, others wait util loop end
+  if (thread_ptr_ && thread_ptr_->joinable()) {
+    VLOG(GLOG_VINFO) << " join here wait loop end";
+    thread_ptr_->join();
+  }
 
   WaitLoopEnd();
 
@@ -127,8 +137,8 @@ void MessageLoop::WakeUpIfNeeded() {
   if (notify_flag_.test_and_set()) {
     return;
   }
-  if (Notify(task_event_->GetFd(), &kTaskFdCounter, sizeof(kTaskFdCounter)) <=
-      0) {
+  int fd = task_event_->GetFd();
+  if (Notify(fd, &kTaskFdCounter, sizeof(kTaskFdCounter)) <= 0) {
     notify_flag_.clear();
   }
 }
@@ -166,7 +176,7 @@ void MessageLoop::SetLoopName(std::string name) {
 }
 
 bool MessageLoop::IsInLoopThread() const {
-  return ST_STARTED == status_.load() && event_pump_.IsInLoop();
+  return event_pump_.IsInLoop();
 }
 
 void MessageLoop::Start() {
@@ -178,11 +188,7 @@ void MessageLoop::Start() {
   thread_ptr_.reset(new std::thread(std::bind(&MessageLoop::ThreadMain, this)));
   {
     std::unique_lock<std::mutex> lk(start_stop_lock_);
-    while (cv_.wait_for(lk, std::chrono::milliseconds(1)) ==
-           std::cv_status::timeout) {
-      if (status_.load() == ST_STARTED)
-        break;
-    }
+    cv_.wait(lk, [this](){return status_.load() == ST_STARTED;});
   }
 }
 
@@ -192,22 +198,15 @@ void MessageLoop::InstallPersistRunner(PersistRunner* runner) {
 }
 
 void MessageLoop::WaitLoopEnd(int32_t ms) {
-  // can't wait stop in loop thread
-  CHECK(!IsInLoopThread());
-
-  // first join, others wait util loop end
-  if (has_join_.exchange(1) == 0 && thread_ptr_->joinable()) {
-    VLOG(GLOG_VINFO) << __FUNCTION__ << " join here wait loop end";
-    thread_ptr_->join();
+  if (status_.load() != ST_STARTED) {
     return;
   }
+  // can't wait stop in loop thread
+  CHECK(!IsInLoopThread()) << " can't wait @loop thread, "
+    << event_pump_.LoopID() << " current tid:" << EventPump::CurrentThreadLoopID();
   {
     std::unique_lock<std::mutex> lk(start_stop_lock_);
-    while (cv_.wait_for(lk, std::chrono::milliseconds(100)) ==
-           std::cv_status::timeout) {
-      if (status_.load() != ST_STARTED)
-        break;
-    }
+    cv_.wait(lk, [this](){return status_.load() != ST_STARTED;});
   }
 }
 
@@ -220,14 +219,14 @@ uint64_t MessageLoop::PumpTimeout() {
 };
 
 void MessageLoop::ThreadMain() {
+  event_pump_.PrepareRun();
+  CHECK(IsInLoopThread());
+
   SetThreadNativeName();
   {
     status_.store(ST_STARTED);
     cv_.notify_all();
   }
-
-  event_pump_.PrepareRun();
-  CHECK(IsInLoopThread());
 
   threadlocal_current_ = this;
 

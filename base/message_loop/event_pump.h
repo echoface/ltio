@@ -25,10 +25,12 @@
 #include <thread>
 #include <vector>
 
-#include <thirdparty/timeout/timeout.h>
 #include "fd_event.h"
 #include "io_multiplexer.h"
 #include "timeout_event.h"
+extern "C" {
+#include <thirdparty/timeout/timeout.h>
+}
 
 namespace base {
 
@@ -74,8 +76,11 @@ public:
 
   bool IsInLoop() const;
 
-  void SetLoopId(uint64_t id) { loop_id_ = id; }
+  uint64_t LoopID() const { return loop_id_;}
 
+  void SetLoopId(uint64_t id);
+
+  static uint64_t CurrentThreadLoopID();
 protected:
   /* update the time wheel mononic time and get all expired
    * timeoutevent will be invoke and re shedule if was repeated*/

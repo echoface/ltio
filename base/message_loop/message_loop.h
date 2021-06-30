@@ -61,6 +61,8 @@ public:
   MessageLoop();
   virtual ~MessageLoop();
 
+  static uint64_t GenLoopID();
+
   bool PostTask(TaskBasePtr&&);
 
   bool PostDelayTask(TaskBasePtr, uint32_t milliseconds);
@@ -137,7 +139,6 @@ private:
 
 private:
   std::atomic<int> status_;
-  std::atomic<int> has_join_;
   std::atomic_flag running_;
 
   std::mutex start_stop_lock_;

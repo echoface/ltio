@@ -18,8 +18,8 @@ TEST_CASE("time_delta", "[test time delta]") {
   base::TimeTicks now = base::TimeTicks::Now();
   sleep(1);
   delta = base::TimeTicks::Now() - now;
-  REQUIRE(delta.InMilliseconds() >= 999);
-  REQUIRE(delta.InMilliseconds() <= 1002);
+  REQUIRE(delta.InMilliseconds() >= 1000);
+  REQUIRE(delta.InMilliseconds() <= 1010);
 
   std::cout << "sizeof(TimeDelta):" << sizeof(base::TimeDelta) << std::endl;
   std::cout << "sizeof(TimeTicks):" << sizeof(base::TimeTicks) << std::endl;

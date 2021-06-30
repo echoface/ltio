@@ -1,6 +1,6 @@
-/* ==========================================================================
+/*
  * timeout.c - Tickless hierarchical timing wheel.
- * --------------------------------------------------------------------------
+ * Copyright (c) 2021 National Cheng Kung University, Taiwan
  * Copyright (c) 2013, 2014  William Ahern
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -21,44 +21,32 @@
  * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
  * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
  * USE OR OTHER DEALINGS IN THE SOFTWARE.
- * ==========================================================================
  */
-#include <limits.h>    /* CHAR_BIT */
-
-#include <stddef.h>    /* NULL */
-#include <stdlib.h>    /* malloc(3) free(3) */
-#include <stdio.h>     /* FILE fprintf(3) */
-
-#include <inttypes.h>  /* UINT64_C uint64_t */
-
-#include <string.h>    /* memset(3) */
 
 #include <errno.h>     /* errno */
-
+#include <inttypes.h>  /* UINT64_C uint64_t */
+#include <limits.h>    /* CHAR_BIT */
+#include <stddef.h>    /* NULL */
+#include <stdio.h>     /* FILE fprintf(3) */
+#include <stdlib.h>    /* malloc(3) free(3) */
+#include <string.h>    /* memset(3) */
 #include <sys/queue.h> /* TAILQ(3) */
 
 #include "timeout.h"
 
-#if TIMEOUT_DEBUG - 0
-#include "timeout-debug.h"
-#endif
-
 #ifdef TIMEOUT_DISABLE_RELATIVE_ACCESS
-#define TO_SET_TIMEOUTS(to, T) ((void)0)
+#define TO_SET_TIMEOUTS(to, T) ((void) 0)
 #else
 #define TO_SET_TIMEOUTS(to, T) ((to)->timeouts = (T))
 #endif
 
-/*
- * A N C I L L A R Y  R O U T I N E S
- *
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* ancillary routines */
 
 #define abstime_t timeout_t /* for documentation purposes */
 #define reltime_t timeout_t /* "" */
 
 #if !defined countof
-#define countof(a) (sizeof (a) / sizeof *(a))
+#define countof(a) (sizeof(a) / sizeof *(a))
 #endif
 
 #if !defined endof
@@ -66,34 +54,31 @@
 #endif
 
 #if !defined MIN
-#define MIN(a, b) (((a) < (b))? (a) : (b))
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #endif
 
 #if !defined MAX
-#define MAX(a, b) (((a) > (b))? (a) : (b))
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #endif
 
-#if !defined TAILQ_CONCAT
-#define TAILQ_CONCAT(head1, head2, field) do {                          \
-	if (!TAILQ_EMPTY(head2)) {                                      \
-		*(head1)->tqh_last = (head2)->tqh_first;                \
-		(head2)->tqh_first->field.tqe_prev = (head1)->tqh_last; \
-		(head1)->tqh_last = (head2)->tqh_last;                  \
-		TAILQ_INIT((head2));                                    \
-	}                                                               \
-} while (0)
+#define LIST_MOVE(to, from, field)                           \
+    do {                                                     \
+        if (LIST_EMPTY(from)) {                              \
+            LIST_INIT((to));                                 \
+        } else {                                             \
+            (to)->lh_first = (from)->lh_first;               \
+            (to)->lh_first->field.le_prev = &(to)->lh_first; \
+            LIST_INIT((from));                               \
+        }                                                    \
+    } while (0)
+
+#if !defined LIST_FOREACH_SAFE
+#define LIST_FOREACH_SAFE(var, head, field, tvar) \
+    for ((var) = LIST_FIRST(head);                \
+         (var) && ((tvar) = LIST_NEXT(var, field), 1); (var) = (tvar))
 #endif
 
-#if !defined TAILQ_FOREACH_SAFE
-#define TAILQ_FOREACH_SAFE(var, head, field, tvar)                      \
-	for ((var) = TAILQ_FIRST(head);                                 \
-	    (var) && ((tvar) = TAILQ_NEXT(var, field), 1);              \
-	    (var) = (tvar))
-#endif
-
-
-/*
- * B I T  M A N I P U L A T I O N  R O U T I N E S
+/* bit manipulation routines
  *
  * The macros and routines below implement wheel parameterization. The
  * inputs are:
@@ -118,8 +103,7 @@
  * WHEEL_BIT cannot be smaller than 3 bits because of our rotr and rotl
  * routines, which only operate on all the value bits in an integer, and
  * there's no integer smaller than uint8_t.
- *
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+ */
 
 #if !defined WHEEL_BIT
 #define WHEEL_BIT 6
@@ -134,357 +118,312 @@
 #define WHEEL_MASK (WHEEL_LEN - 1)
 #define TIMEOUT_MAX ((TIMEOUT_C(1) << (WHEEL_BIT * WHEEL_NUM)) - 1)
 
-#include "timeout-bitops.c"
+#include "bitops.h"
 
 #if WHEEL_BIT == 6
 #define ctz(n) ctz64(n)
 #define clz(n) clz64(n)
-#define fls(n) ((int)(64 - clz64(n)))
+#define fls(n) ((int) (64 - clz64(n)))
 #else
 #define ctz(n) ctz32(n)
 #define clz(n) clz32(n)
-#define fls(n) ((int)(32 - clz32(n)))
+#define fls(n) ((int) (32 - clz32(n)))
 #endif
 
 #if WHEEL_BIT == 6
 #define WHEEL_C(n) UINT64_C(n)
-#define WHEEL_PRIu PRIu64
-#define WHEEL_PRIx PRIx64
-
 typedef uint64_t wheel_t;
+#define rotr(v, c) rotr64((v), (c))
+#define rotl(v, c) rotl64((v), (c))
 
 #elif WHEEL_BIT == 5
-
 #define WHEEL_C(n) UINT32_C(n)
-#define WHEEL_PRIu PRIu32
-#define WHEEL_PRIx PRIx32
-
 typedef uint32_t wheel_t;
+#define rotr(v, c) rotr32((v), (c))
+#define rotl(v, c) rotl32((v), (c))
 
 #elif WHEEL_BIT == 4
-
 #define WHEEL_C(n) UINT16_C(n)
-#define WHEEL_PRIu PRIu16
-#define WHEEL_PRIx PRIx16
-
 typedef uint16_t wheel_t;
+#define rotr(v, c) rotr16((v), (c))
+#define rotl(v, c) rotl16((v), (c))
 
 #elif WHEEL_BIT == 3
-
 #define WHEEL_C(n) UINT8_C(n)
-#define WHEEL_PRIu PRIu8
-#define WHEEL_PRIx PRIx8
-
 typedef uint8_t wheel_t;
+#define rotr(v, c) rotr8((v), (c))
+#define rotl(v, c) rotl8((v), (c))
 
 #else
 #error invalid WHEEL_BIT value
 #endif
 
+/* timer routines */
 
-static inline wheel_t rotl(const wheel_t v, int c) {
-	if (!(c &= (sizeof v * CHAR_BIT - 1)))
-		return v;
-
-	return (v << c) | (v >> (sizeof v * CHAR_BIT - c));
-} /* rotl() */
-
-
-static inline wheel_t rotr(const wheel_t v, int c) {
-	if (!(c &= (sizeof v * CHAR_BIT - 1)))
-		return v;
-
-	return (v >> c) | (v << (sizeof v * CHAR_BIT - c));
-} /* rotr() */
-
-
-/*
- * T I M E R  R O U T I N E S
- *
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-TAILQ_HEAD(timeout_list, timeout);
+LIST_HEAD(timeout_list, timeout);
 
 struct timeouts {
-	struct timeout_list wheel[WHEEL_NUM][WHEEL_LEN], expired;
+    struct timeout_list wheel[WHEEL_NUM][WHEEL_LEN], expired;
 
-	wheel_t pending[WHEEL_NUM];
+    wheel_t pending[WHEEL_NUM];
 
-	timeout_t curtime;
-	timeout_t hertz;
-}; /* struct timeouts */
+    timeout_t curtime;
+    timeout_t hertz;
+};
 
+static struct timeouts *timeouts_init(struct timeouts *T, timeout_t hz)
+{
+    for (unsigned i = 0; i < countof(T->wheel); i++)
+        for (unsigned j = 0; j < countof(T->wheel[i]); j++)
+            LIST_INIT(&T->wheel[i][j]);
 
-static struct timeouts *timeouts_init(struct timeouts *T, timeout_t hz) {
-	unsigned i, j;
+    LIST_INIT(&T->expired);
 
-	for (i = 0; i < countof(T->wheel); i++) {
-		for (j = 0; j < countof(T->wheel[i]); j++) {
-			TAILQ_INIT(&T->wheel[i][j]);
-		}
-	}
+    for (unsigned i = 0; i < countof(T->pending); i++)
+        T->pending[i] = 0;
 
-	TAILQ_INIT(&T->expired);
+    T->curtime = 0;
+    T->hertz = hz ? hz : TIMEOUT_mHZ;
 
-	for (i = 0; i < countof(T->pending); i++) {
-		T->pending[i] = 0;
-	}
+    return T;
+}
 
-	T->curtime = 0;
-	T->hertz = (hz)? hz : TIMEOUT_mHZ;
+struct timeouts *timeouts_open(timeout_t hz, int *error)
+{
+    struct timeouts *T;
+    if ((T = malloc(sizeof *T)))
+        return timeouts_init(T, hz);
 
-	return T;
-} /* timeouts_init() */
+    *error = errno;
+    return NULL;
+}
 
+static void timeouts_reset(struct timeouts *T)
+{
+    struct timeout_list reset;
+    struct timeout *to;
 
-TIMEOUT_PUBLIC struct timeouts *timeouts_open(timeout_t hz, int *error) {
-	struct timeouts *T;
+    LIST_INIT(&reset);
 
-	if ((T = (struct timeouts*)malloc(sizeof *T)))
-		return timeouts_init(T, hz);
+    for (unsigned i = 0; i < countof(T->wheel); i++)
+        for (unsigned j = 0; j < countof(T->wheel[i]); j++) {
+            LIST_FOREACH (to, &T->wheel[i][j], le) {
+                to->pending = NULL;
+                TO_SET_TIMEOUTS(to, NULL);
+            }
+        }
 
-	*error = errno;
+    LIST_FOREACH (to, &T->expired, le) {
+        to->pending = NULL;
+        TO_SET_TIMEOUTS(to, NULL);
+    }
+}
 
-	return NULL;
-} /* timeouts_open() */
+void timeouts_close(struct timeouts *T)
+{
+    /*
+     * NOTE: Delete installed timeouts so timeout_pending() and
+     * timeout_expired() worked as expected.
+     */
+    timeouts_reset(T);
 
+    free(T);
+}
 
-static void timeouts_reset(struct timeouts *T) {
-	struct timeout_list reset;
-	struct timeout *to;
-	unsigned i, j;
+timeout_t timeouts_hz(struct timeouts *T)
+{
+    return T->hertz;
+}
 
-	TAILQ_INIT(&reset);
+void timeouts_del(struct timeouts *T, struct timeout *to)
+{
+    if (to->pending) {
+        LIST_REMOVE(to, le);
 
-	for (i = 0; i < countof(T->wheel); i++) {
-		for (j = 0; j < countof(T->wheel[i]); j++) {
-			TAILQ_CONCAT(&reset, &T->wheel[i][j], tqe);
-		}
-	}
+        if (to->pending != &T->expired && LIST_EMPTY(to->pending)) {
+            ptrdiff_t index = to->pending - &T->wheel[0][0];
+            int wheel = index / WHEEL_LEN;
+            int slot = index % WHEEL_LEN;
 
-	TAILQ_CONCAT(&reset, &T->expired, tqe);
+            T->pending[wheel] &= ~(WHEEL_C(1) << slot);
+        }
 
-	TAILQ_FOREACH(to, &reset, tqe) {
-		to->pending = NULL;
-		TO_SET_TIMEOUTS(to, NULL);
-	}
-} /* timeouts_reset() */
+        to->pending = NULL;
+        TO_SET_TIMEOUTS(to, NULL);
+    }
+}
 
+static inline int timeout_wheel(timeout_t curtime, timeout_t expires)
+{
+    /* must be called with expires > curtime, so fls input is nonzero */
+    return (fls(MIN(curtime ^ expires, TIMEOUT_MAX)) - 1) / WHEEL_BIT;
+}
 
-TIMEOUT_PUBLIC void timeouts_close(struct timeouts *T) {
-	/*
-	 * NOTE: Delete installed timeouts so timeout_pending() and
-	 * timeout_expired() worked as expected.
-	 */
-	timeouts_reset(T);
+static inline int timeout_slot(int wheel, timeout_t expires)
+{
+    return WHEEL_MASK & ((expires >> (wheel * WHEEL_BIT)));
+}
 
-	free(T);
-} /* timeouts_close() */
+static void timeouts_sched_nopending(struct timeouts *T, struct timeout *to);
+static void timeouts_sched_future_nopending(struct timeouts *T,
+                                            struct timeout *to);
 
+static void timeouts_sched(struct timeouts *T,
+                           struct timeout *to,
+                           timeout_t expires)
+{
+    timeouts_del(T, to);
 
-TIMEOUT_PUBLIC timeout_t timeouts_hz(struct timeouts *T) {
-	return T->hertz;
-} /* timeouts_hz() */
+    to->expires = expires;
 
+    TO_SET_TIMEOUTS(to, T);
 
-TIMEOUT_PUBLIC void timeouts_del(struct timeouts *T, struct timeout *to) {
-	if (to->pending) {
-		TAILQ_REMOVE(to->pending, to, tqe);
+    timeouts_sched_nopending(T, to);
+}
 
-		if (to->pending != &T->expired && TAILQ_EMPTY(to->pending)) {
-			ptrdiff_t index = to->pending - &T->wheel[0][0];
-			int wheel = index / WHEEL_LEN;
-			int slot = index % WHEEL_LEN;
+/* As 'timeouts_sched_future_nopending', but do not require that to->expires
+ * is in the future.
+ */
+static void timeouts_sched_nopending(struct timeouts *T, struct timeout *to)
+{
+    if (to->expires > T->curtime) {
+        timeouts_sched_future_nopending(T, to);
+    } else {
+        to->pending = &T->expired;
+        LIST_INSERT_HEAD(to->pending, to, le);
+    }
+}
 
-			T->pending[wheel] &= ~(WHEEL_C(1) << slot);
-		}
+/* Insert 'to' into 'T'.  Requres that to->expires is set, and set some time
+ * in the future. Requires that to is not pending or expired. Requires that
+ * TO_SET_TIMEOUTS has been set.
+ */
+static void timeouts_sched_future_nopending(struct timeouts *T,
+                                            struct timeout *to)
+{
+    int wheel = timeout_wheel(T->curtime, to->expires);
+    int slot = timeout_slot(wheel, to->expires);
 
-		to->pending = NULL;
-		TO_SET_TIMEOUTS(to, NULL);
-	}
-} /* timeouts_del() */
+    to->pending = &T->wheel[wheel][slot];
+    LIST_INSERT_HEAD(to->pending, to, le);
 
-
-static inline reltime_t timeout_rem(struct timeouts *T, struct timeout *to) {
-	return to->expires - T->curtime;
-} /* timeout_rem() */
-
-
-static inline int timeout_wheel(timeout_t timeout) {
-	/* must be called with timeout != 0, so fls input is nonzero */
-	return (fls(MIN(timeout, TIMEOUT_MAX)) - 1) / WHEEL_BIT;
-} /* timeout_wheel() */
-
-
-static inline int timeout_slot(int wheel, timeout_t expires) {
-	return WHEEL_MASK & ((expires >> (wheel * WHEEL_BIT)) - !!wheel);
-} /* timeout_slot() */
-
-
-static void timeouts_sched(struct timeouts *T, struct timeout *to, timeout_t expires) {
-	timeout_t rem;
-	int wheel, slot;
-
-	timeouts_del(T, to);
-
-	to->expires = expires;
-
-	TO_SET_TIMEOUTS(to, T);
-
-	if (expires > T->curtime) {
-		rem = timeout_rem(T, to);
-
-		/* rem is nonzero since:
-		 *   rem == timeout_rem(T,to),
-		 *       == to->expires - T->curtime
-		 *   and above we have expires > T->curtime.
-		 */
-		wheel = timeout_wheel(rem);
-		slot = timeout_slot(wheel, to->expires);
-
-		to->pending = &T->wheel[wheel][slot];
-		TAILQ_INSERT_TAIL(to->pending, to, tqe);
-
-		T->pending[wheel] |= WHEEL_C(1) << slot;
-	} else {
-		to->pending = &T->expired;
-		TAILQ_INSERT_TAIL(to->pending, to, tqe);
-	}
-} /* timeouts_sched() */
-
+    T->pending[wheel] |= WHEEL_C(1) << slot;
+}
 
 #ifndef TIMEOUT_DISABLE_INTERVALS
-static void timeouts_readd(struct timeouts *T, struct timeout *to) {
-	to->expires += to->interval;
+static void timeouts_readd(struct timeouts *T, struct timeout *to)
+{
+    to->expires += to->interval;
 
-	if (to->expires <= T->curtime) {
-		/* If we've missed the next firing of this timeout, reschedule
-		 * it to occur at the next multiple of its interval after
-		 * the last time that it fired.
-		 */
-		timeout_t n = T->curtime - to->expires;
-		timeout_t r = n % to->interval;
-		to->expires = T->curtime + (to->interval - r);
-	}
+    if (to->expires <= T->curtime) {
+        /* If we've missed the next firing of this timeout, reschedule
+         * it to occur at the next multiple of its interval after
+         * the last time that it fired.
+         */
+        timeout_t n = T->curtime - to->expires;
+        timeout_t r = n % to->interval;
+        to->expires = T->curtime + (to->interval - r);
+    }
 
-	timeouts_sched(T, to, to->expires);
-} /* timeouts_readd() */
+    timeouts_sched_future_nopending(T, to);
+}
 #endif
 
-
-TIMEOUT_PUBLIC void timeouts_add(struct timeouts *T, struct timeout *to, timeout_t timeout) {
+void timeouts_add(struct timeouts *T, struct timeout *to, timeout_t timeout)
+{
 #ifndef TIMEOUT_DISABLE_INTERVALS
-	if (to->flags & TIMEOUT_INT)
-		to->interval = MAX(1, timeout);
+    if (to->flags & TIMEOUT_INT)
+        to->interval = MAX(1, timeout);
 #endif
 
-	if (to->flags & TIMEOUT_ABS)
-		timeouts_sched(T, to, timeout);
-	else
-		timeouts_sched(T, to, T->curtime + timeout);
-} /* timeouts_add() */
+    if (to->flags & TIMEOUT_ABS)
+        timeouts_sched(T, to, timeout);
+    else
+        timeouts_sched(T, to, T->curtime + timeout);
+}
 
+void timeouts_update(struct timeouts *T, abstime_t curtime)
+{
+    timeout_t elapsed = curtime - T->curtime;
+    int wheel, i, n_todo = 0;
+    struct timeout_list todo[WHEEL_NUM * WHEEL_LEN];
 
-TIMEOUT_PUBLIC void timeouts_update(struct timeouts *T, abstime_t curtime) {
-	timeout_t elapsed = curtime - T->curtime;
-	struct timeout_list todo;
-	int wheel;
+    /* There's no avoiding looping over every wheel. It's best to keep
+     * WHEEL_NUM smallish.
+     */
+    for (wheel = 0; wheel < WHEEL_NUM; wheel++) {
+        wheel_t pending;
 
-	TAILQ_INIT(&todo);
+        /* Calculate the slots expiring in this wheel
+         *
+         * Assume that current slot is empty, it's timer either expired or
+         * moved to the lower wheel. If the elapsed time is greater or equal
+         * to the maximum period of the wheel, mark every position as
+         * expiring.
+         *
+         * Otherwise, to determine the expired slots fill in all the
+         * bits between the last slot processed and the current
+         * slot (exclusive, we don't need to check it again), inclusive of
+         * the last slot. We'll bitwise-AND this with our pending set below.
+         */
+        if ((elapsed >> (wheel * WHEEL_BIT)) >= WHEEL_MAX) {
+            pending = (wheel_t) ~WHEEL_C(0);
+        } else {
+            wheel_t _elapsed;
+            int oslot, nslot;
 
-	/*
-	 * There's no avoiding looping over every wheel. It's best to keep
-	 * WHEEL_NUM smallish.
-	 */
-	for (wheel = 0; wheel < WHEEL_NUM; wheel++) {
-		wheel_t pending;
+            oslot = WHEEL_MASK & (T->curtime >> (wheel * WHEEL_BIT));
+            nslot = WHEEL_MASK & (curtime >> (wheel * WHEEL_BIT));
+            _elapsed = WHEEL_MASK & (WHEEL_LEN + nslot - oslot);
+            pending = rotl(((WHEEL_C(1) << _elapsed) - 1), oslot + 1);
+        }
 
-		/*
-		 * Calculate the slots expiring in this wheel
-		 *
-		 * If the elapsed time is greater than the maximum period of
-		 * the wheel, mark every position as expiring.
-		 *
-		 * Otherwise, to determine the expired slots fill in all the
-		 * bits between the last slot processed and the current
-		 * slot, inclusive of the last slot. We'll bitwise-AND this
-		 * with our pending set below.
-		 *
-		 * If a wheel rolls over, force a tick of the next higher
-		 * wheel.
-		 */
-		if ((elapsed >> (wheel * WHEEL_BIT)) > WHEEL_MAX) {
-			pending = (wheel_t)~WHEEL_C(0);
-		} else {
-			wheel_t _elapsed = WHEEL_MASK & (elapsed >> (wheel * WHEEL_BIT));
-			int oslot, nslot;
+        while (pending & T->pending[wheel]) {
+            /* ctz input cannot be zero: loop condition. */
+            int slot = ctz(pending & T->pending[wheel]);
+            struct timeout_list *target = &todo[n_todo++];
+            LIST_MOVE(target, &T->wheel[wheel][slot], le);
+            T->pending[wheel] &= ~(UINT64_C(1) << slot);
+        }
 
-			/*
-			 * TODO: It's likely that at least one of the
-			 * following three bit fill operations is redundant
-			 * or can be replaced with a simpler operation.
-			 */
-			oslot = WHEEL_MASK & (T->curtime >> (wheel * WHEEL_BIT));
-			pending = rotl(((UINT64_C(1) << _elapsed) - 1), oslot);
+        if (!(0x1 & pending))
+            break; /* break if we didn't wrap around end of wheel */
+    }
 
-			nslot = WHEEL_MASK & (curtime >> (wheel * WHEEL_BIT));
-			pending |= rotr(rotl(((WHEEL_C(1) << _elapsed) - 1), nslot), _elapsed);
-			pending |= WHEEL_C(1) << nslot;
-		}
+    T->curtime = curtime;
 
-		while (pending & T->pending[wheel]) {
-			/* ctz input cannot be zero: loop condition. */
-			int slot = ctz(pending & T->pending[wheel]);
-			TAILQ_CONCAT(&todo, &T->wheel[wheel][slot], tqe);
-			T->pending[wheel] &= ~(UINT64_C(1) << slot);
-		}
+    for (i = 0; i < n_todo; ++i) {
+        while (!LIST_EMPTY(&todo[i])) {
+            struct timeout *to = LIST_FIRST(&todo[i]);
 
-		if (!(0x1 & pending))
-			break; /* break if we didn't wrap around end of wheel */
+            LIST_REMOVE(to, le);
+            to->pending = NULL;
 
-		/* if we're continuing, the next wheel must tick at least once */
-		elapsed = MAX(elapsed, (WHEEL_LEN << (wheel * WHEEL_BIT)));
-	}
+            timeouts_sched_nopending(T, to);
+        }
+    }
+}
 
-	T->curtime = curtime;
+void timeouts_step(struct timeouts *T, reltime_t elapsed)
+{
+    timeouts_update(T, T->curtime + elapsed);
+}
 
-	while (!TAILQ_EMPTY(&todo)) {
-		struct timeout *to = TAILQ_FIRST(&todo);
+bool timeouts_pending(struct timeouts *T)
+{
+    wheel_t pending = 0;
+    for (int wheel = 0; wheel < WHEEL_NUM; wheel++)
+        pending |= T->pending[wheel];
 
-		TAILQ_REMOVE(&todo, to, tqe);
-		to->pending = NULL;
+    return !!pending;
+}
 
-		timeouts_sched(T, to, to->expires);
-	}
+bool timeouts_expired(struct timeouts *T)
+{
+    return !LIST_EMPTY(&T->expired);
+}
 
-	return;
-} /* timeouts_update() */
-
-
-TIMEOUT_PUBLIC void timeouts_step(struct timeouts *T, reltime_t elapsed) {
-	timeouts_update(T, T->curtime + elapsed);
-} /* timeouts_step() */
-
-
-TIMEOUT_PUBLIC bool timeouts_pending(struct timeouts *T) {
-	wheel_t pending = 0;
-	int wheel;
-
-	for (wheel = 0; wheel < WHEEL_NUM; wheel++) {
-		pending |= T->pending[wheel];
-	}
-
-	return !!pending;
-} /* timeouts_pending() */
-
-
-TIMEOUT_PUBLIC bool timeouts_expired(struct timeouts *T) {
-	return !TAILQ_EMPTY(&T->expired);
-} /* timeouts_expired() */
-
-
-/*
- * Calculate the interval before needing to process any timeouts pending on
+/* Calculate the interval before needing to process any timeouts pending on
  * any wheel.
  *
  * (This is separated from the public API routine so we can evaluate our
@@ -499,246 +438,224 @@ TIMEOUT_PUBLIC bool timeouts_expired(struct timeouts *T) {
  *
  * We should never return a timeout larger than the lowest actual timeout.
  */
-static timeout_t timeouts_int(struct timeouts *T) {
-	timeout_t timeout = ~TIMEOUT_C(0), _timeout;
-	timeout_t relmask;
-	int wheel, slot;
+static timeout_t timeouts_int(struct timeouts *T)
+{
+    timeout_t timeout = ~TIMEOUT_C(0);
+    timeout_t relmask = 0;
 
-	relmask = 0;
+    for (int wheel = 0; wheel < WHEEL_NUM; wheel++) {
+        if (T->pending[wheel]) {
+            int slot = WHEEL_MASK & (T->curtime >> (wheel * WHEEL_BIT));
 
-	for (wheel = 0; wheel < WHEEL_NUM; wheel++) {
-		if (T->pending[wheel]) {
-			slot = WHEEL_MASK & (T->curtime >> (wheel * WHEEL_BIT));
+            /* ctz input cannot be zero: T->pending[wheel] is
+             * nonzero, so rotr() is nonzero. */
+            timeout_t _timeout =
+                (ctz(rotr(T->pending[wheel], slot)) +
+                 !!(T->pending[wheel] & (TIMEOUT_C(1) << slot)))
+                << (wheel * WHEEL_BIT);
+            /* +1 when a timeout greater than TIMEOUT_MAX and wrap in to current
+             * slot of the highest wheel
+             */
 
-			/* ctz input cannot be zero: T->pending[wheel] is
-			 * nonzero, so rotr() is nonzero. */
-			_timeout = (ctz(rotr(T->pending[wheel], slot)) + !!wheel) << (wheel * WHEEL_BIT);
-			/* +1 to higher order wheels as those timeouts are one rotation in the future (otherwise they'd be on a lower wheel or expired) */
+            _timeout -= relmask & T->curtime;
+            /* reduce by how much lower wheels have progressed */
 
-			_timeout -= relmask & T->curtime;
-			/* reduce by how much lower wheels have progressed */
+            timeout = MIN(_timeout, timeout);
+        }
 
-			timeout = MIN(_timeout, timeout);
-		}
+        relmask <<= WHEEL_BIT;
+        relmask |= WHEEL_MASK;
+    }
 
-		relmask <<= WHEEL_BIT; 
-		relmask |= WHEEL_MASK;
-	}
-
-	return timeout;
-} /* timeouts_int() */
-
+    return timeout;
+}
 
 /*
  * Calculate the interval our caller can wait before needing to process
  * events.
  */
-TIMEOUT_PUBLIC timeout_t timeouts_timeout(struct timeouts *T) {
-	if (!TAILQ_EMPTY(&T->expired))
-		return 0;
+timeout_t timeouts_timeout(struct timeouts *T)
+{
+    if (!LIST_EMPTY(&T->expired))
+        return 0;
 
-	return timeouts_int(T);
-} /* timeouts_timeout() */
+    return timeouts_int(T);
+}
 
+struct timeout *timeouts_get(struct timeouts *T)
+{
+    if (!LIST_EMPTY(&T->expired)) {
+        struct timeout *to = LIST_FIRST(&T->expired);
 
-TIMEOUT_PUBLIC struct timeout *timeouts_get(struct timeouts *T) {
-	if (!TAILQ_EMPTY(&T->expired)) {
-		struct timeout *to = TAILQ_FIRST(&T->expired);
-
-		TAILQ_REMOVE(&T->expired, to, tqe);
-		to->pending = NULL;
-		TO_SET_TIMEOUTS(to, NULL);
+        LIST_REMOVE(to, le);
+        to->pending = NULL;
+        TO_SET_TIMEOUTS(to, NULL);
 
 #ifndef TIMEOUT_DISABLE_INTERVALS
-		if ((to->flags & TIMEOUT_INT) && to->interval > 0)
-			timeouts_readd(T, to);
+        if ((to->flags & TIMEOUT_INT) && to->interval > 0)
+            timeouts_readd(T, to);
 #endif
 
-		return to;
-	} else {
-		return 0;
-	}
-} /* timeouts_get() */
+        return to;
+    }
 
+    return 0;
+}
 
-/*
- * Use dumb looping to locate the earliest timeout pending on the wheel so
+/* Use dumb looping to locate the earliest timeout pending on the wheel so
  * our invariant assertions can check the result of our optimized code.
  */
-static struct timeout *timeouts_min(struct timeouts *T) {
-	struct timeout *to, *min = NULL;
-	unsigned i, j;
+static struct timeout *timeouts_min(struct timeouts *T)
+{
+    struct timeout *to, *min = NULL;
 
-	for (i = 0; i < countof(T->wheel); i++) {
-		for (j = 0; j < countof(T->wheel[i]); j++) {
-			TAILQ_FOREACH(to, &T->wheel[i][j], tqe) {
-				if (!min || to->expires < min->expires)
-					min = to;
-			}
-		}
-	}
+    for (unsigned i = 0; i < countof(T->wheel); i++)
+        for (unsigned j = 0; j < countof(T->wheel[i]); j++) {
+            LIST_FOREACH (to, &T->wheel[i][j], le) {
+                if (!min || to->expires < min->expires)
+                    min = to;
+            }
+        }
 
-	return min;
-} /* timeouts_min() */
+    return min;
+}
 
-
-/*
- * Check some basic algorithm invariants. If these invariants fail then
+/* Check some basic algorithm invariants. If these invariants fail then
  * something is definitely broken.
  */
-#define report(...) do { \
-	if ((fp)) \
-		fprintf(fp, __VA_ARGS__); \
-} while (0)
+#define report(...)                   \
+    do {                              \
+        if ((fp))                     \
+            fprintf(fp, __VA_ARGS__); \
+    } while (0)
 
-#define check(expr, ...) do { \
-	if (!(expr)) { \
-		report(__VA_ARGS__); \
-		return 0; \
-	} \
-} while (0)
+#define check(expr, ...)         \
+    do {                         \
+        if (!(expr)) {           \
+            report(__VA_ARGS__); \
+            return 0;            \
+        }                        \
+    } while (0)
 
-TIMEOUT_PUBLIC bool timeouts_check(struct timeouts *T, FILE *fp) {
-	timeout_t timeout;
-	struct timeout *to;
+bool timeouts_check(struct timeouts *T, FILE *fp)
+{
+    struct timeout *to;
 
-	if ((to = timeouts_min(T))) {
-		check(to->expires > T->curtime, "missed timeout (expires:%" TIMEOUT_PRIu " <= curtime:%" TIMEOUT_PRIu ")\n", to->expires, T->curtime);
+    if ((to = timeouts_min(T))) {
+        check(to->expires > T->curtime,
+              "missed timeout (expires:%" PRIu64 " <= curtime:%" PRIu64 ")\n",
+              to->expires, T->curtime);
 
-		timeout = timeouts_int(T);
-		check(timeout <= to->expires - T->curtime, "wrong soft timeout (soft:%" TIMEOUT_PRIu " > hard:%" TIMEOUT_PRIu ") (expires:%" TIMEOUT_PRIu "; curtime:%" TIMEOUT_PRIu ")\n", timeout, (to->expires - T->curtime), to->expires, T->curtime);
+        timeout_t timeout = timeouts_int(T);
+        check(timeout <= to->expires - T->curtime,
+              "wrong soft timeout (soft:%" PRIu64 " > hard:%" PRIu64
+              ") (expires:%" PRIu64 "; curtime:%" PRIu64 ")\n",
+              timeout, (to->expires - T->curtime), to->expires, T->curtime);
 
-		timeout = timeouts_timeout(T);
-		check(timeout <= to->expires - T->curtime, "wrong soft timeout (soft:%" TIMEOUT_PRIu " > hard:%" TIMEOUT_PRIu ") (expires:%" TIMEOUT_PRIu "; curtime:%" TIMEOUT_PRIu ")\n", timeout, (to->expires - T->curtime), to->expires, T->curtime);
-	} else {
-		timeout = timeouts_timeout(T);
+        timeout = timeouts_timeout(T);
+        check(timeout <= to->expires - T->curtime,
+              "wrong soft timeout (soft:%" PRIu64 " > hard:%" PRIu64
+              ") (expires:%" PRIu64 "; curtime:%" PRIu64 ")\n",
+              timeout, (to->expires - T->curtime), to->expires, T->curtime);
+    } else {
+        timeout_t timeout = timeouts_timeout(T);
 
-		if (!TAILQ_EMPTY(&T->expired))
-			check(timeout == 0, "wrong soft timeout (soft:%" TIMEOUT_PRIu " != hard:%" TIMEOUT_PRIu ")\n", timeout, TIMEOUT_C(0));
-		else
-			check(timeout == ~TIMEOUT_C(0), "wrong soft timeout (soft:%" TIMEOUT_PRIu " != hard:%" TIMEOUT_PRIu ")\n", timeout, ~TIMEOUT_C(0));
-	}
+        if (!LIST_EMPTY(&T->expired))
+            check(timeout == 0,
+                  "wrong soft timeout (soft:%" PRIu64 " != hard:%" PRIu64 ")\n",
+                  timeout, TIMEOUT_C(0));
+        else
+            check(timeout == ~TIMEOUT_C(0),
+                  "wrong soft timeout (soft:%" PRIu64 " != hard:%" PRIu64 ")\n",
+                  timeout, ~TIMEOUT_C(0));
+    }
 
-	return 1;
-} /* timeouts_check() */
+    return 1;
+}
 
+#define ENTER                            \
+    do {                                 \
+        static const int pc0 = __LINE__; \
+        switch (pc0 + it->pc) {          \
+        case __LINE__:                   \
+            (void) 0
 
-#define ENTER                                                           \
-	do {                                                            \
-	static const int pc0 = __LINE__;                                \
-	switch (pc0 + it->pc) {                                         \
-	case __LINE__: (void)0
+#define SAVE_AND_DO(do_statement) \
+    do {                          \
+        it->pc = __LINE__ - pc0;  \
+        do_statement;             \
+    case __LINE__:                \
+        (void) 0;                 \
+    } while (0)
 
-#define SAVE_AND_DO(do_statement)                                       \
-	do {                                                            \
-		it->pc = __LINE__ - pc0;                                \
-		do_statement;                                           \
-		case __LINE__: (void)0;                                 \
-	} while (0)
+#define YIELD(rv) SAVE_AND_DO(return (rv))
 
-#define YIELD(rv)                                                       \
-	SAVE_AND_DO(return (rv))
+#define LEAVE           \
+    SAVE_AND_DO(break); \
+    }                   \
+    }                   \
+    while (0)
 
-#define LEAVE                                                           \
-	SAVE_AND_DO(break);                                             \
-	}                                                               \
-	} while (0)
+struct timeout *timeouts_next(struct timeouts *T, struct timeouts_it *it)
+{
+    struct timeout *to;
 
-TIMEOUT_PUBLIC struct timeout *timeouts_next(struct timeouts *T, struct timeouts_it *it) {
-	struct timeout *to;
+    ENTER;
 
-	ENTER;
+    if (it->flags & TIMEOUTS_EXPIRED) {
+        if (it->flags & TIMEOUTS_CLEAR) {
+            while ((to = timeouts_get(T))) {
+                YIELD(to);
+            }
+        } else {
+            LIST_FOREACH_SAFE (to, &T->expired, le, it->to) {
+                YIELD(to);
+            }
+        }
+    }
 
-	if (it->flags & TIMEOUTS_EXPIRED) {
-		if (it->flags & TIMEOUTS_CLEAR) {
-			while ((to = timeouts_get(T))) {
-				YIELD(to);
-			}
-		} else {
-			TAILQ_FOREACH_SAFE(to, &T->expired, tqe, it->to) {
-				YIELD(to);
-			}
-		}
-	}
+    if (it->flags & TIMEOUTS_PENDING) {
+        for (it->i = 0; it->i < countof(T->wheel); it->i++) {
+            for (it->j = 0; it->j < countof(T->wheel[it->i]); it->j++) {
+                LIST_FOREACH_SAFE (to, &T->wheel[it->i][it->j], le, it->to) {
+                    YIELD(to);
+                }
+            }
+        }
+    }
 
-	if (it->flags & TIMEOUTS_PENDING) {
-		for (it->i = 0; it->i < countof(T->wheel); it->i++) {
-			for (it->j = 0; it->j < countof(T->wheel[it->i]); it->j++) {
-				TAILQ_FOREACH_SAFE(to, &T->wheel[it->i][it->j], tqe, it->to) {
-					YIELD(to);
-				}
-			}
-		}
-	}
+    LEAVE;
 
-	LEAVE;
-
-	return NULL;
-} /* timeouts_next */
+    return NULL;
+}
 
 #undef LEAVE
 #undef YIELD
 #undef SAVE_AND_DO
 #undef ENTER
 
+/* timeout routines */
 
-/*
- * T I M E O U T  R O U T I N E S
- *
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-TIMEOUT_PUBLIC struct timeout *timeout_init(struct timeout *to, int flags) {
-	memset(to, 0, sizeof *to);
-
-	to->flags = flags;
-
-	return to;
-} /* timeout_init() */
-
+struct timeout *timeout_init(struct timeout *to, int flags)
+{
+    memset(to, 0, sizeof *to);
+    to->flags = flags;
+    return to;
+}
 
 #ifndef TIMEOUT_DISABLE_RELATIVE_ACCESS
-TIMEOUT_PUBLIC bool timeout_pending(struct timeout *to) {
-	return to->pending && to->pending != &to->timeouts->expired;
-} /* timeout_pending() */
+bool timeout_pending(struct timeout *to)
+{
+    return to->pending && to->pending != &to->timeouts->expired;
+}
 
+bool timeout_expired(struct timeout *to)
+{
+    return to->pending && to->pending == &to->timeouts->expired;
+}
 
-TIMEOUT_PUBLIC bool timeout_expired(struct timeout *to) {
-	return to->pending && to->pending == &to->timeouts->expired;
-} /* timeout_expired() */
-
-
-TIMEOUT_PUBLIC void timeout_del(struct timeout *to) {
-	timeouts_del(to->timeouts, to);
-} /* timeout_del() */
+void timeout_del(struct timeout *to)
+{
+    timeouts_del(to->timeouts, to);
+}
 #endif
-
-
-/*
- * V E R S I O N  I N T E R F A C E S
- *
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-TIMEOUT_PUBLIC int timeout_version(void) {
-	return TIMEOUT_VERSION;
-} /* timeout_version() */
-
-
-TIMEOUT_PUBLIC const char *timeout_vendor(void) {
-	return TIMEOUT_VENDOR;
-} /* timeout_version() */
-
-
-TIMEOUT_PUBLIC int timeout_v_rel(void) {
-	return TIMEOUT_V_REL;
-} /* timeout_version() */
-
-
-TIMEOUT_PUBLIC int timeout_v_abi(void) {
-	return TIMEOUT_V_ABI;
-} /* timeout_version() */
-
-
-TIMEOUT_PUBLIC int timeout_v_api(void) {
-	return TIMEOUT_V_API;
-} /* timeout_version() */
-

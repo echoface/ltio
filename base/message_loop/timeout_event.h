@@ -22,7 +22,10 @@
 
 #include <base/closure/closure_task.h>
 #include <base/time/timestamp.h>
+
+extern "C" {
 #include <thirdparty/timeout/timeout.h>
+}
 
 typedef struct timeout Timeout;
 namespace base {
@@ -37,16 +40,14 @@ public:
   void Invoke();
   void UpdateInterval(int64_t ms);
   void InstallTimerHandler(TaskBasePtr&& h);
-  bool IsRepeated() const { return repeat_; }
+  bool IsRepeated() const { return flags & TIMEOUT_INT; }
   inline bool DelAfterInvoke() const { return del_after_invoke_; }
   inline bool IsAttached() const { return pending != NULL; }
-  inline uint64_t Interval() const { return interval_; }
-  inline uint64_t IntervalMicroSecond() const { return interval_ * 1000; }
+  inline uint64_t Interval() const { return interval; }
+  inline uint64_t IntervalMicroSecond() const { return interval * 1000; }
 
 private:
-  bool repeat_ = false;
   bool use_coro_ = false;
-  uint64_t interval_ = 0;  // ms
   bool del_after_invoke_ = false;
   TaskBasePtr timer_handler_;
 };

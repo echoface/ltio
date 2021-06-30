@@ -17,8 +17,8 @@ SET(LT_3RD_SRSC
   murmurhash/MurmurHash3.cpp
 
   # timeout wheel
+  timeout/timeout.h
   timeout/timeout.c
-  timeout/timeout-bitops.c
 
   urlsafe64/urlsafe64.c
   tinyxml2/tinyxml2.cpp

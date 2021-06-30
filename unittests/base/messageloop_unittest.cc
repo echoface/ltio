@@ -60,7 +60,7 @@ TEST_CASE("base.task", "[test event pump timer]") {
 
 TEST_CASE("event_pump.timer", "[test event pump timer]") {
   base::EventPump pump;
-  pump.SetLoopId(11);
+  pump.SetLoopId(base::MessageLoop::GenLoopID());
   pump.PrepareRun();
 
   size_t repeated_times = 0;
@@ -69,21 +69,28 @@ TEST_CASE("event_pump.timer", "[test event pump timer]") {
   base::TimeoutEvent* repeated_toe = new base::TimeoutEvent(5, true);
   repeated_toe->InstallTimerHandler(NewClosure([&]() { repeated_times++; }));
 
+  auto start = base::time_ms();
+  std::cout << "start at ms:" << start << std::endl;
+
   base::TimeoutEvent* quit_toe = base::TimeoutEvent::CreateOneShot(1000, false);
   quit_toe->InstallTimerHandler(NewClosure([&]() {
-    oneshot_invoked = 10;
-    pump.RemoveTimeoutEvent(repeated_toe);
+    auto end = base::time_ms();
+    std::cout << "stop at ms:" << end - start << std::endl;
+    REQUIRE(end - start >= 1000);
+
+    oneshot_invoked = true;
     pump.RemoveTimeoutEvent(quit_toe);
+    pump.RemoveTimeoutEvent(repeated_toe);
     pump.Quit();
   }));
 
   pump.AddTimeoutEvent(quit_toe);
   pump.AddTimeoutEvent(repeated_toe);
-
-  std::cout << "start at ms:" << base::time_ms() << std::endl;
   pump.Run();
+  std::cout << "repeated_times:" << repeated_times << std::endl;
+
   REQUIRE(oneshot_invoked);
-  REQUIRE(repeated_times > 150);
+  REQUIRE(repeated_times > 50);
 
   delete quit_toe;
   delete repeated_toe;
@@ -99,7 +106,7 @@ TEST_CASE("messageloop.delaytask", "[run delay task]") {
                        uint64_t end = base::time_ms();
                        LOG(INFO) << "delay task run:" << end - start
                                  << "(ms), expect 500";
-                       REQUIRE(((end - start >= 500) && (end - start <= 505)));
+                       REQUIRE(((end - start >= 500) && (end - start <= 550)));
                      }),
                      500);
 
@@ -185,6 +192,9 @@ TEST_CASE("task_obo_bench", "[new task bench per second one by one]") {
   loop.PostTask(FROM_HERE, invoke, &loop, false);
   start_time = base::time_us();
 
+  LOG(INFO) << __FUNCTION__ << ", wait loop, threadLoopID:"
+    << base::EventPump::CurrentThreadLoopID()
+    << ", loopID:" << loop.Pump()->LoopID();
   loop.WaitLoopEnd();
   LOG(INFO) << __FUNCTION__ << ", task_obo_bench end";
 }
