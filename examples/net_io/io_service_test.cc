@@ -66,9 +66,7 @@ public:
       "tcp", [](base::MessageLoop*)->CodecServicePtr {
       return CodecServicePtr(new TcpCodecService);
     });
-
-    ioservice_->StartIOService();
-
+    acceptor_loop_.PostTask(FROM_HERE, &IOService::Start, ioservice_);
     acceptor_loop_.WaitLoopEnd();
   }
 
@@ -105,7 +103,7 @@ private:
   void ExitSignalHandle() {
     LOG(INFO) << " ExitSignalHandle quit AcceptorLoop";
     acceptor_loop_.PostTask(
-      NewClosure(std::bind(&IOService::StopIOService, ioservice_.get())));
+      NewClosure(std::bind(&IOService::Stop, ioservice_.get())));
   }
   base::MessageLoop iowork_loop_;
   base::MessageLoop acceptor_loop_;

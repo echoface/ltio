@@ -25,8 +25,19 @@
 #include "glog/logging.h"
 #include "net_io/tcp_channel.h"
 
-#ifdef LTIO_WITH_OPENSSL
+#ifdef LTIO_HAVE_SSL
+#include <memory>
 #include "net_io/tcp_channel_ssl.h"
+namespace lt {
+namespace net {
+
+base::SSLCtx* ClientSSLCtxProvider::GetClientSSLContext() {
+  if (ssl_ctx_)
+    return ssl_ctx_;
+  return &base::SSLCtx::DefaultClientCtx();
+}
+}  // namespace net
+}  // namespace lt
 #endif
 
 namespace lt {
@@ -78,7 +89,12 @@ void Client::Finalize() {
 
   auto channels = std::atomic_load(&in_use_channels_);
   for (RefClientChannel& ch : *channels) {
-    ch->IOLoop()->PostTask(FROM_HERE, &ClientChannel::CloseClientChannel, ch);
+
+    base::MessageLoop* loop = ch->IOLoop();
+    // this close will success and client detach with it,
+    // no any notify callback will be called any more
+    // in this io_loop, it will close all resource of this transport
+    loop->PostTask(FROM_HERE, &ClientChannel::CloseClientChannel, ch);
   }
 }
 
@@ -155,30 +171,34 @@ void Client::OnConnected(int socket_fd, IPEndPoint& local, IPEndPoint& remote) {
   RefCodecService codec_service =
       CodecFactory::NewClientService(remote_info_.protocol, io_loop);
 
-#ifdef LTIO_WITH_OPENSSL
   SocketChannelPtr channel;
+#ifdef LTIO_HAVE_SSL
   if (codec_service->UseSSLChannel()) {
-    channel = TCPSSLChannel::Create(socket_fd, local, remote, io_loop->Pump());
+    auto ssl_channel = TCPSSLChannel::Create(socket_fd, local, remote);
+    ssl_channel->InitSSL(GetClientSSLContext()->NewSSLSession(socket_fd));
+    channel = std::move(ssl_channel);
   } else {
-    channel = TcpChannel::Create(socket_fd, local, remote, io_loop->Pump());
+    channel = TcpChannel::Create(socket_fd, local, remote);
   }
 #else
-  channel = TcpChannel::Create(socket_fd, local, remote, io_loop->Pump());
+  channel = TcpChannel::Create(socket_fd, local, remote);
 #endif
+  channel->SetIOEventPump(io_loop->Pump());
   codec_service->BindSocket(std::move(channel));
 
   RefClientChannel client_channel = CreateClientChannel(this, codec_service);
   client_channel->SetRequestTimeout(config_.message_timeout);
 
   channels_.push_back(client_channel);
-  io_loop->PostTask(FROM_HERE, &ClientChannel::StartClientChannel,
+  io_loop->PostTask(FROM_HERE,
+                    &ClientChannel::StartClientChannel,
                     client_channel);
 
   RefClientChannelList new_list(
       new ClientChannelList(channels_.begin(), channels_.end()));
   channels_count_.store(new_list->size());
   std::atomic_store(&in_use_channels_, new_list);
-  VLOG(GLOG_VINFO) << __FUNCTION__ << ClientInfo()
+  VLOG(GLOG_VINFO) << ClientInfo()
                    << " connected, initializing...";
 
   launch_next_if_need();
@@ -186,28 +206,26 @@ void Client::OnConnected(int socket_fd, IPEndPoint& local, IPEndPoint& remote) {
 
 void Client::OnClientChannelInited(const ClientChannel* channel) {
   if (!stopping_ && !work_loop_->IsInLoopThread()) {
-    work_loop_->PostTask(FROM_HERE, &Client::OnClientChannelInited, this,
-                         channel);
+    auto thisfunc = std::bind(&Client::OnClientChannelInited, this, channel);
+    work_loop_->PostTask(NewClosure(thisfunc));
     return;
   }
 
   if (delegate_) {
     delegate_->OnClientChannelReady(channel);
   }
-  VLOG(GLOG_VINFO) << __FUNCTION__ << ClientInfo() << "@" << channel
-                   << " ready for use";
+  VLOG(GLOG_VINFO) << ClientInfo() << "@" << channel << " ready for use";
 }
 
 /*on the loop of client IO, need managed by connector loop*/
 void Client::OnClientChannelClosed(const RefClientChannel& channel) {
   if (!work_loop_->IsInLoopThread() && !stopping_) {
-    work_loop_->PostTask(FROM_HERE, &Client::OnClientChannelClosed, this,
-                         channel);
+    auto thisfunc = std::bind(&Client::OnClientChannelClosed, this, channel);
+    work_loop_->PostTask(NewClosure(std::move(thisfunc)));
     return;
   }
 
-  VLOG(GLOG_VINFO) << __FUNCTION__ << ClientInfo() << "@" << channel.get()
-                   << " closed";
+  VLOG(GLOG_VINFO) << ClientInfo() << "@" << channel.get() << " closed";
 
   do {
     channels_.remove_if([&](const RefClientChannel& ch) -> bool {
@@ -242,6 +260,7 @@ bool Client::AsyncDoRequest(RefCodecMessage& req, AsyncCallBack callback) {
 
   // IMPORTANT: avoid self holder for capture list
   CodecMessage* request = req.get();
+
   base::LtClosure resumer = [=]() {
     if (worker->IsInLoopThread()) {
       callback(request->RawResponse());
@@ -252,6 +271,7 @@ bool Client::AsyncDoRequest(RefCodecMessage& req, AsyncCallBack callback) {
   };
 
   req->SetWorkerCtx(worker, std::move(resumer));
+
   req->SetRemoteHost(remote_info_.host);
 
   RefClientChannel client = get_ready_channel();
@@ -278,7 +298,9 @@ CodecMessage* Client::DoRequest(RefCodecMessage& message) {
   }
 
   base::MessageLoop* io_loop = channel->IOLoop();
-  if (!io_loop->PostTask(FROM_HERE, &ClientChannel::SendRequest, channel,
+  if (!io_loop->PostTask(FROM_HERE,
+                         &ClientChannel::SendRequest,
+                         channel,
                          message)) {
     message->SetFailCode(MessageCode::kConnBroken);
     return NULL;

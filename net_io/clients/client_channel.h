@@ -18,6 +18,7 @@
 #ifndef _LT_NET_CLIENT_CHANNEL_H
 #define _LT_NET_CLIENT_CHANNEL_H
 
+#include "base/message_loop/timeout_event.h"
 #include "net_io/codec/codec_message.h"
 #include "net_io/codec/codec_service.h"
 #include "net_io/net_callback.h"
@@ -51,22 +52,31 @@ public:
   virtual ~ClientChannel();
 
   virtual void StartClientChannel();
+
   virtual void CloseClientChannel();
-  // a change for close all inprogress request
+
+  // make sure close all inprogress request
   virtual void BeforeCloseChannel() = 0;
+
   virtual void SendRequest(RefCodecMessage request) = 0;
 
   bool Ready() const { return state_ == kReady; }
+
   bool Closing() const { return state_ == kClosing; }
+
   bool Initializing() const { return state_ == kInitialing; }
 
   void SetRequestTimeout(uint32_t ms) { request_timeout_ = ms; };
+
   base::EventPump* EventPump() { return codec_->Pump(); }
+
   base::MessageLoop* IOLoop() { return codec_->IOLoop(); };
 
   // override from CodecService::Delegate
   const url::RemoteInfo* GetRemoteInfo() const override;
+
   void OnProtocolServiceGone(const RefCodecService& service) override;
+
   void OnProtocolServiceReady(const RefCodecService& service) override;
 
 protected:

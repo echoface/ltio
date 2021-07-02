@@ -19,12 +19,10 @@
 #define _NET_PROTOCOL_SERVICE_H_H
 
 #include "codec_message.h"
-
-#include <base/message_loop/message_loop.h>
-#include <net_io/base/ip_endpoint.h>
-#include <net_io/channel.h>
-#include <net_io/net_callback.h>
-#include <net_io/url_utils.h>
+#include "net_io/base/ip_endpoint.h"
+#include "net_io/channel.h"
+#include "net_io/net_callback.h"
+#include "net_io/url_utils.h"
 
 namespace base {
 class MessageLoop;
@@ -60,19 +58,24 @@ public:
 
   virtual void StartProtocolService();
 
-  SocketChannel* Channel() { return channel_.get(); };
+  base::EventPump* Pump() const;
+
   base::MessageLoop* IOLoop() const { return binded_loop_; }
-  base::EventPump* Pump() const { return binded_loop_->Pump(); }
+
+  SocketChannel* Channel() { return channel_.get(); };
 
   void CloseService(bool block_callback = false);
+
   bool IsConnected() const;
 
   virtual void BeforeCloseService(){};
+
   virtual void AfterChannelClosed(){};
 
   /* feature indentify*/
   // async clients request
   virtual bool KeepSequence() { return true; };
+
   virtual bool KeepHeartBeat() { return false; }
 
   virtual bool SendRequest(CodecMessage* message) = 0;
@@ -80,6 +83,7 @@ public:
   virtual bool SendResponse(const CodecMessage* req, CodecMessage* res) = 0;
 
   virtual const RefCodecMessage NewHeartbeat() { return NULL; }
+
   virtual const RefCodecMessage NewResponse(const CodecMessage*) {
     return NULL;
   }

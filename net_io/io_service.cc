@@ -15,18 +15,19 @@
  * limitations under the License.
  */
 
-#include <base/base_constants.h>
-#include <atomic>
+#include "io_service.h"
+#include "base/base_constants.h"
 #include "base/closure/closure_task.h"
 #include "base/ip_endpoint.h"
-#include "glog/logging.h"
-
 #include "codec/codec_factory.h"
 #include "codec/codec_message.h"
 #include "codec/codec_service.h"
-#include "io_service.h"
+#include "glog/logging.h"
 #include "tcp_channel.h"
+
+#ifdef LTIO_HAVE_SSL
 #include "tcp_channel_ssl.h"
+#endif
 
 namespace lt {
 namespace net {
@@ -36,152 +37,155 @@ IOService::IOService(const IPEndPoint& addr,
                      base::MessageLoop* ioloop,
                      IOServiceDelegate* delegate)
   : protocol_(protocol),
-    accept_loop_(ioloop),
+    acpt_io_(ioloop),
     delegate_(delegate),
     is_stopping_(false) {
   CHECK(delegate_);
 
+  auto pump = acpt_io_->Pump();
+
   service_name_ = addr.ToString();
-  acceptor_.reset(new SocketAcceptor(accept_loop_->Pump(), addr));
-  acceptor_->SetNewConnectionCallback(std::bind(&IOService::OnNewConnection,
-                                                this, std::placeholders::_1,
-                                                std::placeholders::_2));
+  acceptor_.reset(new SocketAcceptor(this, pump, addr));
 }
 
 IOService::~IOService() {
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << " IOService@" << this << " Gone";
+  VLOG(GLOG_VTRACE) << " IOService@" << this << " Gone";
 }
 
-void IOService::StartIOService() {
-  if (accept_loop_->IsInLoopThread()) {
-    return StartInternal();
-  }
-
-  accept_loop_->PostTask(
-      FROM_HERE, std::bind(&IOService::StartInternal, shared_from_this()));
-}
-
-void IOService::StartInternal() {
-  DCHECK(accept_loop_->IsInLoopThread());
-
-  CHECK(acceptor_->StartListen());
-
-  if (delegate_) {
-    delegate_->IOServiceStarted(this);
-  }
-}
-
-/* step1: close the acceptor */
-void IOService::StopIOService() {
-  if (!accept_loop_->IsInLoopThread()) {
-    auto functor = std::bind(&IOService::StopIOService, this);
-    accept_loop_->PostTask(NewClosure(std::move(functor)));
+void IOService::Start() {
+  auto guard_this = shared_from_this();
+  if (!acpt_io_->IsInLoopThread()) {
+    acpt_io_->PostTask(FROM_HERE, &IOService::Start, guard_this);
     return;
   }
 
-  CHECK(accept_loop_->IsInLoopThread());
+  DCHECK(acpt_io_->IsInLoopThread());
+  CHECK(acceptor_->StartListen());
+  delegate_->IOServiceStarted(this);
+}
 
-  // sync
-  acceptor_->StopListen();
-  is_stopping_ = true;
+/* step1: close the acceptor */
+void IOService::Stop() {
+  auto refthis = shared_from_this();
 
-  // async
-  for (auto& codec_service : codecs_) {
-    base::MessageLoop* loop = codec_service->IOLoop();
-    // TODO: add a flag stop callback, force stop/close?
-    loop->PostTask(FROM_HERE, &CodecService::CloseService, codec_service,
-                   false);
+  if (!acpt_io_->IsInLoopThread()) {
+    auto functor = std::bind(&IOService::Stop, refthis);
+    acpt_io_->PostTask(NewClosure(std::move(functor)));
+    return;
   }
+  VLOG(GLOG_VINFO) << __FUNCTION__ << " enter, in acpt loop";
 
-  if (codecs_.empty() && delegate_) {
+  is_stopping_ = true;
+  CHECK(acpt_io_->IsInLoopThread());
+
+  // sync top acceptor
+  acceptor_->StopListen();
+
+  for (auto& codec : codecs_) {
+    base::MessageLoop* loop = codec->IOLoop();
+    loop->PostTask(FROM_HERE, [codec, refthis]() {
+      // stop close notify
+      codec->CloseService(true);
+
+      refthis->OnProtocolServiceGone(codec);
+    });
+  }
+  if (codecs_.empty()) {
     delegate_->IOServiceStoped(this);
   }
 }
 
-void IOService::OnNewConnection(int fd, const IPEndPoint& peer_addr) {
-  CHECK(accept_loop_->IsInLoopThread());
-
-  VLOG(GLOG_VTRACE) << __FUNCTION__
-                    << " connect apply from:" << peer_addr.ToString();
-
-  // check connection limit and others
-  if (!delegate_ || !delegate_->CanCreateNewChannel()) {
-    LOG(INFO) << __FUNCTION__ << " Stop accept new connection"
-              << ", current has:[" << codecs_.size() << "]";
-    return socketutils::CloseSocket(fd);
-  }
-
+RefCodecService IOService::CreateCodeService(int fd, const IPEndPoint& peer) {
   base::MessageLoop* io_loop = delegate_->GetNextIOWorkLoop();
   if (!io_loop) {
-    LOG(INFO) << __FUNCTION__ << " No IOLoop handle this connect request";
-    return socketutils::CloseSocket(fd);
+    socketutils::CloseSocket(fd);
+    LOG(INFO) << " no loop can handle this connection";
+    return nullptr;
   }
 
-  RefCodecService codec_service =
-      CodecFactory::NewServerService(protocol_, io_loop);
+  auto codec = CodecFactory::NewServerService(protocol_, io_loop);
 
-  if (!codec_service) {
-    LOG(ERROR) << __FUNCTION__ << " scheme:" << protocol_ << " NOT-FOUND";
-    return socketutils::CloseSocket(fd);
+  if (!codec) {
+    socketutils::CloseSocket(fd);
+    LOG(ERROR) << " protocol:" << protocol_ << " NOT-FOUND";
+    return nullptr;
   }
 
   IPEndPoint local_addr;
   CHECK(socketutils::GetLocalEndpoint(fd, &local_addr));
+
   SocketChannelPtr channel;
-  if (codec_service->UseSSLChannel()) {
-    channel = TCPSSLChannel::Create(fd, local_addr, peer_addr, io_loop->Pump());
+  // ??make a channel creator delegate to export CreateAction by server implment
+  if (codec->UseSSLChannel()) {
+#ifdef LTIO_HAVE_SSL
+    auto ssl_channel = TCPSSLChannel::Create(fd, local_addr, peer);
+    ssl_channel->InitSSL(delegate_->GetSSLContext()->NewSSLSession(fd));
+    channel = std::move(ssl_channel);
+#else
+    CHECK(false) << "ssl need compile with openssl lib support";
+#endif
   } else {
-    channel = TcpChannel::Create(fd, local_addr, peer_addr, io_loop->Pump());
+    channel = TcpChannel::Create(fd, local_addr, peer);
   }
-  codec_service->SetDelegate(this);
-  codec_service->BindSocket(std::move(channel));
+  channel->SetIOEventPump(io_loop->Pump());
 
-  if (io_loop->IsInLoopThread()) {
-    codec_service->StartProtocolService();
-  } else {
-    io_loop->PostTask(NewClosure(
-        std::bind(&CodecService::StartProtocolService, codec_service)));
+  codec->SetDelegate(this);
+  codec->BindSocket(std::move(channel));
+
+  io_loop->PostTask(FROM_HERE, [codec]() {
+    codec->StartProtocolService();
+  });
+  return codec;
+}
+
+void IOService::OnNewConnection(int fd, const IPEndPoint& peer_addr) {
+  CHECK(acpt_io_->IsInLoopThread());
+  VLOG(GLOG_VTRACE) << " connect apply from:" << peer_addr.ToString();
+
+  // check connection limit and others
+  if (!delegate_->CanCreateNewChannel()) {
+    LOG(INFO) << "Stop accept new connection"
+              << ", current has:[" << codecs_.size() << "]";
+    return socketutils::CloseSocket(fd);
   }
-  StoreProtocolService(codec_service);
-
-  VLOG(GLOG_VTRACE) << __FUNCTION__
-                    << " Connection from:" << peer_addr.ToString()
-                    << " establisted";
+  auto codec = CreateCodeService(fd, peer_addr);
+  if (codec.get() == nullptr) {
+    LOG(INFO) << "failed create new codec for connection"
+              << ", current has:[" << codecs_.size() << "]";
+    return;
+  }
+  StoreProtocolService(codec);
+  VLOG(GLOG_VTRACE) << " Connection from:" << peer_addr.ToString();
 }
 
 void IOService::OnCodecMessage(const RefCodecMessage& message) {
-  if (delegate_) {
-    return delegate_->OnRequestMessage(message);
-  }
-  LOG(INFO) << __func__ << " nobody handle this request";
+  return delegate_->OnRequestMessage(message);
 }
 
 void IOService::OnProtocolServiceGone(const net::RefCodecService& service) {
   // use another task remove a service is a more safe way delete channel&
   // protocol things avoid somewhere->B(do close a channel) ->  ~A  -> use A
   // again in somewhere
-  accept_loop_->PostTask(FROM_HERE, &IOService::RemoveProtocolService, this,
-                         service);
+  acpt_io_->PostTask(FROM_HERE, [this, service]() {
+    this->RemoveProtocolService(service);
+  });
 }
 
 void IOService::StoreProtocolService(const RefCodecService service) {
-  CHECK(accept_loop_->IsInLoopThread());
+  CHECK(acpt_io_->IsInLoopThread());
 
   codecs_.insert(service);
   delegate_->IncreaseChannelCount();
 }
 
 void IOService::RemoveProtocolService(const RefCodecService service) {
-  CHECK(accept_loop_->IsInLoopThread());
+  CHECK(acpt_io_->IsInLoopThread());
+  VLOG(GLOG_VINFO) << "codec:" << service.get() << " stoped";
 
-  size_t count = codecs_.erase(service);
-  LOG_IF(INFO, count == 0) << __func__ << " seems been erase early";
-  if (!delegate_) {
-    return;
-  }
-
-  if (count == 1) {
+  if (codecs_.erase(service)) {
     delegate_->DecreaseChannelCount();
+  } else {
+    LOG(ERROR) << " seems has been erase preivously";
   }
 
   if (is_stopping_ && codecs_.empty()) {

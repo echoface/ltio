@@ -26,12 +26,15 @@
 #include <cstdint>
 #include "base/base_micro.h"
 #include "base/ip_endpoint.h"
-#include "base/message_loop/event_pump.h"
-#include "base/message_loop/message_loop.h"
+#include "base/message_loop/fd_event.h"
 #include "io_buffer.h"
 #include "net_callback.h"
 
 // socket chennel interface and base class
+namespace base {
+class EventPump;
+}
+
 namespace lt {
 namespace net {
 
@@ -52,6 +55,8 @@ public:
   virtual ~SocketChannel() { CHECK(status_ == Status::CLOSED); }
 
   virtual void StartChannel();
+
+  void SetIOEventPump(base::EventPump* pump);
 
   void SetReciever(SocketChannel::Reciever* consumer);
 
@@ -82,8 +87,7 @@ public:
 protected:
   SocketChannel(int socket_fd,
                 const IPEndPoint& loc,
-                const IPEndPoint& peer,
-                base::EventPump* pump);
+                const IPEndPoint& peer);
 
   void setup_channel();
 

@@ -26,10 +26,15 @@
 namespace lt {
 namespace net {
 
-SocketAcceptor::SocketAcceptor(base::EventPump* pump, const IPEndPoint& address)
-  : listening_(false), address_(address), event_pump_(pump) {
-  CHECK(event_pump_);
+SocketAcceptor::SocketAcceptor(Actor* actor,
+                               base::EventPump* pump,
+                               const IPEndPoint& address)
+  : listening_(false),
+    address_(address),
+    handler_(actor),
+    event_pump_(pump) {
   CHECK(InitListener());
+  CHECK(actor && pump);
 }
 
 SocketAcceptor::~SocketAcceptor() {
@@ -60,13 +65,14 @@ bool SocketAcceptor::InitListener() {
   socket_event_ =
       base::FdEvent::Create(this, socket_fd, base::LtEv::LT_EVENT_NONE);
 
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << " init acceptor success, fd:["
+  VLOG(GLOG_VTRACE) << " init acceptor success, fd:["
                     << socket_fd << "] bind to local:[" << address_.ToString()
                     << "]";
   return true;
 }
 
 bool SocketAcceptor::StartListen() {
+  CHECK(event_pump_);
   CHECK(event_pump_->IsInLoop());
 
   if (listening_) {
@@ -77,11 +83,10 @@ bool SocketAcceptor::StartListen() {
   event_pump_->InstallFdEvent(socket_event_.get());
   socket_event_->EnableReading();
 
-  bool success = socketutils::ListenSocket(socket_event_->fd()) == 0;
-  if (!success) {
+  if (socketutils::ListenSocket(socket_event_->GetFd()) < 0) {
     socket_event_->DisableAll();
     event_pump_->RemoveFdEvent(socket_event_.get());
-    LOG(INFO) << __FUNCTION__ << " failed listen on" << address_.ToString();
+    LOG(ERROR) << " failed listen on" << address_.ToString();
     return false;
   }
   VLOG(GLOG_VINFO) << "start listen on:" << address_.ToString();
@@ -101,58 +106,49 @@ void SocketAcceptor::StopListen() {
   VLOG(GLOG_VINFO) << "stop listen on:" << address_.ToString();
 }
 
-void SocketAcceptor::SetNewConnectionCallback(const NewConnectionCallback& cb) {
-  new_conn_callback_ = std::move(cb);
-}
-
 bool SocketAcceptor::HandleRead(base::FdEvent* fd_event) {
   struct sockaddr client_socket_in;
 
   int err = 0;
-  int peer_fd =
-      socketutils::AcceptSocket(socket_event_->fd(), &client_socket_in, &err);
+  int peer_fd = socketutils::AcceptSocket(socket_event_->GetFd(),
+                                          &client_socket_in,
+                                          &err);
   if (peer_fd < 0) {
-    LOG(ERROR) << __FUNCTION__
-               << " accept new connection failed, err:" << base::StrError(err);
+    LOG(ERROR) << " accept failed, err:" << base::StrError(err);
     return true;
   }
 
   IPEndPoint client_addr;
   client_addr.FromSockAddr(&client_socket_in, sizeof(client_socket_in));
 
-  VLOG(GLOG_VTRACE) << __FUNCTION__
-                    << " accept a connection:" << client_addr.ToString();
-  if (new_conn_callback_) {
-    new_conn_callback_(peer_fd, client_addr);
-    return true;
-  }
-  socketutils::CloseSocket(peer_fd);
+  VLOG(GLOG_VTRACE) << " accept a connection:" << client_addr.ToString();
+
+  handler_->OnNewConnection(peer_fd, client_addr);
   return true;
 }
 
 bool SocketAcceptor::HandleWrite(base::FdEvent* ev) {
-  LOG(ERROR) << __FUNCTION__ << " fd [" << ev->fd()
-             << "] write event should not reached";
+  LOG(ERROR) << " fd [" << ev->GetFd() << "] write event should not reached";
   return true;
 }
 
 bool SocketAcceptor::HandleError(base::FdEvent* fd_event) {
-  LOG(ERROR) << __FUNCTION__ << " fd [" << fd_event->fd() << "] error:["
-             << base::StrError() << "]";
+  LOG(ERROR) << " fd [" << fd_event->GetFd() << "] error:[" << base::StrError()
+             << "]";
 
   listening_ = false;
 
   // Relaunch This server
   if (InitListener()) {
     bool re_listen_ok = StartListen();
-    LOG_IF(ERROR, !re_listen_ok) << __FUNCTION__ << " acceptor:["
-                                 << address_.ToString() << "] re-listen failed";
+    LOG_IF(ERROR, !re_listen_ok)
+        << " acceptor:[" << address_.ToString() << "] re-listen failed";
   }
   return false;
 }
 
 bool SocketAcceptor::HandleClose(base::FdEvent* fd_event) {
-  LOG(ERROR) << __FUNCTION__ << " fd [" << fd_event->fd() << "] closed";
+  LOG(ERROR) << "acceptor listen fd [" << fd_event->GetFd() << "] closed";
   return HandleError(fd_event);
 }
 

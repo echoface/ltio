@@ -52,6 +52,10 @@ SET(BASE_SOURCES
   closure/location.cc
   )
 
+if (LTIO_WITH_OPENSSL)
+  list(APPEND BASE_SOURCES crypto/lt_ssl.cc)
+endif()
+
 add_library(ltbase_objs OBJECT ${BASE_SOURCES})
 
 ltio_default_properties(ltbase_objs)

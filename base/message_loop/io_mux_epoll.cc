@@ -101,11 +101,12 @@ FdEvent* IOMuxEpoll::FindFdEvent(int fd) {
 }
 
 void IOMuxEpoll::AddFdEvent(FdEvent* fd_ev) {
-  CHECK((fd_ev->fd() >= 0) && (fd_ev->fd() < lt_events_.size()));
+  int32_t fd = fd_ev->GetFd();
+
+  CHECK((fd >= 0) && (fd < lt_events_.size()));
 
   EpollCtl(fd_ev, EPOLL_CTL_ADD);
 
-  int32_t fd = fd_ev->fd();
   if (lt_events_[fd] != NULL && lt_events_[fd] != fd_ev) {
     LOG(ERROR) << __FUNCTION__ << " override a exsist fdevent"
                << ", origin:" << lt_events_[fd] << " new:" << fd_ev;
@@ -116,7 +117,7 @@ void IOMuxEpoll::AddFdEvent(FdEvent* fd_ev) {
 void IOMuxEpoll::DelFdEvent(FdEvent* fd_ev) {
   EpollCtl(fd_ev, EPOLL_CTL_DEL);
 
-  int32_t fd = fd_ev->fd();
+  int32_t fd = fd_ev->GetFd();
   if (lt_events_[fd] == fd_ev) {
     lt_events_[fd] = NULL;
   } else {
@@ -129,7 +130,7 @@ void IOMuxEpoll::UpdateFdEvent(FdEvent* fd_ev) {
     LOG(ERROR) << "update fd event failed:" << fd_ev->EventInfo();
     return;
   }
-  int32_t fd = fd_ev->fd();
+  int32_t fd = fd_ev->GetFd();
   if (lt_events_[fd] == NULL) {
     lt_events_[fd] = fd_ev;
   }
@@ -138,7 +139,7 @@ void IOMuxEpoll::UpdateFdEvent(FdEvent* fd_ev) {
 int IOMuxEpoll::EpollCtl(FdEvent* fdev, int opt) {
   struct epoll_event ev;
 
-  int fd = fdev->fd();
+  int fd = fdev->GetFd();
 
   ev.data.fd = fd;
   ev.events = ToEpollEvent(fdev->MonitorEvents());

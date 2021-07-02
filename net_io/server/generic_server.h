@@ -28,7 +28,6 @@
 
 #include "base/base_micro.h"
 #include "base/coroutine/coroutine_runner.h"
-#include "base/message_loop/message_loop.h"
 #include "net_io/codec/codec_factory.h"
 #include "net_io/io_service.h"
 
@@ -100,13 +99,13 @@ public:
 #if defined SO_REUSEPORT && defined NET_ENABLE_REUSER_PORT
     for (base::MessageLoop* loop : io_loops_) {
       RefIOService service(new IOService(endpoint_, uri_.protocol, loop, this));
-      service->StartIOService();
+      loop->PostTask(FROM_HERE, &IOService::Start, service);
       ioservices_.push_back(std::move(service));
     }
 #else
     base::MessageLoop* loop = io_loops_.front();
     RefIOService service(new IOService(endpoint_, uri_.protocol, loop, this));
-    service->StartIOService();
+    loop->PostTask(FROM_HERE, &IOService::Start, service);
     ioservices_.push_back(std::move(service));
 #endif
   }
@@ -118,7 +117,11 @@ public:
     std::list<RefIOService> services = ioservices_;
     for (RefIOService& service : services) {
       base::MessageLoop* io = service->AcceptorLoop();
-      io->PostTask(FROM_HERE, &IOService::StopIOService, service);
+      io->PostTask(FROM_HERE, &IOService::Stop, service);
+    }
+
+    if (services.empty()) {
+      closed_callback_();
     }
   }
 
@@ -145,12 +148,13 @@ protected:
 
   void IOServiceStarted(const IOService* service) override {
     std::unique_lock<std::mutex> lck(mtx_);
-    for (const RefIOService& io_service : ioservices_) {
-      if (!io_service->IsRunning()) {
-        return;
-      }
+    int active_iosrv = 0;
+    for (const RefIOService& service : ioservices_) {
+      active_iosrv += service->IsRunning();
     }
-    LOG(INFO) << "Server " << ServerInfo() << " Started";
+    if (active_iosrv == ioservices_.size()) {
+      LOG(INFO) << "Server " << ServerInfo() << " Started";
+    }
   }
 
   void IOServiceStoped(const IOService* service) override {
@@ -171,6 +175,19 @@ protected:
     base::MessageLoop* io_loop = base::MessageLoop::Current();
     CO_GO io_loop << std::bind(handler_, Context::New(request));
   }
+#ifdef LTIO_HAVE_SSL
+public:
+  Server& WithSSLContext(base::SSLCtx* ctx) {
+    ssl_ctx_ = ctx;
+    return *this;
+  }
+  base::SSLCtx* GetSSLContext() override {
+    if (ssl_ctx_) return ssl_ctx_;
+    return &base::SSLCtx::DefaultServerCtx();
+  }
+private:
+  base::SSLCtx* ssl_ctx_ = nullptr;
+#endif
 
 private:
   Handler handler_;
@@ -191,6 +208,7 @@ private:
 
   std::atomic<bool> serving_flag_;
 
+  std::atomic<uint32_t> active_iosrv_;
   std::atomic<uint32_t> client_count_;
 
   base::ClosureCallback closed_callback_;

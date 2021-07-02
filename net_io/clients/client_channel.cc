@@ -55,7 +55,7 @@ void ClientChannel::CloseClientChannel() {
   base::EventPump* pump = EventPump();
   CHECK(pump->IsInLoop());
 
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << " going to close:" << ConnectionInfo();
+  VLOG(GLOG_VTRACE) << " going to close:" << ConnectionInfo();
 
   state_ = kClosing;
 
@@ -63,8 +63,12 @@ void ClientChannel::CloseClientChannel() {
 
   delegate_ = NULL;
 
-  codec_->CloseService();
+  codec_->CloseService(true);
 
+  OnProtocolServiceGone(codec_);
+
+  //fallback avlid inherit class skip
+  //ClientChannel::OnProtocolServiceGone
   if (heartbeat_timer_) {
     pump->RemoveTimeoutEvent(heartbeat_timer_);
     delete heartbeat_timer_;
@@ -72,7 +76,7 @@ void ClientChannel::CloseClientChannel() {
   }
 
   state_ = kDisconnected;
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << " close:" << ConnectionInfo() << " back";
+  VLOG(GLOG_VTRACE) << " close:" << ConnectionInfo() << " back";
 }
 
 std::string ClientChannel::ConnectionInfo() const {
@@ -133,6 +137,7 @@ void ClientChannel::OnProtocolServiceReady(const RefCodecService& service) {
   state_ = kReady;
   uint32_t heartbeat_ms = 0;
   VLOG(GLOG_VTRACE) << __FUNCTION__ << ConnectionInfo();
+
   if (delegate_) {
     delegate_->OnClientChannelInited(this);
     heartbeat_ms = delegate_->GetClientConfig().heartbeat_ms;

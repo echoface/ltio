@@ -38,8 +38,7 @@ class TcpChannel : public SocketChannel {
 public:
   static TCPChannelPtr Create(int socket_fd,
                               const IPEndPoint& local,
-                              const IPEndPoint& peer,
-                              base::EventPump* pump);
+                              const IPEndPoint& peer);
   ~TcpChannel();
 
   int32_t Send(const char* data, const int32_t len) override;
@@ -47,13 +46,11 @@ public:
 protected:
   TcpChannel(int socket_fd,
              const IPEndPoint& loc,
-             const IPEndPoint& peer,
-             base::EventPump* pump);
+             const IPEndPoint& peer);
 
   bool HandleWrite(base::FdEvent* event) override;
+
   bool HandleRead(base::FdEvent* event) override;
-  // bool HandleError(base::FdEvent* event) override;
-  // bool HandleClose(base::FdEvent* event) override;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(TcpChannel);

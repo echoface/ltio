@@ -35,16 +35,14 @@ namespace net {
 // static
 TCPChannelPtr TcpChannel::Create(int socket_fd,
                                  const IPEndPoint& local,
-                                 const IPEndPoint& peer,
-                                 base::EventPump* pump) {
-  return TCPChannelPtr(new TcpChannel(socket_fd, local, peer, pump));
+                                 const IPEndPoint& peer) {
+  return TCPChannelPtr(new TcpChannel(socket_fd, local, peer));
 }
 
 TcpChannel::TcpChannel(int socket_fd,
                        const IPEndPoint& loc,
-                       const IPEndPoint& peer,
-                       base::EventPump* pump)
-  : SocketChannel(socket_fd, loc, peer, pump) {
+                       const IPEndPoint& peer)
+  : SocketChannel(socket_fd, loc, peer) {
   fd_event_->SetEdgeTrigger(true);
   socketutils::KeepAlive(socket_fd, true);
 }
@@ -96,7 +94,7 @@ bool TcpChannel::HandleRead(base::FdEvent* event) {
 
 bool TcpChannel::HandleWrite(base::FdEvent* event) {
   int fatal_err = 0;
-  int socket_fd = fd_event_->fd();
+  int socket_fd = fd_event_->GetFd();
 
   while (out_buffer_.CanReadSize()) {
     ssize_t writen_bytes = socketutils::Write(socket_fd, out_buffer_.GetRead(),
@@ -138,9 +136,7 @@ int32_t TcpChannel::Send(const char* data, const int32_t len) {
   if (out_buffer_.CanReadSize() > 0) {
     out_buffer_.WriteRawData(data, len);
 
-    if (!fd_event_->IsWriteEnable()) {
-      fd_event_->EnableWriting();
-    }
+    fd_event_->EnableWriting();
     return 0;  // all write to buffer, zero write to fd
   }
 
@@ -150,7 +146,7 @@ int32_t TcpChannel::Send(const char* data, const int32_t len) {
 
   do {
     ssize_t part_write =
-        socketutils::Write(fd_event_->fd(), data + n_write, n_remain);
+        socketutils::Write(fd_event_->GetFd(), data + n_write, n_remain);
 
     if (part_write < 0) {
       if (errno == EAGAIN) {
@@ -162,9 +158,7 @@ int32_t TcpChannel::Send(const char* data, const int32_t len) {
         fatal_err = errno;
         schedule_shutdown_ = true;
         SetChannelStatus(Status::CLOSING);
-        if (!fd_event_->IsWriteEnable()) {
-          fd_event_->EnableWriting();
-        }
+        fd_event_->EnableWriting();
         LOG(ERROR) << ChannelInfo() << " send err:" << base::StrError()
                    << " schedule close";
       }

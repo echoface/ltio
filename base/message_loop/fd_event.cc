@@ -49,6 +49,7 @@ void FdEvent::EnableReading() {
     return;
   }
   events_ |= LtEv::LT_EVENT_READ;
+
   notify_watcher();
 }
 
@@ -57,6 +58,7 @@ void FdEvent::EnableWriting() {
     return;
   }
   events_ |= LtEv::LT_EVENT_WRITE;
+
   notify_watcher();
 }
 
@@ -70,6 +72,7 @@ void FdEvent::DisableReading() {
 void FdEvent::DisableWriting() {
   if (!IsWriteEnable())
     return;
+
   events_ &= ~LtEv::LT_EVENT_WRITE;
   notify_watcher();
 }
@@ -108,7 +111,7 @@ void FdEvent::HandleEvent(LtEvent mask) {
 
 std::string FdEvent::EventInfo() const {
   std::ostringstream oss;
-  oss << " [fd:" << fd() << ", watch:" << events2string(events_) << "]";
+  oss << " [fd:" << fd_ << ", watch:" << events2string(events_) << "]";
   return oss.str();
 }
 

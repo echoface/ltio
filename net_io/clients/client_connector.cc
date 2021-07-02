@@ -80,7 +80,7 @@ void Connector::Launch(const IPEndPoint& address) {
       inprogress_list_.push_back(fd_event);
       count_.store(inprogress_list_.size());
       VLOG(GLOG_VTRACE) << __FUNCTION__
-                        << " add new EINPROGRESS fd:" << fd_event->fd();
+                        << " add new EINPROGRESS fd:" << fd_event->GetFd();
 
     } break;
     default: {

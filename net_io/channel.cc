@@ -34,10 +34,16 @@ namespace net {
 
 SocketChannel::SocketChannel(int socket_fd,
                              const IPEndPoint& loc,
-                             const IPEndPoint& peer,
-                             base::EventPump* pump)
-  : name_(loc.ToString()), pump_(pump), local_ep_(loc), remote_ep_(peer) {
+                             const IPEndPoint& peer)
+  : name_(loc.ToString()),
+    local_ep_(loc),
+    remote_ep_(peer) {
   fd_event_ = FdEvent::Create(this, socket_fd, base::LtEv::LT_EVENT_NONE);
+}
+
+void SocketChannel::SetIOEventPump(base::EventPump* pump) {
+  VLOG(GLOG_VTRACE) << "set pump:" << pump << ", id:" << pump->LoopID();
+  pump_ = pump;
 }
 
 void SocketChannel::SetReciever(SocketChannel::Reciever* rec) {
@@ -80,7 +86,7 @@ bool SocketChannel::TryFlush() {
 }
 
 bool SocketChannel::HandleError(base::FdEvent* event) {
-  int err = socketutils::GetSocketError(fd_event_->fd());
+  int err = socketutils::GetSocketError(fd_event_->GetFd());
   VLOG(GLOG_VERROR) << "socket error:" << base::StrError(err);
   return HandleClose(event);
 }
@@ -111,7 +117,7 @@ void SocketChannel::close_channel() {
 }
 
 int32_t SocketChannel::binded_fd() const {
-  return fd_event_ ? fd_event_->fd() : -1;
+  return fd_event_ ? fd_event_->GetFd() : -1;
 }
 
 std::string SocketChannel::local_name() const {

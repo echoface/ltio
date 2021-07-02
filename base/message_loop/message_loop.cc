@@ -151,23 +151,23 @@ bool MessageLoop::HandleRead(FdEvent* fd_event) {
     RunCommandTask(ScheduledTaskType::TaskTypeCtrl);
 
   } else {
-    LOG(ERROR) << __func__ << " should not reached";
+    LOG(ERROR) << " should not reached";
   }
   return true;
 }
 
 bool MessageLoop::HandleWrite(FdEvent* fd_event) {
-  LOG(ERROR) << __func__ << " should not reached";
+  LOG(ERROR) << " should not reached";
   return true;
 }
 
 bool MessageLoop::HandleError(FdEvent* fd_event) {
-  LOG(ERROR) << __func__ << " error event, fd" << fd_event->fd();
+  LOG(ERROR) << " error event, fd" << fd_event->GetFd();
   return true;
 }
 
 bool MessageLoop::HandleClose(FdEvent* fd_event) {
-  LOG(ERROR) << __func__ << " close event, fd" << fd_event->fd();
+  LOG(ERROR) << " close event, fd" << fd_event->GetFd();
   return true;
 }
 

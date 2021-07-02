@@ -31,16 +31,23 @@ namespace net {
 
 class SocketAcceptor : public base::FdEvent::Handler {
 public:
-  SocketAcceptor(base::EventPump*, const IPEndPoint&);
+  class Actor {
+  public:
+    virtual bool AutoRestart() {return true;}
+    virtual void OnFatalError() {CHECK(false);}
+    virtual void OnNewConnection(int /*fd*/, const IPEndPoint&) = 0;
+  };
+public:
+  SocketAcceptor(Actor*, base::EventPump* pump, const IPEndPoint&);
   ~SocketAcceptor();
 
   bool StartListen();
+
   void StopListen();
+
   bool IsListening() { return listening_; }
 
-  void SetNewConnectionCallback(const NewConnectionCallback& cb);
   const IPEndPoint& ListeningAddress() const { return address_; };
-
 private:
   bool InitListener();
   // override from FdEvent::Handler
@@ -52,9 +59,9 @@ private:
   bool listening_;
   IPEndPoint address_;
 
+  Actor* handler_;
   base::EventPump* event_pump_;
   base::RefFdEvent socket_event_;
-  NewConnectionCallback new_conn_callback_;
   DISALLOW_COPY_AND_ASSIGN(SocketAcceptor);
 };
 

@@ -21,10 +21,9 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-#include <base/message_loop/message_loop.h>
-#include <net_io/tcp_channel.h>
-#include <net_io/tcp_channel_ssl.h>
+#include "base/message_loop/message_loop.h"
 #include "glog/logging.h"
+#include "net_io/channel.h"
 
 namespace lt {
 namespace net {
@@ -45,6 +44,10 @@ void CodecService::BindSocket(SocketChannelPtr&& channel) {
   channel_->SetReciever(this);
 }
 
+base::EventPump* CodecService::Pump() const {
+  return binded_loop_->Pump();;
+}
+
 bool CodecService::IsConnected() const {
   return channel_ ? channel_->IsConnected() : false;
 }
@@ -59,10 +62,10 @@ void CodecService::CloseService(bool block_callback) {
 
   BeforeCloseService();
 
-  if (!block_callback) {
-    return channel_->ShutdownChannel(false);
+  if (block_callback) {
+    return channel_->ShutdownWithoutNotify();
   }
-  return channel_->ShutdownWithoutNotify();
+  return channel_->ShutdownChannel(false);
 }
 
 void CodecService::SetIsServerSide(bool server_side) {

@@ -19,20 +19,23 @@
 #define _NET_IO_SERVICE_H_H
 
 #include <atomic>
-#include <unordered_map>
 #include <unordered_set>
+
 #include "base/ip_endpoint.h"
-#include "base/message_loop/message_loop.h"
 #include "codec/codec_message.h"
 #include "codec/codec_service.h"
-#include "dispatcher/workload_dispatcher.h"
 #include "net_callback.h"
 #include "socket_acceptor.h"
+
+#ifdef LTIO_HAVE_SSL
+#include "base/crypto/lt_ssl.h"
+#endif
 
 namespace lt {
 namespace net {
 
 class IOService;
+
 /* IOserviceDelegate Provide the some notify to its owner and got the IOWork
  * loop for IO*/
 class IOServiceDelegate {
@@ -53,12 +56,17 @@ public:
   virtual void IOServiceStoped(const IOService* ioservice){};
 
   virtual void OnRequestMessage(const RefCodecMessage& request) = 0;
+
+#ifdef LTIO_HAVE_SSL //server should provider this
+  virtual base::SSLCtx* GetSSLContext() {return nullptr;}
+#endif
 };
 
 /* Every IOService own a acceptor and listing on a adress,
  * handle incomming connection from acceptor and manager
  * them on working-messageloop */
 class IOService : public EnableShared(IOService),
+                  public SocketAcceptor::Actor,
                   public CodecService::Delegate {
 public:
   /* Must Construct in ownerloop, why? bz we want all io level is clear and tiny
@@ -74,19 +82,17 @@ public:
 
   ~IOService();
 
-  void StartIOService();
-  void StopIOService();
+  void Start();
+  void Stop();
 
-  base::MessageLoop* AcceptorLoop() { return accept_loop_; }
+  base::MessageLoop* AcceptorLoop() { return acpt_io_; }
   const std::string& IOServiceName() const { return service_name_; }
   bool IsRunning() { return acceptor_ && acceptor_->IsListening(); }
 
 private:
-  void StartInternal();
-
   // void HandleProtoMessage(RefCodecMessage message);
   /* create a new connection channel */
-  void OnNewConnection(int, const IPEndPoint&);
+  void OnNewConnection(int, const IPEndPoint&) override;
 
   // override from CodecService::Delegate to manager[remove] from managed list
   void OnCodecMessage(const RefCodecMessage& message) override;
@@ -95,11 +101,13 @@ private:
   void StoreProtocolService(const RefCodecService);
   void RemoveProtocolService(const RefCodecService);
 
+  RefCodecService CreateCodeService(int fd, const IPEndPoint& ep);
+
   // bool as_dispatcher_;
   std::string protocol_;
 
   SocketAcceptorPtr acceptor_;
-  base::MessageLoop* accept_loop_;
+  base::MessageLoop* acpt_io_;
 
   /* interface to owner and handler */
   IOServiceDelegate* delegate_;

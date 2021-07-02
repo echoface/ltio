@@ -70,7 +70,7 @@ void UDPService::StopService() {
   }
   if (!socket_event_)
     return;
-  socketutils::CloseSocket(socket_event_->fd());
+  socketutils::CloseSocket(socket_event_->GetFd());
 }
 
 // override from FdEvent::Handler
@@ -78,7 +78,7 @@ bool UDPService::HandleRead(base::FdEvent* fd_event) {
   do {
     struct mmsghdr* hdr = buffers_.GetMmsghdr();
     int recv_cnt =
-        recvmmsg(fd_event->fd(), hdr, buffers_.Count(), MSG_WAITFORONE, NULL);
+        recvmmsg(fd_event->GetFd(), hdr, buffers_.Count(), MSG_WAITFORONE, NULL);
     if (recv_cnt <= 0) {
       if (errno == EAGAIN || errno == EINTR) {
         break;

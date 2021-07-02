@@ -38,7 +38,24 @@
 #include "net_io/codec/codec_service.h"
 #include "net_io/socket_acceptor.h"
 #include "net_io/socket_utils.h"
-#include "net_io/tcp_channel.h"
+
+#ifdef LTIO_HAVE_SSL
+#include "base/crypto/lt_ssl.h"
+namespace lt {
+namespace net {
+class ClientSSLCtxProvider {
+public:
+  void SetSSLCtx(base::SSLCtx* ctx) { ssl_ctx_ = ctx; };
+  base::SSLCtx* GetClientSSLContext();
+
+protected:
+  void get_ssl_ctx();
+  base::SSLCtx* ssl_ctx_;
+};
+
+}  // namespace net
+}  // namespace lt
+#endif
 
 namespace lt {
 namespace net {
@@ -71,18 +88,27 @@ public:
   virtual void OnAllClientPassiveBroken(const Client* client){};
 };
 
-class Client : public Connector::Delegate, public ClientChannel::Delegate {
+class Client : public Connector::Delegate,
+#ifdef LTIO_HAVE_SSL
+               public ClientSSLCtxProvider,
+#endif
+               public ClientChannel::Delegate {
 public:
   typedef std::vector<RefClientChannel> ClientChannelList;
   typedef std::shared_ptr<ClientChannelList> RefClientChannelList;
 
   Client(base::MessageLoop*, const url::RemoteInfo&);
+
   virtual ~Client();
 
   void Finalize();
+
   void Initialize(const ClientConfig& config);
+
   void SetDelegate(ClientDelegate* delegate);
+
   Client* Use(Interceptor* interceptor);
+
   Client* Use(InterceptArgList interceptors);
 
   template <class T>
@@ -90,6 +116,7 @@ public:
     RefCodecMessage message = std::static_pointer_cast<CodecMessage>(m);
     return (typename T::element_type::ResponseType*)(DoRequest(message));
   }
+
   CodecMessage* DoRequest(RefCodecMessage& message);
 
   bool AsyncDoRequest(RefCodecMessage& req, AsyncCallBack);
@@ -101,21 +128,29 @@ public:
 
   // clientchanneldelegate
   const ClientConfig& GetClientConfig() const override { return config_; }
+
   const url::RemoteInfo& GetRemoteInfo() const override { return remote_info_; }
+
   void OnClientChannelInited(const ClientChannel* channel) override;
-  // only called when passive close, active close won't be notified for
-  // thread-safe reason
+
+  // only called when passive close by peer,
+  // active close won't be notified for thread-safe reason
   void OnClientChannelClosed(const RefClientChannel& channel) override;
+
   void OnRequestGetResponse(const RefCodecMessage&,
                             const RefCodecMessage&) override;
 
   uint64_t ConnectedCount() const;
+
   std::string ClientInfo() const;
+
   std::string RemoteIpPort() const;
 
 private:
   void launch_next_if_need();
+
   uint32_t required_count() const;
+
   /*return a connected and initialized channel*/
   RefClientChannel get_ready_channel();
 
@@ -123,13 +158,12 @@ private:
   base::MessageLoop* next_client_io_loop();
 
   IPEndPoint address_;
+
   const url::RemoteInfo remote_info_;
 
   /* NOTE:
-   * correct:
-   *  client channel born & die
-   * wrong:
-   *  clientchannel's io_loop
+   * A loop manager ClientChannel's lifecycle
+   * not mean the client message io loop
    * */
   base::MessageLoop* work_loop_;
 

@@ -10,3 +10,12 @@ BreakConstructorInitializersBeforeComma: false
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
 
 
+BinPackArguments: false
+BinPackParameters: false
+AllowAllArgumentsOnNextLine: false
+ExperimentalAutoDetectBinPacking: true
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowAllConstructorInitializersOnNextLine: false
+
+
+

@@ -18,6 +18,7 @@
 #include "async_channel.h"
 #include <base/base_constants.h>
 #include <net_io/codec/codec_service.h>
+#include "base/message_loop/message_loop.h"
 
 namespace lt {
 namespace net {
@@ -102,16 +103,16 @@ void AsyncChannel::OnCodecMessage(const RefCodecMessage& res) {
 }
 
 void AsyncChannel::OnProtocolServiceGone(const RefCodecService& service) {
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << service->Channel()->ChannelInfo()
+  VLOG(GLOG_VTRACE) << service->Channel()->ChannelInfo()
                     << " protocol service closed";
   DCHECK(IOLoop()->IsInLoopThread());
+  auto guard = shared_from_this();
 
   for (auto kv : in_progress_) {
     kv.second->SetFailCode(MessageCode::kConnBroken);
     HandleResponse(kv.second, CodecMessage::kNullMessage);
   }
   in_progress_.clear();
-  auto guard = shared_from_this();
   if (delegate_) {
     delegate_->OnClientChannelClosed(guard);
   }
