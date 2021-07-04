@@ -10,43 +10,63 @@ namespace net {
 namespace {
 const int32_t kBlockSize = 2 * 1024;
 
+enum class SSLAction {
+  Close,
+  WaitIO,
+  FastRetry,
+};
+
 // handle openssl error afater ssl operation
 // return value mean wheather should handle close event
 void print_openssl_err() {
   int err;
+  char err_str[256] = {0};
   while ((err = ERR_get_error())) {
-    const char* msg = (const char*)ERR_reason_error_string(err);
-    const char* lib = (const char*)ERR_lib_error_string(err);
-    const char* func = (const char*)ERR_func_error_string(err);
-    LOG(ERROR) << "reason:" << msg << ", lib:" << lib << ", func:" << func;
+    ERR_error_string_n(err, &err_str[0], 256);
+    LOG(ERROR) << "ssl err:" << err_str;
   }
 }
 
-bool handle_openssl_err(base::FdEvent* ev, int err) {
-  bool need_close = false;
-  char err_str[256] = {0};
+SSLAction handle_openssl_err(base::FdEvent* ev, int err) {
+  bool dump_err = false;
+  SSLAction action = SSLAction::Close;
   switch (err) {
     case SSL_ERROR_WANT_READ: {
       ev->EnableReading();
+      action = SSLAction::WaitIO;
     } break;
     case SSL_ERROR_WANT_WRITE: {
       ev->EnableWriting();
+      action = SSLAction::WaitIO;
     } break;
-    case SSL_ERROR_ZERO_RETURN:  // peer close write, can't read anything any
-                                 // more
-      need_close = true;
-      break;
-    case SSL_ERROR_SYSCALL:
-      need_close = (errno != EAGAIN) && (errno != EINTR);
-      break;
+    case SSL_ERROR_ZERO_RETURN: {  // peer close write
+      VLOG(google::GLOG_INFO) << "peer closed" << base::StrError();
+      action = SSLAction::Close;
+    } break;
+    case SSL_ERROR_SYSCALL: {
+      if (errno == EAGAIN) {
+        action = SSLAction::WaitIO;
+      } else if (errno == EINTR) {
+        action = SSLAction::FastRetry;
+      } else {
+        dump_err = true;
+        action = SSLAction::Close;
+      }
+    } break;
     default: {
-      LOG(ERROR) << "openssl lib reason:" << ERR_lib_error_string(err);
-      LOG(ERROR) << "openssl func reason:" << ERR_func_error_string(err);
-      LOG(ERROR) << "openssl reason error:" << ERR_reason_error_string(err);
-      need_close = true;
+      dump_err = true;
+      action = SSLAction::Close;
     } break;
   }
-  return need_close;
+
+  if (dump_err) {
+    char err_str[128] = {0};
+    ERR_error_string_n(err, &err_str[0], 128);
+    LOG(ERROR) << "ssl fatal err:" << err_str << " errno:" << base::StrError();
+    print_openssl_err();
+  }
+  VLOG_IF(google::GLOG_INFO, action == SSLAction::Close) << " ssl ask for close";
+  return action;
 }
 
 }  // namespace
@@ -67,7 +87,7 @@ TCPSSLChannel::TCPSSLChannel(int socket_fd,
 }
 
 TCPSSLChannel::~TCPSSLChannel() {
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << "@" << this << " Gone";
   SSL_free(ssl_);
 }
 
@@ -88,15 +108,13 @@ void TCPSSLChannel::StartChannel() {
 
   // NOTE: this will support auto negotiation when first read
   if (reciever_->IsServerSide()) {
-    LOG(INFO) << "set as acceptor state";
     SSL_set_accept_state(ssl_);
   } else {
-    LOG(INFO) << "set as connect state";
     SSL_set_connect_state(ssl_);
+    OnHandshake(fd_event_.get());
   }
-  // if call SSL_set_accept_state(ssl_); SSL_set_connect_state(ssl_);
-  // OnHandshake here are optional
-  OnHandshake(fd_event_.get());
+  SetChannelStatus(Status::CONNECTED);
+  reciever_->OnChannelReady(this);
 }
 
 int32_t TCPSSLChannel::Send(const char* data, const int32_t len) {
@@ -110,8 +128,7 @@ int32_t TCPSSLChannel::Send(const char* data, const int32_t len) {
 
   size_t n_write = 0;
   size_t n_remain = len;
-
-  bool need_close = false;
+  SSLAction action = SSLAction::WaitIO;
   do {
     int batch_size = std::min(size_t(kBlockSize), n_remain);
 
@@ -121,26 +138,28 @@ int32_t TCPSSLChannel::Send(const char* data, const int32_t len) {
       n_write += ret;
       n_remain = n_remain - ret;
 
+      VLOG(GLOG_VTRACE) << "ssl writer:" << ret << " bytes";
       DCHECK((n_write + n_remain) == size_t(len));
-      continue;
-    }
-    if (errno == EINTR) {
       continue;
     }
 
     int err = SSL_get_error(ssl_, ret);
-    need_close = handle_openssl_err(fd_event_.get(), err);
-    LOG_IF(ERROR, need_close) << "ssl send fatal error, " << ChannelInfo();
+    action = handle_openssl_err(fd_event_.get(), err);
+    if (action == SSLAction::FastRetry) {
+      VLOG(GLOG_VTRACE) << "nintr, fast try again";
+      continue;
+    }
+    LOG_IF(ERROR, action == SSLAction::Close)
+      << "ssl write lib need close, " << ChannelInfo();
     break;
   } while (1);
 
-  if (need_close) {
+  if (action == SSLAction::Close) {
     schedule_shutdown_ = true;
-    SetChannelStatus(Status::CLOSING);
     fd_event_->EnableWriting();
+    SetChannelStatus(Status::CLOSING);
   }
-
-  return need_close ? -1 : n_write;
+  return action == SSLAction::Close ? -1 : n_write;
 }
 
 void TCPSSLChannel::ShutdownChannel(bool half_close) {
@@ -167,53 +186,51 @@ void TCPSSLChannel::ShutdownWithoutNotify() {
 }
 
 bool TCPSSLChannel::OnHandshake(base::FdEvent* event) {
-  LOG(INFO) << __FUNCTION__ << ", enter";
 again:
   ERR_clear_error();
   int ret = SSL_do_handshake(ssl_);
   if (ret > 0) {  // handshake finish
-    handshake_done_ = true;
     SetChannelStatus(Status::CONNECTED);
     reciever_->OnChannelReady(this);
+    VLOG(GLOG_VTRACE) << "ssl finish handshake";
     return true;
   }
-  if (errno == EINTR) {
+  int err = SSL_get_error(ssl_, ret);
+  SSLAction action = handle_openssl_err(event, err);
+  if (action == SSLAction::Close) {
+    VLOG(GLOG_VTRACE) << "ssl failed handshake";
+    return HandleClose(event);
+  } else if (action == SSLAction::FastRetry) {
     goto again;
   }
-  int err = SSL_get_error(ssl_, ret);
-  LOG(INFO) << __FUNCTION__ << ", ret:" << ret << ", err:" << err;
-  bool need_close = handle_openssl_err(event, err);
-  if (need_close) {
-    return HandleClose(event);
-  }
-  print_openssl_err();
+  VLOG(GLOG_VTRACE) << "ssl continue handshake";
   return true;
 }
 
 bool TCPSSLChannel::HandleWrite(base::FdEvent* event) {
-  if (!handshake_done_) {
-    return OnHandshake(event);
-  }
+  VLOG(GLOG_VTRACE) << ChannelInfo() << " handle write";
 
-  bool fatal_err = false;
+  SSLAction action = SSLAction::WaitIO;
   while (out_buffer_.CanReadSize()) {
     ERR_clear_error();
     int batch_size = std::min(uint64_t(kBlockSize), out_buffer_.CanReadSize());
-    ssize_t retv = SSL_write(ssl_, out_buffer_.GetRead(), kBlockSize);
+    ssize_t retv = SSL_write(ssl_, out_buffer_.GetRead(), batch_size);
     if (retv > 0) {
       out_buffer_.Consume(retv);
+      VLOG(GLOG_VTRACE) << ChannelInfo() << " write:" << retv;
       continue;
     }
-    if (errno == EINTR) {
-      continue;
-    }
+
     int err = SSL_get_error(ssl_, retv);
-    fatal_err = handle_openssl_err(event, err);
+    action = handle_openssl_err(event, err);
+    if (action == SSLAction::FastRetry) {
+      continue;
+    }
     break;
   };
+  VLOG(GLOG_VTRACE) << "after write, out buf size:" << out_buffer_.CanReadSize();
 
-  if (fatal_err) {
-    LOG(ERROR) << "ssl write occurs fatal error, " << ChannelInfo();
+  if (action == SSLAction::Close) {
     return HandleClose(event);
   }
 
@@ -229,39 +246,39 @@ bool TCPSSLChannel::HandleWrite(base::FdEvent* event) {
 }
 
 bool TCPSSLChannel::HandleRead(base::FdEvent* event) {
-  if (!handshake_done_) {
-    return OnHandshake(event);
-  }
+  VLOG(GLOG_VTRACE) << ChannelInfo() << " handle read";
 
-  ssize_t bytes_read;
+  int bytes_read;
+  VLOG(GLOG_VTRACE) << "before bytes in buffer:" << in_buffer_.CanReadSize();
 
-  bool need_close = false;
+  SSLAction action = SSLAction::WaitIO;
   do {
     in_buffer_.EnsureWritableSize(kBlockSize);
 
     ERR_clear_error();
-    bytes_read =
-        SSL_read(ssl_, in_buffer_.GetWrite(), in_buffer_.CanWriteSize());
+    bytes_read = SSL_read(ssl_, in_buffer_.GetWrite(), in_buffer_.CanWriteSize());
+    VLOG(GLOG_VTRACE) << "ssl_read ret:" << bytes_read;
     if (bytes_read > 0) {
       in_buffer_.Produce(bytes_read);
       continue;
     }
-    if (errno == EINTR) {
-      continue;
-    }
 
     int err = SSL_get_error(ssl_, bytes_read);
-    need_close = handle_openssl_err(event, err);
-    LOG_IF(ERROR, need_close)
-        << "ssl read occurs fatal error, " << ChannelInfo();
+    action = handle_openssl_err(event, err);
+    if (action == SSLAction::FastRetry) {
+      continue;
+    }
     break;
   } while (1);
+  VLOG(GLOG_VTRACE) << "after read bytes in buffer:" << in_buffer_.CanReadSize();
 
   if (in_buffer_.CanReadSize()) {
+    VLOG(GLOG_VTRACE) << "ssl read size:" << in_buffer_.CanReadSize()
+     << ", content:" << in_buffer_.AsString();
     reciever_->OnDataReceived(this, &in_buffer_);
   }
 
-  if (need_close) {
+  if (action == SSLAction::Close) {
     SetChannelStatus(Status::CLOSING);
     return HandleClose(event);
   }

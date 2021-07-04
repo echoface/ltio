@@ -36,7 +36,9 @@ namespace lt {
 namespace net {
 
 IOBuffer::IOBuffer(uint64_t init_size)
-  : read_index_(0), write_index_(0), data_(init_size) {}
+  : read_index_(0),
+    write_index_(0),
+    data_(init_size) {}
 
 IOBuffer::IOBuffer(const IOBuffer&& r)
   : read_index_(r.read_index_),
@@ -56,7 +58,10 @@ bool IOBuffer::EnsureWritableSize(int64_t len) {
 
   if (int64_t(CanWriteSize() + read_index_) >= len) {
     uint64_t data_size = CanReadSize();
-    std::copy(data_.begin() + read_index_, data_.begin() + write_index_,
+
+    // memcpy ?
+    std::copy(data_.begin() + read_index_,
+              data_.begin() + write_index_,
               data_.begin());
     read_index_ = 0;
     write_index_ = data_size;

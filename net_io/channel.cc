@@ -93,8 +93,7 @@ bool SocketChannel::HandleError(base::FdEvent* event) {
 
 bool SocketChannel::HandleClose(base::FdEvent* event) {
   DCHECK(pump_->IsInLoop());
-  VLOG(GLOG_VTRACE) << "socket close, " << ChannelInfo();
-
+  VLOG(GLOG_VTRACE) << "close socket channel:" << ChannelInfo();
   if (status_ != Status::CLOSED) {
     close_channel();
   }
@@ -130,8 +129,9 @@ std::string SocketChannel::remote_name() const {
 
 std::string SocketChannel::ChannelInfo() const {
   std::ostringstream oss;
-  oss << "[fd:" << binded_fd() << ", this:" << this
-      << ", local:" << local_name() << ", remote:" << remote_name()
+  oss << "[fd:" << binded_fd()
+      << ", local:" << local_name()
+      << ", remote:" << remote_name()
       << ", status:" << StatusAsString() << "]";
   return oss.str();
 }

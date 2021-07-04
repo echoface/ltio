@@ -49,7 +49,6 @@ public:
   base::SSLCtx* GetClientSSLContext();
 
 protected:
-  void get_ssl_ctx();
   base::SSLCtx* ssl_ctx_;
 };
 
@@ -119,7 +118,7 @@ public:
 
   CodecMessage* DoRequest(RefCodecMessage& message);
 
-  bool AsyncDoRequest(RefCodecMessage& req, AsyncCallBack);
+  bool AsyncDoRequest(const RefCodecMessage& req, AsyncCallBack);
 
   // notified from connector
   void OnConnectFailed(uint32_t count) override;

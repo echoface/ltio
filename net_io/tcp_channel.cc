@@ -52,6 +52,7 @@ TcpChannel::~TcpChannel() {
 }
 
 bool TcpChannel::HandleRead(base::FdEvent* event) {
+  VLOG(GLOG_VTRACE) << ChannelInfo() << " handle read";
   int err = 0;
   ssize_t bytes_read;
   bool need_close = false;
@@ -93,6 +94,8 @@ bool TcpChannel::HandleRead(base::FdEvent* event) {
 }
 
 bool TcpChannel::HandleWrite(base::FdEvent* event) {
+  VLOG(GLOG_VTRACE) << ChannelInfo() << " handle write";
+
   int fatal_err = 0;
   int socket_fd = fd_event_->GetFd();
 

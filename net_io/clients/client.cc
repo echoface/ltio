@@ -254,8 +254,8 @@ void Client::OnRequestGetResponse(const RefCodecMessage& request,
   request->GetWorkCtx().resumer_fn();
 }
 
-bool Client::AsyncDoRequest(RefCodecMessage& req, AsyncCallBack callback) {
-  base::MessageLoop* worker = base::MessageLoop::Current();
+bool Client::AsyncDoRequest(const RefCodecMessage& req, AsyncCallBack callback) {
+  base::MessageLoop* worker = next_client_io_loop();
   CHECK(worker);
 
   // IMPORTANT: avoid self holder for capture list

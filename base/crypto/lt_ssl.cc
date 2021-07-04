@@ -14,28 +14,24 @@ std::once_flag lib_init_flag;
 
 void print_openssl_err() {
   int err;
+  char err_str[256] = {0};
   while ((err = ERR_get_error())) {
-    const char* msg = (const char*)ERR_reason_error_string(err);
-    const char* lib = (const char*)ERR_lib_error_string(err);
-    const char* func = (const char*)ERR_func_error_string(err);
-    LOG(ERROR) << "reason:" << msg << ", lib:" << lib << ", func:" << func;
+    ERR_error_string_n(err, &err_str[0], 256);
+    LOG(ERROR) << "ssl err:" << err_str;
   }
 }
 
 void open_ssl_lib_init() {
-#if OPENSSL_VERSION_NUMBER >= 0x10100003L
-  CHECK(OPENSSL_init_ssl(OPENSSL_INIT_LOAD_CONFIG, NULL))
-      << "ssl lib init fail";
-#else
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+  CONF_modules_load(NULL, NULL, 0);
+#elif OPENSSL_VERSION_NUMBER >= 0x0907000L
   OPENSSL_config(NULL);
+#endif
   SSL_library_init();
   SSL_load_error_strings();
-  ERR_load_crypto_strings();
   OpenSSL_add_all_algorithms();
-#endif
-  SSL_load_error_strings();
+
   print_openssl_err();
-  ERR_clear_error();
 }
 
 template <SSLRole role>

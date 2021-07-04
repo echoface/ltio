@@ -47,16 +47,16 @@ static const char kQuit = 1;
 static const int64_t kTaskFdCounter = 1;
 
 namespace {
-  // thread safe
-  thread_local MessageLoop* threadlocal_current_ = NULL;
+// thread safe
+thread_local MessageLoop* threadlocal_current_ = NULL;
 
-  uint64_t generate_loop_id() {
-    static std::atomic<uint64_t> _id = {0};
-    uint64_t next = _id.fetch_add(1);
-    return next == 0 ? _id.fetch_add(1) : next;
-  }
-
+uint64_t generate_loop_id() {
+  static std::atomic<uint64_t> _id = {0};
+  uint64_t next = _id.fetch_add(1);
+  return next == 0 ? _id.fetch_add(1) : next;
 }
+
+}  // namespace
 
 MessageLoop* MessageLoop::Current() {
   return threadlocal_current_;
@@ -91,13 +91,19 @@ private:
   const uint64_t schedule_time_;
 };
 
-//static
+#ifndef LOOP_LOG_DETAIL
+#define LOOP_LOG_DETAIL "MessageLoop@" << this << "[name:" << loop_name_ << "] "
+#endif
+
+// static
 uint64_t MessageLoop::GenLoopID() {
   return generate_loop_id();
 }
 
 MessageLoop::MessageLoop()
-  : running_(0), wakeup_pipe_in_(0), event_pump_(this) {
+  : running_(0),
+    wakeup_pipe_in_(0),
+    event_pump_(this) {
   notify_flag_.clear();
   status_.store(ST_INITING);
 
@@ -122,15 +128,14 @@ MessageLoop::~MessageLoop() {
 
   // first join, others wait util loop end
   if (thread_ptr_ && thread_ptr_->joinable()) {
-    VLOG(GLOG_VINFO) << " join here wait loop end";
+    VLOG(GLOG_VINFO) << LOOP_LOG_DETAIL << "join here";
     thread_ptr_->join();
   }
 
   WaitLoopEnd();
 
   ::close(wakeup_pipe_in_);
-  VLOG(GLOG_VINFO) << "MessageLoop@" << this << "[name:" << loop_name_
-                   << "] Gone";
+  VLOG(GLOG_VINFO) << LOOP_LOG_DETAIL << "Gone";
 }
 
 void MessageLoop::WakeUpIfNeeded() {
@@ -151,23 +156,23 @@ bool MessageLoop::HandleRead(FdEvent* fd_event) {
     RunCommandTask(ScheduledTaskType::TaskTypeCtrl);
 
   } else {
-    LOG(ERROR) << " should not reached";
+    LOG(ERROR) << LOOP_LOG_DETAIL << "should not reached";
   }
   return true;
 }
 
 bool MessageLoop::HandleWrite(FdEvent* fd_event) {
-  LOG(ERROR) << " should not reached";
+  LOG(ERROR) << LOOP_LOG_DETAIL << "should not reached";
   return true;
 }
 
 bool MessageLoop::HandleError(FdEvent* fd_event) {
-  LOG(ERROR) << " error event, fd" << fd_event->GetFd();
+  LOG(ERROR) << LOOP_LOG_DETAIL << "error event, fd:" << fd_event->GetFd();
   return true;
 }
 
 bool MessageLoop::HandleClose(FdEvent* fd_event) {
-  LOG(ERROR) << " close event, fd" << fd_event->GetFd();
+  LOG(ERROR) << LOOP_LOG_DETAIL << "close event, fd:" << fd_event->GetFd();
   return true;
 }
 
@@ -181,14 +186,14 @@ bool MessageLoop::IsInLoopThread() const {
 
 void MessageLoop::Start() {
   if (running_.test_and_set(std::memory_order_acquire)) {
-    LOG(INFO) << "Messageloop [" << LoopName() << "] aready runing...";
+    LOG(INFO) << LOOP_LOG_DETAIL << "aready runing...";
     return;
   }
 
   thread_ptr_.reset(new std::thread(std::bind(&MessageLoop::ThreadMain, this)));
   {
     std::unique_lock<std::mutex> lk(start_stop_lock_);
-    cv_.wait(lk, [this](){return status_.load() == ST_STARTED;});
+    cv_.wait(lk, [this]() { return status_.load() == ST_STARTED; });
   }
 }
 
@@ -202,11 +207,11 @@ void MessageLoop::WaitLoopEnd(int32_t ms) {
     return;
   }
   // can't wait stop in loop thread
-  CHECK(!IsInLoopThread()) << " can't wait @loop thread, "
-    << event_pump_.LoopID() << " current tid:" << EventPump::CurrentThreadLoopID();
+  CHECK(!IsInLoopThread()) << LOOP_LOG_DETAIL << " ID:" << event_pump_.LoopID()
+                           << ", tid:" << EventPump::CurrentThreadLoopID();
   {
     std::unique_lock<std::mutex> lk(start_stop_lock_);
-    cv_.wait(lk, [this](){return status_.load() != ST_STARTED;});
+    cv_.wait(lk, [this]() { return status_.load() != ST_STARTED; });
   }
 }
 
@@ -233,8 +238,7 @@ void MessageLoop::ThreadMain() {
   event_pump_.InstallFdEvent(task_event_.get());
   event_pump_.InstallFdEvent(wakeup_event_.get());
 
-  VLOG(GLOG_VINFO) << "MessageLoop@" << this
-    << "[name:" << loop_name_ << "] Start";
+  VLOG(GLOG_VINFO) << LOOP_LOG_DETAIL << "Start";
 
   event_pump_.Run();
 
@@ -249,14 +253,13 @@ void MessageLoop::ThreadMain() {
   status_.store(ST_STOPED);
   threadlocal_current_ = NULL;
 
-  VLOG(GLOG_VINFO) << "MessageLoop@" << this
-    << "[name:" << loop_name_ << "] End";
+  VLOG(GLOG_VINFO) << LOOP_LOG_DETAIL << "Thread End";
   cv_.notify_all();
 }
 
 bool MessageLoop::PostDelayTask(TaskBasePtr task, uint32_t ms) {
   LOG_IF(ERROR, status_ != ST_STARTED)
-      << "loop not started, loc:" << task->TaskLocation().ToString();
+    << LOOP_LOG_DETAIL << "not started, task:" << task->TaskLocation().ToString();
 
   if (!IsInLoopThread()) {
     return PostTask(
@@ -282,7 +285,7 @@ bool MessageLoop::PendingNestedTask(TaskBasePtr&& task) {
 
 bool MessageLoop::PostTask(TaskBasePtr&& task) {
   LOG_IF(ERROR, status_ != ST_STARTED)
-      << "loop not started, loc:" << task->TaskLocation().ToString();
+    << LOOP_LOG_DETAIL << "not started, task:" << task->TaskLocation().ToString();
 
   if (IsInLoopThread()) {
     return PendingNestedTask(std::move(task));
@@ -348,15 +351,14 @@ void MessageLoop::RunCommandTask(ScheduledTaskType type) {
           QuitLoop();
         } break;
         default: {
-          LOG(ERROR) << " Should Not Reached Here!!!" << int(buf)
-                     << " ret:" << ret;
+          LOG(ERROR) << LOOP_LOG_DETAIL << "should not reached";
           DCHECK(false);
         } break;
       }
     } break;
     default:
       DCHECK(false);
-      LOG(ERROR) << " Should Not Reached Here!!!";
+      LOG(ERROR) << LOOP_LOG_DETAIL << "should not reached";
       break;
   }
 }
@@ -391,5 +393,7 @@ void MessageLoop::SetThreadNativeName() {
     return;
   pthread_setname_np(pthread_self(), loop_name_.c_str());
 }
+
+#undef LOOP_LOG_DETAIL
 
 };  // namespace base

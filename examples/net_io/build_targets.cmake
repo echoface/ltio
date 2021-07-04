@@ -39,3 +39,10 @@ ADD_EXECUTABLE(http_benchmark_server
 TARGET_LINK_LIBRARIES(http_benchmark_server
   ltio
 )
+
+ADD_EXECUTABLE(lt_http_client
+  net_io/lt_http_client.cc
+)
+TARGET_LINK_LIBRARIES(lt_http_client
+  ltio
+)

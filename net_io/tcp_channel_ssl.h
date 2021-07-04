@@ -45,7 +45,6 @@ protected:
   bool HandleRead(base::FdEvent* event) override;
 private:
   bool server_ = true;
-  bool handshake_done_ = false;
 
 #ifdef LTIO_WITH_OPENSSL
   SSLImpl* ssl_;

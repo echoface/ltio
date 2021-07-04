@@ -75,7 +75,7 @@ void CodecService::SetIsServerSide(bool server_side) {
 void CodecService::OnChannelClosed(const SocketChannel* channel) {
   CHECK(channel == channel_.get());
 
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << channel_->ChannelInfo() << " closed";
+  VLOG(GLOG_VTRACE) << channel_->ChannelInfo() << " closed";
   RefCodecService guard = shared_from_this();
 
   AfterChannelClosed();

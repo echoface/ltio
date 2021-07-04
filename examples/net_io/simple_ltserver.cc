@@ -19,6 +19,7 @@
 
 DEFINE_bool(ssl, false, "use ssl");
 base::SSLCtx* server_ssl_ctx = nullptr;
+base::SSLCtx* client_ssl_ctx = nullptr;
 #endif
 
 using namespace lt::net;
@@ -130,13 +131,15 @@ public:
     std::string http_address = base::StrUtil::Concat("http://", FLAGS_http);
 #ifdef LTIO_HAVE_SSL
     if (FLAGS_ssl) {
+      LOG(INFO) << "init ssl use cert:" << FLAGS_cert << ", key:" << FLAGS_key;
       base::SSLCtx::Param param(base::SSLRole::Server);
       param.crt_file = FLAGS_cert;
       param.key_file = FLAGS_key;
       server_ssl_ctx = new base::SSLCtx(param);
       http_address = base::StrUtil::Concat("https://", FLAGS_http);
-      LOG(INFO) << "init ssl server, cert:" << FLAGS_cert
-                << ", key:" << FLAGS_key;
+
+      client_ssl_ctx = new base::SSLCtx(base::SSLRole::Client);
+      client_ssl_ctx->UseCertification(FLAGS_cert, "");
     }
 #endif
 
@@ -208,7 +211,7 @@ public:
     http_client->SetDelegate(this);
     http_client->Initialize(config);
 #ifdef LTIO_HAVE_SSL
-    http_client->SetSSLCtx(nullptr);
+    http_client->SetSSLCtx(client_ssl_ctx);
 #endif
   }
 
@@ -365,7 +368,9 @@ int main(int argc, char* argv[]) {
     http_url = base::StrUtil::Concat("https://", FLAGS_http);
   }
 #endif
-  // app.StartHttpClients(http_url);
+  if (FLAGS_http_client) {
+    app.StartHttpClients(http_url);
+  }
 
   if (FLAGS_raw_client) {
     app.StartRawClient(base::StrUtil::Concat("raw://", FLAGS_raw));

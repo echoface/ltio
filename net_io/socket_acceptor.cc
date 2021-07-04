@@ -57,7 +57,7 @@ bool SocketAcceptor::InitListener() {
 
   int ret = socketutils::BindSocketFd(socket_fd, storage.AsSockAddr());
   if (ret < 0) {
-    LOG(ERROR) << " failed bind, address:" << address_.ToString()
+    LOG(ERROR) << "acceptor failed bind, address:" << address_.ToString()
                << " fd:" << socket_fd;
     socketutils::CloseSocket(socket_fd);
     return false;
@@ -65,7 +65,7 @@ bool SocketAcceptor::InitListener() {
   socket_event_ =
       base::FdEvent::Create(this, socket_fd, base::LtEv::LT_EVENT_NONE);
 
-  VLOG(GLOG_VTRACE) << " init acceptor success, fd:["
+  VLOG(GLOG_VTRACE) << "acceptor init success, fd:["
                     << socket_fd << "] bind to local:[" << address_.ToString()
                     << "]";
   return true;
@@ -76,7 +76,7 @@ bool SocketAcceptor::StartListen() {
   CHECK(event_pump_->IsInLoop());
 
   if (listening_) {
-    LOG(ERROR) << " Aready Listen on:" << address_.ToString();
+    LOG(ERROR) << "already listen on:" << address_.ToString();
     return true;
   }
 
@@ -86,10 +86,10 @@ bool SocketAcceptor::StartListen() {
   if (socketutils::ListenSocket(socket_event_->GetFd()) < 0) {
     socket_event_->DisableAll();
     event_pump_->RemoveFdEvent(socket_event_.get());
-    LOG(ERROR) << " failed listen on" << address_.ToString();
+    LOG(ERROR) << "acceptor failed listen on" << address_.ToString();
     return false;
   }
-  VLOG(GLOG_VINFO) << "start listen on:" << address_.ToString();
+  VLOG(GLOG_VINFO) << "acceptor start listen on:" << address_.ToString();
   listening_ = true;
   return true;
 }
@@ -103,7 +103,7 @@ void SocketAcceptor::StopListen() {
   socket_event_->DisableAll();
 
   listening_ = false;
-  VLOG(GLOG_VINFO) << "stop listen on:" << address_.ToString();
+  VLOG(GLOG_VINFO) << "acceptor stop listen on:" << address_.ToString();
 }
 
 bool SocketAcceptor::HandleRead(base::FdEvent* fd_event) {
@@ -114,26 +114,26 @@ bool SocketAcceptor::HandleRead(base::FdEvent* fd_event) {
                                           &client_socket_in,
                                           &err);
   if (peer_fd < 0) {
-    LOG(ERROR) << " accept failed, err:" << base::StrError(err);
+    LOG(ERROR) << "accept failed, err:" << base::StrError(err);
     return true;
   }
 
   IPEndPoint client_addr;
   client_addr.FromSockAddr(&client_socket_in, sizeof(client_socket_in));
 
-  VLOG(GLOG_VTRACE) << " accept a connection:" << client_addr.ToString();
+  VLOG(GLOG_VTRACE) << "accept a connection:" << client_addr.ToString();
 
   handler_->OnNewConnection(peer_fd, client_addr);
   return true;
 }
 
 bool SocketAcceptor::HandleWrite(base::FdEvent* ev) {
-  LOG(ERROR) << " fd [" << ev->GetFd() << "] write event should not reached";
+  LOG(ERROR) << "fd [" << ev->GetFd() << "] write event should not reached";
   return true;
 }
 
 bool SocketAcceptor::HandleError(base::FdEvent* fd_event) {
-  LOG(ERROR) << " fd [" << fd_event->GetFd() << "] error:[" << base::StrError()
+  LOG(ERROR) << "fd [" << fd_event->GetFd() << "] error:[" << base::StrError()
              << "]";
 
   listening_ = false;
@@ -142,7 +142,7 @@ bool SocketAcceptor::HandleError(base::FdEvent* fd_event) {
   if (InitListener()) {
     bool re_listen_ok = StartListen();
     LOG_IF(ERROR, !re_listen_ok)
-        << " acceptor:[" << address_.ToString() << "] re-listen failed";
+        << "acceptor:[" << address_.ToString() << "] re-listen failed";
   }
   return false;
 }

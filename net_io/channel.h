@@ -52,7 +52,7 @@ public:
   } Reciever;
 
 public:
-  virtual ~SocketChannel() { CHECK(status_ == Status::CLOSED); }
+  virtual ~SocketChannel() { CHECK(status_ != Status::CONNECTED);}
 
   virtual void StartChannel();
 

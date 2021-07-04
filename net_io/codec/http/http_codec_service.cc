@@ -59,7 +59,9 @@ http_parser_settings HttpCodecService::res_parser_settings_ = {
 };
 
 HttpCodecService::HttpCodecService(base::MessageLoop* loop)
-  : CodecService(loop), request_context_(nullptr), response_context_(nullptr) {
+  : CodecService(loop),
+    request_context_(nullptr),
+    response_context_(nullptr) {
   request_context_ = new ReqParseContext();
   response_context_ = new ResParseContext();
 }
@@ -94,11 +96,10 @@ bool HttpCodecService::ParseHttpRequest(SocketChannel* channel, IOBuffer* buf) {
   const char* buffer_start = (const char*)buf->GetRead();
   http_parser* parser = request_context_->Parser();
 
-  size_t nparsed = http_parser_execute(parser, &req_parser_settings_,
-                                       buffer_start, buffer_size);
-
-  VLOG(GLOG_VTRACE) << __FUNCTION__
-                    << " http_parser_execute consumed size:" << nparsed;
+  size_t nparsed = http_parser_execute(parser,
+                                       &req_parser_settings_,
+                                       buffer_start,
+                                       buffer_size);
   buf->Consume(nparsed);
 
   if (parser->upgrade) {
@@ -110,8 +111,9 @@ bool HttpCodecService::ParseHttpRequest(SocketChannel* channel, IOBuffer* buf) {
 
     return false;
   } else if (nparsed != buffer_size) {
-    LOG(ERROR) << " Parse Occur ERROR, nparsed" << nparsed
-               << " buffer_size:" << buffer_size;
+    VLOG(GLOG_VTRACE) << __FUNCTION__ << ", nparsed:" << nparsed
+                      << ", bufsize:" << buf->CanReadSize()
+                      << ", content:" << buf->AsString();
 
     request_context_->current_.reset();
     channel->Send(HttpConstant::kBadRequest.data(),
@@ -121,8 +123,7 @@ bool HttpCodecService::ParseHttpRequest(SocketChannel* channel, IOBuffer* buf) {
   }
 
   if (!delegate_) {
-    LOG(ERROR) << "No message handler for this http protocol service message, "
-                  "shutdown this channel";
+    LOG(ERROR) << "no reciever handle this message";
     return false;
   }
 
@@ -132,7 +133,7 @@ bool HttpCodecService::ParseHttpRequest(SocketChannel* channel, IOBuffer* buf) {
 
     message->SetIOCtx(shared_from_this());
     CHECK(message->GetMessageType() == MessageType::kRequest);
-    VLOG(GLOG_VTRACE) << " pass message to message reciever"
+    VLOG(GLOG_VTRACE) << "router request to reciever"
                       << channel_->ChannelInfo();
     delegate_->OnCodecMessage(RefCast(CodecMessage, message));
   }
@@ -146,8 +147,10 @@ bool HttpCodecService::ParseHttpResponse(SocketChannel* channel,
   size_t buffer_size = buf->CanReadSize();
   const char* buffer_start = (const char*)buf->GetRead();
   http_parser* parser = response_context_->Parser();
-  size_t nparsed = http_parser_execute(parser, &res_parser_settings_,
-                                       buffer_start, buffer_size);
+  size_t nparsed = http_parser_execute(parser,
+                                       &res_parser_settings_,
+                                       buffer_start,
+                                       buffer_size);
 
   buf->Consume(nparsed);
   if (parser->upgrade) {  // websockt
@@ -231,11 +234,14 @@ bool HttpCodecService::SendRequest(CodecMessage* message) {
   CHECK(message->GetMessageType() == MessageType::kRequest);
 
   auto request = static_cast<HttpRequest*>(message);
+  // last chance manipulate request
   BeforeSendRequest(request);
 
   if (!RequestToBuffer(request, channel_->WriterBuffer())) {
+    LOG(ERROR) << __FUNCTION__ << " failed encode:" << request->Dump();
     return false;
   }
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << ", write request:" << request->Dump();
   return channel_->TryFlush();
 }
 
@@ -250,7 +256,7 @@ bool HttpCodecService::SendResponse(const CodecMessage* req,
     LOG(ERROR) << __FUNCTION__ << " failed encode:" << response->Dump();
     return false;
   }
-  VLOG(GLOG_VINFO) << __FUNCTION__ << " write response:" << response->Dump();
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << " write response:" << response->Dump();
   /* see: https://tools.ietf.org/html/rfc7230#section-6.1
 
    The "close" connection option is defined for a sender to signal that

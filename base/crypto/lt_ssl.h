@@ -3,8 +3,9 @@
 
 #ifdef LTIO_WITH_OPENSSL
 #include <string>
-#include "openssl/err.h"
-#include "openssl/ssl.h"
+#include <openssl/err.h>
+#include <openssl/ssl.h>
+#include <openssl/conf.h>
 
 using SSLImpl = struct ssl_st;
 using SSLCtxImpl = struct ssl_ctx_st;
