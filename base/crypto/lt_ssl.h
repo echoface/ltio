@@ -52,6 +52,10 @@ public:
 
   void SetCtxTimeout(int sec);
 
+  void SetVerifyMode(int mode);
+
+  bool UseVerifyCA(const std::string& ca, const std::string& verify_path);
+
   bool UseCertification(const std::string& cert, const std::string& key);
 private:
   Param param_;

@@ -39,7 +39,7 @@ DEFINE_string(redis,
 
 DEFINE_bool(redis_client, false, "wheather enable redis client");
 DEFINE_bool(raw_client, false, "wheather enable self connected http client");
-DEFINE_bool(http_client, true, "wheather enable self connected raw client");
+DEFINE_bool(http_client, false, "wheather enable self connected raw client");
 DEFINE_int32(loops, 4, "how many loops use for handle message and io");
 
 net::ClientConfig DeafaultClientConfig(int count = 2) {
@@ -139,6 +139,7 @@ public:
       http_address = base::StrUtil::Concat("https://", FLAGS_http);
 
       client_ssl_ctx = new base::SSLCtx(base::SSLRole::Client);
+      client_ssl_ctx->UseVerifyCA(FLAGS_cert, "");
       client_ssl_ctx->UseCertification(FLAGS_cert, "");
     }
 #endif
@@ -207,7 +208,7 @@ public:
         << " server can't be resolve";
 
     http_client = new net::Client(NextIOLoopForClient(), server_info);
-    net::ClientConfig config = DeafaultClientConfig(2);
+    net::ClientConfig config = DeafaultClientConfig(1);
     http_client->SetDelegate(this);
     http_client->Initialize(config);
 #ifdef LTIO_HAVE_SSL

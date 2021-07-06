@@ -52,7 +52,7 @@ public:
   } Reciever;
 
 public:
-  virtual ~SocketChannel() { CHECK(status_ != Status::CONNECTED);}
+  virtual ~SocketChannel();
 
   virtual void StartChannel();
 
@@ -76,7 +76,10 @@ public:
 
   IOBuffer* WriterBuffer() { return &out_buffer_; }
 
+  Status GetStatus() const {return status_;}
+  bool IsClosed() const { return status_ == Status::CLOSED; };
   bool IsConnected() const { return status_ == Status::CONNECTED; };
+  bool IsConnecting() const { return status_ == Status::CONNECTING; };
 
   std::string ChannelInfo() const;
 

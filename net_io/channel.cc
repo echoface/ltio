@@ -41,6 +41,10 @@ SocketChannel::SocketChannel(int socket_fd,
   fd_event_ = FdEvent::Create(this, socket_fd, base::LtEv::LT_EVENT_NONE);
 }
 
+SocketChannel::~SocketChannel() {
+  CHECK(!IsConnected()) << ChannelInfo();
+}
+
 void SocketChannel::SetIOEventPump(base::EventPump* pump) {
   VLOG(GLOG_VTRACE) << "set pump:" << pump << ", id:" << pump->LoopID();
   pump_ = pump;
@@ -75,7 +79,7 @@ void SocketChannel::ShutdownChannel(bool half_close) {
 void SocketChannel::ShutdownWithoutNotify() {
   DCHECK(pump_->IsInLoop());
 
-  if (IsConnected()) {
+  if (!IsClosed()) {
     close_channel();
   }
 }
@@ -94,7 +98,7 @@ bool SocketChannel::HandleError(base::FdEvent* event) {
 bool SocketChannel::HandleClose(base::FdEvent* event) {
   DCHECK(pump_->IsInLoop());
   VLOG(GLOG_VTRACE) << "close socket channel:" << ChannelInfo();
-  if (status_ != Status::CLOSED) {
+  if (!IsClosed()) {
     close_channel();
   }
   reciever_->OnChannelClosed(this);
@@ -129,10 +133,10 @@ std::string SocketChannel::remote_name() const {
 
 std::string SocketChannel::ChannelInfo() const {
   std::ostringstream oss;
-  oss << "[fd:" << binded_fd()
-      << ", local:" << local_name()
-      << ", remote:" << remote_name()
-      << ", status:" << StatusAsString() << "]";
+  oss << "[" << binded_fd()
+      << "@<" << local_name()
+      << "#" << remote_name()
+      << ">" << StatusAsString() << "]";
   return oss.str();
 }
 

@@ -52,7 +52,9 @@ SSLCtx& SSLCtx::DefaultClientCtx() {
   return g_client_ctx.get();
 }
 
-SSLCtx::Param::Param(SSLRole role) : role(role) {}
+SSLCtx::Param::Param(SSLRole role)
+  : role(role),
+    verify_peer(role == SSLRole::Client) {}
 
 SSLCtx::SSLCtx(SSLRole role) : SSLCtx(Param(role)) {}
 
@@ -99,7 +101,8 @@ SSLCtx::SSLCtx(const Param& param) : param_(param) {
   if (param.verify_peer) {
     mode = SSL_VERIFY_PEER;
   }
-  if (mode == SSL_VERIFY_PEER && param.ca_file.empty() &&
+  if (mode == SSL_VERIFY_PEER &&
+      param.ca_file.empty() &&
       param.ca_path.empty()) {
     SSL_CTX_set_default_verify_paths(impl_);
   }
@@ -127,8 +130,29 @@ SSLImpl* SSLCtx::NewSSLSession(int fd) {
   return ssl;
 }
 
+void SSLCtx::SetVerifyMode(int mode) {
+  SSL_CTX_set_verify(impl_, mode, NULL);
+}
+
 void SSLCtx::SetCtxTimeout(int sec) {
   SSL_CTX_set_timeout(impl_, sec);
+}
+
+bool SSLCtx::UseVerifyCA(const std::string& ca_file, const std::string& verify_path) {
+  if (ca_file.empty() && verify_path.empty()) {
+    return false;
+  }
+  const char* _ca_file = ca_file.size() ? ca_file.c_str() : nullptr;
+  const char* _ca_path = verify_path.size() ? ca_file.c_str() : nullptr;
+  if (!SSL_CTX_load_verify_locations(impl_, _ca_file, _ca_path)) {
+    LOG(ERROR) << "ssl ca_file/ca_path failed!"
+      << ", file:" << ca_file << " path:" << verify_path;
+    goto error;
+  }
+  return true;
+error:
+  print_openssl_err();
+  return false;
 }
 
 bool SSLCtx::UseCertification(const std::string& cert, const std::string& key) {

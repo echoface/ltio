@@ -75,7 +75,7 @@ void CoroRunner::CoroutineEntry(void* coro) {
   coroutine->Exit();
 #else
   /* libcoro has the same flow for exit the finished coroutine*/
-  runner.SwapCurrentAndTransferTo(runner.main_coro_);
+  runner.switch_context(runner.main_coro_);
 #endif
 }
 
@@ -107,44 +107,44 @@ void CoroRunner::RegisteAsCoroWorker(MessageLoop* l) {
 
 // static
 bool CoroRunner::Yieldable() {
-  return tls_runner ? (!tls_runner->IsMain()) : false;
+  return tls_runner ? (!tls_runner->in_main_coro()) : false;
 }
 
 // static
 void CoroRunner::Sched(int64_t us) {
-  if (!tls_runner || tls_runner->IsMain()) {
+  if (!tls_runner || tls_runner->in_main_coro()) {
     return;
   }
   Coroutine* coro = tls_runner->current_;
-  if (coro->ElapsedTime() < us || tls_runner->TaskCount() == 0) {
+  if (coro->ElapsedTime() < us || tls_runner->task_count() == 0) {
     return;
   }
   MessageLoop* loop = tls_runner->bind_loop_;
   if (loop->PostTask(NewClosure(MakeResumer()))) {
-    return tls_runner->SwapCurrentAndTransferTo(tls_runner->main_coro_);
+    return tls_runner->switch_context(tls_runner->main_coro_);
   }
 }
 
 // static
 void CoroRunner::Yield() {
   CHECK(Yieldable());
-  tls_runner->SwapCurrentAndTransferTo(tls_runner->main_coro_);
+  tls_runner->switch_context(tls_runner->main_coro_);
 }
 
 // static
 void CoroRunner::Sleep(uint64_t ms) {
   if (!Yieldable()) {
-    DCHECK(false) << "CO_SLEEP only work on coro context";
+    DCHECK(false) << "co_sleep only work on coro context";
     return;
   }
 
   MessageLoop* loop = tls_runner->bind_loop_;
   if (loop->PostDelayTask(NewClosure(MakeResumer()), ms)) {
-    return tls_runner->SwapCurrentAndTransferTo(tls_runner->main_coro_);
+    return tls_runner->switch_context(tls_runner->main_coro_);
   }
 
   std::this_thread::yield();
-  DCHECK(false) << "CO_SLEEP failed, task schedule failed";
+  DCHECK(false) << "co_sleep failed, task schedule failed";
 }
 
 // static
@@ -220,7 +220,7 @@ bool CoroRunner::ContinueRun() {
   // parking this coroutine for next task
   if (parking_coros_.size() < max_parking_count_) {
     parking_coros_.push_back(current_);
-    SwapCurrentAndTransferTo(main_coro_);
+    switch_context(main_coro_);
     return true;
   }
 
@@ -242,11 +242,11 @@ void CoroRunner::Run() {
   coro_tasks_.swap(sched_tasks_);
 
   // P(CoroRunner) take a M(Corotine) do work(TaskBasePtr)
-  while (TaskCount() > 0) {
+  while (task_count() > 0) {
     Coroutine* coro = RetrieveCoroutine();
     DCHECK(coro);
 
-    SwapCurrentAndTransferTo(coro);
+    switch_context(coro);
   }
 
   GcAllCachedCoroutine();
@@ -257,7 +257,7 @@ void CoroRunner::Run() {
  * 如果本身是MainCoro，则直接进行切换.
  * 如果不是在调度的线程里,则调度到目标Loop去Resume*/
 void CoroRunner::Resume(std::weak_ptr<Coroutine>& weak, uint64_t id) {
-  if (bind_loop_->IsInLoopThread() && IsMain()) {
+  if (bind_loop_->IsInLoopThread() && in_main_coro()) {
     return DoResume(weak, id);
   }
   auto f = std::bind(&CoroRunner::DoResume, this, weak, id);
@@ -265,7 +265,7 @@ void CoroRunner::Resume(std::weak_ptr<Coroutine>& weak, uint64_t id) {
 }
 
 void CoroRunner::DoResume(WeakCoroutine& weak, uint64_t id) {
-  DCHECK(IsMain());
+  DCHECK(in_main_coro());
 
   Coroutine* coroutine = nullptr;
   {
@@ -279,18 +279,13 @@ void CoroRunner::DoResume(WeakCoroutine& weak, uint64_t id) {
   if (!coroutine->CanResume(id)) {
     return;
   }
-  return SwapCurrentAndTransferTo(coroutine);
+  return switch_context(coroutine);
 }
 
-void CoroRunner::SwapCurrentAndTransferTo(Coroutine* next) {
-  if (next == current_) {
-    LOG(INFO) << "coro: next_coro == current, do nothing";
-    return std::this_thread::yield();
-  }
+void CoroRunner::switch_context(Coroutine* next) {
+  DCHECK(next != current_) << "bad context switch";
   Coroutine* current = current_;
-
-  VLOG(GLOG_VTRACE) << __func__ << RunnerInfo() << " switch to next:" << next;
-
+  VLOG(GLOG_VTRACE) << current->CoInfo() << " switch to:" << next->CoInfo();
   current_ = next;
   current->TransferTo(next);
 }
@@ -316,14 +311,6 @@ void CoroRunner::GcAllCachedCoroutine() {
     coro->ReleaseSelfHolder();
   }
   cached_gc_coros_.clear();
-}
-
-std::string CoroRunner::RunnerInfo() const {
-  std::ostringstream oss;
-  oss << "[ current:" << current_ << ", wait_id:" << current_->ResumeID()
-      << ", status:" << StateToString(current_->Status())
-      << ", is_main:" << (IsMain() ? "true" : "false") << "] ";
-  return oss.str();
 }
 
 }  // namespace base

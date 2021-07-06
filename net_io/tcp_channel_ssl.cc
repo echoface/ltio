@@ -20,9 +20,9 @@ enum class SSLAction {
 // return value mean wheather should handle close event
 void print_openssl_err() {
   int err;
-  char err_str[256] = {0};
+  char err_str[128] = {0};
   while ((err = ERR_get_error())) {
-    ERR_error_string_n(err, &err_str[0], 256);
+    ERR_error_string_n(err, &err_str[0], arraysize(err_str));
     LOG(ERROR) << "ssl err:" << err_str;
   }
 }
@@ -60,12 +60,10 @@ SSLAction handle_openssl_err(base::FdEvent* ev, int err) {
   }
 
   if (dump_err) {
-    char err_str[128] = {0};
-    ERR_error_string_n(err, &err_str[0], 128);
-    LOG(ERROR) << "ssl fatal err:" << err_str << " errno:" << base::StrError();
+    LOG(ERROR) << "ssl err:" << err << ", errno:" << base::StrError();
     print_openssl_err();
   }
-  VLOG_IF(google::GLOG_INFO, action == SSLAction::Close) << " ssl ask for close";
+  VLOG_IF(google::GLOG_INFO, action == SSLAction::Close) << "ssl ask for close";
   return action;
 }
 
@@ -104,17 +102,15 @@ void TCPSSLChannel::StartChannel() {
   fd_event_->EnableReading();
   pump_->InstallFdEvent(fd_event_.get());
 
-  SetChannelStatus(Status::CONNECTING);
+  SetChannelStatus(Status::CONNECTED);
+  reciever_->OnChannelReady(this);
 
-  // NOTE: this will support auto negotiation when first read
   if (reciever_->IsServerSide()) {
     SSL_set_accept_state(ssl_);
   } else {
     SSL_set_connect_state(ssl_);
-    OnHandshake(fd_event_.get());
   }
-  SetChannelStatus(Status::CONNECTED);
-  reciever_->OnChannelReady(this);
+  OnHandshake(fd_event_.get());
 }
 
 int32_t TCPSSLChannel::Send(const char* data, const int32_t len) {
@@ -162,29 +158,6 @@ int32_t TCPSSLChannel::Send(const char* data, const int32_t len) {
   return action == SSLAction::Close ? -1 : n_write;
 }
 
-void TCPSSLChannel::ShutdownChannel(bool half_close) {
-  DCHECK(pump_->IsInLoop());
-
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
-
-  schedule_shutdown_ = true;
-  if (!half_close) {
-    HandleClose(fd_event_.get());
-    return;
-  }
-
-  if (!fd_event_->IsWriteEnable()) {
-    fd_event_->EnableWriting();
-  }
-}
-
-void TCPSSLChannel::ShutdownWithoutNotify() {
-  DCHECK(pump_->IsInLoop());
-  if (IsConnected()) {
-    close_channel();
-  }
-}
-
 bool TCPSSLChannel::OnHandshake(base::FdEvent* event) {
 again:
   ERR_clear_error();
@@ -197,13 +170,14 @@ again:
   }
   int err = SSL_get_error(ssl_, ret);
   SSLAction action = handle_openssl_err(event, err);
+  VLOG_IF(GLOG_VTRACE, action == SSLAction::Close) << "ssl failed handshake";
+  VLOG_IF(GLOG_VTRACE, action == SSLAction::WaitIO) << "ssl continue handshake";
+
   if (action == SSLAction::Close) {
-    VLOG(GLOG_VTRACE) << "ssl failed handshake";
     return HandleClose(event);
   } else if (action == SSLAction::FastRetry) {
     goto again;
   }
-  VLOG(GLOG_VTRACE) << "ssl continue handshake";
   return true;
 }
 

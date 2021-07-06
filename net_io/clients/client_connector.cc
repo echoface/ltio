@@ -35,13 +35,11 @@ void Connector::Launch(const IPEndPoint& address) {
 
   int sock_fd = socketutils::CreateNoneBlockTCP(address.GetSockAddrFamily());
   if (sock_fd == -1) {
-    LOG(ERROR) << __FUNCTION__ << " connect [" << address.ToString()
-               << "] failed";
+    LOG(ERROR) << "connect [" << address.ToString() << "] failed";
     return delegate_->OnConnectFailed(inprogress_list_.size());
   }
 
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << " connect [" << address.ToString()
-                    << "] enter";
+  VLOG(GLOG_VTRACE) << "connect [" << address.ToString() << "] enter";
 
   SockaddrStorage storage;
   if (address.ToSockAddr(storage.AsSockAddr(), storage.Size()) == 0) {
@@ -51,8 +49,7 @@ void Connector::Launch(const IPEndPoint& address) {
 
   int error = 0;
   int ret = socketutils::SocketConnect(sock_fd, storage.AsSockAddr(), &error);
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << " ret:" << ret
-                    << " error:" << base::StrError(error);
+  VLOG(GLOG_VTRACE) << "ret:" << ret << " error:" << base::StrError(error);
   if (ret == 0 && error == 0) {
     IPEndPoint remote_addr;
     IPEndPoint local_addr;
@@ -63,8 +60,7 @@ void Connector::Launch(const IPEndPoint& address) {
       return delegate_->OnConnectFailed(inprogress_list_.size());
     }
 
-    VLOG(GLOG_VTRACE) << __FUNCTION__ << " " << address.ToString()
-                      << " connected at once";
+    VLOG(GLOG_VTRACE) << address.ToString() << " connected at once";
     return delegate_->OnConnected(sock_fd, local_addr, remote_addr);
   }
 
@@ -79,14 +75,12 @@ void Connector::Launch(const IPEndPoint& address) {
 
       inprogress_list_.push_back(fd_event);
       count_.store(inprogress_list_.size());
-      VLOG(GLOG_VTRACE) << __FUNCTION__
-                        << " add new EINPROGRESS fd:" << fd_event->GetFd();
+      VLOG(GLOG_VTRACE) << "connect inprogress fd:" << fd_event->GetFd();
 
     } break;
     default: {
       socketutils::CloseSocket(sock_fd);
-      LOG(ERROR) << __FUNCTION__
-                 << " launch connection failed:" << base::StrError(error);
+      LOG(ERROR) << "launch connection failed:" << base::StrError(error);
       return delegate_->OnConnectFailed(inprogress_list_.size());
 
     } break;
@@ -94,7 +88,7 @@ void Connector::Launch(const IPEndPoint& address) {
 }
 
 bool Connector::HandleRead(base::FdEvent* fd_event) {
-  LOG(ERROR) << __func__ << " should not reached";
+  LOG(ERROR) << "should not reached";
   return HandleClose(fd_event);
 }
 
@@ -102,13 +96,13 @@ bool Connector::HandleWrite(base::FdEvent* fd_event) {
   int socket_fd = fd_event->GetFd();
 
   if (nullptr == delegate_) {
-    LOG(ERROR) << __func__ << " delegate_ null, endup";
+    LOG(ERROR) << "delegate_ null, endup";
     Cleanup(fd_event);
     return false;
   }
 
   if (socketutils::IsSelfConnect(socket_fd)) {
-    LOG(ERROR) << __func__ << " detect a self connection, endup";
+    LOG(ERROR) << "detect a self connection, endup";
     Cleanup(fd_event);
     delegate_->OnConnectFailed(inprogress_list_.size());
     return false;
@@ -122,7 +116,7 @@ bool Connector::HandleWrite(base::FdEvent* fd_event) {
       !socketutils::GetLocalEndpoint(socket_fd, &local_addr)) {
     Cleanup(fd_event);
     delegate_->OnConnectFailed(inprogress_list_.size());
-    LOG(ERROR) << __func__ << " bad socket fd, connect failed";
+    LOG(ERROR) << "bad socket fd, connect failed";
     return false;
   }
 
@@ -131,7 +125,7 @@ bool Connector::HandleWrite(base::FdEvent* fd_event) {
 }
 
 bool Connector::HandleError(base::FdEvent* fd_event) {
-  LOG(ERROR) << __func__ << " connect fd error";
+  LOG(ERROR) << "connect fd error" << base::StrError();
   Cleanup(fd_event);
 
   if (delegate_) {
@@ -141,7 +135,7 @@ bool Connector::HandleError(base::FdEvent* fd_event) {
 }
 
 bool Connector::HandleClose(base::FdEvent* fd_event) {
-  LOG(ERROR) << __func__ << " connect fd close";
+  LOG(ERROR) << "connect fd close";
   return HandleError(fd_event);
 }
 
@@ -161,7 +155,7 @@ void Connector::Cleanup(base::FdEvent* event) {
   inprogress_list_.remove_if(
       [event](base::RefFdEvent& ev) -> bool { return ev.get() == event; });
   count_.store(inprogress_list_.size());
-  VLOG(GLOG_VINFO) << " connecting list size:" << inprogress_list_.size();
+  VLOG(GLOG_VINFO) << "inprogress size:" << inprogress_list_.size();
 }
 
 }  // namespace net

@@ -41,11 +41,6 @@ public:
   }
 
   ~Coroutine() {
-    VLOG(GLOG_VTRACE) << "coroutine gone!"
-                      << " count:" << SystemCoroutineCount()
-                      << " state:" << StateToString(state_)
-                      << " main:" << (is_main() ? "True" : "False");
-
     aco_destroy(coro_);
     coro_ = nullptr;
 
@@ -55,6 +50,8 @@ public:
       aco_share_stack_destroy(sstk_);
       sstk_ = nullptr;
     }
+    VLOG(GLOG_VTRACE) << "coroutine gone:" << CoInfo();
+    VLOG(GLOG_VTRACE) << "alive coros:" << SystemCoroutineCount();
   }
 
   /*NOTE: this will switch to main coro, be care for call this
@@ -81,12 +78,21 @@ public:
     }
   }
 
+  std::string CoInfo() const {
+    std::ostringstream oss;
+    oss << "[co@" << this << "#" << resume_cnt_ << "#"
+        << StateToString(state_) << "#" << (is_main() ? "c0" : "c") << "]";
+    return oss.str();
+  }
+
 private:
   friend class CoroRunner;
 
   Coroutine() {
     aco_thread_init(NULL);
     coro_ = aco_create(NULL, NULL, 0, NULL, NULL);
+    VLOG(GLOG_VTRACE) << "new coroutine:" << CoInfo();
+    VLOG(GLOG_VTRACE) << "alive coros:" << SystemCoroutineCount();
   }
 
   Coroutine(CoroEntry entry, Coroutine* main_co) {
@@ -96,10 +102,8 @@ private:
 
     coro_counter_.fetch_add(1);
 
-    VLOG(GLOG_VTRACE) << "coroutine born!"
-                      << " count:" << coro_counter_.load()
-                      << " state:" << StateToString(state_)
-                      << " main:" << (is_main() ? "True" : "False");
+    VLOG(GLOG_VTRACE) << "new coroutine:" << CoInfo();
+    VLOG(GLOG_VTRACE) << "alive coros:" << SystemCoroutineCount();
   }
 
   void SelfHolder(RefCoroutine& self) {

@@ -75,6 +75,13 @@ public:
     self_holder_ = self;
   }
 
+  std::string CoInfo() const {
+    std::ostringstream oss;
+    oss << (is_main() ? "[c0@" : "[c@") << this
+      << "#" << resume_cnt_ << "#" << StateToString(state_) << "]";
+    return oss.str();
+  }
+
 private:
   friend class CoroRunner;
 
@@ -86,6 +93,8 @@ private:
       base::SpinLockGuard guard(g_coro_lock);
       coro_create(this, NULL, NULL, NULL, 0);
     }
+    VLOG(GLOG_VTRACE) << "new coroutine:" << CoInfo();
+    VLOG(GLOG_VTRACE) << "alive coros:" << SystemCoroutineCount();
   }
 
   Coroutine(CoroEntry entry, Coroutine* main_co) {
@@ -94,8 +103,7 @@ private:
     stack_.ssze = 0;
     stack_.sptr = nullptr;
     int r = coro_stack_alloc(&stack_, COROUTINE_STACK_SIZE);
-    LOG_IF(ERROR, r == 0) << "Failed Allocate Coroutine Stack";
-    CHECK(r == 1);
+    CHECK(r == 1) << "faild alloc coro stack";
     memset((coro_context*)this, 0, sizeof(coro_context));
     {
       base::SpinLockGuard guard(g_coro_lock);
@@ -103,10 +111,8 @@ private:
     }
     coro_counter_.fetch_add(1);
 
-    VLOG(GLOG_VTRACE) << "coroutine born!"
-                      << " count:" << SystemCoroutineCount()
-                      << " state:" << StateToString(state_)
-                      << " main:" << (is_main() ? "True" : "False");
+    VLOG(GLOG_VTRACE) << "new coroutine:" << CoInfo();
+    VLOG(GLOG_VTRACE) << "alive coros:" << SystemCoroutineCount();
   }
 
   void ReleaseSelfHolder() { self_holder_.reset(); };

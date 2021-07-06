@@ -27,10 +27,6 @@ public:
 
   void StartChannel() override;
 
-  void ShutdownChannel(bool half_close) override;
-
-  void ShutdownWithoutNotify() override;
-
   int32_t Send(const char* data, const int32_t len) override;
 
 protected:

@@ -48,7 +48,8 @@ class CoroRunner : public PersistRunner {
 public:
   typedef struct _go {
     _go(const char* func, const char* file, int line)
-      : location_(func, file, line), target_loop_(_go::loop()) {}
+      : location_(func, file, line),
+        target_loop_(_go::loop()) {}
 
     /* specific a loop for this task*/
     inline _go& operator-(MessageLoop* loop) {
@@ -156,10 +157,6 @@ protected:
    */
   bool ContinueRun();
 
-  size_t TaskCount() const {
-    return coro_tasks_.size() + remote_queue_.size_approx();
-  }
-
   size_t InQueueTaskCount() const { return sched_tasks_.size(); }
 
   size_t NoneRemoteTaskCount() const { return coro_tasks_.size(); }
@@ -176,12 +173,15 @@ protected:
   /* do resume a coroutine from main_coro*/
   void DoResume(WeakCoroutine& coro, uint64_t id);
 
-  bool IsMain() const { return main_coro_ == current_; }
-
+private:
   /* switch call stack from different coroutine*/
-  void SwapCurrentAndTransferTo(Coroutine* next);
+  void switch_context(Coroutine* next);
 
-  std::string RunnerInfo() const;
+  bool in_main_coro() const { return main_coro_ == current_; }
+
+  size_t task_count() const {
+    return coro_tasks_.size() + remote_queue_.size_approx();
+  }
 
 private:
   Coroutine* current_;

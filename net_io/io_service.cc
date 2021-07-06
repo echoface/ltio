@@ -140,11 +140,11 @@ RefCodecService IOService::CreateCodeService(int fd, const IPEndPoint& peer) {
 
 void IOService::OnNewConnection(int fd, const IPEndPoint& peer_addr) {
   CHECK(acpt_io_->IsInLoopThread());
-  VLOG(GLOG_VTRACE) << " connect apply from:" << peer_addr.ToString();
+  VLOG(GLOG_VTRACE) << "setup new connection:" << peer_addr.ToString();
 
   // check connection limit and others
   if (!delegate_->CanCreateNewChannel()) {
-    LOG(INFO) << "Stop accept new connection"
+    LOG(INFO) << "stop accept new connection"
               << ", current has:[" << codecs_.size() << "]";
     return socketutils::CloseSocket(fd);
   }
@@ -155,7 +155,7 @@ void IOService::OnNewConnection(int fd, const IPEndPoint& peer_addr) {
     return;
   }
   StoreProtocolService(codec);
-  VLOG(GLOG_VTRACE) << " Connection from:" << peer_addr.ToString();
+  VLOG(GLOG_VTRACE) << "connection done from:" << peer_addr.ToString();
 }
 
 void IOService::OnCodecMessage(const RefCodecMessage& message) {
@@ -185,7 +185,7 @@ void IOService::RemoveProtocolService(const RefCodecService service) {
   if (codecs_.erase(service)) {
     delegate_->DecreaseChannelCount();
   } else {
-    LOG(ERROR) << " seems has been erase preivously";
+    LOG(ERROR) << "seems has been erase preivously";
   }
 
   if (is_stopping_ && codecs_.empty()) {
