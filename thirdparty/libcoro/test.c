@@ -5,8 +5,7 @@
 coro_context ctx, mainctx;
 struct coro_stack stack;
 
-void coro_body(void *arg)
-{
+void coro_body(void *arg) {
     printf("OK\n");
     coro_transfer(&ctx, &mainctx);
     printf("Back in coro\n");

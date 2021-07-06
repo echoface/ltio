@@ -9,6 +9,7 @@ endif()
 ADD_SUBDIRECTORY(fmt)
 ADD_SUBDIRECTORY(resp)
 ADD_SUBDIRECTORY(hat-trie)
+ADD_SUBDIRECTORY(fcontext)
 
 SET(LT_3RD_SRSC
   #hash

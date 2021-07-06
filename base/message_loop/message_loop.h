@@ -59,6 +59,7 @@ public:
   } ScheduledTaskType;
 
   MessageLoop();
+  MessageLoop(const std::string& name);
   virtual ~MessageLoop();
 
   static uint64_t GenLoopID();
