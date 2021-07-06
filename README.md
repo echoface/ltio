@@ -5,14 +5,14 @@ LigthingIO is a 'light' network IO framework with some `base` impliment for bett
 ## code implemnet
 those implemnet include follow code/component
 
-###base
+### base
 - base code
 - message loop
 - repeat timer
 - lazyinstance
 - coroutine scheduler(a limited G/M/P schedule model with work stealing)
 
-###network io
+### network io
 - reactor model
 - resp/line/raw/http[s]1.x protocol
 - openssl tls socket implement
@@ -21,7 +21,7 @@ those implemnet include follow code/component
 - raw/http[s]/line client with full async/waitable coro
 - async redis protocol[only client side support]
 
-###component
+### component
 - geo utils
 - bloom filter
 - countmin-sketch
@@ -36,9 +36,6 @@ TODO:
 - http2 implement
 - RPC implement(may based on this repo to keep code clear)
 + add sendfile support for zero copy between kernel and user space
-
-###About MessageLoop:
-  like mostly messageloop implement, all PostTask/PostDelayTask/PostTaskWithReply implemented, it's inspired by chromium messageloop code;
 
 
 ## Build And Deploy
@@ -61,6 +58,7 @@ cmake -DWITH_OPENSSL=[ON|OFF]    \
 ```
 
 ## LazyInstance:
+
 ```c++
   //class Foo, only when use to create Foo Object
   static base::LazyInstance<Foo> gFoo = LAZY_INSTANCE_INIT;
@@ -76,7 +74,9 @@ timer.Start(interval_ms, [&]() {
 });
 ```
 
-## TaskLoop
+## TaskLoop[MessageLoop]
+
+like mostly loop implement, all PostTask/PostDelayTask/PostTaskWithReply implemented, it's inspired by chromium messageloop code;
 
 ```c++
 /*
@@ -234,9 +234,12 @@ void coro_fun(std::string tag);
   从我作为一个在一线业务开发多年的菜鸡选手而言, 合理的设计业务比什么都重要; 合理的选择和业务设计, 会让很多所谓的锁和资源共享变得多余; 在听到golang的口号:"不要通过共享内存来通信，而应该通过通信来共享内存"之前,本人基于chromium conenten api做开发和在计算广告设计的这几年的经验教训中对此早已有深深的体会.
 
 ## NET IO:
-
-see `examples/net_io/simple_ltserver.cc examples/net_io/lt_http_client.cc for more detail`
 ---
+
+see `examples/net_io/simple_ltserver.cc examples/net_io/lt_http_client.cc` for more detail
+
+### Benchmark
+
 just run a server with: `./bin/simple_ltserver`
 a more benchable server: `./bin/http_benchmark_server`
 
