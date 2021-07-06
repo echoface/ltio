@@ -16,6 +16,9 @@ set_target_properties(coro
 add_executable(coro_test test.c)
 target_link_libraries (coro_test coro)
 
+add_executable(coro_bench bench.cc)
+target_link_libraries (coro_bench coro)
+
 check_include_files (setjmp.h HAVE_SETJMP_H)
 check_include_files (ucontext.h HAVE_UCONTEXT_H)
 check_symbol_exists (sigaltstack "signal.h" HAVE_SIGALTSTACK)

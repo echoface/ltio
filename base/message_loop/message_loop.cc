@@ -56,6 +56,11 @@ uint64_t generate_loop_id() {
   return next == 0 ? _id.fetch_add(1) : next;
 }
 
+std::string generate_loop_name() {
+  static std::atomic<uint64_t> _id = {0};
+  return "loop@" + std::to_string(_id.fetch_add(1));
+}
+
 }  // namespace
 
 MessageLoop* MessageLoop::Current() {
@@ -95,13 +100,18 @@ private:
 #define LOOP_LOG_DETAIL "MessageLoop@" << this << "[name:" << loop_name_ << "] "
 #endif
 
-// static
+// static for test ut
 uint64_t MessageLoop::GenLoopID() {
   return generate_loop_id();
 }
 
 MessageLoop::MessageLoop()
+  : MessageLoop(generate_loop_name()) {
+}
+
+MessageLoop::MessageLoop(const std::string& name)
   : running_(0),
+    loop_name_(name),
     wakeup_pipe_in_(0),
     event_pump_(this) {
   notify_flag_.clear();
@@ -117,7 +127,6 @@ MessageLoop::MessageLoop()
   task_event_ = FdEvent::Create(this, ev_fd, LtEv::LT_EVENT_READ);
 
   running_.clear();
-
   event_pump_.SetLoopId(GenLoopID());
 }
 
