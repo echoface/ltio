@@ -7,8 +7,7 @@
 // head values appear unique even if an element is re-added.)
 
 template <typename N>
-struct FreeListNode
-{
+struct FreeListNode {
     FreeListNode() : freeListNext(nullptr) { }
 
     std::atomic<N*> freeListNext;
@@ -33,8 +32,7 @@ struct FreeList {
                                              std::memory_order_relaxed));
     }
 
-    inline N* try_get()
-    {
+    inline N* try_get() {
         HeadPtr currentHead = head.load(std::memory_order_acquire);
         HeadPtr newHead;
         while (currentHead.ptr != nullptr) {

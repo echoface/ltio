@@ -25,7 +25,8 @@ namespace base {
 
 // new a timer with spcial runner loop
 RepeatingTimer::RepeatingTimer(MessageLoop* loop)
-  : running_(false), runner_loop_(loop) {
+  : running_(false),
+    runner_loop_(loop) {
   CHECK(runner_loop_);
 }
 
@@ -47,7 +48,7 @@ void RepeatingTimer::Start(uint64_t ms, LtClosure user_task) {
   CHECK(!timeout_event_);
 
   timeout_event_.reset(new TimeoutEvent(ms, true));
-  timeout_event_->InstallTimerHandler(
+  timeout_event_->InstallHandler(
       NewClosure(std::bind(&RepeatingTimer::OnTimeout, this)));
   user_task_ = std::move(user_task);
 
@@ -57,8 +58,10 @@ void RepeatingTimer::Start(uint64_t ms, LtClosure user_task) {
     return runner_loop_->Pump()->AddTimeoutEvent(timeout_event_.get());
   }
 
-  runner_loop_->PostTask(FROM_HERE, &EventPump::AddTimeoutEvent,
-                         runner_loop_->Pump(), timeout_event_.get());
+  runner_loop_->PostTask(FROM_HERE,
+                         &EventPump::AddTimeoutEvent,
+                         runner_loop_->Pump(),
+                         timeout_event_.get());
 }
 
 // reset timeoutevent and reset it
@@ -79,7 +82,8 @@ void RepeatingTimer::Stop() {
         removed = true;
         cv.notify_all();
       },
-      runner_loop_->Pump(), timeout_event_.get());
+      runner_loop_->Pump(),
+      timeout_event_.get());
 
   runner_loop_->PostTask(NewClosure(remover_fn));
 

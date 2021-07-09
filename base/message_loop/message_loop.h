@@ -39,16 +39,21 @@
 
 namespace base {
 
-enum LoopState { ST_INITING = 1, ST_STARTED = 2, ST_STOPED = 3 };
+enum LoopState {ST_STOPED = 0, ST_STARTED = 1};
 
 class MessageLoop;
 class PersistRunner {
 public:
   virtual void Run() = 0;
+
   virtual void LoopGone(MessageLoop* loop){};
+
+  virtual bool HasPeedingTask() const = 0;
+private:
+  LtClosure notifier_;
 };
 
-class MessageLoop : public PumpDelegate, public FdEvent::Handler {
+class MessageLoop : public FdEvent::Handler {
 public:
   static MessageLoop* Current();
 
@@ -59,7 +64,9 @@ public:
   } ScheduledTaskType;
 
   MessageLoop();
+
   MessageLoop(const std::string& name);
+
   virtual ~MessageLoop();
 
   static uint64_t GenLoopID();
@@ -103,64 +110,77 @@ public:
   }
 
   void Start();
+
   bool IsInLoopThread() const;
 
   void WakeUpIfNeeded();
+
+  PersistRunner* DelegateRunner();
+
   void InstallPersistRunner(PersistRunner* runner);
+
   // t: millsecond for giveup cpu for waiting
   void WaitLoopEnd(int32_t t = 1);
+
   void SetLoopName(std::string name);
+
   const std::string& LoopName() const { return loop_name_; }
 
   void QuitLoop();
-  EventPump* Pump() { return &event_pump_; }
 
-  uint64_t PumpTimeout() override;
+  EventPump* Pump() { return &pump_; }
 
 private:
   void ThreadMain();
   void SetThreadNativeName();
 
-  bool PendingNestedTask(TaskBasePtr&& task);
-
   void RunCommandTask(ScheduledTaskType t);
+
+  uint64_t PumpTimeout();
+
+  size_t PendingTasksCount() const;
 
   // nested task: post another task in current loop
   // override from pump for nested task;
-  void RunNestedTask() override;
+  void RunNestedTask();
+
   void RunScheduledTask();
-  void RunTimerClosure(const TimerEventList&) override;
 
   int Notify(int fd, const void* data, size_t count);
 
   bool HandleRead(FdEvent* fd_event) override;
+
   bool HandleWrite(FdEvent* fd_event) override;
+
   bool HandleError(FdEvent* fd_event) override;
+
   bool HandleClose(FdEvent* fd_event) override;
 
 private:
-  std::atomic<int> status_;
-  std::atomic_flag running_;
+  using ThreadPtr = std::unique_ptr<std::thread>;
+
+  bool running_ = false;
+  std::atomic_flag start_flag_;
 
   std::mutex start_stop_lock_;
   std::condition_variable cv_;
 
   std::string loop_name_;
-  std::unique_ptr<std::thread> thread_ptr_;
+  ThreadPtr thread_ptr_;
 
   RefFdEvent task_event_;
   std::atomic_flag notify_flag_;
 
-  ConcurrentTaskQueue scheduled_tasks_;
+  TaskQueue scheduled_tasks_;
   std::vector<TaskBasePtr> in_loop_tasks_;
 
-  std::list<PersistRunner*> persist_runner_;
+  PersistRunner* delegate_runner_ = nullptr;
 
   // pipe just use for loop control
   int wakeup_pipe_in_ = -1;
   RefFdEvent wakeup_event_;
 
-  EventPump event_pump_;
+  EventPump pump_;
   DISALLOW_COPY_AND_ASSIGN(MessageLoop);
 };
 
