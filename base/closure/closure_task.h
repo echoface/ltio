@@ -50,7 +50,8 @@ template <typename Functor>
 class ClosureTask : public TaskBase {
 public:
   explicit ClosureTask(const Location& location, const Functor& closure)
-    : TaskBase(location), closure_task(closure) {}
+    : TaskBase(location),
+      closure_task(closure) {}
   void Run() override {
     try {
       closure_task();
@@ -70,7 +71,9 @@ public:
   TaskWithCleanup(const Location& location,
                   const Closure& closure,
                   const Cleanup& cleanup)
-    : TaskBase(location), closure_task(closure), cleanup_task(cleanup) {}
+    : TaskBase(location),
+      closure_task(closure),
+      cleanup_task(cleanup) {}
   void Run() override {
     try {
       closure_task();
@@ -109,6 +112,6 @@ static TaskBasePtr CreateTaskWithCallback(const Location& location,
 
 #define NewClosure(Functor) ::base::CreateClosure(FROM_HERE, Functor)
 #define NewClosureWithCleanup(Functor, Cleanup) \
-  ::base::CreateClosureWithCallback(Location, Functor, Cleanup)
+  ::base::CreateTaskWithCallback(FROM_HERE, Functor, Cleanup)
 
 #endif

@@ -28,9 +28,6 @@
 #include "fd_event.h"
 #include "io_multiplexer.h"
 #include "timeout_event.h"
-extern "C" {
-#include <thirdparty/timeout/timeout.h>
-}
 
 namespace base {
 
@@ -43,28 +40,19 @@ typedef std::function<void()> QuitClosure;
 typedef std::shared_ptr<FdEvent> RefFdEvent;
 typedef std::vector<TimeoutEvent*> TimerEventList;
 
-class PumpDelegate {
-public:
-  virtual void RunNestedTask(){};
-  virtual uint64_t PumpTimeout() { return 5; };  // ms
-  virtual void RunTimerClosure(const TimerEventList&){};
-};
-
-/* pump fd event and timeout event and pass them to handler by delegate
- * interface*/
+/* EventPump pump ioevent/timerevent from
+ * timeout_wheel or fd event from kernel
+ * */
 class EventPump {
 public:
   EventPump();
-  EventPump(PumpDelegate* d);
-  ~EventPump();
 
-  void Run();
+  ~EventPump();
 
   void PrepareRun();
 
-  bool Running() { return running_; }
-
-  void Quit() { running_ = false; };
+  // run with a timeout in ms
+  void Pump(uint64_t ms = 50);
 
   bool InstallFdEvent(FdEvent* fd_event);
 
@@ -76,9 +64,9 @@ public:
 
   bool IsInLoop() const;
 
-  uint64_t LoopID() const { return loop_id_;}
-
   void SetLoopId(uint64_t id);
+
+  uint64_t LoopID() const { return loop_id_;}
 
   static uint64_t CurrentThreadLoopID();
 protected:
@@ -86,7 +74,7 @@ protected:
    * timeoutevent will be invoke and re shedule if was repeated*/
   void ProcessTimerEvent();
 
-  void InvokeFiredEvent(FiredEvent* start, int count);
+  void InvokeFiredEvent(FiredEvent* evs, int count);
   /* return the minimal timeout for next poll
    * return 0 when has event expired,
    * return default_timeout when no other timeout provided*/
@@ -100,20 +88,18 @@ protected:
   void add_timer_internal(uint64_t now_us, TimeoutEvent* event);
 
 private:
-  PumpDelegate* delegate_;
-  bool running_;
-
   std::unique_ptr<IOMux> io_mux_;
 
 #if 0
   // replace by new timeout_wheel for more effective perfomance [ O(1) ]
-  //TimerTaskQueue timer_queue_;
+  // TimerTaskQueue timer_queue_;
 #endif
-  int32_t max_fds_;
 
   int32_t timestamp_;
 
   uint64_t loop_id_ = 0;
+
+  std::vector<FiredEvent> fired_list_;
 
   TimeoutWheel* timeout_wheel_ = nullptr;
 };

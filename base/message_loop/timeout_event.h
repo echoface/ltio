@@ -35,21 +35,30 @@ public:
   static TimeoutEvent* CreateOneShot(uint64_t ms, bool delelte_after_invoke);
 
   TimeoutEvent(uint64_t ms, bool repeat);
-  ~TimeoutEvent();
+
+  virtual ~TimeoutEvent();
 
   void Invoke();
-  void UpdateInterval(int64_t ms);
-  void InstallTimerHandler(TaskBasePtr&& h);
-  bool IsRepeated() const { return flags & TIMEOUT_INT; }
-  inline bool DelAfterInvoke() const { return del_after_invoke_; }
-  inline bool IsAttached() const { return pending != NULL; }
-  inline uint64_t Interval() const { return interval; }
-  inline uint64_t IntervalMicroSecond() const { return interval * 1000; }
 
+  void UpdateInterval(int64_t ms);
+
+  void InstallHandler(TaskBasePtr&& h);
+
+  TaskBasePtr ExtractHandler();
+
+  bool IsRepeated() const { return flags & TIMEOUT_INT; }
+
+  inline bool DelAfterInvoke() const { return del_after_invoke_; }
+
+  inline bool IsAttached() const { return pending != NULL; }
+
+  inline uint64_t Interval() const { return interval; }
+
+  inline uint64_t IntervalMicroSecond() const { return interval * 1000; }
 private:
-  bool use_coro_ = false;
+  TaskBasePtr handler_;
+
   bool del_after_invoke_ = false;
-  TaskBasePtr timer_handler_;
 };
 
 }  // namespace base

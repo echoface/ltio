@@ -147,7 +147,7 @@ void ClientChannel::OnProtocolServiceReady(const RefCodecService& service) {
     heartbeat_timer_ = new base::TimeoutEvent(heartbeat_ms, true);
 
     auto heartbeat_fun = std::bind(&ClientChannel::OnHearbeatTimerInvoke, this);
-    heartbeat_timer_->InstallTimerHandler(NewClosure(heartbeat_fun));
+    heartbeat_timer_->InstallHandler(NewClosure(heartbeat_fun));
     EventPump()->AddTimeoutEvent(heartbeat_timer_);
   }
 };

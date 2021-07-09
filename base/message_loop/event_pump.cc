@@ -34,17 +34,16 @@ thread_local uint64_t tid_ = 0;  // assign with current run loop
 
 }
 
-EventPump::EventPump() : EventPump(NULL) {}
+//static
+uint64_t EventPump::CurrentThreadLoopID() {
+  return tid_;
+}
 
-EventPump::EventPump(PumpDelegate* d) : delegate_(d), running_(false) {
-  struct rlimit limit;
-  if (0 != getrlimit(RLIMIT_NOFILE, &limit)) {
-    max_fds_ = 65535;
-  } else {
-    max_fds_ = limit.rlim_cur;
-  }
+EventPump::EventPump()
+  : fired_list_(65535) {
+
   InitializeTimeWheel();
-  io_mux_.reset(new base::IOMuxEpoll(max_fds_));
+  io_mux_.reset(new base::IOMuxEpoll());
 }
 
 EventPump::~EventPump() {
@@ -52,35 +51,6 @@ EventPump::~EventPump() {
   if (timeout_wheel_) {
     FinalizeTimeWheel();
   }
-}
-
-void EventPump::PrepareRun() {
-  tid_ = loop_id_;
-  CHECK(loop_id_);
-}
-
-void EventPump::Run() {
-  running_ = true;
-  IgnoreSigPipeSignalOnCurrentThread();
-
-  timeout_t next_timeout = 0;
-  FiredEvent* active_list = new FiredEvent[max_fds_];
-  while (running_) {
-    next_timeout = NextTimeout();
-    int count = io_mux_->WaitingIO(active_list, next_timeout);
-
-    ProcessTimerEvent();
-
-    InvokeFiredEvent(active_list, count);
-
-    if (delegate_) {
-      delegate_->RunNestedTask();
-    }
-    ProcessTimerEvent();
-  }
-  running_ = false;
-  delete[] active_list;
-  FinalizeTimeWheel();
 }
 
 bool EventPump::IsInLoop() const {
@@ -91,43 +61,55 @@ void EventPump::SetLoopId(uint64_t id) {
   loop_id_ = id;
 }
 
-//static
-uint64_t EventPump::CurrentThreadLoopID() {
-  return tid_;
+void EventPump::PrepareRun() {
+  tid_ = loop_id_;
+  CHECK(loop_id_);
+  IgnoreSigPipeSignalOnCurrentThread();
+}
+
+void EventPump::Pump(uint64_t ms) {
+  CHECK(IsInLoop());
+
+  ms = std::min(ms, NextTimeout());
+
+  int count = io_mux_->WaitingIO(fired_list_, ms);
+
+  ProcessTimerEvent();
+
+  InvokeFiredEvent(&fired_list_[0], count);
 }
 
 bool EventPump::InstallFdEvent(FdEvent* fd_event) {
   CHECK(IsInLoop());
-
   if (fd_event->EventWatcher()) {
-    LOG(ERROR) << " event has registered," << fd_event->EventInfo();
+    LOG(ERROR) << "event has registered," << fd_event->EventInfo();
     return false;
   }
-  fd_event->SetFdWatcher(io_mux_.get());
   io_mux_->AddFdEvent(fd_event);
   return true;
 }
 
 bool EventPump::RemoveFdEvent(FdEvent* fd_event) {
   CHECK(IsInLoop());
+
   if (!fd_event->EventWatcher()) {
-    LOG(ERROR) << __FUNCTION__ << " event not been registered, "
+    LOG(ERROR) << "event not been registered, "
                << fd_event->EventInfo();
     return false;
   }
-  fd_event->SetFdWatcher(nullptr);
-
   io_mux_->DelFdEvent(fd_event);
   return true;
 }
 
 void EventPump::AddTimeoutEvent(TimeoutEvent* timeout_ev) {
   CHECK(IsInLoop());
+
   add_timer_internal(time_ms(), timeout_ev);
 }
 
 void EventPump::RemoveTimeoutEvent(TimeoutEvent* timeout_ev) {
   CHECK(IsInLoop());
+
   ::timeouts_del(timeout_wheel_, timeout_ev);
 }
 
@@ -139,21 +121,16 @@ void EventPump::add_timer_internal(uint64_t now, TimeoutEvent* event) {
 void EventPump::ProcessTimerEvent() {
   ::timeouts_update(timeout_wheel_, time_ms());
 
-  std::vector<TimeoutEvent*> to_be_deleted;
-
   Timeout* expired = NULL;
   while (NULL != (expired = timeouts_get(timeout_wheel_))) {
 
     TimeoutEvent* timeout_ev = static_cast<TimeoutEvent*>(expired);
 
-    if (!timeout_ev->IsRepeated() && timeout_ev->DelAfterInvoke()) {
-      to_be_deleted.push_back(timeout_ev);
-    }
     timeout_ev->Invoke();
-  }
 
-  for (auto toe : to_be_deleted) {
-    delete toe;
+    if (!timeout_ev->IsRepeated() && timeout_ev->DelAfterInvoke()) {
+      delete timeout_ev;
+    }
   }
 }
 
@@ -163,7 +140,7 @@ void EventPump::InvokeFiredEvent(FiredEvent* evs, int count) {
     if (fd_event) {
       fd_event->HandleEvent(evs[i].event_mask);
     } else {
-      LOG(ERROR) << __func__ << " event removed by previous handler";
+      LOG(ERROR) << " event removed by previous handler";
     }
     evs[i].reset();
   }
@@ -171,10 +148,6 @@ void EventPump::InvokeFiredEvent(FiredEvent* evs, int count) {
 
 timeout_t EventPump::NextTimeout() {
   static const uint64_t default_timeout_ms = 50;
-
-  if (delegate_ && delegate_->PumpTimeout() == 0) {
-    return 0;
-  }
 
   ::timeouts_update(timeout_wheel_, time_ms());
   if (::timeouts_expired(timeout_wheel_)) {

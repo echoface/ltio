@@ -40,14 +40,18 @@ void TimeoutEvent::UpdateInterval(int64_t ms) {
   interval = ms;
 }
 
-void TimeoutEvent::Invoke() {
-  if (timer_handler_) {
-    timer_handler_->Run();
-  }
+TaskBasePtr TimeoutEvent::ExtractHandler() {
+  return std::move(handler_);
 }
 
-void TimeoutEvent::InstallTimerHandler(TaskBasePtr&& h) {
-  timer_handler_ = std::move(h);
+void TimeoutEvent::InstallHandler(TaskBasePtr&& h) {
+  handler_ = std::move(h);
+}
+
+void TimeoutEvent::Invoke() {
+  if (handler_) {
+    handler_->Run();
+  }
 }
 
 }  // namespace base

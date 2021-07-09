@@ -16,9 +16,9 @@
  */
 
 #include "wait_group.h"
+#include "co_runner.h"
 
 #include <base/message_loop/message_loop.h>
-#include "coroutine_runner.h"
 
 namespace base {
 
@@ -76,9 +76,10 @@ WaitGroup::Result WaitGroup::Wait(int64_t timeout_ms) {
     // case 1: timeout invoke, nothing happend
     // case 2: all task done, timeout event be removed, OnTimeOut never invoked
     auto functor = std::bind(&WaitGroup::OnTimeOut, this);
-    timeout_->InstallTimerHandler(NewClosure(std::move(functor)));
+    timeout_->InstallHandler(NewClosure(std::move(functor)));
     loop_->Pump()->AddTimeoutEvent(timeout_.get());
   }
+
   CO_YIELD;
 
   if (timeout_) {
