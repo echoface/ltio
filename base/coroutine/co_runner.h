@@ -144,15 +144,17 @@ protected:
 #define co_go base::CoroRunner::_go(__FUNCTION__, __FILE__, __LINE__) -
 #define co_sleep(ms) base::CoroRunner::Sleep(ms)
 
-#define __co_wait_here__ base::CoroRunner::Yield();
-#define __co_sched_here__ base::CoroRunner::Sched();
+#define __co_wait_here__ base::CoroRunner::Yield()
+#define __co_sched_here__ base::CoroRunner::Sched()
+#define __co_yielable__ base::CoroRunner::Yieldable()
+#define __co_new_resumer__ base::CoroRunner::MakeResumer()
 
 // sync task in coroutine context
 #define co_sync(func)                                        \
   do {                                                       \
     auto loop = base::MessageLoop::Current();                \
     loop->PostTask(NewClosureWithCleanup(func, CO_RESUMER)); \
-    __co_wait_here__                                         \
+    __co_wait_here__;                                        \
   } while (0)
 
 #define CO_SYNC(func) co_sync(func)

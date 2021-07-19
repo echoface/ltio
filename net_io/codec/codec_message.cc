@@ -37,6 +37,7 @@ CodecMessage::~CodecMessage() {}
 void CodecMessage::SetFailCode(MessageCode reason) {
   fail_code_ = reason;
 }
+
 MessageCode CodecMessage::FailCode() const {
   return fail_code_;
 }

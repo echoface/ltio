@@ -397,6 +397,7 @@ void CoroRunner::Yield() {
   CHECK(Yieldable());
   // add current_ into a linkedlist to tracking
   // system-range coroutine status
+  LOG(INFO) << __FUNCTION__;
   g->SwitchContext(g->main_);
 }
 
