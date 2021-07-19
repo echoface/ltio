@@ -26,6 +26,7 @@ SET(BASE_SOURCES
   #coroutine
   coroutine/co_loop.cc
   coroutine/co_runner.cc
+  coroutine/co_mutex.cc
   coroutine/wait_group.cc
 
   # task eventloop

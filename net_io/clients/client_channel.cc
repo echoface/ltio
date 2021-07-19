@@ -107,9 +107,11 @@ void ClientChannel::OnHearbeatTimerInvoke() {
 bool ClientChannel::HandleResponse(const RefCodecMessage& req,
                                    const RefCodecMessage& res) {
   if (heartbeat_message_.get() == req.get()) {
+    LOG_IF(INFO, !res) << "heartbeat got null response, code:" << req->FailCode();
     heartbeat_message_.reset();
-    LOG_IF(INFO, !res->IsHeartbeat())
-        << "heartbeat message go a none heartbeat response";
+    if (res && !res->IsHeartbeat()) {
+      LOG(ERROR) << "heartbeat message got none heartbeat response";
+    }
     return true;
   }
 

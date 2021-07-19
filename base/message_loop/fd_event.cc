@@ -94,6 +94,7 @@ void FdEvent::HandleEvent(LtEvent mask) {
     }
     if (mask & LtEv::LT_EVENT_WRITE) {
       if (kContinue != handler_->HandleWrite(this)) {
+        break;
       }
     }
     if (mask & LtEv::LT_EVENT_READ) {

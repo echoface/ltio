@@ -11,6 +11,7 @@
 #include <base/memory/scoped_guard.h>
 #include <base/message_loop/message_loop.h>
 #include <base/time/time_utils.h>
+#include "base/coroutine/co_mutex.h"
 
 #include <thirdparty/catch/catch.hpp>
 
@@ -238,7 +239,7 @@ TEST_CASE("coro.Sched", "[coroutine sched]") {
     std::cout << "first task run start" << std::endl;
     auto start = base::time_us();
     while (base::time_us() - start < 1000) {
-      __co_sched_here__
+      __co_sched_here__;
     };
     cnt++;
     std::cout << "first task run end" << std::endl;
@@ -275,3 +276,28 @@ TEST_CASE("coro.resume_twice", "[resume_twice a yield coro]") {
   usleep(5000);
   REQUIRE(cnt == 1);
 }
+
+TEST_CASE("coro.co_lock", "[resume_twice a yield coro]") {
+  FLAGS_v = 25;
+
+  std::vector<base::MessageLoop*> loops;
+  for (int i = 0; i < 10; i++) {
+    loops.push_back(new base::MessageLoop(std::to_string(i)));
+    loops.back()->Start();
+    base::CoroRunner::RegisteRunner(loops.back());
+  }
+
+  int64_t cnt = 0;
+
+  base::CoMutex co_lock;
+  for (int i = 0; i < 1000; i++) {
+    CO_GO [&]() {
+      co_lock.lock();
+      cnt++;
+      co_lock.unlock();
+    };
+  }
+  sleep(1);
+  REQUIRE(cnt == 1000);
+}
+
