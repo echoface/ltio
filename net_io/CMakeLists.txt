@@ -25,8 +25,7 @@ set(LTNET_SOURCE
   codec/line/line_message.cc
   codec/line/line_codec_service.cc
 
-  codec/http/http_request.cc
-  codec/http/http_response.cc
+  codec/http/http_message.cc
   codec/http/http_constants.cc
   codec/http/parser_context.cc
   codec/http/http_codec_service.cc

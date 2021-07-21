@@ -39,8 +39,16 @@ public:
   class Delegate {
   public:
     virtual void OnCodecMessage(const RefCodecMessage& message) = 0;
+
     virtual void OnProtocolServiceReady(const RefCodecService& service){};
+
     virtual void OnProtocolServiceGone(const RefCodecService& service) = 0;
+
+    // protocol upgrade
+    virtual bool UpgradeProtocol(const RefCodecService& service,
+                                 const RefCodecMessage& upgrade_req) {
+      return false;
+    }
 
     // for client side
     virtual const url::RemoteInfo* GetRemoteInfo() const { return NULL; };
@@ -48,6 +56,7 @@ public:
 
 public:
   CodecService(base::MessageLoop* loop);
+
   virtual ~CodecService();
 
   void SetDelegate(Delegate* d);
@@ -67,6 +76,8 @@ public:
   void CloseService(bool block_callback = false);
 
   bool IsConnected() const;
+
+  virtual bool FromUpgrade(RefCodecMessage& req) { return false; };
 
   virtual void BeforeCloseService(){};
 
