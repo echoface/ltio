@@ -69,6 +69,7 @@ HttpCodecService::HttpCodecService(base::MessageLoop* loop)
   : CodecService(loop),
     request_context_(nullptr),
     response_context_(nullptr) {
+
   request_context_ = new ReqParseContext();
   response_context_ = new ResParseContext();
 }
@@ -80,6 +81,26 @@ HttpCodecService::~HttpCodecService() {
 
 bool HttpCodecService::UseSSLChannel() const {
   return protocol_ == "https" ? true : false;
+}
+
+void HttpCodecService::StartProtocolService() {
+  settings_ = {
+    .on_message_begin = &HttpCodecService::OnMessageBegin,
+    .on_url = &HttpCodecService::OnURL,
+    .on_status = &HttpCodecService::OnStatus,
+    .on_header_field = &HttpCodecService::OnHeaderField,
+    .on_header_value = &HttpCodecService::OnHeaderValue,
+    .on_headers_complete = &HttpCodecService::OnHeaderFinish,
+    .on_body = &HttpCodecService::OnMessageBody,
+    .on_message_complete = &HttpCodecService::OnMessageEnd,
+    .on_chunk_header = &HttpCodecService::OnChunkHeader,
+    .on_chunk_complete = &HttpCodecService::OnChunkFinished,
+  };
+
+  parser_.data = this;
+  http_parser_init(&parser_, IsServerSide() ? HTTP_REQUEST : HTTP_RESPONSE);
+
+  CodecService::StartProtocolService();
 }
 
 void HttpCodecService::OnDataFinishSend(const SocketChannel* channel) {}
@@ -107,11 +128,16 @@ bool HttpCodecService::ParseHttpRequest(SocketChannel* channel, IOBuffer* buf) {
                                        &req_parser_settings_,
                                        buffer_start,
                                        buffer_size);
-  buf->Consume(nparsed);
+  if (nparsed > 0) {
+    buf->Consume(nparsed);
+  }
 
   if (parser->upgrade) {
     LOG(ERROR) << " Not Supported Now";
 
+    if (delegate_) {
+      delegate_->UpgradeProtocol(shared_from_this(), nullptr);
+    }
     request_context_->current_.reset();
     channel->Send(HttpConstant::kBadRequest.data(),
                   HttpConstant::kBadRequest.size());
@@ -133,6 +159,7 @@ bool HttpCodecService::ParseHttpRequest(SocketChannel* channel, IOBuffer* buf) {
     LOG(ERROR) << "no reciever handle this message";
     return false;
   }
+
 
   while (request_context_->messages_.size()) {
     RefHttpRequest message = request_context_->messages_.front();
@@ -369,6 +396,68 @@ bool HttpCodecService::BeforeSendResponseMessage(const HttpRequest* request,
     }
   }
   return true;
+}
+
+int HttpCodecService::OnMessageBegin(http_parser* parser) {
+  HttpCodecService* codec = (HttpCodecService*)parser->data;
+
+  codec->half_header.first.clear();
+  codec->half_header.second.clear();
+
+  if (codec->IsServerSide()) {
+    codec->cur_req_ = std::make_shared<HttpRequest>();
+  } else {
+    codec->cur_res_ = std::make_shared<HttpResponse>();
+  }
+  return 0;
+}
+
+int HttpCodecService::OnHeaderFinish(http_parser* parser) {
+  HttpCodecService* codec = (HttpCodecService*)parser->data;
+
+  if (codec->IsServerSide()) {
+    codec->cur_req_->InsertHeader(std::move(codec->half_header));
+  } else {
+    codec->cur_res_->InsertHeader(std::move(codec->half_header));
+  }
+  return 0;
+}
+
+int HttpCodecService::OnMessageEnd(http_parser* parser) {
+  return 0;
+}
+
+int HttpCodecService::OnChunkHeader(http_parser* parser) {
+  return 0;
+}
+
+int HttpCodecService::OnChunkFinished(http_parser* parser) {
+  return 0;
+}
+
+int HttpCodecService::OnURL(http_parser* parser, const char* url, size_t len) {
+  HttpCodecService* codec = (HttpCodecService*)parser->data;
+
+  if (codec->IsServerSide()) {
+    codec->cur_req_->SetRequestURL(url);
+  }
+  return 0;
+}
+
+int HttpCodecService::OnStatus(http_parser* parser, const char* start, size_t len) {
+  return 0;
+}
+
+int HttpCodecService::OnHeaderField(http_parser* parser, const char* field, size_t len) {
+  return 0;
+}
+
+int HttpCodecService::OnHeaderValue(http_parser* parser, const char* value, size_t len) {
+  return 0;
+}
+
+int HttpCodecService::OnMessageBody(http_parser* parser, const char* body, size_t len) {
+  return 0;
 }
 
 }  // namespace net
