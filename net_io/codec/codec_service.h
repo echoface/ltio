@@ -36,19 +36,16 @@ namespace net {
 class CodecService : public EnableShared(CodecService),
                      public SocketChannel::Reciever {
 public:
-  class Delegate {
+  class Handler {
   public:
     virtual void OnCodecMessage(const RefCodecMessage& message) = 0;
+  };
 
-    virtual void OnProtocolServiceReady(const RefCodecService& service){};
+  class Delegate {
+  public:
+    virtual void OnCodecReady(const RefCodecService& service){};
 
-    virtual void OnProtocolServiceGone(const RefCodecService& service) = 0;
-
-    // protocol upgrade
-    virtual bool UpgradeProtocol(const RefCodecService& service,
-                                 const RefCodecMessage& upgrade_req) {
-      return false;
-    }
+    virtual void OnCodecClosed(const RefCodecService& service) = 0;
 
     // for client side
     virtual const url::RemoteInfo* GetRemoteInfo() const { return NULL; };
@@ -59,7 +56,11 @@ public:
 
   virtual ~CodecService();
 
-  void SetDelegate(Delegate* d);
+  void SetDelegate(Delegate* d) {delegate_ = d;}
+
+  Handler* GetHandler() {return handler_;}
+
+  void SetHandler(Handler* handler) {handler_ = handler;}
 
   void SetProtocol(const std::string& protocol) { protocol_ = protocol; };
 
@@ -77,7 +78,7 @@ public:
 
   bool IsConnected() const;
 
-  virtual bool FromUpgrade(RefCodecMessage& req) { return false; };
+  virtual bool FromUpgrade() { return false; };
 
   virtual void BeforeCloseService(){};
 
@@ -99,21 +100,21 @@ public:
     return NULL;
   }
 
+  virtual bool UseSSLChannel() const { return false; };
+
   const std::string& protocol() const { return protocol_; };
 
   void SetIsServerSide(bool server_side);
 
-  virtual bool UseSSLChannel() const { return false; };
-
   bool IsServerSide() const override { return server_side_; }
 
-  inline MessageType InComingType() const {
+  inline MessageType RecievedMessageType() const {
     return server_side_ ? MessageType::kRequest : MessageType::kResponse;
   }
 
 protected:
   // override this do initializing for client side, like set db, auth etc
-  virtual void OnChannelReady(const SocketChannel*) override;
+  void OnChannelReady(const SocketChannel*) override;
 
   void OnChannelClosed(const SocketChannel*) override;
 
@@ -122,6 +123,8 @@ protected:
   std::string protocol_;
 
   SocketChannelPtr channel_;
+
+  Handler* handler_ = nullptr;
 
   Delegate* delegate_ = nullptr;
 

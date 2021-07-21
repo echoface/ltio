@@ -24,6 +24,8 @@ namespace lt {
 namespace net {
 
 struct HttpConstant {
+  static const std::string kRootPath;
+
   static const std::string kCRCN;
   static const std::string kHost;
   static const std::string kBlankSpace;

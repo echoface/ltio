@@ -17,7 +17,7 @@
 
 #include "maglev2.h"
 
-#include "murmurhash/MurmurHash3.h"
+#include "hash/murmurhash3.h"
 
 #define MAGLEVE_USE_128BIT_HASH
 

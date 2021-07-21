@@ -34,10 +34,6 @@ CodecService::~CodecService() {
   VLOG(GLOG_VTRACE) << __func__ << " this@" << this << " gone";
 };
 
-void CodecService::SetDelegate(CodecService::Delegate* d) {
-  delegate_ = d;
-}
-
 void CodecService::BindSocket(SocketChannelPtr&& channel) {
   DCHECK(!channel_.get());
   channel_ = std::move(channel);
@@ -53,7 +49,9 @@ bool CodecService::IsConnected() const {
 }
 
 void CodecService::StartProtocolService() {
+  VLOG(GLOG_VINFO) << __FUNCTION__ << " enter";
   CHECK(binded_loop_->IsInLoopThread());
+
   channel_->StartChannel();
 }
 
@@ -80,12 +78,13 @@ void CodecService::OnChannelClosed(const SocketChannel* channel) {
 
   AfterChannelClosed();
 
-  delegate_->OnProtocolServiceGone(guard);
+  delegate_->OnCodecClosed(guard);
 }
 
 void CodecService::OnChannelReady(const SocketChannel*) {
   RefCodecService guard = shared_from_this();
-  delegate_->OnProtocolServiceReady(guard);
+  VLOG(GLOG_VINFO) << __FUNCTION__ << " enter";
+  delegate_->OnCodecReady(guard);
 }
 
 }  // namespace net

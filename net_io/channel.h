@@ -108,6 +108,9 @@ protected:
 
   virtual bool HandleClose(base::FdEvent* event) override;
 
+  const IPEndPoint& LocalEndpoint() const {return local_ep_;}
+
+  const IPEndPoint& RemoteEndPoint() const {return local_ep_;}
 protected:
   std::string name_;
 
@@ -116,6 +119,7 @@ protected:
   base::RefFdEvent fd_event_;
 
   IPEndPoint local_ep_;
+
   IPEndPoint remote_ep_;
 
   IOBuffer in_buffer_;
@@ -130,6 +134,7 @@ private:
 
   DISALLOW_COPY_AND_ASSIGN(SocketChannel);
 };
+
 using SocketChannelPtr = std::unique_ptr<SocketChannel>;
 
 }  // namespace net

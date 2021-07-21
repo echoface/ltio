@@ -56,4 +56,17 @@ private:
 
 }  // namespace net
 }  // namespace lt
+
+#include "net_io/server/handler_factory.h"
+
+template <typename Functor>
+lt::net::CodecService::Handler* NewHttpHandler(const Functor& func) {
+  return NewHandler<Functor, lt::net::HttpRequestCtx>(func);
+}
+
+template <typename Functor>
+lt::net::CodecService::Handler* NewHttpCoroHandler(const Functor& func) {
+  return NewCoroHandler<Functor, lt::net::HttpRequestCtx>(func);
+}
+
 #endif

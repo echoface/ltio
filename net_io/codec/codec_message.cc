@@ -28,18 +28,22 @@ const RefCodecMessage CodecMessage::kNullMessage;
 
 CodecMessage::CodecMessage(MessageType type)
   : type_(type),
-    fail_code_(kSuccess) {
+    code_(kSuccess) {
   work_context_.loop = NULL;
 }
 
 CodecMessage::~CodecMessage() {}
 
+void CodecMessage::SetTimeout() {
+  code_ = kTimeOut;
+}
+
 void CodecMessage::SetFailCode(MessageCode reason) {
-  fail_code_ = reason;
+  code_ = reason;
 }
 
 MessageCode CodecMessage::FailCode() const {
-  return fail_code_;
+  return code_;
 }
 
 void CodecMessage::SetIOCtx(const RefCodecService& service) {
@@ -59,7 +63,6 @@ void CodecMessage::SetWorkerCtx(base::MessageLoop* loop,
 
 void CodecMessage::SetResponse(const RefCodecMessage& response) {
   response_ = response;
-  responded_ = true;
 }
 
 const char* CodecMessage::TypeAsStr() const {

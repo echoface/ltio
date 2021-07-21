@@ -56,8 +56,8 @@ public:
         if (response) {
           SendResponse(message.get(), response.get());
         }
-      } else if (delegate_) {
-        delegate_->OnCodecMessage(RefCast(CodecMessage, message));
+      } else if (handler_) {
+        handler_->OnCodecMessage(RefCast(CodecMessage, message));
       }
     } while (1);
   }

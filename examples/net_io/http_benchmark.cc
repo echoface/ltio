@@ -14,13 +14,14 @@ using namespace base;
 
 DEFINE_int32(loops, 4, "how many loops use for handle message and io");
 DEFINE_bool(echo, false, "just echo response without any logic");
+DEFINE_bool(coro, false, "using coro context handle request");
 DEFINE_string(http,
               "0.0.0.0:5006",
               "host:port used for http service listen on");
 
-class HttpBenchMarkServer {
+class HttpBenchServer {
 public:
-  ~HttpBenchMarkServer() {
+  ~HttpBenchServer() {
     LOG(INFO) << __func__ << " close app";
     for (auto loop : loops) {
       delete loop;
@@ -40,56 +41,60 @@ public:
       loops.back()->Start();
       CoroRunner::RegisteRunner(loops.back());
     }
-    // ProfilerStart("perf.out");
-    http_server.WithIOLoops(loops)
-        .WithAddress(base::StrUtil::Concat("http://", FLAGS_http))
-        .ServeAddress([this](const RefHttpRequestCtx& context) {
 
-          const HttpRequest* req = context->Request();
-          // TODO: response freelist
-          auto response = HttpResponse::CreateWithCode(200);
-          response->SetKeepAlive(req->IsKeepAlive());
-          if (FLAGS_echo) {
-            response->MutableBody() = "echo";
-          } else {
-            response->InsertHeader("Server", "ltio");
-            auto tm = fmt::gmtime(std::time(nullptr));
-            response->InsertHeader(
-                "Date",
-                fmt::format("{:%a, %d %b %Y %H:%M:%S %Z}", tm));
-            if (req->RequestUrl() == "/plaintext") {
-              response->MutableBody() = "Hello, World!";
-            } else if (req->RequestUrl() == "/json") {
-              response->InsertHeader("Content-Type", "application/json");
-              response->MutableBody() = std::move(json_message.dump());
-            }
-          }
-          return context->Response(response);
-        });
+    auto func = [this](const RefHttpRequestCtx& context) {
+      const HttpRequest* req = context->Request();
+      // TODO: response freelist
+      auto response = HttpResponse::CreateWithCode(200);
+      response->SetKeepAlive(req->IsKeepAlive());
+      if (FLAGS_echo) {
+        response->MutableBody() = "echo";
+      } else {
+        response->InsertHeader("Server", "ltio");
+        auto tm = fmt::gmtime(std::time(nullptr));
+        response->InsertHeader("Date",
+                               fmt::format("{:%a, %d %b %Y %H:%M:%S %Z}", tm));
+        if (req->RequestUrl() == "/plaintext") {
+          response->MutableBody() = "Hello, World!";
+        } else if (req->RequestUrl() == "/json") {
+          response->InsertHeader("Content-Type", "application/json");
+          response->MutableBody() = std::move(json_message.dump());
+        }
+      }
+      return context->Response(response);
+    };
+
+    handler.reset(FLAGS_coro ? NewHttpCoroHandler(func) : NewHttpCoroHandler(func));
+
+    // ProfilerStart("perf.out");
+    wss.WithIOLoops(loops)
+        .WithAddress(base::StrUtil::Concat("http://", FLAGS_http))
+        .ServeAddress(handler.get());
     loops.back()->WaitLoopEnd();
   }
 
   void Stop() {
     CHECK(CO_CANYIELD);
     LOG(INFO) << __FUNCTION__ << " stop enter";
-    http_server.StopServer(CO_RESUMER);
+    wss.StopServer(CO_RESUMER);
     CO_YIELD;
     LOG(INFO) << __FUNCTION__ << " stop leave";
     loops.back()->QuitLoop();
   }
 
-  HttpServer http_server;
-  //HttpCoroServer http_server;
+  HttpServer wss;
+  std::unique_ptr<CodecService::Handler> handler;
+  // HttpCoroServer http_server;
   base::MessageLoop main_loop;
   nlohmann::json json_message;
   std::vector<base::MessageLoop*> loops;
 };
 
-HttpBenchMarkServer app;
+HttpBenchServer app;
 
 void signalHandler(int signum) {
   LOG(INFO) << "sighandler sig:" << signum;
-  CO_GO std::bind(&HttpBenchMarkServer::Stop, &app);
+  CO_GO std::bind(&HttpBenchServer::Stop, &app);
 }
 
 int main(int argc, char* argv[]) {

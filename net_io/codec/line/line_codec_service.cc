@@ -43,7 +43,8 @@ void LineCodecService::OnDataReceived(const SocketChannel*, IOBuffer* buf) {
   }
 
   {
-    std::shared_ptr<LineMessage> msg(new LineMessage(InComingType()));
+    std::shared_ptr<LineMessage> msg(new LineMessage(RecievedMessageType()));
+
     msg->SetIOCtx(shared_from_this());
 
     const char* start = buf->GetRead();
@@ -54,8 +55,8 @@ void LineCodecService::OnDataReceived(const SocketChannel*, IOBuffer* buf) {
 
     buf->Consume(len + 2 /*lenth of /r/n*/);
 
-    if (delegate_) {
-      delegate_->OnCodecMessage(RefCast(CodecMessage, msg));
+    if (handler_) {
+      handler_->OnCodecMessage(RefCast(CodecMessage, msg));
     }
   }
 }

@@ -44,12 +44,12 @@ public:
 
 private:
   AsyncChannel(Delegate*, const RefCodecService&);
-  void OnRequestTimeout(WeakCodecMessage request);
+  void OnRequestTimeout(const WeakCodecMessage& request);
 
   // override protocolServiceDelegate
   void BeforeCloseChannel() override;
   void OnCodecMessage(const RefCodecMessage& res) override;
-  void OnProtocolServiceGone(const RefCodecService& service) override;
+  void OnCodecClosed(const RefCodecService& service) override;
 
 private:
   std::unordered_map<uint64_t, RefCodecMessage> in_progress_;

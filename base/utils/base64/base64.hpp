@@ -115,8 +115,7 @@ std::size_t encode(void* dest, void const* src, std::size_t len) {
 */
 template<class = void>
 std::pair<std::size_t, std::size_t>
-decode(void* dest, char const* src, std::size_t len)
-{
+decode(void* dest, char const* src, std::size_t len) {
     char* out = static_cast<char*>(dest);
     auto in = reinterpret_cast<unsigned char const*>(src);
     unsigned char c3[3], c4[4];
@@ -182,6 +181,6 @@ std::string base64_decode(std::string const& data) {
     return dest;
 }
 
-} //base 
+} //base
 
 #endif

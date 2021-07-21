@@ -33,7 +33,8 @@ class ClientChannel;
 
 REF_TYPEDEFINE(ClientChannel);
 
-class ClientChannel : public CodecService::Delegate {
+class ClientChannel : public CodecService::Handler,
+                      public CodecService::Delegate {
 public:
   class Delegate {
   public:
@@ -75,9 +76,9 @@ public:
   // override from CodecService::Delegate
   const url::RemoteInfo* GetRemoteInfo() const override;
 
-  void OnProtocolServiceGone(const RefCodecService& service) override;
+  void OnCodecClosed(const RefCodecService& service) override;
 
-  void OnProtocolServiceReady(const RefCodecService& service) override;
+  void OnCodecReady(const RefCodecService& service) override;
 
 protected:
   void OnHearbeatTimerInvoke();

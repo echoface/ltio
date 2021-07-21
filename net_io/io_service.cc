@@ -39,17 +39,23 @@ IOService::IOService(const IPEndPoint& addr,
   : protocol_(protocol),
     acpt_io_(ioloop),
     delegate_(delegate),
-    is_stopping_(false) {
+    is_stopping_(false),
+    endpoint_(addr) {
+
   CHECK(delegate_);
 
   auto pump = acpt_io_->Pump();
 
-  service_name_ = addr.ToString();
   acceptor_.reset(new SocketAcceptor(this, pump, addr));
 }
 
 IOService::~IOService() {
   VLOG(GLOG_VTRACE) << " IOService@" << this << " Gone";
+}
+
+IOService& IOService::WithHandler(Handler* h) {
+  handler_ = h;
+  return *this;
 }
 
 void IOService::Start() {
@@ -87,7 +93,7 @@ void IOService::Stop() {
       // stop close notify
       codec->CloseService(true);
 
-      refthis->OnProtocolServiceGone(codec);
+      refthis->OnCodecClosed(codec);
     });
   }
   if (codecs_.empty()) {
@@ -130,6 +136,8 @@ RefCodecService IOService::CreateCodeService(int fd, const IPEndPoint& peer) {
   channel->SetIOEventPump(io_loop->Pump());
 
   codec->SetDelegate(this);
+  codec->SetHandler(handler_);
+
   codec->BindSocket(std::move(channel));
 
   io_loop->PostTask(FROM_HERE, [codec]() {
@@ -158,22 +166,26 @@ void IOService::OnNewConnection(int fd, const IPEndPoint& peer_addr) {
   VLOG(GLOG_VTRACE) << "connection done from:" << peer_addr.ToString();
 }
 
-void IOService::OnCodecMessage(const RefCodecMessage& message) {
-  delegate_->OnRequestMessage(std::move(message));
-}
-
-void IOService::OnProtocolServiceGone(const net::RefCodecService& service) {
+void IOService::OnCodecClosed(const net::RefCodecService& service) {
   // use another task remove a service is a more safe way delete channel&
   // protocol things avoid somewhere->B(do close a channel) ->  ~A  -> use A
   // again in somewhere
   auto guard_this = shared_from_this();
+  delegate_->OnConnectionClose(service);
+
   acpt_io_->PostTask(FROM_HERE, [guard_this, service]() {
     guard_this->RemoveProtocolService(service);
   });
 }
 
+void IOService::OnCodecReady(const RefCodecService& service) {
+  VLOG(GLOG_VINFO) << "codec:" << service.get() << " ready";
+  delegate_->OnConnectionOpen(service);
+}
+
 void IOService::StoreProtocolService(const RefCodecService service) {
   CHECK(acpt_io_->IsInLoopThread());
+  VLOG(GLOG_VINFO) << "codec:" << service.get() << " added";
 
   codecs_.insert(service);
   delegate_->IncreaseChannelCount();

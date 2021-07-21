@@ -4,7 +4,7 @@
 #include <math.h>
 #include <string.h>
 #include <iostream>
-#include "thirdparty/murmurhash/MurmurHash3.h"
+#include "hash/murmurhash3.h"
 
 namespace component {
 /*

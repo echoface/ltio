@@ -6,7 +6,7 @@
 #include <atomic>
 #include <iostream>
 #include "glog/logging.h"
-#include "thirdparty/murmurhash/MurmurHash3.h"
+#include "hash/murmurhash3.h"
 
 #include <net_io/clients/router/client_router.h>
 #include <net_io/clients/router/hash_router.h>

@@ -21,6 +21,7 @@
 #include "line/line_codec_service.h"
 #include "raw/raw_codec_service.h"
 #include "redis/resp_codec_service.h"
+#include "websocket/ws_codec_service.h"
 
 #include <base/memory/lazy_instance.h>
 
@@ -104,6 +105,16 @@ void CodecFactory::InitInnerDefault() {
   creators_.insert(
       std::make_pair("redis", [](base::MessageLoop* loop) -> RefCodecService {
         std::shared_ptr<RespCodecService> service(new RespCodecService(loop));
+        return std::static_pointer_cast<CodecService>(service);
+      }));
+  creators_.insert(
+      std::make_pair("ws", [](base::MessageLoop* loop) -> RefCodecService {
+        std::shared_ptr<CodecService> service(new WSCodecService(loop));
+        return std::static_pointer_cast<CodecService>(service);
+      }));
+  creators_.insert(
+      std::make_pair("wss", [](base::MessageLoop* loop) -> RefCodecService {
+        std::shared_ptr<CodecService> service(new WSCodecService(loop));
         return std::static_pointer_cast<CodecService>(service);
       }));
 }

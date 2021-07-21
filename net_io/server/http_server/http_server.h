@@ -41,9 +41,9 @@ struct NoneHttpCoroServerTraits {
   static const uint64_t kRequestQpsLimit = 100000;
 };
 
-using HttpCoroServer = BaseServer<HttpRequestCtx, DefaultConfigurator>;
+using HttpCoroServer = BaseServer<DefaultConfigurator>;
 
-using HttpServer = BaseServer<HttpRequestCtx, NoneHttpCoroServerTraits>;
+using HttpServer = BaseServer<NoneHttpCoroServerTraits>;
 
 }  // namespace net
 }  // namespace lt

@@ -33,6 +33,18 @@ typedef std::shared_ptr<HttpResponse> RefHttpResponse;
 
 typedef std::map<std::string, std::string> KeyValMap;
 
+using string_view = nonstd::string_view;
+
+struct URIView {
+  bool err = false;
+
+  string_view path;
+
+  string_view queries;
+
+  string_view fragment;
+};
+
 class HttpMessage {
 public:
   HttpMessage();
@@ -42,13 +54,15 @@ public:
 
   const std::string& Body() const {return body_;}
 
+  void SetBody(std::string&& body);
+
+  void SetBody(const std::string& body);
+
   void SetBody(const char* body);
 
   void SetBody(const char* body, size_t len);
 
-  void SetBody(const std::string& body);
-
-  void SetBody(const std::string&& body);
+  void AppendBody(const char* data, size_t len);
 
   bool IsKeepAlive() const {return keepalive_;};
 
@@ -58,9 +72,9 @@ public:
 
   const KeyValMap& Headers() const {return headers_;}
 
-  bool HasHeaderField(const char* f) const;
+  bool HasHeader(const char* f) const;
 
-  bool HasHeaderField(const std::string&) const;
+  bool HasHeader(const std::string&) const;
 
   void InsertHeader(const std::string&, const std::string&);
 
@@ -68,12 +82,20 @@ public:
 
   void InsertHeader(const std::pair<std::string, std::string>&& kv);
 
+  bool RemoveHeader(const std::string& field) {
+    return headers_.erase(field);
+  }
+
+  const std::string& Header(const std::string& field) const {
+    return GetHeader(field);
+  }
   const std::string& GetHeader(const std::string&) const;
 
   int VersionMajor() const { return http_major_; }
 
   int VersionMinor() const { return http_minor_; }
 protected:
+
   bool keepalive_ = false;
   uint8_t http_major_ = 1;
   uint8_t http_minor_ = 1;
@@ -94,11 +116,17 @@ public:
 
   const std::string& Method() const;
 
+  // format: /path/abc?k=v&k=v&k=#fragment URLBuilder
   void SetRequestURL(const char* url);
 
+  // format: /path/abc?k=v&k=v&k=#fragment URLBuilder
   void SetRequestURL(const std::string&);
 
+  void AppendPartURL(const char* d, size_t len);
+
   const std::string& RequestUrl() const;
+
+  const string_view Path() const {return url_view_.path;}
 
   KeyValMap& MutableParams();
 
@@ -108,16 +136,17 @@ public:
 
   const std::string Dump() const override;
 
-private:
-  void ParseUrlToParams();
-
+  void parse_url_view();
 private:
   friend class HttpCodecService;
-  friend class ReqParseContext;
+  template<typename T, typename M> friend class HttpParser;
 
+  // GET /path?params#fragment
   std::string method_;
 
   std::string url_;
+
+  URIView url_view_;
 
   KeyValMap params_;
   /*indicate url has parsed to params_*/
@@ -142,11 +171,8 @@ public:
 
 private:
   friend class HttpCodecService;
-  friend class ResParseContext;
+  template<typename T, typename M> friend class HttpParser;
 
-  bool keepalive_;
-  uint8_t http_major_;
-  uint8_t http_minor_;
   uint16_t status_code_;
 };
 

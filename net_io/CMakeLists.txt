@@ -27,8 +27,12 @@ set(LTNET_SOURCE
 
   codec/http/http_message.cc
   codec/http/http_constants.cc
-  codec/http/parser_context.cc
   codec/http/http_codec_service.cc
+
+  codec/websocket/ws_util.cc
+  codec/websocket/ws_message.cc
+  codec/websocket/websocket_parser.c
+  codec/websocket/ws_codec_service.cc
 
   codec/raw/raw_message.cc
 
@@ -41,6 +45,7 @@ set(LTNET_SOURCE
 
   #server
   server/generic_server.h
+  server/ws_server/ws_server.cc
   server/raw_server/raw_server.cc
   server/http_server/http_context.cc
 

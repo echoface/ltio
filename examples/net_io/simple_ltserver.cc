@@ -40,6 +40,8 @@ DEFINE_string(redis,
 DEFINE_bool(redis_client, false, "wheather enable redis client");
 DEFINE_bool(raw_client, false, "wheather enable self connected http client");
 DEFINE_bool(http_client, false, "wheather enable self connected raw client");
+DEFINE_bool(use_coro, true, "wheather enable coro processor");
+
 DEFINE_int32(loops, 4, "how many loops use for handle message and io");
 
 net::ClientConfig DeafaultClientConfig(int count = 2) {
@@ -96,7 +98,17 @@ base::MessageLoop main_loop;
 
 class SimpleApp : public net::ClientDelegate {
 public:
-  SimpleApp() {}
+  SimpleApp() {
+    auto raw_func = std::bind(&SimpleApp::HandleRawRequest, this, std::placeholders::_1);
+    auto http_func = std::bind(&SimpleApp::HandleHttpRequest, this, std::placeholders::_1);
+    if (FLAGS_use_coro) {
+      raw_handler.reset(NewRawCoroHandler(raw_func));
+      http_handler.reset(NewHttpCoroHandler(http_func));
+    } else {
+      raw_handler.reset(NewRawHandler(raw_func));
+      http_handler.reset(NewHttpHandler(http_func));
+    }
+  }
 
   ~SimpleApp() {
     LOG(INFO) << __func__ << " close app";
@@ -124,9 +136,7 @@ public:
 
     raw_server.WithIOLoops(loops)
         .WithAddress(base::StrUtil::Concat("raw://", FLAGS_raw))
-        .ServeAddress(std::bind(&SimpleApp::HandleRawRequest,
-                                this,
-                                std::placeholders::_1));
+        .ServeAddress(raw_handler.get());
 
     std::string http_address = base::StrUtil::Concat("http://", FLAGS_http);
 #ifdef LTIO_HAVE_SSL
@@ -150,8 +160,7 @@ public:
       http_server.WithSSLContext(server_ssl_ctx);
     }
 #endif
-    http_server.ServeAddress(
-        std::bind(&SimpleApp::HandleHttpRequest, this, std::placeholders::_1));
+    http_server.ServeAddress(http_handler.get());
   }
 
   void HandleRawRequest(RefRawRequestContext context) {
@@ -336,7 +345,9 @@ public:
   std::vector<base::MessageLoop*> loops;
 
   RawCoroServer raw_server;
+  std::unique_ptr<CodecService::Handler> raw_handler;
   HttpCoroServer http_server;
+  std::unique_ptr<CodecService::Handler> http_handler;
 };
 std::atomic_int SimpleApp::io_round_count = {0};
 

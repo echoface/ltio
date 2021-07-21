@@ -48,7 +48,7 @@ private:
   // override form ProtocolServiceDelegate
   void BeforeCloseChannel() override;
   void OnCodecMessage(const RefCodecMessage& res) override;
-  void OnProtocolServiceGone(const RefCodecService& service) override;
+  void OnCodecClosed(const RefCodecService& service) override;
 
 private:
   RefCodecMessage ing_request_;

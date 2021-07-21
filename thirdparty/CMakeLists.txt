@@ -7,9 +7,10 @@ ADD_SUBDIRECTORY(fcontext)
 
 SET(LT_3RD_SRSC
   #hash
-  md5/md5.c
-  crc/crc.cpp
-  murmurhash/MurmurHash3.cpp
+  hash/md5.c
+  hash/crc.cpp
+  hash/sha1.cpp
+  hash/murmurhash3.cpp
 
   # timeout wheel
   timeout/timeout.h

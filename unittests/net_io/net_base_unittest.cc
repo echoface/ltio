@@ -152,3 +152,18 @@ TEST_CASE("udp.udpservice", "[udp serivce]") {
 
   main.WaitLoopEnd();
 }
+
+#include "net_io/codec/http/parser_context.h"
+
+TEST_CASE("http.parser.tpl", "[http parser template]") {
+  struct T {
+    void CommitHttpRequest(net::RefHttpRequest&& req) {}
+    void CommitHttpResponse(net::RefHttpResponse&& rsp) {}
+  };
+  T handler;
+  net::HttpParser<T, net::HttpRequest> req_parser(&handler);
+  req_parser.AppendURL("abck", 4);
+
+  net::HttpParser<T, net::HttpResponse> res_parser(&handler);
+  res_parser.AppendURL("abck", 4);
+}

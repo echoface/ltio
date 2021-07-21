@@ -50,29 +50,34 @@ void AsyncChannel::SendRequest(RefCodecMessage request) {
     return;
   }
 
-  WeakCodecMessage weak(
-      request);  // weak ptr must init outside, Take Care of weakptr
-  auto functor =
-      std::bind(&AsyncChannel::OnRequestTimeout, shared_from_this(), weak);
+  // weak ptr must init outside, Take Care of weakptr
+  WeakCodecMessage weak(request);
+  auto guard_this = shared_from_this();
+  auto functor = std::bind(&AsyncChannel::OnRequestTimeout, guard_this, weak);
+
   IOLoop()->PostDelayTask(NewClosure(functor), request_timeout_);
 
   uint64_t message_identify = request->AsyncId();
   in_progress_.insert(std::make_pair(message_identify, std::move(request)));
 }
 
-void AsyncChannel::OnRequestTimeout(WeakCodecMessage weak) {
-  RefCodecMessage request = weak.lock();
-  if (!request || request->IsResponded()) {
+void AsyncChannel::OnRequestTimeout(const WeakCodecMessage& weak) {
+  DCHECK(IOLoop()->IsInLoopThread());
+
+  auto request = weak.lock();
+  if (!request) {
     return;
   }
 
+
   uint64_t identify = request->AsyncId();
-
   size_t numbers = in_progress_.erase(identify);
-  CHECK(numbers == 1);
-
+  if (numbers == 0) {
+    VLOG(GLOG_VTRACE) << "message has reponsed";
+    return;
+  }
   request->SetFailCode(MessageCode::kTimeOut);
-  HandleResponse(request, CodecMessage::kNullMessage);
+  HandleResponse(request, nullptr);
 }
 
 void AsyncChannel::BeforeCloseChannel() {
@@ -102,7 +107,7 @@ void AsyncChannel::OnCodecMessage(const RefCodecMessage& res) {
   HandleResponse(request, res);
 }
 
-void AsyncChannel::OnProtocolServiceGone(const RefCodecService& service) {
+void AsyncChannel::OnCodecClosed(const RefCodecService& service) {
   VLOG(GLOG_VTRACE) << service->Channel()->ChannelInfo()
                     << " protocol service closed";
   DCHECK(IOLoop()->IsInLoopThread());
@@ -117,7 +122,7 @@ void AsyncChannel::OnProtocolServiceGone(const RefCodecService& service) {
     delegate_->OnClientChannelClosed(guard);
   }
 
-  ClientChannel::OnProtocolServiceGone(service);
+  ClientChannel::OnCodecClosed(service);
 }
 
 }  // namespace net

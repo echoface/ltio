@@ -8,8 +8,8 @@
 
 #include <base/message_loop/message_loop.h>
 #include <base/time/time_utils.h>
+#include <hash/murmurhash3.h>
 #include <net_io/clients/router/maglev_router.h>
-#include <thirdparty/murmurhash/MurmurHash3.h>
 #include <thirdparty/catch/catch.hpp>
 
 using namespace lt;
