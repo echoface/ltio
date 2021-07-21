@@ -1,3 +1,5 @@
+#ifndef _LT_BASE_GZIP_H_
+#define _LT_BASE_GZIP_H_
 /*
  * Copyright 2021 <name of copyright holder>
  * Author: Huan.Gong <gonghuan.dev@gmail.com>
@@ -49,3 +51,5 @@ int compress_deflate(const std::string& str,
 
 }  // namespace Gzip
 }  // namespace base
+
+#endif

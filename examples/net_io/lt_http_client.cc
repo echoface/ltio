@@ -78,7 +78,7 @@ int main(int argc, char** argv) {
       continue;
     }
     done = false;
-    CO_GO[&]() {
+    CO_GO [&]() {
       auto http_request = std::make_shared<lt::net::HttpRequest>();
       http_request->SetMethod("GET");
       http_request->SetRequestURL("/ping");

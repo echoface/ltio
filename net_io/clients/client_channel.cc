@@ -39,11 +39,14 @@ RefClientChannel CreateClientChannel(ClientChannel::Delegate* delegate,
 
 ClientChannel::ClientChannel(Delegate* d, const RefCodecService& service)
   : delegate_(d), codec_(service) {
+
+  codec_->SetHandler(this);
   codec_->SetDelegate(this);
 }
 
 ClientChannel::~ClientChannel() {
   VLOG(GLOG_VTRACE) << __func__ << " this:" << this << " gone";
+  codec_->SetHandler(NULL);
   codec_->SetDelegate(NULL);
 }
 
@@ -65,7 +68,7 @@ void ClientChannel::CloseClientChannel() {
 
   codec_->CloseService(true);
 
-  OnProtocolServiceGone(codec_);
+  OnCodecClosed(codec_);
 
   //fallback avlid inherit class skip
   //ClientChannel::OnProtocolServiceGone
@@ -124,7 +127,7 @@ bool ClientChannel::HandleResponse(const RefCodecMessage& req,
 }
 
 // override
-void ClientChannel::OnProtocolServiceGone(const RefCodecService& service) {
+void ClientChannel::OnCodecClosed(const RefCodecService& service) {
   VLOG(GLOG_VTRACE) << __FUNCTION__ << " enter";
 
   if (heartbeat_timer_) {
@@ -135,7 +138,7 @@ void ClientChannel::OnProtocolServiceGone(const RefCodecService& service) {
 }
 
 // override
-void ClientChannel::OnProtocolServiceReady(const RefCodecService& service) {
+void ClientChannel::OnCodecReady(const RefCodecService& service) {
   state_ = kReady;
   uint32_t heartbeat_ms = 0;
   VLOG(GLOG_VTRACE) << __FUNCTION__ << ConnectionInfo();

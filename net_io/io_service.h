@@ -55,11 +55,15 @@ public:
   virtual void IOServiceStarted(const IOService* ioservice){};
   virtual void IOServiceStoped(const IOService* ioservice){};
 
-  virtual void OnRequestMessage(const RefCodecMessage& request) = 0;
-
-#ifdef LTIO_HAVE_SSL //server should provider this
-  virtual base::SSLCtx* GetSSLContext() {return nullptr;}
+#ifdef LTIO_HAVE_SSL  // server should provider this
+  virtual base::SSLCtx* GetSSLContext() { return nullptr; }
 #endif
+
+  // codec/channel is ready, can read/write
+  virtual void OnConnectionOpen(const RefCodecService& service) {};
+
+  // codec/channel closed, any read/write operation not allowed
+  virtual void OnConnectionClose(const RefCodecService& service) {};
 };
 
 /* Every IOService own a acceptor and listing on a adress,
@@ -69,6 +73,7 @@ class IOService : public EnableShared(IOService),
                   public SocketAcceptor::Actor,
                   public CodecService::Delegate {
 public:
+  using Handler = CodecService::Handler;
   /* Must Construct in ownerloop, why? bz we want all io level is clear and tiny
    * it only handle io relative things, it's easy! just post a task IOMain at
    * everything begin,
@@ -82,11 +87,16 @@ public:
 
   ~IOService();
 
+  IOService& WithHandler(Handler* h);
+
   void Start();
+
   void Stop();
 
   base::MessageLoop* AcceptorLoop() { return acpt_io_; }
-  const std::string& IOServiceName() const { return service_name_; }
+
+  const std::string IOServiceName() const { return endpoint_.ToString(); }
+
   bool IsRunning() { return acceptor_ && acceptor_->IsListening(); }
 
 private:
@@ -95,10 +105,14 @@ private:
   void OnNewConnection(int, const IPEndPoint&) override;
 
   // override from CodecService::Delegate to manager[remove] from managed list
-  void OnCodecMessage(const RefCodecMessage& message) override;
-  void OnProtocolServiceGone(const RefCodecService& service) override;
+  void OnCodecClosed(const RefCodecService& service) override;
+
+  // override from CodecService::Delegate to give a chance for server push
+  // eg: bi-stream handleshake
+  void OnCodecReady(const RefCodecService& service) override;
 
   void StoreProtocolService(const RefCodecService);
+
   void RemoveProtocolService(const RefCodecService);
 
   RefCodecService CreateCodeService(int fd, const IPEndPoint& ep);
@@ -109,12 +123,17 @@ private:
   SocketAcceptorPtr acceptor_;
   base::MessageLoop* acpt_io_;
 
+  CodecService::Handler* handler_ = nullptr;
+
   /* interface to owner and handler */
   IOServiceDelegate* delegate_;
+
   bool is_stopping_ = false;
 
   uint64_t channel_count_;
-  std::string service_name_;
+
+  IPEndPoint endpoint_;
+
   std::unordered_set<RefCodecService> codecs_;
 };
 

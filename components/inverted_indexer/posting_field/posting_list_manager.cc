@@ -2,11 +2,12 @@
 // Created by gh on 18-10-15.
 //
 
-#include "posting_list_manager.h"
 #include <algorithm>
 #include <iostream>
+#include "hash/crc.h"
+
+#include "posting_list_manager.h"
 #include "bitmap_posting_list.h"
-#include "thirdparty/crc/crc.h"
 
 namespace component {
 #define FULLUINT64BIT 0xFFFFFFFFFFFFFFFF

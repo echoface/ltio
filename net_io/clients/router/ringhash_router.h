@@ -21,7 +21,7 @@
 #include <zlib.h>  //crc32
 
 #include "client_router.h"
-#include "murmurhash/MurmurHash3.h"
+#include "hash/murmurhash3.h"
 #include "net_io/base/load_balance/consistent_hash_map.h"
 
 namespace lt {

@@ -41,6 +41,7 @@ public:
                               const IPEndPoint& peer);
   ~TcpChannel();
 
+  // return bytes writen when success else a error code(<0) return 
   int32_t Send(const char* data, const int32_t len) override;
 
 protected:

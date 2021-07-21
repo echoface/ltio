@@ -37,25 +37,18 @@ namespace net {
 using base::MessageLoop;
 
 typedef struct DefaultConfigurator {
-  static const bool coro_process = true;
   static const uint64_t kClientConnLimit = 65536;
   static const uint64_t kRequestQpsLimit = 100000;
 } DefaultConfigurator;
 
-/*
- * Context need implement follow interface
- *
- * Context::New(RefCodecMessage request);
- * */
-template <typename Context, typename Configurator = DefaultConfigurator>
+template <typename Configurator = DefaultConfigurator>
 class BaseServer : public IOServiceDelegate {
 public:
-  typedef BaseServer<Context, Configurator> Server;
-  typedef std::shared_ptr<Context> RefContext;
+  typedef BaseServer<Configurator> Server;
   typedef std::list<RefIOService> RefIOServiceList;
   typedef std::vector<MessageLoop*> MessageLoopList;
 
-  typedef std::function<void(const std::shared_ptr<Context>&)> Handler;
+  using Handler = CodecService::Handler;
 
   BaseServer() : serving_flag_(false), client_count_(0) {}
 
@@ -74,17 +67,17 @@ public:
   }
 
   const IPEndPoint& Endpoint() const { return endpoint_; };
+
   const url::SchemeIpPort& ServeURI() const { return uri_; }
 
-  void ServeAddress(const Handler& handler) { ServeAddress(address_, handler); }
+  void ServeAddress(Handler* handler) { ServeAddress(address_, handler); }
 
-  void ServeAddress(const std::string& address, const Handler& handler) {
+  void ServeAddress(const std::string& address, Handler* handler) {
     CHECK(handler);
     CHECK(io_loops_.size());
     CHECK(!serving_flag_.exchange(true));
 
     address_ = address;
-    handler_ = handler;
 
     if (!url::ParseURI(address, uri_)) {
       LOG(ERROR) << "error address,required format:[scheme://host:port]";
@@ -99,19 +92,23 @@ public:
 #if defined SO_REUSEPORT && defined NET_ENABLE_REUSER_PORT
     for (base::MessageLoop* loop : io_loops_) {
       RefIOService service(new IOService(endpoint_, uri_.protocol, loop, this));
+      service->WithHandler(handler);
+
       loop->PostTask(FROM_HERE, &IOService::Start, service);
       ioservices_.push_back(std::move(service));
     }
 #else
     base::MessageLoop* loop = io_loops_.front();
     RefIOService service(new IOService(endpoint_, uri_.protocol, loop, this));
+
+    service->WithHandler(handler);
     loop->PostTask(FROM_HERE, &IOService::Start, service);
     ioservices_.push_back(std::move(service));
 #endif
   }
 
   void StopServer(const base::ClosureCallback& callback = nullptr) {
-    CHECK(serving_flag_);
+    CHECK(serving_flag_.exchange(false));
     closed_callback_ = callback;
 
     std::list<RefIOService> services = ioservices_;
@@ -168,12 +165,6 @@ protected:
     }
   }
 
-  void OnRequestMessage(const RefCodecMessage& request) override {
-    if (!Configurator::coro_process) {
-      return handler_(Context::New(request));
-    }
-    co_go std::bind(handler_, Context::New(request));
-  }
 #ifdef LTIO_HAVE_SSL
 public:
   Server& WithSSLContext(base::SSLCtx* ctx) {
@@ -189,10 +180,6 @@ private:
 #endif
 
 private:
-  Handler handler_;
-
-  bool coro_handler_ = true;
-
   std::mutex mtx_;
 
   std::string address_;
@@ -207,7 +194,6 @@ private:
 
   std::atomic<bool> serving_flag_;
 
-  std::atomic<uint32_t> active_iosrv_;
   std::atomic<uint32_t> client_count_;
 
   base::ClosureCallback closed_callback_;

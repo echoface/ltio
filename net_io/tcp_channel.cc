@@ -67,12 +67,12 @@ bool TcpChannel::HandleRead(base::FdEvent* event) {
       in_buffer_.Produce(bytes_read);
       continue;
     }
-
-    VLOG(GLOG_VTRACE) << ChannelInfo() << " read err:" << base::StrError();
     if (errno == EAGAIN) {
+      VLOG(GLOG_VTRACE) << ChannelInfo() << " read EAGAIN";
       break;
     }
     if (bytes_read == 0) { //peer close
+      VLOG(GLOG_VTRACE) << ChannelInfo() << " peer close:" << base::StrError();
       need_close = true;
       break;
     }
@@ -127,6 +127,7 @@ bool TcpChannel::HandleWrite(base::FdEvent* event) {
   }
 
   if (out_buffer_.CanReadSize() == 0) {
+    fd_event_->DisableWriting();
     reciever_->OnDataFinishSend(this);
     if (schedule_shutdown_) {
       return HandleClose(event);
@@ -161,12 +162,11 @@ int32_t TcpChannel::Send(const char* data, const int32_t len) {
       DCHECK((n_write + n_remain) == size_t(len));
       continue;
     }
-    if (errno == EINTR) {
-      continue;
-    }
 
     if (errno == EAGAIN) {
       out_buffer_.WriteRawData(data + n_write, n_remain);
+    } else if (errno == EINTR) {
+      continue;
     } else {
       // to avoid A -> B -> callback delete A problem,
       // use a write event to triggle handle close action

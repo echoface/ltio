@@ -15,16 +15,18 @@
  * limitations under the License.
  */
 
-#include "fd_event.h"
-#include "glog/logging.h"
-
 #include <sys/resource.h>
 #include <sys/time.h>
 #include <algorithm>
+
+#include "base/base_constants.h"
 #include "event_pump.h"
+#include "fd_event.h"
 #include "io_multiplexer.h"
 #include "io_mux_epoll.h"
 #include "linux_signal.h"
+
+#include "glog/logging.h"
 
 namespace base {
 
@@ -34,14 +36,12 @@ thread_local uint64_t tid_ = 0;  // assign with current run loop
 
 }
 
-//static
+// static
 uint64_t EventPump::CurrentThreadLoopID() {
   return tid_;
 }
 
-EventPump::EventPump()
-  : fired_list_(65535) {
-
+EventPump::EventPump() : fired_list_(65535) {
   InitializeTimeWheel();
   io_mux_.reset(new base::IOMuxEpoll());
 }
@@ -71,6 +71,7 @@ void EventPump::Pump(uint64_t ms) {
   CHECK(IsInLoop());
 
   ms = std::min(ms, NextTimeout());
+  VLOG_EVERY_N(GLOG_VTRACE, 1000) << " poll timeout:" << ms;
 
   int count = io_mux_->WaitingIO(fired_list_, ms);
 
@@ -93,8 +94,7 @@ bool EventPump::RemoveFdEvent(FdEvent* fd_event) {
   CHECK(IsInLoop());
 
   if (!fd_event->EventWatcher()) {
-    LOG(ERROR) << "event not been registered, "
-               << fd_event->EventInfo();
+    LOG(ERROR) << "event not been registered, " << fd_event->EventInfo();
     return false;
   }
   io_mux_->DelFdEvent(fd_event);
@@ -114,7 +114,8 @@ void EventPump::RemoveTimeoutEvent(TimeoutEvent* timeout_ev) {
 }
 
 void EventPump::add_timer_internal(uint64_t now, TimeoutEvent* event) {
-  timeout_t t = event->IsRepeated() ? event->Interval() : now + event->Interval();
+  timeout_t t =
+      event->IsRepeated() ? event->Interval() : now + event->Interval();
   ::timeouts_add(timeout_wheel_, event, t);
 }
 
@@ -123,7 +124,6 @@ void EventPump::ProcessTimerEvent() {
 
   Timeout* expired = NULL;
   while (NULL != (expired = timeouts_get(timeout_wheel_))) {
-
     TimeoutEvent* timeout_ev = static_cast<TimeoutEvent*>(expired);
 
     timeout_ev->Invoke();

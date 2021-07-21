@@ -101,7 +101,7 @@ void QueuedChannel::OnRequestTimeout(WeakCodecMessage weak) {
     return;
   }
 
-  VLOG(GLOG_VINFO) << __FUNCTION__ << codec_->Channel()->ChannelInfo()
+  VLOG(GLOG_VINFO) << codec_->Channel()->ChannelInfo()
                    << " timeout reached";
 
   request->SetFailCode(MessageCode::kTimeOut);
@@ -111,13 +111,13 @@ void QueuedChannel::OnRequestTimeout(WeakCodecMessage weak) {
   if (codec_->IsConnected()) {
     codec_->CloseService();
   } else {
-    OnProtocolServiceGone(codec_);
+    OnCodecClosed(codec_);
   }
 }
 
 void QueuedChannel::OnCodecMessage(const RefCodecMessage& res) {
   DCHECK(IOLoop()->IsInLoopThread());
-
+  VLOG(GLOG_VTRACE) << "got a response:" << res->Dump();
   if (!ing_request_) {
     return;
   }
@@ -130,7 +130,7 @@ void QueuedChannel::OnCodecMessage(const RefCodecMessage& res) {
   TrySendNext();
 }
 
-void QueuedChannel::OnProtocolServiceGone(const RefCodecService& service) {
+void QueuedChannel::OnCodecClosed(const RefCodecService& service) {
   VLOG(GLOG_VTRACE) << __FUNCTION__ << service->Channel()->ChannelInfo()
                     << " protocol service closed";
   if (ing_request_) {
@@ -151,7 +151,7 @@ void QueuedChannel::OnProtocolServiceGone(const RefCodecService& service) {
     delegate_->OnClientChannelClosed(guard);
   }
 
-  ClientChannel::OnProtocolServiceGone(service);
+  ClientChannel::OnCodecClosed(service);
 }
 
 }  // namespace net

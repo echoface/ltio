@@ -17,7 +17,7 @@
 
 #include "maglev_router.h"
 
-#include "thirdparty/murmurhash/MurmurHash3.h"
+#include "thirdparty/hash/murmurhash3.h"
 
 namespace lt {
 namespace net {

@@ -21,9 +21,11 @@
 #include <string>
 #include <vector>
 
+#include "http_parser/http_parser.h"
 #include "net_io/codec/codec_service.h"
+#include "net_io/codec/http/http_message.h"
+#include "net_io/codec/http/parser_context.h"
 #include "net_io/net_callback.h"
-#include "parser_context.h"
 
 struct http_parser_settings;
 
@@ -75,6 +77,10 @@ public:
 
   static int OnMessageBody(http_parser* parser, const char* body, size_t len);
 
+  static bool RequestToBuffer(const HttpRequest*, IOBuffer*);
+
+  static bool ResponseToBuffer(const HttpResponse*, IOBuffer*);
+
   void StartProtocolService() override;
 
   // override from CodecService
@@ -82,51 +88,44 @@ public:
 
   void OnDataReceived(const SocketChannel*, IOBuffer*) override;
 
-  static bool RequestToBuffer(const HttpRequest*, IOBuffer*);
-
-  static bool ResponseToBuffer(const HttpResponse*, IOBuffer*);
-
   void BeforeSendRequest(HttpRequest*);
 
   bool SendRequest(CodecMessage* message) override;
 
-  bool BeforeSendResponseMessage(const HttpRequest*, HttpResponse*);
+  bool BeforeSendResponse(const HttpRequest*, HttpResponse*);
 
   bool SendResponse(const CodecMessage* req, CodecMessage* res) override;
 
   const RefCodecMessage NewResponse(const CodecMessage*) override;
 
+  void CommitHttpRequest(const RefHttpRequest&& request);
+
+  void CommitHttpResponse(const RefHttpResponse&& response);
+
 private:
   bool UseSSLChannel() const override;
 
-  bool ParseHttpRequest(SocketChannel* channel, IOBuffer*);
+  void init_http_parser();
 
-  bool ParseHttpResponse(SocketChannel* channel, IOBuffer*);
+  void finalize_http_parser();
 
 private:
   using HeaderKV = std::pair<std::string, std::string>;
+  using HttpReqParser = HttpParser<HttpCodecService, HttpRequest>;
+  using HttpResParser = HttpParser<HttpCodecService, HttpResponse>;
 
-  http_parser parser_;
+  HttpReqParser* req_parser() {
+    return http_parser_.req_parser;
+  }
+  HttpResParser* rsp_parser() {
+    return http_parser_.res_parser;
+  }
+  union Parser {
+    HttpReqParser* req_parser;
+    HttpResParser* res_parser;
+  };
 
-  http_parser_settings settings_;
-
-  HeaderKV half_header;
-
-  RefHttpRequest cur_req_;
-
-  RefHttpResponse cur_res_;
-
-  RefHttpResponse current_;
-
-  std::list<RefHttpResponse> messages_;
-
-  ReqParseContext* request_context_;
-
-  ResParseContext* response_context_;
-
-  static http_parser_settings req_parser_settings_;
-
-  static http_parser_settings res_parser_settings_;
+  Parser http_parser_;
 };
 
 }  // namespace net

@@ -57,6 +57,7 @@ void SocketChannel::SetReciever(SocketChannel::Reciever* rec) {
 
 void SocketChannel::StartChannel() {
   CHECK(reciever_ && pump_->IsInLoop() && status_ == Status::CONNECTING);
+
   setup_channel();
 }
 
@@ -76,6 +77,8 @@ void SocketChannel::ShutdownChannel(bool half_close) {
 
 void SocketChannel::ShutdownWithoutNotify() {
   DCHECK(pump_->IsInLoop());
+
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
 
   if (!IsClosed()) {
     close_channel();
@@ -104,17 +107,22 @@ bool SocketChannel::HandleClose(base::FdEvent* event) {
 }
 
 void SocketChannel::setup_channel() {
+  VLOG(GLOG_VINFO) << __FUNCTION__ << " enter";
+
   fd_event_->EnableReading();
-  fd_event_->EnableWriting();
+  //fd_event_->EnableWriting();
+
   pump_->InstallFdEvent(fd_event_.get());
 
   SetChannelStatus(Status::CONNECTED);
 
+  VLOG(GLOG_VINFO) << __FUNCTION__ << " notify ready";
   reciever_->OnChannelReady(this);
 }
 
 void SocketChannel::close_channel() {
   pump_->RemoveFdEvent(fd_event_.get());
+
   SetChannelStatus(Status::CLOSED);
 }
 

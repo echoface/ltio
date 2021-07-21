@@ -86,6 +86,7 @@ void FdEvent::notify_watcher() {
 void FdEvent::HandleEvent(LtEvent mask) {
   static const bool kContinue = true;
   revents_ = mask;
+  VLOG(GLOG_VTRACE) << "fd:" << fd_ << RcvEventAsString();
   do {
     if (mask & LtEv::LT_EVENT_ERROR) {
       if (kContinue != handler_->HandleError(this)) {

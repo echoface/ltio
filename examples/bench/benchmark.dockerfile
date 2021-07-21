@@ -10,7 +10,7 @@ ADD CMakeLists.txt build_ltio/
 ADD http_benchmark.cc build_ltio/
 
 WORKDIR /build_ltio
-RUN pwd; git clone https://github.com/echoface/ltio.git --recurse
+RUN pwd; git clone -b feture_fcontext https://github.com/echoface/ltio.git --recurse
 
 RUN ls; cmake .; make
 

@@ -58,10 +58,24 @@ struct DefaultRawNoneCoroConfigrator {
   static const uint64_t kRequestQpsLimit = 100000;
 };
 
-using RawCoroServer = BaseServer<RawRequestContext, DefaultConfigurator>;
+using RawCoroServer = BaseServer<DefaultConfigurator>;
 
-using RawServer = BaseServer<RawRequestContext, DefaultRawNoneCoroConfigrator>;
+using RawServer = BaseServer<DefaultRawNoneCoroConfigrator>;
 
 }  // namespace net
 }  // namespace lt
+
+#include "net_io/server/handler_factory.h"
+
+template <typename Functor>
+lt::net::CodecService::Handler* NewRawHandler(const Functor& func) {
+  return NewHandler<Functor, lt::net::RawRequestContext>(func);
+}
+
+template <typename Functor>
+lt::net::CodecService::Handler* NewRawCoroHandler(const Functor& func) {
+  return NewCoroHandler<Functor, lt::net::RawRequestContext>(func);
+}
+
+
 #endif

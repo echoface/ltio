@@ -59,8 +59,8 @@ void RespCodecService::OnDataReceived(const SocketChannel* channel,
   if (next_incoming_count_ == 0) {
     current_response->SetIOCtx(shared_from_this());
 
-    if (delegate_ && init_wait_res_flags_ == 0) {
-      delegate_->OnCodecMessage(RefCast(CodecMessage, current_response));
+    if (handler_ && init_wait_res_flags_ == 0) {
+      handler_->OnCodecMessage(std::move(current_response));
     } else if (init_wait_res_flags_ != 0) {
       HandleInitResponse(current_response.get());
       init_wait_res_flags_ = 0;
@@ -73,6 +73,7 @@ void RespCodecService::OnDataReceived(const SocketChannel* channel,
 void RespCodecService::HandleInitResponse(RedisResponse* response) {
   uint8_t res_index = 0;
   if (init_wait_res_flags_ & InitWaitFlags::kWaitAuth) {
+
     init_wait_res_flags_ &= ~(InitWaitFlags::kWaitAuth);
 
     auto& res_value = response->ResultAtIndex(res_index++);

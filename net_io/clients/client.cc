@@ -271,8 +271,6 @@ bool Client::AsyncDoRequest(const RefCodecMessage& req,
 
   req->SetWorkerCtx(worker, std::move(resumer));
 
-  req->SetRemoteHost(remote_info_.host);
-
   RefClientChannel client = get_ready_channel();
   if (!client) {
     return false;
@@ -285,7 +283,6 @@ bool Client::AsyncDoRequest(const RefCodecMessage& req,
 CodecMessage* Client::DoRequest(RefCodecMessage& message) {
   CHECK(CO_CANYIELD);
 
-  message->SetRemoteHost(remote_info_.host);
   message->SetWorkerCtx(base::MessageLoop::Current(), CO_RESUMER);
 
   auto channel = get_ready_channel();
