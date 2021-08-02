@@ -86,7 +86,7 @@ void HttpMessage::SetBody(const char* body, size_t len) {
 }
 
 HttpRequest::HttpRequest()
-  : CodecMessage(MessageType::kRequest),
+  : CodecMessage(),
     method_("GET"),
     url_param_parsed_(false) {}
 
@@ -163,17 +163,14 @@ const std::string& HttpRequest::Method() const {
 
 const std::string HttpRequest::Dump() const {
   std::ostringstream oss;
-  oss << "{\"type\": \"" << TypeAsStr() << "\""
-      << ", \"http_major\": " << (int)http_major_
-      << ", \"http_minor\": " << (int)http_minor_ << ", \"method\": \""
-      << Method() << "\""
-      << ", \"request_url\": \"" << url_ << "\"";
-
+  oss << "{ \"major\": " << (int)http_major_
+      << ", \"minor\": " << (int)http_minor_
+      << ", \"method\": \"" << Method() << "\""
+      << ", \"url\": \"" << url_ << "\"";
   for (const auto& pair : headers_) {
     oss << ", \"header." << pair.first << "\": \"" << pair.second << "\"";
   }
-  oss << ", \"keep_alive\": " << keepalive_ << ", \"body\": \"" << body_ << "\""
-      << "}";
+  oss << ", \"body\": \"" << body_ << "\"}";
   return std::move(oss.str());
 }
 
@@ -189,22 +186,20 @@ RefHttpResponse HttpResponse::CreateWithCode(uint16_t code) {
   return r;
 }
 
-HttpResponse::HttpResponse() : CodecMessage(MessageType::kResponse) {}
+HttpResponse::HttpResponse() : CodecMessage() {}
 
 HttpResponse::~HttpResponse() {}
 
 const std::string HttpResponse::Dump() const {
   std::ostringstream oss;
-  oss << "{\"type\": \"" << TypeAsStr() << "\""
-      << ", \"http_major\": " << (int)http_major_
-      << ", \"http_minor\": " << (int)http_minor_
-      << ", \"status_code\": " << (int)status_code_;
+  oss << "{ \"major\": " << (int)http_major_
+      << ", \"minor\": " << (int)http_minor_
+      << ", \"code\": " << (int)status_code_;
 
   for (const auto& pair : headers_) {
     oss << ", \"header." << pair.first << "\": \"" << pair.second << "\"";
   }
-  oss << ", \"keep_alive\": " << keepalive_ << ", \"body\": \"" << body_ << "\""
-      << "}";
+  oss << ", \"body\": \"" << body_ << "\"}";
   return oss.str();
 }
 

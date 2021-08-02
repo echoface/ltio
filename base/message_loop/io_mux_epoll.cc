@@ -64,13 +64,13 @@ int IOMuxEpoll::WaitingIO(FiredEvList& out, int32_t ms) {
 
 LtEvent IOMuxEpoll::ToLtEvent(const uint32_t epoll_ev) {
   LtEvent event = LtEv::LT_EVENT_NONE;
-
-  if (epoll_ev & EPOLLERR) {
-    event |= LtEv::LT_EVENT_ERROR;
+  // case hang out: but can read till EOF
+  if (epoll_ev & (EPOLLHUP|EPOLLERR)) {
+    event |= LtEv::LT_EVENT_READ;
+    event |= LtEv::LT_EVENT_WRITE;
   }
   // case readable:
-  // case hang out: but can read till EOF
-  if (epoll_ev & EPOLLHUP || epoll_ev & EPOLLIN) {
+  if (epoll_ev & EPOLLIN) {
     event |= LtEv::LT_EVENT_READ;
   }
   // writable

@@ -84,7 +84,6 @@ MessageLoop::MessageLoop(const std::string& name)
   : start_flag_(0),
     loop_name_(name),
     wakeup_pipe_in_(0) {
-
   start_flag_.clear();
   notify_flag_.clear();
 
@@ -128,34 +127,21 @@ void MessageLoop::WakeUpIfNeeded() {
   }
 }
 
-bool MessageLoop::HandleRead(FdEvent* fd_event) {
+void MessageLoop::HandleEvent(FdEvent* fdev) {
+  if (fdev->RecvRead()) {
+    return HandleRead(fdev);
+  }
+  LOG(ERROR) << LOOP_LOG_DETAIL << "event:" << fdev->RcvEventAsString();
+}
+
+void MessageLoop::HandleRead(FdEvent* fd_event) {
   if (fd_event == task_event_.get()) {
-
     RunCommandTask(ScheduledTaskType::TaskTypeDefault);
-
   } else if (fd_event == wakeup_event_.get()) {
-
     RunCommandTask(ScheduledTaskType::TaskTypeCtrl);
-
   } else {
     LOG(ERROR) << LOOP_LOG_DETAIL << "should not reached";
   }
-  return true;
-}
-
-bool MessageLoop::HandleWrite(FdEvent* fd_event) {
-  LOG(ERROR) << LOOP_LOG_DETAIL << "should not reached";
-  return true;
-}
-
-bool MessageLoop::HandleError(FdEvent* fd_event) {
-  LOG(ERROR) << LOOP_LOG_DETAIL << "error event, fd:" << fd_event->GetFd();
-  return true;
-}
-
-bool MessageLoop::HandleClose(FdEvent* fd_event) {
-  LOG(ERROR) << LOOP_LOG_DETAIL << "close event, fd:" << fd_event->GetFd();
-  return true;
 }
 
 void MessageLoop::SetLoopName(std::string name) {
@@ -175,7 +161,7 @@ void MessageLoop::Start() {
   thread_ptr_.reset(new std::thread(std::bind(&MessageLoop::ThreadMain, this)));
   {
     std::unique_lock<std::mutex> lk(start_stop_lock_);
-    cv_.wait(lk, [this]() { return running_;});
+    cv_.wait(lk, [this]() { return running_; });
   }
 }
 
@@ -195,9 +181,8 @@ void MessageLoop::WaitLoopEnd(int32_t ms) {
   }
 
   // can't wait stop in loop thread
-  CHECK(!IsInLoopThread()) << LOOP_LOG_DETAIL
-    << ", id:" << pump_.LoopID()
-    << ", tid:" << EventPump::CurrentThreadLoopID();
+  CHECK(!IsInLoopThread()) << LOOP_LOG_DETAIL << ", id:" << pump_.LoopID()
+                           << ", tid:" << EventPump::CurrentThreadLoopID();
   {
     std::unique_lock<std::mutex> lk(start_stop_lock_);
     cv_.wait(lk, [this]() { return !running_; });
@@ -230,8 +215,7 @@ void MessageLoop::ThreadMain() {
   pump_.InstallFdEvent(wakeup_event_.get());
 
   cv_.notify_all();
-  while(running_) {
-
+  while (running_) {
     // pump io/timer event
     pump_.Pump(PumpTimeout());
 
@@ -305,7 +289,7 @@ void MessageLoop::RunCommandTask(ScheduledTaskType type) {
       uint64_t count = 0;
       int ret = ::read(task_event_->GetFd(), &count, sizeof(count));
       LOG_IF(ERROR, ret < 0)
-          << " error:" << StrError(errno) << " fd:" << task_event_->GetFd();
+          << " error:" << StrError() << " fd:" << task_event_->GetFd();
 
       // clear must clear after read
       notify_flag_.clear();

@@ -7,16 +7,18 @@
 namespace lt {
 namespace net {
 
-class WebsocketMessage : public CodecMessage {
+class WebsocketFrame : public CodecMessage {
 public:
-  ~WebsocketMessage();
+  static WebsocketFrame* NewCloseFrame(uint16_t code);
 
-  WebsocketMessage(MessageType type);
+  ~WebsocketFrame();
 
-  WebsocketMessage(MessageType type, int opcode);
+  WebsocketFrame();
 
-  const std::string& Payload() const {
-    return payload_;
+  WebsocketFrame(int opcode);
+
+  const nonstd::string_view Payload() const {
+    return nonstd::string_view((char*)payload_.data(), payload_.size());
   }
 
   void AppendData(const char* data, size_t len);
@@ -47,10 +49,10 @@ private:
 
   int opcode_;
 
-  std::string payload_;
+  std::vector<uint8_t> payload_;
 };
 
-using RefWebsockMessage = std::shared_ptr<WebsocketMessage>;
+using RefWebsocketFrame = std::shared_ptr<WebsocketFrame>;
 
 }
 }  // namespace lt

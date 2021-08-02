@@ -290,7 +290,7 @@ public:
   }
 
   void SendRawRequest() {
-    auto raw_request = LtRawMessage::Create(true);
+    auto raw_request = LtRawMessage::Create();
     raw_request->SetMethod(12);
     raw_request->SetContent("ABC");
     LtRawMessage* raw_response = raw_client->SendRecieve(raw_request);

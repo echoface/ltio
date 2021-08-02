@@ -12,7 +12,7 @@
 #include <algorithm>
 #include <string>
 
-#include <base/build_config.h>
+#include <base/ltio_config.h>
 
 namespace base {
 

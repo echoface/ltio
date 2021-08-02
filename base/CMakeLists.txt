@@ -70,3 +70,6 @@ target_include_directories(ltbase_objs
     $<TARGET_PROPERTY:fmt,INTERFACE_INCLUDE_DIRECTORIES>
     $<TARGET_PROPERTY:fcontext,INTERFACE_INCLUDE_DIRECTORIES>
 )
+
+# configure a header file to pass some of the CMake settings to the source code
+configure_file(ltio_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/ltio_config.h)

@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
   base::MessageLoop background;
   background.Start();
   http_client.reset(new net::Client(&background, server_info));
-  if (server_info.protocol == "https") {
+  if (server_info.scheme == "https") {
 #ifdef LTIO_HAVE_SSL
     auto client_ssl_ctx = new base::SSLCtx(base::SSLRole::Client);
     if (FLAGS_insercure) {

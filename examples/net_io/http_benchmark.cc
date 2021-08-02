@@ -64,7 +64,7 @@ public:
       return context->Response(response);
     };
 
-    handler.reset(FLAGS_coro ? NewHttpCoroHandler(func) : NewHttpCoroHandler(func));
+    handler.reset(FLAGS_coro ? NewHttpCoroHandler(func) : NewHttpHandler(func));
 
     // ProfilerStart("perf.out");
     wss.WithIOLoops(loops)

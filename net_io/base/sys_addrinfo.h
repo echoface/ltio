@@ -18,7 +18,7 @@
 #ifndef NET_BASE_SYS_ADDRINFO_H_
 #define NET_BASE_SYS_ADDRINFO_H_
 
-#include "base/build_config.h"
+#include "base/ltio_config.h"
 
 #if defined(OS_POSIX)
 

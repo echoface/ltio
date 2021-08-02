@@ -20,7 +20,7 @@
 namespace lt {
 namespace net {
 
-RedisResponse::RedisResponse() : CodecMessage(MessageType::kResponse) {}
+RedisResponse::RedisResponse() : CodecMessage() {}
 
 RedisResponse::~RedisResponse() {}
 

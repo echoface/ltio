@@ -18,6 +18,27 @@
 #ifndef LT_NET_CLIENT_BASE_H_H
 #define LT_NET_CLIENT_BASE_H_H
 
+#include <base/ltio_config.h>
+
+#ifdef LTIO_HAVE_SSL
+
+#include <string>
+#include "base/crypto/lt_ssl.h"
+namespace lt {
+namespace net {
+class ClientSSLCtxProvider {
+public:
+  void SetSSLCtx(base::SSLCtx* ctx) { ssl_ctx_ = ctx; };
+  base::SSLCtx* GetClientSSLContext();
+
+protected:
+  base::SSLCtx* ssl_ctx_;
+};
+
+}  // namespace net
+}  // namespace lt
+#endif
+
 #include <cstdint>
 namespace lt {
 namespace net {

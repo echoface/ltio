@@ -19,7 +19,7 @@
 #include <string.h>
 #include <vector>
 
-#include "base/build_config.h"
+#include "base/ltio_config.h"
 
 #if HAVE_ERRNO_H
 #include <errno.h>

@@ -80,6 +80,7 @@ TCPSSLChannel::TCPSSLChannel(int socket_fd,
                              const IPEndPoint& loc,
                              const IPEndPoint& peer)
   : SocketChannel(socket_fd, loc, peer) {
+
   fd_event_->EnableWriting();
   fd_event_->SetEdgeTrigger(true);
   socketutils::KeepAlive(socket_fd, true);
@@ -103,15 +104,18 @@ void TCPSSLChannel::StartChannel() {
   fd_event_->EnableReading();
   pump_->InstallFdEvent(fd_event_.get());
 
-  SetChannelStatus(Status::CONNECTED);
-  reciever_->OnChannelReady(this);
-
   if (reciever_->IsServerSide()) {
     SSL_set_accept_state(ssl_);
   } else {
     SSL_set_connect_state(ssl_);
   }
-  OnHandshake(fd_event_.get());
+
+  if (!DoHandshake(fd_event_.get())) {
+    HandleClose(fd_event_.get());
+    return;
+  }
+  SetChannelStatus(Status::CONNECTED);
+  reciever_->OnChannelReady(this);
 }
 
 int32_t TCPSSLChannel::Send(const char* data, const int32_t len) {
@@ -158,29 +162,116 @@ int32_t TCPSSLChannel::Send(const char* data, const int32_t len) {
   return action == SSLAction::Close ? -1 : n_write;
 }
 
-bool TCPSSLChannel::OnHandshake(base::FdEvent* event) {
-again:
-  ERR_clear_error();
-  int ret = SSL_do_handshake(ssl_);
-  if (ret > 0) {  // handshake finish
-    SetChannelStatus(Status::CONNECTED);
-    reciever_->OnChannelReady(this);
-    VLOG(GLOG_VTRACE) << "ssl finish handshake";
-    return true;
-  }
-  int err = SSL_get_error(ssl_, ret);
-  SSLAction action = handle_openssl_err(event, err);
-  VLOG_IF(GLOG_VTRACE, action == SSLAction::Close) << "ssl failed handshake";
-  VLOG_IF(GLOG_VTRACE, action == SSLAction::WaitIO) << "ssl continue handshake";
-
-  if (action == SSLAction::Close) {
-    return HandleClose(event);
-  } else if (action == SSLAction::FastRetry) {
-    goto again;
+bool TCPSSLChannel::TryFlush() {
+  if (out_buffer_.CanReadSize()) {
+    return HandleWrite(fd_event_.get());
   }
   return true;
 }
 
+bool TCPSSLChannel::DoHandshake(base::FdEvent* event) {
+
+  SSLAction action;
+  do {
+    ERR_clear_error();
+    int ret = SSL_do_handshake(ssl_);
+    if (ret > 0) {  // handshake finish
+      VLOG(GLOG_VTRACE) << "ssl finish handshake";
+      return true;
+    }
+
+    int err = SSL_get_error(ssl_, ret);
+    SSLAction action = handle_openssl_err(event, err);
+    VLOG_IF(GLOG_VTRACE, action == SSLAction::Close) << "ssl failed handshake";
+    VLOG_IF(GLOG_VTRACE, action == SSLAction::WaitIO) << "ssl continue handshake";
+  } while(action == SSLAction::FastRetry);
+
+  return action == SSLAction::Close ? false : true;
+}
+
+void TCPSSLChannel::HandleEvent(base::FdEvent* fdev) {
+  if (out_buffer_.CanReadSize()) {
+    if (!HandleWrite(fdev)) {
+      goto err_handler;
+    }
+    if (out_buffer_.CanReadSize() == 0) {
+      reciever_->OnDataFinishSend(this);
+    }
+  }
+
+  if (fdev->RecvRead()) {
+    if (!HandleRead(fdev)) {
+      goto err_handler;
+    }
+    if (in_buffer_.CanReadSize()) {
+      reciever_->OnDataReceived(this, &in_buffer_);
+    }
+  }
+
+  if (!schedule_shutdown_) {
+    return;
+  }
+err_handler:
+  HandleClose(fdev);
+  return;
+}
+
+bool TCPSSLChannel::HandleWrite(base::FdEvent* event) {
+  VLOG(GLOG_VTRACE) << ChannelInfo() << " handle write";
+
+  SSLAction action = SSLAction::WaitIO;
+  while (out_buffer_.CanReadSize()) {
+    ERR_clear_error();
+    int batch_size = std::min(uint64_t(kBlockSize), out_buffer_.CanReadSize());
+    ssize_t retv = SSL_write(ssl_, out_buffer_.GetRead(), batch_size);
+    if (retv > 0) {
+      out_buffer_.Consume(retv);
+      VLOG(GLOG_VTRACE) << ChannelInfo() << " write:" << retv;
+      continue;
+    }
+
+    int err = SSL_get_error(ssl_, retv);
+    action = handle_openssl_err(event, err);
+    if (action == SSLAction::FastRetry) {
+      continue;
+    }
+    break;
+  };
+  VLOG(GLOG_VTRACE) << "after write, out buf size:" << out_buffer_.CanReadSize();
+  return action != SSLAction::Close;
+
+}
+
+bool TCPSSLChannel::HandleRead(base::FdEvent* event) {
+  VLOG(GLOG_VTRACE) << ChannelInfo() << " handle read";
+
+  int bytes_read;
+  VLOG(GLOG_VTRACE) << "before bytes in buffer:" << in_buffer_.CanReadSize();
+
+  SSLAction action = SSLAction::WaitIO;
+  do {
+    in_buffer_.EnsureWritableSize(2048);
+
+    ERR_clear_error();
+    bytes_read = SSL_read(ssl_, in_buffer_.GetWrite(), in_buffer_.CanWriteSize());
+    VLOG(GLOG_VTRACE) << "ssl_read ret:" << bytes_read;
+    if (bytes_read > 0) {
+      in_buffer_.Produce(bytes_read);
+      continue;
+    }
+
+    int err = SSL_get_error(ssl_, bytes_read);
+    action = handle_openssl_err(event, err);
+    if (action == SSLAction::FastRetry) {
+      continue;
+    }
+    break;
+  } while (1);
+  VLOG(GLOG_VTRACE) << "after read bytes in buffer:" << in_buffer_.CanReadSize();
+  return action != SSLAction::Close;
+}
+
+/*
 bool TCPSSLChannel::HandleWrite(base::FdEvent* event) {
   VLOG(GLOG_VTRACE) << ChannelInfo() << " handle write";
 
@@ -256,6 +347,7 @@ bool TCPSSLChannel::HandleRead(base::FdEvent* event) {
   }
   return true;
 }
+*/
 
 }  // namespace net
 }  // namespace lt

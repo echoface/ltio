@@ -47,14 +47,13 @@ const std::string LtRawHeader::Dump() const {
   return std::move(oss.str());
 }
 
-LtRawMessage::RefRawMessage RawMessage::Create(bool request) {
-  auto t = request ? MessageType::kRequest : MessageType::kResponse;
-  return std::make_shared<RawMessage>(t);
+LtRawMessage::RefRawMessage RawMessage::Create() {
+  return std::make_shared<RawMessage>();
 }
 
 RawMessage::RefRawMessage RawMessage::CreateResponse(
     const RawMessage* request) {
-  auto response = Create(false);
+  auto response = Create();
   response->header_.code = 0;
   response->header_.content_size_ = 0;
   response->header_.method = request->Method();
@@ -73,7 +72,7 @@ RawMessage::RefRawMessage RawMessage::Decode(IOBuffer* buffer,
   }
 
   // decode
-  auto message = Create(server_side);
+  auto message = Create();
   ::memcpy(&message->header_, buffer->GetRead(), LtRawHeader::kHeaderSize);
   buffer->Consume(LtRawHeader::kHeaderSize);
 
@@ -85,7 +84,7 @@ RawMessage::RefRawMessage RawMessage::Decode(IOBuffer* buffer,
   return message;
 }
 
-RawMessage::RawMessage(MessageType t) : CodecMessage(t) {}
+RawMessage::RawMessage() : CodecMessage() {}
 
 bool RawMessage::EncodeTo(SocketChannel* ch) {
   CHECK(content_.size() == header_.payload_size());
@@ -122,10 +121,8 @@ void RawMessage::AppendContent(const char* c, uint64_t len) {
 
 const std::string RawMessage::Dump() const {
   std::ostringstream oss;
-  oss << "{\"type\": \"" << TypeAsStr() << "\","
-      << "\"header\": " << header_.Dump() << ","
-      << "\"content\": \"" << content_ << "\""
-      << "}";
+  oss << "{\"header\": " << header_.Dump()
+      << ",\"content\": \"" << content_ << "\"}";
   return std::move(oss.str());
 }
 

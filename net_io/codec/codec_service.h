@@ -31,14 +31,17 @@ class MessageLoop;
 namespace lt {
 namespace net {
 
-/* a stateless encoder/decoder and
- * transfer the ProtoMessage to real Handler */
+/* as name mean, decode bytestream to a specific message from channel
+ * and encode request/response to bytestream and write to channel
+ * */
 class CodecService : public EnableShared(CodecService),
                      public SocketChannel::Reciever {
 public:
   class Handler {
   public:
     virtual void OnCodecMessage(const RefCodecMessage& message) = 0;
+
+    virtual void OnCodecMessage(IOContext ctx, const RefCodecMessage& msg)  {};
   };
 
   class Delegate {
@@ -70,15 +73,13 @@ public:
 
   base::EventPump* Pump() const;
 
-  base::MessageLoop* IOLoop() const { return binded_loop_; }
+  base::MessageLoop* IOLoop() const { return loop_; }
 
   SocketChannel* Channel() { return channel_.get(); };
 
   void CloseService(bool block_callback = false);
 
   bool IsConnected() const;
-
-  virtual bool FromUpgrade() { return false; };
 
   virtual void BeforeCloseService(){};
 
@@ -108,10 +109,6 @@ public:
 
   bool IsServerSide() const override { return server_side_; }
 
-  inline MessageType RecievedMessageType() const {
-    return server_side_ ? MessageType::kRequest : MessageType::kResponse;
-  }
-
 protected:
   // override this do initializing for client side, like set db, auth etc
   void OnChannelReady(const SocketChannel*) override;
@@ -128,7 +125,8 @@ protected:
 
   Delegate* delegate_ = nullptr;
 
-  base::MessageLoop* binded_loop_ = nullptr;
+  base::MessageLoop* loop_ = nullptr;
+
   DISALLOW_COPY_AND_ASSIGN(CodecService);
 };
 

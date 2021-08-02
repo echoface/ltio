@@ -32,29 +32,13 @@
 #include "interceptor.h"
 #include "queued_channel.h"
 
+#include <base/ltio_config.h>
 #include <net_io/url_utils.h>
 #include "net_io/codec/codec_factory.h"
 #include "net_io/codec/codec_message.h"
 #include "net_io/codec/codec_service.h"
 #include "net_io/socket_acceptor.h"
 #include "net_io/socket_utils.h"
-
-#ifdef LTIO_HAVE_SSL
-#include "base/crypto/lt_ssl.h"
-namespace lt {
-namespace net {
-class ClientSSLCtxProvider {
-public:
-  void SetSSLCtx(base::SSLCtx* ctx) { ssl_ctx_ = ctx; };
-  base::SSLCtx* GetClientSSLContext();
-
-protected:
-  base::SSLCtx* ssl_ctx_;
-};
-
-}  // namespace net
-}  // namespace lt
-#endif
 
 namespace lt {
 namespace net {

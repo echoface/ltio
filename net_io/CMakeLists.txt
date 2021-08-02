@@ -51,6 +51,7 @@ set(LTNET_SOURCE
 
   #clients source
   clients/client.cc
+  clients/ws_client.cc
   clients/client_channel.cc
   clients/async_channel.cc
   clients/queued_channel.cc

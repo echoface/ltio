@@ -22,64 +22,88 @@
 #include <atomic>
 #include <cstdint>
 #include <list>
-#include <set>
 
-#include "../codec/codec_factory.h"
-#include "../codec/codec_service.h"
-#include "../codec/http/http_request.h"
-#include "../codec/http/http_response.h"
-#include "../codec/line/line_message.h"
-#include "../socket_acceptor.h"
-#include "../socket_utils.h"
-#include "../tcp_channel.h"
+#include "net_io/codec/codec_factory.h"
+#include "net_io/socket_acceptor.h"
+#include "net_io/socket_utils.h"
 
 namespace lt {
 namespace net {
 
-class Connector;
-using base::EventPump;
 using base::FdEvent;
+using base::EventPump;
 using base::RefFdEvent;
 
-typedef std::shared_ptr<Connector> RefConnector;
-typedef std::unique_ptr<Connector> OwnedConnector;
-typedef std::weak_ptr<base::FdEvent> WeakPtrFdEvent;
+typedef struct DialOption {
+  int connect_timeout = -1; // in ms
+} DialOption;
+
+struct ConnDetail {
+  int socket = 0;
+  IPEndPoint local;
+  IPEndPoint peer;
+
+  bool valid() {return socket > 0 && local.address().IsValid() && peer.address().IsValid();}
+};
+
 
 class Connector : public base::FdEvent::Handler {
 public:
+  enum Error {
+    kSocketErr = 1,
+    kTimeout = 2,
+  };
   class Delegate {
   public:
     virtual ~Delegate(){};
-    // notify connect failed and report inprogress count
+
+    // notify connect fail
     virtual void OnConnectFailed(uint32_t count) = 0;
+
+    // replace OnConnectFailed
+    virtual void OnConnectErr(Error err) {};
+
     virtual void OnConnected(int socket_fd,
                              IPEndPoint& local,
                              IPEndPoint& remote) = 0;
   };
-  Connector(base::EventPump* pump, Delegate* delegate);
+
+  Connector(base::EventPump* pump);
   ~Connector(){};
 
   void Stop();
 
-  /*gurantee a callback atonce or later*/
-  void Launch(const net::IPEndPoint& address);
+  void Dial(const net::IPEndPoint& ep, Delegate*);
+
+  ConnDetail DialSync(const net::IPEndPoint& ep);
 
   uint32_t InprocessCount() const { return count_; }
 
 private:
-  bool HandleRead(FdEvent* fd_event) override;
-  bool HandleWrite(FdEvent* fd_event) override;
-  bool HandleError(FdEvent* fd_event) override;
-  bool HandleClose(FdEvent* fd_event) override;
+  typedef struct connect_ctx {
+    RefFdEvent ev = nullptr;
+    Delegate* hdl = nullptr;
+    bool IsNil() const {return (!hdl || !ev);}
+  } ctx;
 
-  void Cleanup(base::FdEvent* event);
+  void HandleEvent(FdEvent* fdev) override;
+
+  void HandleError(FdEvent* fd_event);
+
+  void HandleWrite(FdEvent* fd_event);
+
+  void RemoveFromInprogress(base::FdEvent* ev, bool notify_fail);
 
 private:
   EventPump* pump_;
-  Delegate* delegate_;
+
   std::atomic<uint32_t> count_;
-  std::list<RefFdEvent> inprogress_list_;
+
+  std::list<connect_ctx> inprogress_;
 };
+
+using RefConnector = std::shared_ptr<Connector>;
+using OwnedConnector = std::unique_ptr<Connector>;
 
 }  // namespace net
 }  // namespace lt

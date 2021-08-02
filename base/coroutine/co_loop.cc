@@ -75,9 +75,7 @@ void CoLoop::InvokeFiredEvent(FiredEvent* evs, int count) {
     auto func = [this, ev]() {
       FdEvent* fd_event = io_mux_->FindFdEvent(ev.fd_id);
       if (fd_event) {
-        fd_event->SetActivedEvent(ev.event_mask);
-        fd_event->HandleEvent(ev.event_mask);
-        return;
+        return fd_event->Invoke(ev.event_mask);
       }
       LOG(ERROR) << "event removed previously, fd:" << ev.fd_id;
     };

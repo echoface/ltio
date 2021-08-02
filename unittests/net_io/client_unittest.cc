@@ -244,7 +244,7 @@ TEST_CASE("client.raw.request", "[raw client send request]") {
   int success_request = 0;
 
   auto raw_request_task = [&]() {
-    auto request = net::LtRawMessage::Create(true);
+    auto request = net::LtRawMessage::Create();
     request->SetMethod(12);
     request->SetContent("RawRequest");
 
@@ -307,7 +307,7 @@ TEST_CASE("client.timer.request", "[fetch resource every interval]") {
 
   CO_GO& loop << [&]() {
     do {
-      auto request = net::LtRawMessage::Create(true);
+      auto request = net::LtRawMessage::Create();
       request->SetMethod(12);
       request->SetContent("RawRequest");
 
@@ -387,7 +387,7 @@ TEST_CASE("client.raw.bench", "[raw client send request benchmark]") {
 
   auto raw_request_task = [&]() {
     while (total_task-- > 0) {
-      auto request = net::LtRawMessage::Create(true);
+      auto request = net::LtRawMessage::Create();
       request->SetMethod(12);
       request->SetContent("RawRequest");
 
@@ -440,7 +440,7 @@ TEST_CASE("client.http.bench", "[http client send request benchmark]") {
 
   LOG(INFO) << "parse result, host:" << server_info.host
             << " ip:" << server_info.host_ip << " port:" << server_info.port
-            << " protocol:" << server_info.protocol;
+            << " protocol:" << server_info.scheme;
 
   net::Client http_client(&loop, server_info);
 
@@ -523,7 +523,7 @@ TEST_CASE("client.redis_client", "[redis client]") {
     if (!success) {
       LOG(INFO) << "host:" << server_info.host << " ip:" << server_info.host_ip
                 << " port:" << server_info.port
-                << " protocol:" << server_info.protocol;
+                << " protocol:" << server_info.scheme;
       return;
     }
 
@@ -610,7 +610,7 @@ TEST_CASE("client.ringhash_router", "[redis ringhash router client]") {
     if (!success) {
       LOG(INFO) << "host:" << server_info.host << " ip:" << server_info.host_ip
                 << " port:" << server_info.port
-                << " protocol:" << server_info.protocol;
+                << " protocol:" << server_info.scheme;
       return;
     }
 
@@ -681,7 +681,7 @@ TEST_CASE("client.redis_heartbeat", "[redis client heartbeat]") {
     if (!success) {
       LOG(INFO) << "host:" << server_info.host << " ip:" << server_info.host_ip
                 << " port:" << server_info.port
-                << " protocol:" << server_info.protocol;
+                << " protocol:" << server_info.scheme;
       return;
     }
 

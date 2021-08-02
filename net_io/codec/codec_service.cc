@@ -28,7 +28,7 @@
 namespace lt {
 namespace net {
 
-CodecService::CodecService(base::MessageLoop* loop) : binded_loop_(loop) {}
+CodecService::CodecService(base::MessageLoop* loop) : loop_(loop) {}
 
 CodecService::~CodecService() {
   VLOG(GLOG_VTRACE) << __func__ << " this@" << this << " gone";
@@ -41,7 +41,7 @@ void CodecService::BindSocket(SocketChannelPtr&& channel) {
 }
 
 base::EventPump* CodecService::Pump() const {
-  return binded_loop_->Pump();;
+  return loop_->Pump();;
 }
 
 bool CodecService::IsConnected() const {
@@ -50,13 +50,13 @@ bool CodecService::IsConnected() const {
 
 void CodecService::StartProtocolService() {
   VLOG(GLOG_VINFO) << __FUNCTION__ << " enter";
-  CHECK(binded_loop_->IsInLoopThread());
+  CHECK(loop_->IsInLoopThread());
 
   channel_->StartChannel();
 }
 
 void CodecService::CloseService(bool block_callback) {
-  DCHECK(binded_loop_->IsInLoopThread());
+  DCHECK(loop_->IsInLoopThread());
 
   BeforeCloseService();
 

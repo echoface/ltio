@@ -19,7 +19,7 @@
 #define _LT_LINKED_LIST_IMPL_H_
 
 #include "base/check.h"
-#include "base/base_micro.h"
+#include "base/lt_micro.h"
 
 namespace base {
 

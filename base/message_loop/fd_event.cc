@@ -49,7 +49,6 @@ void FdEvent::EnableReading() {
     return;
   }
   events_ |= LtEv::LT_EVENT_READ;
-
   notify_watcher();
 }
 
@@ -58,7 +57,6 @@ void FdEvent::EnableWriting() {
     return;
   }
   events_ |= LtEv::LT_EVENT_WRITE;
-
   notify_watcher();
 }
 
@@ -83,32 +81,10 @@ void FdEvent::notify_watcher() {
   }
 }
 
-void FdEvent::HandleEvent(LtEvent mask) {
-  static const bool kContinue = true;
-  revents_ = mask;
-  VLOG(GLOG_VTRACE) << "fd:" << fd_ << RcvEventAsString();
-  do {
-    if (mask & LtEv::LT_EVENT_ERROR) {
-      if (kContinue != handler_->HandleError(this)) {
-        break;
-      }
-    }
-    if (mask & LtEv::LT_EVENT_WRITE) {
-      if (kContinue != handler_->HandleWrite(this)) {
-        break;
-      }
-    }
-    if (mask & LtEv::LT_EVENT_READ) {
-      if (kContinue != handler_->HandleRead(this)) {
-        break;
-      }
-    }
-    if (mask & LtEv::LT_EVENT_CLOSE) {
-      if (kContinue != handler_->HandleClose(this)) {
-        break;
-      }
-    }
-  } while (0);
+void FdEvent::Invoke(LtEvent ev) {
+  revents_ = ev;
+  handler_->HandleEvent(this);
+  revents_ = LT_EVENT_NONE;
 }
 
 std::string FdEvent::EventInfo() const {

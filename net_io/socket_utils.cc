@@ -50,6 +50,13 @@ SocketFd CreateNoneBlockTCP(sa_family_t family, int type) {
   return sockfd;
 }
 
+SocketFd CreateBlockTCPSocket(sa_family_t family, int type) {
+  int sockfd = ::socket(family, SOCK_STREAM | SOCK_CLOEXEC, type);
+  LOG_IF(ERROR, sockfd == -1)
+      << " create tcp socket err:[" << base::StrError() << "]";
+  return sockfd;
+}
+
 SocketFd CreateNoneBlockUDP(sa_family_t family, int type) {
   int sockfd =
       ::socket(family, SOCK_DGRAM | SOCK_NONBLOCK | SOCK_CLOEXEC, type);
@@ -66,7 +73,7 @@ int BindSocketFd(SocketFd sockfd, const struct sockaddr* addr) {
   return ret;
 }
 
-int SocketConnect(SocketFd fd, const struct sockaddr* addr, int* err) {
+int Connect(SocketFd fd, const struct sockaddr* addr, int* err) {
   int ret =
       ::connect(fd, addr, static_cast<socklen_t>(sizeof(struct sockaddr_in6)));
   LOG_IF(ERROR, ret < 0 && errno != EINPROGRESS)
@@ -76,6 +83,19 @@ int SocketConnect(SocketFd fd, const struct sockaddr* addr, int* err) {
   }
   return ret;
 }
+
+bool SetSocketBlocking(int fd, bool blocking) {
+  if (fd < 0)
+    return false;
+
+  int flags = fcntl(fd, F_GETFL, 0);
+  if (flags == -1)
+    return false;
+
+  flags = blocking ? (flags & ~O_NONBLOCK) : (flags | O_NONBLOCK);
+  return (fcntl(fd, F_SETFL, flags) == 0) ? true : false;
+}
+
 
 int ListenSocket(SocketFd socket_fd) {
   int ret = ::listen(socket_fd, SOMAXCONN);
@@ -241,7 +261,8 @@ bool IsSelfConnect(int sockfd) {
       const struct sockaddr_in6* laddr6 = local_storage.AsSockAddrIn6();
 
       return laddr6->sin6_port == raddr6->sin6_port &&
-             (memcmp(&laddr6->sin6_addr, &raddr6->sin6_addr,
+             (memcmp(&laddr6->sin6_addr,
+                     &raddr6->sin6_addr,
                      sizeof(raddr6->sin6_addr)) == 0);
     }
     default:
@@ -252,7 +273,10 @@ bool IsSelfConnect(int sockfd) {
 
 bool ReUseSocketAddress(SocketFd socket_fd, bool reuse) {
   int option = reuse ? 1 : 0;
-  int r = ::setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &option,
+  int r = ::setsockopt(socket_fd,
+                       SOL_SOCKET,
+                       SO_REUSEADDR,
+                       &option,
                        static_cast<socklen_t>(sizeof option));
   LOG_IF(ERROR, r == -1) << " REUSEADDR Failed, fd:" << socket_fd
                          << " Reuse:" << reuse;
@@ -262,7 +286,10 @@ bool ReUseSocketAddress(SocketFd socket_fd, bool reuse) {
 bool ReUseSocketPort(SocketFd socket_fd, bool reuse) {
 #ifdef SO_REUSEPORT
   int optval = reuse ? 1 : 0;
-  int ret = ::setsockopt(socket_fd, SOL_SOCKET, SO_REUSEPORT, &optval,
+  int ret = ::setsockopt(socket_fd,
+                         SOL_SOCKET,
+                         SO_REUSEPORT,
+                         &optval,
                          static_cast<socklen_t>(sizeof optval));
   LOG_IF(ERROR, ret == -1) << "Set SO_REUSEPORT failed.";
   return ret == 0;
@@ -273,13 +300,16 @@ bool ReUseSocketPort(SocketFd socket_fd, bool reuse) {
 
 void KeepAlive(SocketFd fd, bool alive) {
   int optval = alive ? 1 : 0;
-  ::setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &optval,
+  ::setsockopt(fd,
+               SOL_SOCKET,
+               SO_KEEPALIVE,
+               &optval,
                static_cast<socklen_t>(sizeof optval));
 }
 
 void TCPNoDelay(SocketFd fd) {
   int on = 1;
-  ::setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (void *)&on, sizeof(on));
+  ::setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (void*)&on, sizeof(on));
 }
 
 }  // namespace socketutils

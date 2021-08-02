@@ -41,17 +41,22 @@ public:
                               const IPEndPoint& peer);
   ~TcpChannel();
 
-  // return bytes writen when success else a error code(<0) return 
+  // return bytes writen when success else a error code(<0) return
   int32_t Send(const char* data, const int32_t len) override;
 
+  bool TryFlush() override;
 protected:
   TcpChannel(int socket_fd,
              const IPEndPoint& loc,
              const IPEndPoint& peer);
 
-  bool HandleWrite(base::FdEvent* event) override;
+  void HandleEvent(base::FdEvent* fdev) override;
 
-  bool HandleRead(base::FdEvent* event) override;
+  /*
+  // return true if success, false when error
+  bool HandleWrite(base::FdEvent* event);
+  bool HandleRead(base::FdEvent* event);
+  */
 
 private:
   DISALLOW_COPY_AND_ASSIGN(TcpChannel);

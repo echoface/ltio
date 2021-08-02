@@ -122,13 +122,13 @@ bool HttpCodecService::RequestToBuffer(const HttpRequest* request,
   }
   buffer->WriteString(HttpConstant::kCRCN);
 
-  buffer->WriteString(request->Body());
+  if (request->Body().size()) {
+    buffer->WriteString(request->Body());
+  }
   return true;
 }
 
 bool HttpCodecService::SendRequest(CodecMessage* message) {
-  CHECK(message->GetMessageType() == MessageType::kRequest);
-
   auto request = static_cast<HttpRequest*>(message);
   // last chance manipulate request
   BeforeSendRequest(request);
@@ -214,8 +214,6 @@ bool HttpCodecService::ResponseToBuffer(const HttpResponse* response,
 
 const RefCodecMessage
   HttpCodecService::NewResponse(const CodecMessage* request) {
-
-  CHECK(request && request->IsRequest());
 
   // static_cast<HttpRequest*>(request);
   const HttpRequest* http_request = (HttpRequest*)request;

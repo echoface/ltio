@@ -123,14 +123,14 @@ bool HostResolve(const std::string& host, std::string& host_ip) {
 }
 
 // use c++17 std::string_view avoid memory allocator
-/* protocol://user:password@host:port?query_string*/
+/* scheme://user:password@host:port?query_string*/
 bool ParseRemote(const std::string& str, RemoteInfo& out, bool resolve) {
   nonstd::string_view in = nonstd::string_view(str);
 
   std::string::size_type find_start = 0;
   std::string::size_type pos = in.find("://", find_start);
   if (pos != std::string::npos) {
-    out.protocol = in.substr(find_start, pos).to_string();
+    out.scheme = in.substr(find_start, pos).to_string();
     find_start = pos + sizeof("://") - 1;
   }
 
@@ -171,7 +171,7 @@ bool ParseRemote(const std::string& str, RemoteInfo& out, bool resolve) {
     if (kv.size() != 2) {
       continue;
     }
-    out.querys.insert(std::make_pair(kv.front(), kv.back()));
+    out.queries.insert(std::make_pair(kv.front(), kv.back()));
   }
   return true;
 }

@@ -22,15 +22,10 @@ class WSService {
   public:
     virtual ~WSService() {};
 
-    virtual void OnOpen(WebscoketStream* ws) = 0;
-    virtual void OnClose(WebscoketStream* ws) = 0;
-    virtual void OnMessage(WebscoketStream* ws, const RefWebsockMessage) = 0;
+    virtual void OnOpen(Websocket* ws) = 0;
+    virtual void OnClose(Websocket* ws) = 0;
+    virtual void OnMessage(Websocket* ws, const RefWebsocketFrame&) = 0;
 };
-
-using OpenHandler = std::function<void(WebscoketStream*)>;
-using CloseHandler = std::function<void(WebscoketStream*)>;
-using MessageHandler =
-    std::function<void(WebscoketStream*, const RefWebsockMessage&)>;
 
 class WsServer : public CodecService::Handler,
                  public BaseServer<DefaultConfigurator> {
@@ -93,10 +88,10 @@ protected:
       return;// codec->CloseService();
     }
 
-    WebsocketMessage* ws_msg = (WebsocketMessage*)message.get();
+    WebsocketFrame* ws_msg = (WebsocketFrame*)message.get();
 
     VLOG(GLOG_VTRACE) << "ws recieve:" << message->Dump();
-    iter->second->OnMessage(s, RefCast(WebsocketMessage, message));
+    iter->second->OnMessage(s, RefCast(WebsocketFrame, message));
   }
 
 private:

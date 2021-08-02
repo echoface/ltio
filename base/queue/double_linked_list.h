@@ -18,7 +18,7 @@
 #ifndef _BASE_DOUBLELINKED_LIST_H_
 #define _BASE_DOUBLELINKED_LIST_H_
 
-#include <base/base_micro.h>
+#include <base/lt_micro.h>
 #include <inttypes.h>
 #include <cstdio>
 #include <functional>

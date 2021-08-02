@@ -39,25 +39,27 @@ bool ParseURI(const std::string, SchemeIpPort& out);
 bool HostResolve(const std::string& host, std::string& host_ip);
 
 typedef std::unordered_map<std::string, std::string> QueryMap;
+
 typedef struct RemoteInfo {
   uint16_t port = 0;
   std::string user;
   std::string passwd;
   std::string host;
   std::string host_ip;
-  std::string protocol;
-  QueryMap querys;
+  std::string scheme;
+  QueryMap queries;
   void reset() {
     port = 0;
     user.clear();
     passwd.clear();
     host.clear();
     host_ip.clear();
-    protocol.clear();
-    querys.clear();
+    scheme.clear();
+    queries.clear();
   }
   std::string HostIpPort() const;
 } RemoteInfo;
+
 /* uniform uri parse: http://user:password@host:port?arg1=1&arg2=2
  * protocol://user:password@hots:port?query_string*/
 bool ParseRemote(const std::string& in, RemoteInfo& out, bool resolve = true);

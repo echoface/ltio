@@ -25,17 +25,17 @@ public:
     loops.clear();
   }
 
-  void OnOpen(WebscoketStream* ws) {
+  void OnOpen(Websocket* ws) {
     LOG(INFO) << __func__ << " add to list";
     conns_.Append(ws);
   }
 
-  void OnClose(WebscoketStream* ws) {
+  void OnClose(Websocket* ws) {
     LOG(INFO) << __func__ << " remove from list";
     conns_.Remove(ws);
   }
 
-  void OnMessage(WebscoketStream* ws, const RefWebsockMessage message) {
+  void OnMessage(Websocket* ws, const RefWebsocketFrame& message) {
     LOG(INFO) << __func__ << " message:" << message->Dump();
     ws->Send(message);
   }
@@ -78,7 +78,7 @@ public:
 
   std::vector<base::MessageLoop*> loops;
 
-  base::LinkedList<WebscoketStream> conns_;
+  base::LinkedList<Websocket> conns_;
 };
 
 WSEchoService app;

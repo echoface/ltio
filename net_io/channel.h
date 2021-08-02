@@ -24,7 +24,7 @@
 
 #include <base/base_constants.h>
 #include <cstdint>
-#include "base/base_micro.h"
+#include "base/lt_micro.h"
 #include "base/ip_endpoint.h"
 #include "base/message_loop/fd_event.h"
 #include "io_buffer.h"
@@ -60,7 +60,8 @@ public:
 
   void SetReciever(SocketChannel::Reciever* consumer);
 
-  virtual bool TryFlush();
+  // write as much as data into socket
+  virtual bool TryFlush() = 0;
 
   /* return -1 when error,
    * return 0 when all data pending to buffer,
@@ -104,9 +105,11 @@ protected:
 
   void SetChannelStatus(Status st);
 
-  virtual bool HandleError(base::FdEvent* event) override;
+  //void HandleEvent(base::FdEvent* fdev);
 
-  virtual bool HandleClose(base::FdEvent* event) override;
+  bool HandleError(base::FdEvent* fdev);
+
+  bool HandleClose(base::FdEvent* fdev);
 
   const IPEndPoint& LocalEndpoint() const {return local_ep_;}
 

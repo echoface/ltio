@@ -19,6 +19,7 @@
 #define LIGHTING_NET_SOCKET_UTILS_H
 
 #include <arpa/inet.h>
+#include <fcntl.h>
 #include <netinet/in.h>
 #include <string>
 #include "base/ip_endpoint.h"
@@ -33,12 +34,16 @@ namespace socketutils {
 
 SocketFd CreateNoneBlockTCP(sa_family_t family, int type = IPPROTO_TCP);
 SocketFd CreateNoneBlockUDP(sa_family_t family, int type = IPPROTO_UDP);
+SocketFd CreateBlockTCPSocket(sa_family_t family, int type = IPPROTO_TCP);
+
+/** Returns true on success, or false if there was an error */
+bool SetSocketBlocking(int fd, bool blocking);
 
 int ListenSocket(SocketFd fd);
 
 int BindSocketFd(SocketFd fd, const struct sockaddr* addr);
 
-int SocketConnect(SocketFd fd, const struct sockaddr* addr, int* err);
+int Connect(SocketFd fd, const struct sockaddr* addr, int* err);
 
 SocketFd AcceptSocket(SocketFd fd, struct sockaddr* addr, int* err);
 

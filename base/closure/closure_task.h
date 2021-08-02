@@ -24,7 +24,7 @@
 
 #include "glog/logging.h"
 
-#include "base/base_micro.h"
+#include "base/lt_micro.h"
 #include "location.h"
 
 namespace base {
@@ -35,7 +35,7 @@ using ClosureCallback = LtClosure;
 class TaskBase {
 public:
   TaskBase() {}
-  explicit TaskBase(const Location& location) : location_(location) {}
+  explicit TaskBase(const Location& loc) : location_(loc) {}
   virtual ~TaskBase() {}
   virtual void Run() = 0;
   const Location& TaskLocation() const { return location_; }
@@ -46,15 +46,16 @@ private:
 };
 using TaskBasePtr = std::unique_ptr<TaskBase>;
 
-template <typename Functor>
-class ClosureTask : public TaskBase {
+template <typename F>
+class Closure0 : public TaskBase {
 public:
-  explicit ClosureTask(const Location& location, const Functor& closure)
-    : TaskBase(location),
-      closure_task(closure) {}
+  explicit Closure0(const Location& loc, const F& closure)
+    : TaskBase(loc),
+      func_(closure) {}
+
   void Run() override {
     try {
-      closure_task();
+      func_();
     } catch (...) {
       LOG(ERROR) << "Crash From:" << ClosureInfo();
       abort();
@@ -62,7 +63,26 @@ public:
   }
 
 private:
-  Functor closure_task;
+  typename std::remove_reference<F>::type func_;
+};
+
+template <typename Functor>
+class Closure0p : public TaskBase {
+public:
+  explicit Closure0p(const Location& location, const Functor* closure)
+    : TaskBase(location),
+      func_(closure) {}
+  void Run() override {
+    try {
+      (*func_)();
+    } catch (...) {
+      LOG(ERROR) << "Crash From:" << ClosureInfo();
+      abort();
+    }
+  }
+
+private:
+  typename std::remove_reference<Functor>::type* func_;
 };
 
 template <class Closure, class Cleanup>
@@ -94,10 +114,14 @@ private:
   Cleanup cleanup_task;
 };
 
-template <class Closure>
-static TaskBasePtr CreateClosure(const Location& location,
-                                 const Closure& closure) {
-  return TaskBasePtr(new ClosureTask<Closure>(location, closure));
+template <typename F>
+static TaskBasePtr CreateClosure(const Location& loc, const F& closure) {
+  return TaskBasePtr(new Closure0<F>(loc, closure));
+}
+
+template <class F>
+static TaskBasePtr CreateClosure(const Location& loc, const F* closure) {
+  return TaskBasePtr(new Closure0p<F>(loc, closure));
 }
 
 template <class Closure, class Cleanup>
@@ -110,7 +134,8 @@ static TaskBasePtr CreateTaskWithCallback(const Location& location,
 
 }  // namespace base
 
-#define NewClosure(Functor) ::base::CreateClosure(FROM_HERE, Functor)
+#define NewClosure(...) ::base::CreateClosure(FROM_HERE, __VA_ARGS__)
+
 #define NewClosureWithCleanup(Functor, Cleanup) \
   ::base::CreateTaskWithCallback(FROM_HERE, Functor, Cleanup)
 
