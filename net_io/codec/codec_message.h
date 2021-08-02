@@ -61,13 +61,9 @@ typedef std::function<void(const RefCodecMessage&)> ProtoMessageHandler;
 
 class CodecMessage {
 public:
-  CodecMessage(MessageType t);
+  CodecMessage();
 
   virtual ~CodecMessage();
-
-  const MessageType& GetMessageType() const { return type_; };
-
-  bool IsRequest() const { return type_ == MessageType::kRequest; };
 
   const IOContext& GetIOCtx() const { return io_context_; }
 
@@ -91,8 +87,6 @@ public:
 
   const RefCodecMessage& Response() const { return response_; }
 
-  const char* TypeAsStr() const;
-
   /* use for those async-able protocol message,
    * use for matching request and response*/
   virtual bool AsHeartbeat() { return false; };
@@ -114,8 +108,6 @@ protected:
   WorkContext work_context_;
 
 private:
-  MessageType type_;
-
   MessageCode code_;
 
   RefCodecMessage response_;

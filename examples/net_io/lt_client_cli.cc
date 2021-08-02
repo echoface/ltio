@@ -22,7 +22,7 @@ ClientPtr raw_router;
 BlockMessageQueue message_queue;
 
 void DoLtRawRequest(const std::string& content) {
-  auto raw_request = net::LtRawMessage::Create(true);
+  auto raw_request = net::LtRawMessage::Create();
   raw_request->SetMethod(12);
   raw_request->SetContent(content);
   net::LtRawMessage* response = raw_router->SendRecieve(raw_request);
@@ -35,7 +35,7 @@ void DoLtRawRequest(const std::string& content) {
 }
 
 void DoFwRapidRequest(std::string content) {
-  auto raw_request = FwRapidMessage::Create(true);
+  auto raw_request = FwRapidMessage::Create();
   raw_request->SetCmdId(100);
   raw_request->SetContent(content);
   FwRapidMessage* response = raw_router->SendRecieve(raw_request);
@@ -103,7 +103,7 @@ int main(int argc, char** argv) {
       break;
     }
 
-    if (server_info.protocol == "raw") {
+    if (server_info.scheme == "raw") {
       CO_GO& mainloop << std::bind(&DoLtRawRequest, content);
     } else {
       CO_GO& mainloop << std::bind(&DoFwRapidRequest, content);

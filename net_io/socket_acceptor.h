@@ -21,7 +21,7 @@
 #include "base/ip_endpoint.h"
 #include "socket_utils.h"
 
-#include "base/base_micro.h"
+#include "base/lt_micro.h"
 #include "base/message_loop/fd_event.h"
 #include "base/message_loop/message_loop.h"
 #include "net_callback.h"
@@ -51,10 +51,10 @@ public:
 private:
   bool InitListener();
   // override from FdEvent::Handler
-  bool HandleRead(base::FdEvent* fd_event) override;
-  bool HandleWrite(base::FdEvent* fd_event) override;
-  bool HandleError(base::FdEvent* fd_event) override;
-  bool HandleClose(base::FdEvent* fd_event) override;
+  void HandleEvent(base::FdEvent* fdev);
+
+  void AcceptRead(base::FdEvent* fdev);
+  bool HandleError(base::FdEvent* fd_event);
 
   bool listening_;
   IPEndPoint address_;

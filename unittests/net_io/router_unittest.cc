@@ -54,7 +54,7 @@ TEST_CASE("client.hashrouter", "[http client]") {
     if (!success) {
       LOG(INFO) << "host:" << server_info.host << " ip:" << server_info.host_ip
                 << " port:" << server_info.port
-                << " protocol:" << server_info.protocol;
+                << " protocol:" << server_info.scheme;
       return;
     }
 

@@ -3,7 +3,7 @@
 
 #include <unordered_map>
 
-#include "base/base_micro.h"
+#include "base/lt_micro.h"
 #include "components/boolean_indexer/be_indexer.h"
 #include "components/boolean_indexer/document.h"
 

@@ -26,7 +26,8 @@
 #include <mutex>  // std::mutex, std::unique_lock
 #include <vector>
 
-#include "base/base_micro.h"
+#include "base/ltio_config.h"
+#include "base/lt_micro.h"
 #include "base/coroutine/co_runner.h"
 #include "net_io/codec/codec_factory.h"
 #include "net_io/io_service.h"
@@ -89,7 +90,7 @@ public:
     }
 
     endpoint_ = net::IPEndPoint(uri_.host_ip, uri_.port);
-#if defined SO_REUSEPORT && defined NET_ENABLE_REUSER_PORT
+#if defined SO_REUSEPORT && defined LTIO_ENABLE_REUSER_PORT
     for (base::MessageLoop* loop : io_loops_) {
       RefIOService service(new IOService(endpoint_, uri_.protocol, loop, this));
       service->WithHandler(handler);
@@ -135,10 +136,10 @@ protected:
   void DecreaseChannelCount() override { client_count_--; }
 
   MessageLoop* GetNextIOWorkLoop() override {
-#if defined SO_REUSEPORT && defined NET_ENABLE_REUSER_PORT
+#if defined SO_REUSEPORT && defined LTIO_ENABLE_REUSER_PORT
     return MessageLoop::Current();
 #else
-    static std::atomic<uint32_t> index = 0;
+    static std::atomic<uint32_t> index = {0};
     return io_loops_[index.fetch_add(1) % io_loops_.size()];
 #endif
   };

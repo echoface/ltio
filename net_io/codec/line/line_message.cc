@@ -20,14 +20,18 @@
 namespace lt {
 namespace net {
 
-LineMessage::LineMessage(MessageType t) : CodecMessage(t) {}
+LineMessage::LineMessage() : CodecMessage() {}
+
+LineMessage::LineMessage(const std::string& data)
+  : CodecMessage(),
+    content_(data) {}
 
 LineMessage::~LineMessage() {}
 std::string& LineMessage::MutableBody() {
-  return body_;
+  return content_;
 }
 const std::string& LineMessage::Body() const {
-  return body_;
+  return content_;
 }
 
 }  // namespace net

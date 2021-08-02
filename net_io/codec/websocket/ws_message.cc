@@ -5,20 +5,30 @@
 namespace lt {
 namespace net {
 
-WebsocketMessage::~WebsocketMessage() {}
-
-WebsocketMessage::WebsocketMessage(MessageType type) : CodecMessage(type) {}
-
-WebsocketMessage::WebsocketMessage(MessageType type, int opcode)
-  : CodecMessage(type),
-    opcode_(opcode) {}
-
-void WebsocketMessage::AppendData(const char* data, size_t len) {
-  payload_.append(data, len);
+WebsocketFrame* WebsocketFrame::NewCloseFrame(uint16_t code) {
+  WebsocketFrame* frame = new WebsocketFrame(WS_OP_CLOSE);
+  uint16_t bytes = htobe16(code);
+  frame->AppendData((const char*)&bytes, sizeof(bytes));
+  return frame;
 }
 
-const std::string WebsocketMessage::Dump() const {
-  return fmt::format("opcode:{}, payload:{}", opcode_, payload_);
+WebsocketFrame::~WebsocketFrame() {}
+
+WebsocketFrame::WebsocketFrame()
+  : CodecMessage(),
+    opcode_(WS_OP_TEXT) {
+}
+
+WebsocketFrame::WebsocketFrame(int opcode)
+  : CodecMessage(),
+    opcode_(opcode) {}
+
+void WebsocketFrame::AppendData(const char* data, size_t len) {
+  std::copy(data, data + len, std::back_inserter(payload_));
+}
+
+const std::string WebsocketFrame::Dump() const {
+  return fmt::format("opcode:{}, payload:{}", opcode_, Payload().to_string());
 }
 
 }  // namespace net

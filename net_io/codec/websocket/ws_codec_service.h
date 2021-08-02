@@ -4,24 +4,27 @@
 #include "ws_message.h"
 
 #include "net_io/codec/codec_service.h"
-#include "net_io/codec/websocket/websocket_parser.h"
 #include "net_io/codec/http/parser_context.h"
+#include "net_io/codec/websocket/websocket_parser.h"
 
 namespace lt {
 namespace net {
 
 // public api for message interactive based on bi-stream connection
-class WebscoketStream : public base::LinkedList<WebscoketStream>::Node {
+class Websocket : public base::LinkedList<Websocket>::Node {
 public:
-  WebscoketStream() {}
+  Websocket() {}
 
-  virtual bool Send(RefWebsockMessage message) {
-    return false;
-  };
+  virtual bool Send(RefWebsocketFrame message) { return false; };
 };
 
-class WSCodecService : public CodecService,
-                       public WebscoketStream {
+using WSCallback = std::function<void(Websocket* ws)>;
+using WSMsgCallback =
+    std::function<void(Websocket* ws, const RefWebsocketFrame&)>;
+
+using WebsocketParser = struct websocket_parser;
+
+class WSCodecService : public CodecService, public Websocket {
 public:
   WSCodecService(base::MessageLoop* loop);
 
@@ -29,19 +32,17 @@ public:
 
   void StartProtocolService() override;
 
-  bool FromUpgrade() override { return false; };
+  void BeforeCloseService() override{};
 
-  void BeforeCloseService() override {};
-
-  void AfterChannelClosed() override {};
+  void AfterChannelClosed() override{};
 
   /* feature indentify*/
   // async clients request
   bool KeepSequence() override { return false; };
 
-  bool KeepHeartBeat() override { return false;}
+  bool KeepHeartBeat() override { return false; }
 
-  bool Send(RefWebsockMessage message) override;
+  bool Send(RefWebsocketFrame message) override;
 
   bool SendRequest(CodecMessage* message) override;
 
@@ -57,19 +58,24 @@ public:
 
   bool UseSSLChannel() const override { return protocol_ == "wss"; };
 
-  const std::string& TopicPath() const {return ws_path_;}
-
   void CommitHttpRequest(const RefHttpRequest&& request);
 
   void CommitHttpResponse(const RefHttpResponse&& response);
 
+  const std::string& TopicPath() const { return ws_path_; }
+
+  // client api: format /xxx/path?queries
+  void SetTopicPath(const std::string& path) { ws_path_ = path;}
+
 protected:
-  using HttpReqParser = HttpParser<WSCodecService, HttpRequest>; 
-  using HttpResParser = HttpParser<WSCodecService, HttpResponse>; 
+  using HttpReqParser = HttpParser<WSCodecService, HttpRequest>;
+  using HttpResParser = HttpParser<WSCodecService, HttpResponse>;
 
   static int OnFrameBegin(websocket_parser* parser);
 
-  static int OnFrameBody(websocket_parser* parser, const char* data, size_t len);
+  static int OnFrameBody(websocket_parser* parser,
+                         const char* data,
+                         size_t len);
 
   static int OnFrameFinish(websocket_parser* parser);
 
@@ -91,15 +97,12 @@ protected:
 
   void finalize_http_parser();
 
-  HttpReqParser* http_req_parser() {
-    return http_parser_.req_parser;
-  }
-  HttpResParser* http_res_parser() {
-    return http_parser_.res_parser;
-  }
+  HttpReqParser* http_req_parser() { return http_parser_.req_parser; }
+  HttpResParser* http_res_parser() { return http_parser_.res_parser; }
+
 private:
   enum handshake_state {
-    HS_None     = 0,
+    HS_None = 0,
     HS_SUCCEESS = 1,
     HS_WRONGMSG = 2,
   };
@@ -126,7 +129,7 @@ private:
 
   std::string sec_accept_;
 
-  RefWebsockMessage current_;
+  RefWebsocketFrame current_;
 
   DISALLOW_COPY_AND_ASSIGN(WSCodecService);
 };

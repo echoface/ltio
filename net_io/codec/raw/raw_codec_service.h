@@ -63,14 +63,13 @@ public:
   }
 
   const RefCodecMessage NewResponse(const CodecMessage* req) override {
-    CHECK(req->GetMessageType() == MessageType::kRequest);
     return RawMessageType::CreateResponse((RawMessageType*)req);
   }
 
   const RefCodecMessage NewHeartbeat() {
-    auto message = RawMessageType::Create(!IsServerSide());
+    auto message = RawMessageType::Create();
     if (message->AsHeartbeat()) {
-      return std::move(message);
+      return message;
     }
     return NULL;
   }
@@ -81,8 +80,6 @@ public:
 
   bool SendRequest(CodecMessage* message) override {
     RawMessageType* request = static_cast<RawMessageType*>(message);
-    CHECK(request->GetMessageType() == MessageType::kRequest);
-
     request->SetAsyncId(RawCodecService::sequence_id_++);
     return request->EncodeTo(channel_.get());
   };

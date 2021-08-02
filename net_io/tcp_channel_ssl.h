@@ -34,11 +34,17 @@ protected:
                 const IPEndPoint& loc,
                 const IPEndPoint& peer);
 
-  bool OnHandshake(base::FdEvent* event);
+  // write as much as data into socket
+  bool TryFlush() override;
 
-  bool HandleWrite(base::FdEvent* event) override;
+  // return true when success, false when failed
+  bool DoHandshake(base::FdEvent* event);
 
-  bool HandleRead(base::FdEvent* event) override;
+  bool HandleWrite(base::FdEvent* event);
+
+  bool HandleRead(base::FdEvent* event);
+
+  void HandleEvent(base::FdEvent* fdev) override;
 private:
   bool server_ = true;
 

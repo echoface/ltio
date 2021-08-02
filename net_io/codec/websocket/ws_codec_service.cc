@@ -1,5 +1,6 @@
 #include "ws_codec_service.h"
 
+#include <net_io/codec/http/http_codec_service.h>
 #include "fmt/core.h"
 #include "ws_util.h"
 
@@ -7,7 +8,7 @@ namespace lt {
 namespace net {
 
 namespace {
-const char* access_response_template =
+const char* upgrade_response_template =
     "HTTP/1.1 101 Switching Protocols\r\n"
     "Connection: Upgrade\r\n"
     "Upgrade: websocket\r\n"
@@ -15,8 +16,9 @@ const char* access_response_template =
 
 constexpr size_t MAX_PAYLOAD_LENGTH = (1 << 24);  // 16M
 
-WebsocketMessage kpong_res(MessageType::kResponse, WS_OPCODE_PONG);
-WebsocketMessage kclose_res(MessageType::kResponse, WS_OPCODE_CLOSE);
+WebsocketFrame* kclose_msg = WebsocketFrame::NewCloseFrame(1000);
+WebsocketFrame kping_msg(WS_OPCODE_PING);
+WebsocketFrame kpong_msg(WS_OPCODE_PONG);
 
 };  // namespace
 
@@ -58,10 +60,9 @@ void WSCodecService::finalize_http_parser() {
 int WSCodecService::OnFrameBegin(websocket_parser* parser) {
   auto codec = (WSCodecService*)parser->data;
   if (!codec->current_) {
-    auto type = codec->RecievedMessageType();
-    codec->current_ = std::make_shared<WebsocketMessage>(type);
+    codec->current_ = std::make_shared<WebsocketFrame>();
   }
-  WebsocketMessage* message = codec->current_.get();
+  WebsocketFrame* message = codec->current_.get();
   int opcode = parser->flags & WS_OP_MASK;
   if (opcode != WS_OP_CONTINUE) {
     message->SetOpCode(opcode);
@@ -82,6 +83,7 @@ int WSCodecService::OnFrameBody(websocket_parser* parser,
   if (parser->flags & WS_HAS_MASK) {
     websocket_parser_decode((char*)data, data, len, parser);
   }
+  VLOG(GLOG_VTRACE) << "ws parse body:" << std::string(data, len);
   codec->current_->AppendData(data, len);
   return 0;
 }
@@ -97,13 +99,13 @@ int WSCodecService::OnFrameFinish(websocket_parser* parser) {
 void WSCodecService::CommitFrameMessage() {
   switch (current_->OpCode()) {
     case WS_OPCODE_CLOSE:
-      SendResponse(nullptr, &kclose_res);
-
+      LOG(INFO) << "CloseFrame:" << current_->Dump();
+      SendResponse(nullptr, kclose_msg);
       CloseService(true);
       return delegate_->OnCodecClosed(shared_from_this());
       break;
     case WS_OPCODE_PING:
-      SendResponse(nullptr, &kpong_res);
+      SendResponse(nullptr, &kpong_msg);
       break;
     default:
       break;
@@ -118,15 +120,40 @@ void WSCodecService::StartProtocolService() {
   init_http_parser();
 
   CodecService::StartProtocolService();
+
+  /*
+  GET / HTTP/1.1
+  Host: localhost:8080
+  Origin: http://127.0.0.1:3000
+  Connection: Upgrade
+  Upgrade: websocket
+  Sec-WebSocket-Version: 13
+  Sec-WebSocket-Key: w4v7O6xFTi36lq3RNcgctw==
+  */
+  if (!IsServerSide()) {
+    // send a handshake http upgrade request
+    auto hs_req = std::make_shared<HttpRequest>();
+    hs_req->SetMethod("GET");
+    hs_req->SetRequestURL(ws_path_);
+    const url::RemoteInfo* info = delegate_->GetRemoteInfo();
+    hs_req->InsertHeader("Host", info->host);
+    hs_req->InsertHeader("Upgrade", "websocket");
+    hs_req->InsertHeader("Connection", "Upgrade");
+    hs_req->InsertHeader("Sec-WebSocket-Version", "13");
+    hs_req->InsertHeader("Sec-WebSocket-Key", "w4v7O6xFTi36lq3RNcgctw==");
+    HttpCodecService::RequestToBuffer(hs_req.get(), channel_->WriterBuffer());
+    VLOG(GLOG_VTRACE) << "send handshake request" << channel_->WriterBuffer()->AsString();
+    channel_->TryFlush();
+  }
 }
 
-bool WSCodecService::Send(RefWebsockMessage message) {
+bool WSCodecService::Send(RefWebsocketFrame message) {
   CodecMessage* ptr = message.get();
   return IsServerSide() ? SendResponse(nullptr, ptr) : SendRequest(ptr);
 }
 
 bool WSCodecService::SendRequest(CodecMessage* req) {
-  WebsocketMessage* wsmsg = (WebsocketMessage*)req;
+  WebsocketFrame* wsmsg = (WebsocketFrame*)req;
   size_t size =
       WebsocketUtil::CalculateFrameSize(wsmsg->Payload().size(), true);
 
@@ -137,13 +164,13 @@ bool WSCodecService::SendRequest(CodecMessage* req) {
                                           wsmsg->Payload().data(),
                                           wsmsg->Payload().size(),
                                           (ws_opcode)wsmsg->OpCode());
-  buffer->Produce(n);
-
+  buffer->Produce(size);
+  VLOG(GLOG_VTRACE) << "send request size:" << size << ", n:" << n << " content:" << wsmsg->Payload();
   return channel_->TryFlush();
 }
 
 bool WSCodecService::SendResponse(const CodecMessage*, CodecMessage* res) {
-  WebsocketMessage* wsmsg = (WebsocketMessage*)res;
+  WebsocketFrame* wsmsg = (WebsocketFrame*)res;
   size_t size = WebsocketUtil::CalculateFrameSize(wsmsg->Payload().size());
 
   auto buffer = channel_->WriterBuffer();
@@ -155,6 +182,7 @@ bool WSCodecService::SendResponse(const CodecMessage*, CodecMessage* res) {
                                           wsmsg->Payload().size(),
                                           (ws_opcode)wsmsg->OpCode());
   buffer->Produce(n);
+  VLOG(GLOG_VTRACE) << "send response size:" << size << ", n:" << n << " payload:" << wsmsg->Payload();
 
   return channel_->TryFlush();
 }
@@ -178,7 +206,9 @@ void WSCodecService::OnChannelReady(const SocketChannel* ch) {
   return;
 }
 
-void WSCodecService::OnChannelClosed(const SocketChannel*) {}
+void WSCodecService::OnChannelClosed(const SocketChannel* ch) {
+  CodecService::OnChannelClosed(ch);
+}
 
 void WSCodecService::OnDataFinishSend(const SocketChannel*) {}
 
@@ -202,7 +232,7 @@ void WSCodecService::CommitHttpRequest(const RefHttpRequest&& request) {
 
   auto ws_accept = WebsocketUtil::GenAcceptKey(sec_key_.c_str());
 
-  std::string response = fmt::format(access_response_template, ws_accept);
+  std::string response = fmt::format(upgrade_response_template, ws_accept);
   VLOG(GLOG_VINFO) << "websocket upgrade, path:" << ws_path_
                    << ",key:" << sec_key_ << ",rsp:" << response;
 
@@ -294,7 +324,6 @@ void WSCodecService::OnDataReceived(const SocketChannel*, IOBuffer* buf) {
                                             buf->GetRead(),
                                             buf->CanReadSize());
   if (nparsed != buf->CanReadSize()) {
-
     CloseService(true);
     return delegate_->OnCodecClosed(guard);
   }

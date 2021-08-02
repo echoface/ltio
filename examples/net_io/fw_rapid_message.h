@@ -28,15 +28,14 @@ public:
   static bool KeepQueue() { return false; }
   static bool WithHeartbeat() { return true; }
 
-  static RefFwRapidMessage Create(bool request) {
-    auto t = request ? net::MessageType::kRequest : net::MessageType::kResponse;
-    auto msg = std::make_shared<FwRapidMessage>(t);
+  static RefFwRapidMessage Create() {
+    auto msg = std::make_shared<FwRapidMessage>();
     msg->header_.size = sizeof(RapidHeader);
     return msg;
   }
 
   static RefFwRapidMessage CreateResponse(const FwRapidMessage* request) {
-    auto res = Create(false);
+    auto res = Create();
     res->header_ = request->header_;
     res->header_.size = sizeof(RapidHeader);
     res->header_.extra = 0;
@@ -59,7 +58,7 @@ public:
     if (buffer->CanReadSize() < frame_size) {
       return NULL;
     }
-    auto message = Create(server_side);
+    auto message = Create();
     ::memcpy(&message->header_, buffer->GetRead(), sizeof(RapidHeader));
     const uint64_t body_size = message->header_.size - sizeof(RapidHeader);
     buffer->Consume(sizeof(RapidHeader));
@@ -72,7 +71,7 @@ public:
     return message;
   }
 
-  FwRapidMessage(net::MessageType t) : CodecMessage(t) {}
+  FwRapidMessage() : CodecMessage() {}
   ~FwRapidMessage(){};
 
   uint8_t Type() const { return header_.type; }

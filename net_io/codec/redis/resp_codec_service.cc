@@ -109,8 +109,8 @@ void RespCodecService::OnChannelReady(const SocketChannel* ch) {
     init_wait_res_flags_ |= InitWaitFlags::kWaitAuth;
   }
 
-  auto db_iter = info->querys.find("db");
-  if (db_iter != info->querys.end() && !db_iter->second.empty()) {
+  auto db_iter = info->queries.find("db");
+  if (db_iter != info->queries.end() && !db_iter->second.empty()) {
     request->Select(db_iter->second);
     init_wait_res_flags_ |= InitWaitFlags::kWaitSelectDB;
   }
@@ -138,11 +138,6 @@ const RefCodecMessage RespCodecService::NewHeartbeat() {
 }
 
 bool RespCodecService::SendRequest(CodecMessage* message) {
-  if (message->GetMessageType() != MessageType::kRequest) {
-    LOG(ERROR) << __FUNCTION__ << " only client side supported";
-    return false;
-  }
-
   CHECK(next_incoming_count_ == 0);
 
   RedisRequest* request = (RedisRequest*)message;

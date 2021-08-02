@@ -2,7 +2,7 @@
 #define __LT_CORO_MUTEX_H_H_
 
 #include <deque>
-#include "base/base_micro.h"
+#include "base/lt_micro.h"
 #include "base/closure/closure_task.h"
 #include "base/memory/spin_lock.h"
 

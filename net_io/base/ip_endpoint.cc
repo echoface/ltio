@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/build_config.h"
+#include "base/ltio_config.h"
 
 #include <endian.h>
 #include <netinet/in.h>
 #include <string.h>
 #include <tuple>
 
-//#include "base/sys_byteorder.h"
 #include "glog/logging.h"
 #include "ip_address.h"
 #include "ip_endpoint.h"
@@ -79,7 +78,8 @@ IPEndPoint::IPEndPoint() : port_(0) {}
 IPEndPoint::~IPEndPoint() = default;
 
 IPEndPoint::IPEndPoint(const IPAddress& address, uint16_t port)
-  : address_(address), port_(port) {}
+  : address_(address),
+    port_(port) {}
 
 IPEndPoint::IPEndPoint(const base::StringPiece ip, uint16_t port)
   : port_(port) {
@@ -120,7 +120,8 @@ socklen_t IPEndPoint::ToSockAddr(struct sockaddr* address,
       memset(addr, 0, sizeof(struct sockaddr_in));
       addr->sin_family = AF_INET;
       addr->sin_port = htobe16(port_);  // base::HostToNet16(port_);
-      memcpy(&addr->sin_addr, address_.bytes().data(),
+      memcpy(&addr->sin_addr,
+             address_.bytes().data(),
              IPAddress::kIPv4AddressSize);
 
       return sizeof(struct sockaddr_in);
@@ -134,7 +135,8 @@ socklen_t IPEndPoint::ToSockAddr(struct sockaddr* address,
       memset(addr6, 0, sizeof(struct sockaddr_in6));
       addr6->sin6_family = AF_INET6;
       addr6->sin6_port = htobe16(port_);  // base::HostToNet16(port_);
-      memcpy(&addr6->sin6_addr, address_.bytes().data(),
+      memcpy(&addr6->sin6_addr,
+             address_.bytes().data(),
              IPAddress::kIPv6AddressSize);
       return sizeof(struct sockaddr_in6);
     } break;
@@ -151,8 +153,11 @@ bool IPEndPoint::FromSockAddr(const struct sockaddr* sock_addr,
   const uint8_t* address;
   size_t address_len;
   uint16_t port;
-  if (!GetIPAddressFromSockAddr(sock_addr, sock_addr_len, &address,
-                                &address_len, &port)) {
+  if (!GetIPAddressFromSockAddr(sock_addr,
+                                sock_addr_len,
+                                &address,
+                                &address_len,
+                                &port)) {
     return false;
   }
 

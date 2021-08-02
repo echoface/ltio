@@ -18,13 +18,14 @@
 
 #include <algorithm>
 
+#include <base/ltio_config.h>
 #include "base/base_constants.h"
 #include "base/coroutine/co_runner.h"
 #include "base/utils/string/str_utils.h"
 #include "client_channel.h"
+#include "glog/logging.h"
 #include "net_io/tcp_channel.h"
 
-#include "glog/logging.h"
 #ifdef LTIO_HAVE_SSL
 #include <memory>
 #include "net_io/tcp_channel_ssl.h"
@@ -59,7 +60,7 @@ Client::Client(base::MessageLoop* loop, const url::RemoteInfo& info)
   std::atomic_store(&in_use_channels_, empty_list);
 
   channels_count_.store(0);
-  connector_.reset(new Connector(work_loop_->Pump(), this));
+  connector_.reset(new Connector(work_loop_->Pump()));
 }
 
 Client::~Client() {
@@ -75,7 +76,11 @@ void Client::Initialize(const ClientConfig& config) {
   config_ = config;
   uint32_t init_count = std::min(kConnetBatchCount, required_count());
   for (uint32_t i = 0; i < init_count; i++) {
-    work_loop_->PostTask(FROM_HERE, &Connector::Launch, connector_, address_);
+    work_loop_->PostTask(FROM_HERE,
+                         &Connector::Dial,
+                         connector_,
+                         address_,
+                         this);
   }
 }
 
@@ -114,7 +119,7 @@ void Client::OnConnectFailed(uint32_t count) {
                       << connector_->InprocessCount();
   } else {
     int32_t delay = std::min(next_reconnect_interval_, kMaxReconInterval);
-    auto functor = std::bind(&Connector::Launch, connector_, address_);
+    auto functor = std::bind(&Connector::Dial, connector_, address_, this);
     work_loop_->PostDelayTask(NewClosure(functor), delay);
     VLOG(GLOG_VERROR) << "reconnect:" << RemoteIpPort() << " after " << delay
                       << "(ms)";
@@ -142,7 +147,7 @@ void Client::launch_next_if_need() {
     return;
   }
   int start = connected + inprocess_cnt;
-  work_loop_->PostTask(FROM_HERE, &Connector::Launch, connector_, address_);
+  work_loop_->PostTask(FROM_HERE, &Connector::Dial, connector_, address_, this);
 }
 
 RefClientChannel Client::get_ready_channel() {
@@ -168,7 +173,7 @@ void Client::OnConnected(int socket_fd, IPEndPoint& local, IPEndPoint& remote) {
   base::MessageLoop* io_loop = next_client_io_loop();
 
   RefCodecService codec_service =
-      CodecFactory::NewClientService(remote_info_.protocol, io_loop);
+      CodecFactory::NewClientService(remote_info_.scheme, io_loop);
 
   SocketChannelPtr channel;
 #ifdef LTIO_HAVE_SSL

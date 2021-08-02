@@ -73,8 +73,14 @@ void UDPService::StopService() {
   socketutils::CloseSocket(socket_event_->GetFd());
 }
 
+void UDPService::HandleEvent(base::FdEvent* fdev) {
+  if (fdev->RecvRead()) {
+    return HandleRead(fdev);
+  }
+}
+
 // override from FdEvent::Handler
-bool UDPService::HandleRead(base::FdEvent* fd_event) {
+void UDPService::HandleRead(base::FdEvent* fd_event) {
   do {
     struct mmsghdr* hdr = buffers_.GetMmsghdr();
     int recv_cnt =
@@ -98,23 +104,18 @@ bool UDPService::HandleRead(base::FdEvent* fd_event) {
                 << " sender:" << endpoint.ToString();
     }
   } while (true);
-
-  return true;
 }
 
-bool UDPService::HandleWrite(base::FdEvent* fd_event) {
+void UDPService::HandleWrite(base::FdEvent* fd_event) {
   LOG(INFO) << __FUNCTION__ << "fd_event:" << fd_event;
-  return true;
 }
 
-bool UDPService::HandleError(base::FdEvent* fd_event) {
+void UDPService::HandleError(base::FdEvent* fd_event) {
   LOG(INFO) << __FUNCTION__ << "fd_event:" << fd_event;
-  return true;
 }
 
-bool UDPService::HandleClose(base::FdEvent* fd_event) {
+void UDPService::HandleClose(base::FdEvent* fd_event) {
   LOG(INFO) << __FUNCTION__ << "fd_event:" << fd_event;
-  return true;
 }
 
 }  // namespace net

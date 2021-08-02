@@ -57,7 +57,7 @@ typedef struct LtRawHeader {
  * //decide which type client channel will be used(asyncchannel or queuechannel)
  * static bool Message::KeepQueue()
  *
- * static Message::Create(bool request);
+ * static Message::Create();
  * static Message::CreateResponse(const Message* request);
  * static Message::DecodeFrom(IOBuffer* buffer, bool server);
  *
@@ -71,30 +71,42 @@ public:
   // feature trait
   static bool KeepQueue() { return false; }
   static bool WithHeartbeat() { return true; }
-  static RefRawMessage Create(bool request);
+
+  static RefRawMessage Create();
+
   static RefRawMessage CreateResponse(const RawMessage* request);
   static RefRawMessage Decode(IOBuffer* buffer, bool server_side);
   bool EncodeTo(SocketChannel* channel);
 
-  RawMessage(MessageType t);
+  RawMessage();
+
   ~RawMessage(){};
 
   // override from ProtocalMessage
   void SetAsyncId(uint64_t id) override { header_.sequence_id_ = id; }
+
   const uint64_t AsyncId() const override { return header_.seq_id(); };
+
   bool AsHeartbeat() override;
+
   bool IsHeartbeat() const override;
 
   uint8_t Code() const { return header_.code; }
+
   void SetCode(const uint8_t code) { header_.code = code; }
+
   uint8_t Method() const { return header_.method; }
+
   void SetMethod(const uint8_t code) { header_.method = code; }
 
   void SetContent(const char* c);
+
   void SetContent(const std::string& c);
+
   void AppendContent(const char* c, uint64_t len);
 
   const std::string& Content() const { return content_; }
+
   uint64_t ContentLength() const { return content_.size(); }
 
   const std::string Dump() const override;

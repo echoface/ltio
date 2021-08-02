@@ -20,7 +20,7 @@
 namespace lt {
 namespace net {
 
-RedisRequest::RedisRequest() : CodecMessage(MessageType::kRequest) {}
+RedisRequest::RedisRequest() : CodecMessage() {}
 
 RedisRequest::~RedisRequest() {}
 

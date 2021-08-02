@@ -138,7 +138,7 @@ void EventPump::InvokeFiredEvent(FiredEvent* evs, int count) {
   for (int i = 0; i < count; i++) {
     FdEvent* fd_event = io_mux_->FindFdEvent(evs[i].fd_id);
     if (fd_event) {
-      fd_event->HandleEvent(evs[i].event_mask);
+      fd_event->Invoke(evs[i].event_mask);
     } else {
       LOG(ERROR) << " event removed by previous handler";
     }

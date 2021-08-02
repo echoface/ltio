@@ -148,13 +148,9 @@ private:
 
   int Notify(int fd, const void* data, size_t count);
 
-  bool HandleRead(FdEvent* fd_event) override;
+  void HandleEvent(FdEvent* fd_event) override;
 
-  bool HandleWrite(FdEvent* fd_event) override;
-
-  bool HandleError(FdEvent* fd_event) override;
-
-  bool HandleClose(FdEvent* fd_event) override;
+  void HandleRead(FdEvent* fd_event);
 
 private:
   using ThreadPtr = std::unique_ptr<std::thread>;

@@ -24,7 +24,7 @@
 #include <functional>
 #include <memory>
 
-#include "base/base_micro.h"
+#include "base/lt_micro.h"
 #include "base/queue/linked_list.h"
 #include "event.h"
 
@@ -38,22 +38,17 @@ typedef std::unique_ptr<FdEvent> FdEventPtr;
 class FdEvent final {
 public:
   /* interface notify poller notify_watcher polling events*/
-  class Watcher {
-  public:
-    virtual ~Watcher() {}
+  typedef struct Watcher {
+    virtual ~Watcher() = default;
     virtual void UpdateFdEvent(FdEvent* fd_event) = 0;
-  };
+  } Watcher;
 
-  class Handler {  // fd owner should implement those
-  public:
-    virtual ~Handler() {}
+  typedef struct Handler {  // fd owner should implement those
+    virtual ~Handler() = default;
     // operator api, return false to block event popup
     // return true continue all event handle triggle
-    virtual bool HandleRead(FdEvent* fd_event) = 0;
-    virtual bool HandleWrite(FdEvent* fd_event) = 0;
-    virtual bool HandleError(FdEvent* fd_event) = 0;
-    virtual bool HandleClose(FdEvent* fd_event) = 0;
-  };
+    virtual void HandleEvent(FdEvent* fdev) = 0;
+  } Handler;
 
   static RefFdEvent Create(Handler* handler, int fd, LtEvent event);
 
@@ -61,9 +56,10 @@ public:
   ~FdEvent();
 
   void SetFdWatcher(Watcher* watcher);
+
   Watcher* EventWatcher() { return watcher_; }
 
-  void HandleEvent(LtEvent event);
+  void Invoke(LtEvent ev);
 
   // the event we take care about
   LtEvent MonitorEvents() const;
@@ -79,6 +75,7 @@ public:
   void DisableAll() {SetEvent(LtEv::LT_EVENT_NONE);}
   inline bool IsReadEnable() const { return events_ & LtEv::LT_EVENT_READ; }
   inline bool IsWriteEnable() const { return events_ & LtEv::LT_EVENT_WRITE; }
+
   inline bool EdgeTriggerMode() const { return enable_et_; }
   inline void SetEdgeTrigger(bool edge) { enable_et_ = edge; }
 
@@ -86,6 +83,11 @@ public:
   inline void ReleaseOwnership() { owner_fd_ = false; }
 
   LtEvent ActivedEvent() const { return revents_; };
+  bool RecvErr() const {return revents_ & LT_EVENT_ERROR;}
+  bool RecvRead() const {return revents_ & LT_EVENT_READ;}
+  bool RecvWrite() const {return revents_ & LT_EVENT_WRITE;}
+  bool RecvClose() const {return revents_ & LT_EVENT_CLOSE;}
+
   void SetActivedEvent(LtEvent ev) {revents_ = ev;};
 
   std::string EventInfo() const;

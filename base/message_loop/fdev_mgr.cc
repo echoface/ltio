@@ -1,6 +1,7 @@
 #include "fdev_mgr.h"
 #include <glog/logging.h>
 #include <sys/resource.h>
+#include "base/base_constants.h"
 #include "base/memory/lazy_instance.h"
 
 namespace {
@@ -25,6 +26,8 @@ FdEventMgr::FdEventMgr() {
 }
 
 FdEventMgr::Result FdEventMgr::Add(FdEvent* fdev) {
+  VLOG(GLOG_VTRACE) << " fdev_mgr add fd:" << fdev->EventInfo();
+
   int fd = fdev->GetFd();
   if (fd < 0 || fd >= evs_.size()) {
     LOG(ERROR) << "invalid fd:" << fd;
@@ -33,6 +36,7 @@ FdEventMgr::Result FdEventMgr::Add(FdEvent* fdev) {
 
   FdEvent* installed  = evs_[fd];
   if (nullptr != installed) {
+    LOG(ERROR) << "duplicate fd:" << fd << ", ev:" << fdev;
     return Duplicated;
   }
   evs_[fd] = fdev;
@@ -40,6 +44,8 @@ FdEventMgr::Result FdEventMgr::Add(FdEvent* fdev) {
 }
 
 FdEventMgr::Result FdEventMgr::Remove(FdEvent* fdev) {
+  VLOG(GLOG_VTRACE) << " fdev_mgr revove fd:" << fdev->EventInfo();
+
   int fd = fdev->GetFd();
   if (fd < 0 || fd >= evs_.size()) {
     LOG(ERROR) << "remove fd:" << fd << " fails, out of bound";

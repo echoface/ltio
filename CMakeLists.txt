@@ -13,6 +13,7 @@ option(LTIO_BUILD_EXAMPLES "Build UNITTEST" ON)
 option(LTIO_BUILD_UNITTESTS "Build UNITTEST" ON)
 option(LTIO_BUILD_SHARED_LIBS "Build shared libraries" ON)
 option(LTIO_WITH_OPENSSL "support ssl by openssl" OFF)
+option(LTIO_ENABLE_REUSER_PORT "enable reuse port" ON)
 
 include(ExternalProject)
 include(GNUInstallDirs)
@@ -22,4 +23,3 @@ include(${CMAKE_CONFIG_DIR}/dependency.cmake)
 include(${CMAKE_CONFIG_DIR}/include.cmake)
 #include(${CMAKE_CONFIG_DIR}/googletest.cmake)
 include(${CMAKE_CONFIG_DIR}/targets.cmake)
-

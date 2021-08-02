@@ -85,11 +85,6 @@ void SocketChannel::ShutdownWithoutNotify() {
   }
 }
 
-bool SocketChannel::TryFlush() {
-  HandleWrite(fd_event_.get());
-  return true;
-}
-
 bool SocketChannel::HandleError(base::FdEvent* event) {
   int err = socketutils::GetSocketError(fd_event_->GetFd());
   VLOG(GLOG_VERROR) << "socket error:" << base::StrError(err);
@@ -97,7 +92,6 @@ bool SocketChannel::HandleError(base::FdEvent* event) {
 }
 
 bool SocketChannel::HandleClose(base::FdEvent* event) {
-  DCHECK(pump_->IsInLoop());
   VLOG(GLOG_VTRACE) << "close socket channel:" << ChannelInfo();
   if (!IsClosed()) {
     close_channel();

@@ -27,13 +27,17 @@ namespace net {
 class LineMessage : public CodecMessage {
 public:
   typedef LineMessage ResponseType;
-  LineMessage(MessageType t);
+  LineMessage();
+  LineMessage(const std::string& data);
+
   ~LineMessage();
+
   std::string& MutableBody();
+
   const std::string& Body() const;
 
 private:
-  std::string body_;
+  std::string content_;
 };
 
 }  // namespace net

@@ -54,3 +54,10 @@ ADD_EXECUTABLE(lt_ws_echo_server
 TARGET_LINK_LIBRARIES(lt_ws_echo_server
   ltio
 )
+
+ADD_EXECUTABLE(lt_ws_client
+  net_io/lt_ws_client.cc
+)
+TARGET_LINK_LIBRARIES(lt_ws_client
+  ltio
+)

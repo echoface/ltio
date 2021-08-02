@@ -1,3 +1,4 @@
+#include <base/closure/closure_task.h>
 #include <base/utils/string/str_utils.h>
 #include <iostream>
 #include <thirdparty/catch/catch.hpp>
@@ -21,4 +22,11 @@ TEST_CASE("string_utils", "[]") {
   std::string none_true_str = "abc";
   ok_bool = base::StrUtil::Parse<bool>(none_true_str);
   CHECK(!ok_bool);
+}
+
+TEST_CASE("multi lambda capture list", "[ task run]") {
+  int a = 0;
+  int b = 0;
+  auto task1 = NewClosure([&]() { LOG(INFO) << a << ", b:" << b; });
+  auto task2 = NewClosure([a, b]() { LOG(INFO) << a << ", b:" << b; });
 }

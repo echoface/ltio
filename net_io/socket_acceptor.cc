@@ -65,9 +65,8 @@ bool SocketAcceptor::InitListener() {
   socket_event_ =
       base::FdEvent::Create(this, socket_fd, base::LtEv::LT_EVENT_NONE);
 
-  VLOG(GLOG_VTRACE) << "acceptor init success, fd:["
-                    << socket_fd << "] bind to local:[" << address_.ToString()
-                    << "]";
+  VLOG(GLOG_VTRACE) << "acceptor init success, fd:[" << socket_fd
+                    << "] bind to local:[" << address_.ToString() << "]";
   return true;
 }
 
@@ -106,38 +105,36 @@ void SocketAcceptor::StopListen() {
   VLOG(GLOG_VINFO) << "acceptor stop listen on:" << address_.ToString();
 }
 
-bool SocketAcceptor::HandleRead(base::FdEvent* fd_event) {
-  struct sockaddr client_socket_in;
+void SocketAcceptor::HandleEvent(base::FdEvent* fdev) {
+  if (fdev->RecvRead()) {
+    AcceptRead(fdev);
+  }
+  if (fdev->RecvClose() || fdev->RecvErr()) {
+    HandleError(fdev);
+  }
+}
 
+void SocketAcceptor::AcceptRead(base::FdEvent* fdev) {
+  struct sockaddr socket_in;
   int err = 0;
-  int peer_fd = socketutils::AcceptSocket(socket_event_->GetFd(),
-                                          &client_socket_in,
-                                          &err);
+  int peer_fd = socketutils::AcceptSocket(fdev->GetFd(), &socket_in, &err);
   if (peer_fd < 0) {
     LOG(ERROR) << "accept failed, err:" << base::StrError(err);
-    return true;
+    return;
   }
 
   IPEndPoint client_addr;
-  client_addr.FromSockAddr(&client_socket_in, sizeof(client_socket_in));
+  client_addr.FromSockAddr(&socket_in, sizeof(socket_in));
 
   VLOG(GLOG_VTRACE) << "accept a connection:" << client_addr.ToString();
 
   handler_->OnNewConnection(peer_fd, client_addr);
-  return true;
 }
 
-bool SocketAcceptor::HandleWrite(base::FdEvent* ev) {
-  LOG(ERROR) << "fd [" << ev->GetFd() << "] write event should not reached";
-  return true;
-}
-
-bool SocketAcceptor::HandleError(base::FdEvent* fd_event) {
-  LOG(ERROR) << "fd [" << fd_event->GetFd() << "] error:[" << base::StrError()
-             << "]";
+bool SocketAcceptor::HandleError(base::FdEvent* fdev) {
+  LOG(ERROR) << "error event happened, fd [" << fdev->GetFd();
 
   listening_ = false;
-
   // Relaunch This server
   if (InitListener()) {
     bool re_listen_ok = StartListen();
@@ -145,11 +142,6 @@ bool SocketAcceptor::HandleError(base::FdEvent* fd_event) {
         << "acceptor:[" << address_.ToString() << "] re-listen failed";
   }
   return false;
-}
-
-bool SocketAcceptor::HandleClose(base::FdEvent* fd_event) {
-  LOG(ERROR) << "acceptor listen fd [" << fd_event->GetFd() << "] closed";
-  return HandleError(fd_event);
 }
 
 }  // namespace net

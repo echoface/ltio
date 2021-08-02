@@ -1,16 +1,18 @@
 #ifndef _LT_BASE_CRYPTO_SSL_H_
 #define _LT_BASE_CRYPTO_SSL_H_
 
+#include "base/ltio_config.h"
+
 #ifdef LTIO_WITH_OPENSSL
-#include <string>
+#include <openssl/conf.h>
 #include <openssl/err.h>
 #include <openssl/ssl.h>
-#include <openssl/conf.h>
+#include <string>
 
 using SSLImpl = struct ssl_st;
 using SSLCtxImpl = struct ssl_ctx_st;
 
-#else   // none LTIO_WITH_OPENSSL
+#else  // none LTIO_WITH_OPENSSL
 
 astatic_assert(false, "current only openssl support")
 
@@ -40,9 +42,11 @@ public:
     std::string ca_file;
     std::string ca_path;
   };
+
 public:
   static SSLCtx& DefaultServerCtx();
   static SSLCtx& DefaultClientCtx();
+
 public:
   ~SSLCtx();
   SSLCtx(SSLRole role);
@@ -57,6 +61,7 @@ public:
   bool UseVerifyCA(const std::string& ca, const std::string& verify_path);
 
   bool UseCertification(const std::string& cert, const std::string& key);
+
 private:
   Param param_;
   SSLCtxImpl* impl_ = nullptr;

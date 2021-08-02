@@ -26,9 +26,8 @@ namespace net {
 
 const RefCodecMessage CodecMessage::kNullMessage;
 
-CodecMessage::CodecMessage(MessageType type)
-  : type_(type),
-    code_(kSuccess) {
+CodecMessage::CodecMessage()
+  : code_(kSuccess) {
   work_context_.loop = NULL;
 }
 
@@ -63,18 +62,6 @@ void CodecMessage::SetWorkerCtx(base::MessageLoop* loop,
 
 void CodecMessage::SetResponse(const RefCodecMessage& response) {
   response_ = response;
-}
-
-const char* CodecMessage::TypeAsStr() const {
-  switch (type_) {
-    case MessageType::kRequest:
-      return "Request";
-    case MessageType::kResponse:
-      return "Response";
-    default:
-      break;
-  }
-  return "MessageNone";
 }
 
 }  // namespace net

@@ -43,7 +43,7 @@ void LineCodecService::OnDataReceived(const SocketChannel*, IOBuffer* buf) {
   }
 
   {
-    std::shared_ptr<LineMessage> msg(new LineMessage(RecievedMessageType()));
+    std::shared_ptr<LineMessage> msg(new LineMessage());
 
     msg->SetIOCtx(shared_from_this());
 

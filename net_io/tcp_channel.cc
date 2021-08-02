@@ -27,7 +27,54 @@
 
 namespace {
 const int32_t kBlockSize = 2 * 1024;
+
+// return true when success, false when error hanpened
+bool ReadAllFromSocket(base::FdEvent* fdev, lt::net::IOBuffer* buf) {
+  int socket = fdev->GetFd();
+  ssize_t bytes_read = 0;
+  do {
+    buf->EnsureWritableSize(kBlockSize);
+    bytes_read = ::read(socket, buf->GetWrite(), buf->CanWriteSize());
+    if (bytes_read > 0) {
+      buf->Produce(bytes_read);
+      continue;
+    }
+    if (errno == EINTR) {
+      continue;
+    }
+    VLOG_IF(GLOG_VTRACE, bytes_read == 0) << "peer closed, fd:" << socket;
+    break;
+  } while (true);
+  return errno == EAGAIN ? true : false;
 }
+
+// return true when success, false when fail
+bool WriteAllToSocket(base::FdEvent* fdev, lt::net::IOBuffer* buf) {
+  int socket_fd = fdev->GetFd();
+  ssize_t writen_bytes = 0;
+  bool success = true;
+  while (buf->CanReadSize()) {
+    writen_bytes = ::write(socket_fd, buf->GetRead(), buf->CanReadSize());
+    if (writen_bytes > 0) {
+      buf->Consume(writen_bytes);
+      continue;
+    }
+    if (errno == EINTR) {
+      continue;
+    }
+    success = (errno == EAGAIN ? true : false);
+    break;
+  };
+
+  if (buf->CanReadSize()) {
+    fdev->EnableWriting();
+  } else {
+    fdev->DisableWriting();
+  }
+  return success;
+}
+
+}  // namespace
 
 namespace lt {
 namespace net {
@@ -52,18 +99,45 @@ TcpChannel::~TcpChannel() {
   VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
 }
 
+void TcpChannel::HandleEvent(base::FdEvent* fdev) {
+  if (out_buffer_.CanReadSize()) {
+    if (!WriteAllToSocket(fdev, &out_buffer_)) {
+      goto err_handle;
+    }
+    if (out_buffer_.CanReadSize()) {
+      reciever_->OnDataFinishSend(this);
+    }
+  }
+  if (fdev->RecvRead()) {
+    if (!ReadAllFromSocket(fdev, &in_buffer_)) {
+      goto err_handle;
+    }
+  }
+  if (in_buffer_.CanReadSize()) {
+    reciever_->OnDataReceived(this, &in_buffer_);
+  }
+  if (!schedule_shutdown_) {
+    return;
+  }
+err_handle:
+  HandleClose(fdev);
+  return;
+}
+
+/*
 bool TcpChannel::HandleRead(base::FdEvent* event) {
   VLOG(GLOG_VTRACE) << ChannelInfo() << " handle read";
-  int err = 0;
   ssize_t bytes_read;
   bool need_close = false;
   do {
     in_buffer_.EnsureWritableSize(kBlockSize);
 
-    bytes_read = ::read(fd_event_->GetFd(), in_buffer_.GetWrite(),
+    bytes_read = ::read(fd_event_->GetFd(),
+                        in_buffer_.GetWrite(),
                         in_buffer_.CanWriteSize());
     if (bytes_read > 0) {
-      VLOG(GLOG_VTRACE) << ChannelInfo() << " read [" << bytes_read << "] bytes";
+      VLOG(GLOG_VTRACE) << ChannelInfo() << " read [" << bytes_read
+                        << "] bytes";
       in_buffer_.Produce(bytes_read);
       continue;
     }
@@ -71,8 +145,8 @@ bool TcpChannel::HandleRead(base::FdEvent* event) {
       VLOG(GLOG_VTRACE) << ChannelInfo() << " read EAGAIN";
       break;
     }
-    if (bytes_read == 0) { //peer close
-      VLOG(GLOG_VTRACE) << ChannelInfo() << " peer close:" << base::StrError();
+    if (bytes_read == 0) {  // peer close
+      VLOG(GLOG_VTRACE) << ChannelInfo() << " peer closed";
       need_close = true;
       break;
     }
@@ -121,8 +195,7 @@ bool TcpChannel::HandleWrite(base::FdEvent* event) {
   };
 
   if (fatal_err != 0) {
-    LOG(ERROR) << ChannelInfo()
-               << " write err:" << base::StrError(fatal_err);
+    LOG(ERROR) << ChannelInfo() << " write err:" << base::StrError(fatal_err);
     return HandleClose(event);
   }
 
@@ -132,6 +205,14 @@ bool TcpChannel::HandleWrite(base::FdEvent* event) {
     if (schedule_shutdown_) {
       return HandleClose(event);
     }
+  }
+  return true;
+}
+*/
+
+bool TcpChannel::TryFlush() {
+  if (out_buffer_.CanReadSize()) {
+    return WriteAllToSocket(fd_event_.get(), &out_buffer_);
   }
   return true;
 }
@@ -145,7 +226,7 @@ int32_t TcpChannel::Send(const char* data, const int32_t len) {
 
   if (out_buffer_.CanReadSize() > 0) {
     out_buffer_.WriteRawData(data, len);
-    HandleWrite(fd_event_.get());
+    WriteAllToSocket(fd_event_.get(), &out_buffer_);
     return len;
   }
 
@@ -174,7 +255,7 @@ int32_t TcpChannel::Send(const char* data, const int32_t len) {
       schedule_shutdown_ = true;
       SetChannelStatus(Status::CLOSING);
       LOG(ERROR) << ChannelInfo() << " send err:" << base::StrError()
-        << " schedule close";
+                 << " schedule close";
     }
     break;
   } while (n_remain != 0);

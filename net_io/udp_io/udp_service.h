@@ -53,7 +53,8 @@ typedef struct IOVecBuffer {
 
 typedef struct UDPBufferDetail {
   UDPBufferDetail(struct mmsghdr* hdr, IOVecBuffer* buffer)
-    : mmsg_hdr(hdr), buffer(buffer) {}
+    : mmsg_hdr(hdr),
+      buffer(buffer) {}
   nonstd::string_view data() const {
     if (mmsg_hdr == nullptr || buffer == nullptr) {
       return nonstd::string_view();
@@ -116,10 +117,12 @@ private:
   UDPService(base::MessageLoop* io, const IPEndPoint& ep);
 
   // override from FdEvent::Handler
-  bool HandleRead(base::FdEvent* fd_event) override;
-  bool HandleWrite(base::FdEvent* fd_event) override;
-  bool HandleError(base::FdEvent* fd_event) override;
-  bool HandleClose(base::FdEvent* fd_event) override;
+  void HandleEvent(base::FdEvent* fdev);
+
+  void HandleRead(base::FdEvent* fd_event);
+  void HandleWrite(base::FdEvent* fd_event);
+  void HandleError(base::FdEvent* fd_event);
+  void HandleClose(base::FdEvent* fd_event);
 
 private:
   base::MessageLoop* io_;
