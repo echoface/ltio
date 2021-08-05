@@ -171,7 +171,7 @@ bool TCPSSLChannel::TryFlush() {
 
 bool TCPSSLChannel::DoHandshake(base::FdEvent* event) {
 
-  SSLAction action;
+  SSLAction action = SSLAction::WaitIO;
   do {
     ERR_clear_error();
     int ret = SSL_do_handshake(ssl_);
@@ -181,8 +181,8 @@ bool TCPSSLChannel::DoHandshake(base::FdEvent* event) {
     }
 
     int err = SSL_get_error(ssl_, ret);
-    SSLAction action = handle_openssl_err(event, err);
-    VLOG_IF(GLOG_VTRACE, action == SSLAction::Close) << "ssl failed handshake";
+    action = handle_openssl_err(event, err);
+    VLOG_IF(GLOG_VERROR, action == SSLAction::Close) << "ssl failed handshake";
     VLOG_IF(GLOG_VTRACE, action == SSLAction::WaitIO) << "ssl continue handshake";
   } while(action == SSLAction::FastRetry);
 
