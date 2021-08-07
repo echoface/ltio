@@ -23,6 +23,7 @@
 #define LIGHTINGIO_NET_CHANNEL_H
 
 #include <base/base_constants.h>
+#include <base/compiler_specific.h>
 #include <cstdint>
 #include "base/lt_micro.h"
 #include "base/ip_endpoint.h"
@@ -54,40 +55,57 @@ public:
 public:
   virtual ~SocketChannel();
 
-  virtual void StartChannel();
+  virtual bool StartChannel() WARN_UNUSED_RESULT;
 
   void SetIOEventPump(base::EventPump* pump);
 
   void SetReciever(SocketChannel::Reciever* consumer);
 
   // write as much as data into socket
-  virtual bool TryFlush() = 0;
+  // return true when, false when error
+  // handle err is responsibility of caller
+  // the caller should decide close channel or not
+  virtual bool TryFlush() WARN_UNUSED_RESULT = 0;
 
-  /* return -1 when error,
+  /* return -1 when error, handle err is responsibility of caller
    * return 0 when all data pending to buffer,
-   * other case return the byte of writen*/
-  virtual int32_t Send(const char* data, const int32_t len) = 0;
+   * other case return the bytes writen*/
+  inline int32_t Send(const std::string& data) {
+    return Send(data.data(), data.size());
+  }
+
+  /* return -1 when error, handle err is responsibility of caller
+   * return 0 when all data pending to buffer,
+   * other case return the bytes writen*/
+  virtual int32_t Send(const char* data, const int32_t len) WARN_UNUSED_RESULT = 0;
 
   /* a initiative call from codec to close channel
    * 1. shutdown writer if writing is enable
    * 2. unregiste fdevent from pump and close socket*/
   virtual void ShutdownChannel(bool half_close);
 
+  /* close socket channel without callback notify*/
   virtual void ShutdownWithoutNotify();
 
   IOBuffer* WriterBuffer() { return &out_buffer_; }
 
   Status GetStatus() const {return status_;}
+
   bool IsClosed() const { return status_ == Status::CLOSED; };
+
   bool IsConnected() const { return status_ == Status::CONNECTED; };
+
   bool IsConnecting() const { return status_ == Status::CONNECTING; };
 
-  std::string ChannelInfo() const;
+  bool ShutdownScheduled() const {return schedule_shutdown_;}
 
   const std::string StatusAsString() const;
 
-  const std::string& ChannelName() const { return name_; }
+  const IPEndPoint& LocalEndpoint() const {return local_ep_;}
 
+  const IPEndPoint& RemoteEndPoint() const {return local_ep_;}
+
+  std::string ChannelInfo() const;
 protected:
   SocketChannel(int socket_fd,
                 const IPEndPoint& loc,
@@ -105,18 +123,9 @@ protected:
 
   void SetChannelStatus(Status st);
 
-  //void HandleEvent(base::FdEvent* fdev);
-
-  bool HandleError(base::FdEvent* fdev);
-
   bool HandleClose(base::FdEvent* fdev);
 
-  const IPEndPoint& LocalEndpoint() const {return local_ep_;}
-
-  const IPEndPoint& RemoteEndPoint() const {return local_ep_;}
 protected:
-  std::string name_;
-
   base::EventPump* pump_;
 
   base::RefFdEvent fd_event_;

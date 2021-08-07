@@ -39,7 +39,7 @@ enum LtEv {
 
 typedef uint32_t LtEvent;
 
-std::string events2string(const LtEvent& event);
+std::string ev2str(const LtEvent& event);
 
 }  // namespace base
 #endif

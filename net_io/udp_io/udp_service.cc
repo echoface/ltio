@@ -74,7 +74,7 @@ void UDPService::StopService() {
 }
 
 void UDPService::HandleEvent(base::FdEvent* fdev) {
-  if (fdev->RecvRead()) {
+  if (fdev->ReadFired()) {
     return HandleRead(fdev);
   }
 }

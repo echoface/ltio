@@ -15,7 +15,7 @@ void CoMutex::lock() {
     lock_.unlock();
     return;
   }
-  waiters_.push_back(std::move(__co_new_resumer__));
+  waiters_.emplace_back(std::move(co_new_resumer()));
   lock_.unlock();
 
   __co_wait_here__;
@@ -29,7 +29,7 @@ void CoMutex::unlock() {
     return;
   }
 
-  LtClosure resumer = std::move(waiters_.front());
+  LtClosure resumer(std::move(waiters_.front()));
   waiters_.pop_front();
   lock_.unlock();
 

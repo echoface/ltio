@@ -18,22 +18,23 @@
 #include "event.h"
 
 #include <sstream>
+#include <vector>
+
+#include "base/utils/string/str_utils.h"
 
 namespace base {
 
-std::string events2string(const LtEvent& events) {
-  std::ostringstream oss;
-  oss << "[";
+std::string ev2str(const LtEvent& events) {
+  std::vector<std::string> evs;
   if (events & LtEv::LT_EVENT_READ)
-    oss << "READ ";
+    evs.emplace_back("read");
   if (events & LtEv::LT_EVENT_WRITE)
-    oss << "WRITE ";
+    evs.emplace_back("write");
   if (events & LtEv::LT_EVENT_ERROR)
-    oss << "ERROR ";
+    evs.emplace_back("error");
   if (events & LtEv::LT_EVENT_CLOSE)
-    oss << "CLOSE ";
-  oss << "]";
-  return oss.str().c_str();
+    evs.emplace_back("close");
+  return StrUtil::Join(evs, "|");
 }
 
 };  // namespace base

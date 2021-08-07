@@ -25,7 +25,7 @@
 namespace base {
 
 namespace {
-  constexpr size_t kMaxFiredEvOnePoll = 65535;
+constexpr size_t kMaxFiredEvOnePoll = 65535;
 }
 
 IOMuxEpoll::IOMuxEpoll()
@@ -65,7 +65,7 @@ int IOMuxEpoll::WaitingIO(FiredEvList& out, int32_t ms) {
 LtEvent IOMuxEpoll::ToLtEvent(const uint32_t epoll_ev) {
   LtEvent event = LtEv::LT_EVENT_NONE;
   // case hang out: but can read till EOF
-  if (epoll_ev & (EPOLLHUP|EPOLLERR)) {
+  if (epoll_ev & (EPOLLHUP | EPOLLERR)) {
     event |= LtEv::LT_EVENT_READ;
     event |= LtEv::LT_EVENT_WRITE;
   }
@@ -147,10 +147,13 @@ int IOMuxEpoll::EpollCtl(FdEvent* fdev, int opt) {
   }
 
   int ret = ::epoll_ctl(epoll_, opt, fd, &ev);
+  VLOG(26) << "apply epoll_ctl opt " << EpollOptToString(opt) << " on fd " << fd
+           << " failed, errno:" << StrError(errno)
+           << " events:" << fdev->MonitorEventStr();
   LOG_IF(ERROR, ret != 0) << "apply epoll_ctl opt " << EpollOptToString(opt)
                           << " on fd " << fd
                           << " failed, errno:" << StrError(errno)
-                          << " events:" << fdev->MonitorEventAsString();
+                          << " events:" << fdev->MonitorEventStr();
 
   return ret;
 }

@@ -108,7 +108,7 @@ void TcpChannel::HandleEvent(base::FdEvent* fdev) {
       reciever_->OnDataFinishSend(this);
     }
   }
-  if (fdev->RecvRead()) {
+  if (fdev->ReadFired()) {
     if (!ReadAllFromSocket(fdev, &in_buffer_)) {
       goto err_handle;
     }
@@ -124,95 +124,10 @@ err_handle:
   return;
 }
 
-/*
-bool TcpChannel::HandleRead(base::FdEvent* event) {
-  VLOG(GLOG_VTRACE) << ChannelInfo() << " handle read";
-  ssize_t bytes_read;
-  bool need_close = false;
-  do {
-    in_buffer_.EnsureWritableSize(kBlockSize);
-
-    bytes_read = ::read(fd_event_->GetFd(),
-                        in_buffer_.GetWrite(),
-                        in_buffer_.CanWriteSize());
-    if (bytes_read > 0) {
-      VLOG(GLOG_VTRACE) << ChannelInfo() << " read [" << bytes_read
-                        << "] bytes";
-      in_buffer_.Produce(bytes_read);
-      continue;
-    }
-    if (errno == EAGAIN) {
-      VLOG(GLOG_VTRACE) << ChannelInfo() << " read EAGAIN";
-      break;
-    }
-    if (bytes_read == 0) {  // peer close
-      VLOG(GLOG_VTRACE) << ChannelInfo() << " peer closed";
-      need_close = true;
-      break;
-    }
-    if (EINTR != errno) {
-      need_close = true;
-      LOG(ERROR) << ChannelInfo() << " read error:" << base::StrError();
-      break;
-    }
-  } while (true);
-
-  if (in_buffer_.CanReadSize()) {
-    reciever_->OnDataReceived(this, &in_buffer_);
-  }
-
-  bool ev_continue = true;
-  if (need_close) {
-    ev_continue = HandleClose(event);
-  }
-
-  return ev_continue;
-}
-
-bool TcpChannel::HandleWrite(base::FdEvent* event) {
-  VLOG(GLOG_VTRACE) << ChannelInfo() << " handle write";
-
-  int fatal_err = 0;
-  int socket_fd = fd_event_->GetFd();
-
-  ssize_t writen_bytes = 0;
-  while (out_buffer_.CanReadSize()) {
-    writen_bytes = socketutils::Write(socket_fd,
-                                      out_buffer_.GetRead(),
-                                      out_buffer_.CanReadSize());
-    if (writen_bytes > 0) {
-      out_buffer_.Consume(writen_bytes);
-      continue;
-    }
-    if (errno == EINTR) {
-      VLOG(GLOG_VTRACE) << ChannelInfo() << " EINTR continue";
-      continue;
-    }
-    if (errno != EAGAIN) {
-      fatal_err = errno;
-    }
-    break;
-  };
-
-  if (fatal_err != 0) {
-    LOG(ERROR) << ChannelInfo() << " write err:" << base::StrError(fatal_err);
-    return HandleClose(event);
-  }
-
-  if (out_buffer_.CanReadSize() == 0) {
-    fd_event_->DisableWriting();
-    reciever_->OnDataFinishSend(this);
-    if (schedule_shutdown_) {
-      return HandleClose(event);
-    }
-  }
-  return true;
-}
-*/
-
 bool TcpChannel::TryFlush() {
   if (out_buffer_.CanReadSize()) {
-    return WriteAllToSocket(fd_event_.get(), &out_buffer_);
+    bool success = WriteAllToSocket(fd_event_.get(), &out_buffer_);
+    return success;
   }
   return true;
 }

@@ -1,7 +1,11 @@
 #include "ws_codec_service.h"
 
-#include <net_io/codec/http/http_codec_service.h>
 #include "fmt/core.h"
+#include "hash/murmurhash3.h"
+
+#include "base/utils/base64/base64.hpp"
+#include "base/utils/rand_util.h"
+#include "net_io/codec/http/http_codec_service.h"
 #include "ws_util.h"
 
 namespace lt {
@@ -132,6 +136,11 @@ void WSCodecService::StartProtocolService() {
   */
   if (!IsServerSide()) {
     // send a handshake http upgrade request
+    uint64_t key = base::RandUint64();
+    std::array<uint8_t, 16> out;
+    MurmurHash3_x64_128(&key, sizeof(key), 0xf03c, out.data());
+    std::string sec_key = base::base64_encode(out.data(), out.size());
+
     auto hs_req = std::make_shared<HttpRequest>();
     hs_req->SetMethod("GET");
     hs_req->SetRequestURL(ws_path_);
@@ -140,10 +149,11 @@ void WSCodecService::StartProtocolService() {
     hs_req->InsertHeader("Upgrade", "websocket");
     hs_req->InsertHeader("Connection", "Upgrade");
     hs_req->InsertHeader("Sec-WebSocket-Version", "13");
-    hs_req->InsertHeader("Sec-WebSocket-Key", "w4v7O6xFTi36lq3RNcgctw==");
+    hs_req->InsertHeader("Sec-WebSocket-Key", sec_key);
     HttpCodecService::RequestToBuffer(hs_req.get(), channel_->WriterBuffer());
-    VLOG(GLOG_VTRACE) << "send handshake request" << channel_->WriterBuffer()->AsString();
-    channel_->TryFlush();
+    VLOG(GLOG_VTRACE) << "send handshake request"
+                      << channel_->WriterBuffer()->AsString();
+    ignore_result(channel_->TryFlush());
   }
 }
 
@@ -165,7 +175,8 @@ bool WSCodecService::SendRequest(CodecMessage* req) {
                                           wsmsg->Payload().size(),
                                           (ws_opcode)wsmsg->OpCode());
   buffer->Produce(size);
-  VLOG(GLOG_VTRACE) << "send request size:" << size << ", n:" << n << " content:" << wsmsg->Payload();
+  VLOG(GLOG_VTRACE) << "send request size:" << size << ", n:" << n
+                    << " content:" << wsmsg->Payload();
   return channel_->TryFlush();
 }
 
@@ -182,7 +193,8 @@ bool WSCodecService::SendResponse(const CodecMessage*, CodecMessage* res) {
                                           wsmsg->Payload().size(),
                                           (ws_opcode)wsmsg->OpCode());
   buffer->Produce(n);
-  VLOG(GLOG_VTRACE) << "send response size:" << size << ", n:" << n << " payload:" << wsmsg->Payload();
+  VLOG(GLOG_VTRACE) << "send response size:" << size << ", n:" << n
+                    << " payload:" << wsmsg->Payload();
 
   return channel_->TryFlush();
 }
@@ -200,7 +212,6 @@ bool WSCodecService::SendResponse(const CodecMessage*, CodecMessage* res) {
 void WSCodecService::OnChannelReady(const SocketChannel* ch) {
   CHECK(delegate_);
   VLOG(GLOG_VINFO) << __FUNCTION__ << ", ch:" << ch->ChannelInfo();
-
   // Issue a handshake request
   // auto hs_req = std::make_shared<HttpRequest>();
   return;
@@ -236,8 +247,7 @@ void WSCodecService::CommitHttpRequest(const RefHttpRequest&& request) {
   VLOG(GLOG_VINFO) << "websocket upgrade, path:" << ws_path_
                    << ",key:" << sec_key_ << ",rsp:" << response;
 
-  int32_t ret = channel_->Send(response.data(), response.size());
-  if (ret < 0) {
+  if (channel_->Send(response) < 0) {
     hs_state = handshake_state::HS_WRONGMSG;
     return;
   }
@@ -254,11 +264,8 @@ void WSCodecService::OnHandshakeReqData(IOBuffer* buf) {
   if (HttpReqParser::Error == parser->Parse(buf)) {
     LOG(ERROR) << "parse handshake request error";
 
-    channel_->Send(HttpConstant::kBadRequest.data(),
-                   HttpConstant::kBadRequest.size());
-
+    ignore_result(channel_->Send(HttpConstant::kBadRequest));
     CloseService(true);
-
     return delegate_->OnCodecClosed(shared_from_this());
   }
 
@@ -268,9 +275,7 @@ void WSCodecService::OnHandshakeReqData(IOBuffer* buf) {
 
   if (hs_state == HS_WRONGMSG) {
     LOG(ERROR) << "got bad handshake message";
-    channel_->Send(HttpConstant::kBadRequest.data(),
-                   HttpConstant::kBadRequest.size());
-
+    ignore_result(channel_->Send(HttpConstant::kBadRequest));
     CloseService(true);
     return delegate_->OnCodecClosed(shared_from_this());
   }
@@ -291,9 +296,7 @@ void WSCodecService::OnHandshakeResData(IOBuffer* buf) {
   auto parser = http_res_parser();
   if (HttpResParser::Error == parser->Parse(buf)) {
     LOG(ERROR) << "parse handshake response error";
-    channel_->Send(HttpConstant::kBadRequest.data(),
-                   HttpConstant::kBadRequest.size());
-
+    ignore_result(channel_->Send(HttpConstant::kBadRequest));
     CloseService(true);
     return delegate_->OnCodecClosed(shared_from_this());
   }
@@ -304,9 +307,7 @@ void WSCodecService::OnHandshakeResData(IOBuffer* buf) {
 
   if (hs_state == HS_WRONGMSG) {
     LOG(ERROR) << "got bad handshake message";
-    channel_->Send(HttpConstant::kBadRequest.data(),
-                   HttpConstant::kBadRequest.size());
-
+    ignore_result(channel_->Send(HttpConstant::kBadRequest));
     CloseService(true);
     return delegate_->OnCodecClosed(shared_from_this());
   }

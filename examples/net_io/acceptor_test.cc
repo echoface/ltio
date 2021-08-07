@@ -43,14 +43,13 @@ public:
                      [&](const net::SocketChannelPtr& channel) -> bool {
                        return ch == channel.get();
                      });
-
-    (*iter)->Send(buf->GetRead(), buf->CanReadSize());
+    ignore_result((*iter)->Send(buf->GetRead(), buf->CanReadSize()));
     buf->Consume(buf->CanReadSize());
   };
 
   bool IsServerSide() const override {return true;}
 
-  void OnNewConnection(int fd, const net::IPEndPoint& peer) {
+  void OnNewConnection(int fd, const net::IPEndPoint& peer) override {
     net::IPEndPoint local;
     CHECK(net::socketutils::GetLocalEndpoint(fd, &local));
 
@@ -71,12 +70,12 @@ public:
 
     ch->SetReciever(this);
     if (loop.IsInLoopThread()) {
-      ch->StartChannel();
+      ignore_result(ch->StartChannel());
     } else {
       loop.PostTask(NewClosure(std::bind(&net::TcpChannel::StartChannel, ch.get())));
     }
 
-    LOG(INFO) << "channel:[" << ch->ChannelName()
+    LOG(INFO) << "channel:[" << ch->ChannelInfo()
       << "] connected, connections count:" << connections.size();
     connections.insert(std::move(ch));
   }

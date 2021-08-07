@@ -82,7 +82,8 @@ void EventPump::Pump(uint64_t ms) {
 
 bool EventPump::InstallFdEvent(FdEvent* fd_event) {
   CHECK(IsInLoop());
-  if (fd_event->EventWatcher()) {
+  FdEvent::Watcher* wc = fd_event->EventWatcher();
+  if (wc && wc != io_mux_.get()) {
     LOG(ERROR) << "event has registered," << fd_event->EventInfo();
     return false;
   }
@@ -140,7 +141,7 @@ void EventPump::InvokeFiredEvent(FiredEvent* evs, int count) {
     if (fd_event) {
       fd_event->Invoke(evs[i].event_mask);
     } else {
-      LOG(ERROR) << " event removed by previous handler";
+      LOG(ERROR) << "event removed by previous handler or timeout";
     }
     evs[i].reset();
   }

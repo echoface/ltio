@@ -52,7 +52,7 @@ void CodecService::StartProtocolService() {
   VLOG(GLOG_VINFO) << __FUNCTION__ << " enter";
   CHECK(loop_->IsInLoopThread());
 
-  channel_->StartChannel();
+  ignore_result(channel_->StartChannel());
 }
 
 void CodecService::CloseService(bool block_callback) {
