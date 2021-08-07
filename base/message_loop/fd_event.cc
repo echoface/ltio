@@ -28,7 +28,7 @@ RefFdEvent FdEvent::Create(FdEvent::Handler* handler, int fd, LtEvent events) {
 }
 
 FdEvent::FdEvent(FdEvent::Handler* handler, int fd, LtEvent event)
-  : fd_(fd), events_(event), revents_(0), owner_fd_(true), handler_(handler) {}
+  : fd_(fd), event_(event), fired_(0), owner_fd_(true), handler_(handler) {}
 
 FdEvent::~FdEvent() {
   if (owner_fd_) {
@@ -40,15 +40,11 @@ void FdEvent::SetFdWatcher(Watcher* d) {
   watcher_ = d;
 }
 
-LtEvent FdEvent::MonitorEvents() const {
-  return events_;
-}
-
 void FdEvent::EnableReading() {
   if (IsReadEnable()) {
     return;
   }
-  events_ |= LtEv::LT_EVENT_READ;
+  event_ |= LtEv::LT_EVENT_READ;
   notify_watcher();
 }
 
@@ -56,14 +52,15 @@ void FdEvent::EnableWriting() {
   if (IsWriteEnable()) {
     return;
   }
-  events_ |= LtEv::LT_EVENT_WRITE;
+  event_ |= LtEv::LT_EVENT_WRITE;
   notify_watcher();
 }
 
 void FdEvent::DisableReading() {
   if (!IsReadEnable())
     return;
-  events_ &= ~LtEv::LT_EVENT_READ;
+
+  event_ &= ~LtEv::LT_EVENT_READ;
   notify_watcher();
 }
 
@@ -71,7 +68,12 @@ void FdEvent::DisableWriting() {
   if (!IsWriteEnable())
     return;
 
-  events_ &= ~LtEv::LT_EVENT_WRITE;
+  event_ &= ~LtEv::LT_EVENT_WRITE;
+  notify_watcher();
+}
+
+void FdEvent::SetEvent(const LtEv& ev) {
+  event_ = ev;
   notify_watcher();
 }
 
@@ -82,23 +84,17 @@ void FdEvent::notify_watcher() {
 }
 
 void FdEvent::Invoke(LtEvent ev) {
-  revents_ = ev;
+  fired_ = ev;
   handler_->HandleEvent(this);
-  revents_ = LT_EVENT_NONE;
+  fired_ = LT_EVENT_NONE;
 }
 
 std::string FdEvent::EventInfo() const {
   std::ostringstream oss;
-  oss << " [fd:" << fd_ << ", watch:" << events2string(events_) << "]";
+  oss << " [fd:" << fd_
+    << ", watch:" << ev2str(event_)
+    << ", fired:" << ev2str(fired_) << "]";
   return oss.str();
-}
-
-std::string FdEvent::RcvEventAsString() const {
-  return events2string(revents_);
-}
-
-std::string FdEvent::MonitorEventAsString() const {
-  return events2string(events_);
 }
 
 }  // namespace base

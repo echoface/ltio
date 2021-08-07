@@ -119,7 +119,7 @@ ConnDetail Connector::DialSync(const net::IPEndPoint& ep) {
 
 
 void Connector::HandleEvent(FdEvent* fdev) {
-  if (fdev->RecvWrite()) {
+  if (fdev->WriteFired()) {
     return HandleWrite(fdev);
   }
   //read/error/close

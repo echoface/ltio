@@ -75,11 +75,8 @@ void HttpCodecService::OnDataReceived(const SocketChannel* ch, IOBuffer* buf) {
   }
 
   if (!success) {
-    channel_->Send(HttpConstant::kBadRequest.data(),
-                   HttpConstant::kBadRequest.size());
-
+    ignore_result(channel_->Send(HttpConstant::kBadRequest));
     CloseService(true);  // no callback here
-
     return delegate_->OnCodecClosed(shared_from_this());
   }
 }
@@ -143,7 +140,6 @@ bool HttpCodecService::SendRequest(CodecMessage* message) {
 
 bool HttpCodecService::SendResponse(const CodecMessage* req,
                                     CodecMessage* res) {
-
   HttpResponse* response = static_cast<HttpResponse*>(res);
   const HttpRequest* request = static_cast<const HttpRequest*>(req);
 
@@ -212,9 +208,8 @@ bool HttpCodecService::ResponseToBuffer(const HttpResponse* response,
   return true;
 }
 
-const RefCodecMessage
-  HttpCodecService::NewResponse(const CodecMessage* request) {
-
+const RefCodecMessage HttpCodecService::NewResponse(
+    const CodecMessage* request) {
   // static_cast<HttpRequest*>(request);
   const HttpRequest* http_request = (HttpRequest*)request;
 

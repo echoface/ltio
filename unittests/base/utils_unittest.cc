@@ -24,7 +24,7 @@ TEST_CASE("string_utils", "[]") {
   CHECK(!ok_bool);
 }
 
-TEST_CASE("multi lambda capture list", "[ task run]") {
+TEST_CASE("clause.multilargs", "[task run]") {
   int a = 0;
   int b = 0;
   auto task1 = NewClosure([&]() { LOG(INFO) << a << ", b:" << b; });

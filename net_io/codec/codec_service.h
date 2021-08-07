@@ -18,6 +18,7 @@
 #ifndef _NET_PROTOCOL_SERVICE_H_H
 #define _NET_PROTOCOL_SERVICE_H_H
 
+#include "base/compiler_specific.h"
 #include "codec_message.h"
 #include "net_io/base/ip_endpoint.h"
 #include "net_io/channel.h"
@@ -41,7 +42,7 @@ public:
   public:
     virtual void OnCodecMessage(const RefCodecMessage& message) = 0;
 
-    virtual void OnCodecMessage(IOContext ctx, const RefCodecMessage& msg)  {};
+    virtual void OnCodecMessage(IOContext ctx, const RefCodecMessage& msg){};
   };
 
   class Delegate {
@@ -59,11 +60,11 @@ public:
 
   virtual ~CodecService();
 
-  void SetDelegate(Delegate* d) {delegate_ = d;}
+  void SetDelegate(Delegate* d) { delegate_ = d; }
 
-  Handler* GetHandler() {return handler_;}
+  Handler* GetHandler() { return handler_; }
 
-  void SetHandler(Handler* handler) {handler_ = handler;}
+  void SetHandler(Handler* handler) { handler_ = handler; }
 
   void SetProtocol(const std::string& protocol) { protocol_ = protocol; };
 
@@ -91,13 +92,13 @@ public:
 
   virtual bool KeepHeartBeat() { return false; }
 
-  virtual bool SendRequest(CodecMessage* message) = 0;
+  virtual bool SendRequest(CodecMessage* message) WARN_UNUSED_RESULT = 0;
 
-  virtual bool SendResponse(const CodecMessage* req, CodecMessage* res) = 0;
+  virtual bool SendResponse(const CodecMessage* req, CodecMessage* res) WARN_UNUSED_RESULT = 0;
 
-  virtual const RefCodecMessage NewHeartbeat() { return NULL; }
+  virtual const RefCodecMessage NewHeartbeat() WARN_UNUSED_RESULT { return NULL; }
 
-  virtual const RefCodecMessage NewResponse(const CodecMessage*) {
+  virtual const RefCodecMessage NewResponse(const CodecMessage*) WARN_UNUSED_RESULT {
     return NULL;
   }
 

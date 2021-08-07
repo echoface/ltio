@@ -73,12 +73,6 @@ inline void ignore_result(const T&) {}
 
 #define REF_TYPEDEFINE(Type) typedef std::shared_ptr<Type> Ref##Type
 
-#if defined(COMPILER_GCC) || defined(__clang__)
-#define WARN_UNUSED_RESULT __attribute__((warn_unused_result))
-#else
-#define WARN_UNUSED_RESULT
-#endif
-
 // The following enum should be used only as a constructor argument to indicate
 // that the variable has static storage class, and that the constructor should
 // do nothing to its state.  It indicates to the reader that it is legal to

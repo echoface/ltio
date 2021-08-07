@@ -128,10 +128,10 @@ void MessageLoop::WakeUpIfNeeded() {
 }
 
 void MessageLoop::HandleEvent(FdEvent* fdev) {
-  if (fdev->RecvRead()) {
+  if (fdev->ReadFired()) {
     return HandleRead(fdev);
   }
-  LOG(ERROR) << LOOP_LOG_DETAIL << "event:" << fdev->RcvEventAsString();
+  LOG(ERROR) << LOOP_LOG_DETAIL << "event:" << fdev->FiredEventStr();
 }
 
 void MessageLoop::HandleRead(FdEvent* fd_event) {

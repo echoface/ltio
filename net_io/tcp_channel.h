@@ -41,10 +41,10 @@ public:
                               const IPEndPoint& peer);
   ~TcpChannel();
 
-  // return bytes writen when success else a error code(<0) return
-  int32_t Send(const char* data, const int32_t len) override;
+  bool TryFlush() override WARN_UNUSED_RESULT;
 
-  bool TryFlush() override;
+  // return bytes writen when success else a error code(<0) return
+  int32_t Send(const char* data, const int32_t len) override WARN_UNUSED_RESULT;
 protected:
   TcpChannel(int socket_fd,
              const IPEndPoint& loc,

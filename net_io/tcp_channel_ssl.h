@@ -25,9 +25,10 @@ public:
 
   void InitSSL(SSLImpl* ssl);
 
-  void StartChannel() override;
+  bool StartChannel() override WARN_UNUSED_RESULT;
 
-  int32_t Send(const char* data, const int32_t len) override;
+  __attribute__((warn_unused_result))
+  int32_t Send(const char* data, const int32_t len) override WARN_UNUSED_RESULT;
 
 protected:
   TCPSSLChannel(int socket_fd,
@@ -35,7 +36,7 @@ protected:
                 const IPEndPoint& peer);
 
   // write as much as data into socket
-  bool TryFlush() override;
+  bool TryFlush() override WARN_UNUSED_RESULT;
 
   // return true when success, false when failed
   bool DoHandshake(base::FdEvent* event);

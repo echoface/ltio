@@ -35,9 +35,9 @@ namespace net {
 SocketChannel::SocketChannel(int socket_fd,
                              const IPEndPoint& loc,
                              const IPEndPoint& peer)
-  : name_(loc.ToString()),
-    local_ep_(loc),
+  : local_ep_(loc),
     remote_ep_(peer) {
+
   fd_event_ = FdEvent::Create(this, socket_fd, base::LtEv::LT_EVENT_NONE);
 }
 
@@ -55,40 +55,38 @@ void SocketChannel::SetReciever(SocketChannel::Reciever* rec) {
   reciever_ = rec;
 }
 
-void SocketChannel::StartChannel() {
+bool SocketChannel::StartChannel() {
   CHECK(reciever_ && pump_->IsInLoop() && status_ == Status::CONNECTING);
 
   setup_channel();
+
+  VLOG(GLOG_VINFO) << __FUNCTION__ << " notify ready";
+  reciever_->OnChannelReady(this);
+  return true;
 }
 
 void SocketChannel::ShutdownChannel(bool half_close) {
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
   DCHECK(pump_->IsInLoop());
 
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
-  schedule_shutdown_ = true;
   if (half_close) {
+    schedule_shutdown_ = true;
     fd_event_->EnableWriting();
-    SetChannelStatus(Status::CLOSING);
-    return;
+    return SetChannelStatus(Status::CLOSING);
   }
-
-  HandleClose(fd_event_.get());
-}
-
-void SocketChannel::ShutdownWithoutNotify() {
-  DCHECK(pump_->IsInLoop());
-
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
 
   if (!IsClosed()) {
     close_channel();
   }
+  reciever_->OnChannelClosed(this);
 }
 
-bool SocketChannel::HandleError(base::FdEvent* event) {
-  int err = socketutils::GetSocketError(fd_event_->GetFd());
-  VLOG(GLOG_VERROR) << "socket error:" << base::StrError(err);
-  return HandleClose(event);
+void SocketChannel::ShutdownWithoutNotify() {
+  DCHECK(pump_->IsInLoop());
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
+  if (!IsClosed()) {
+    close_channel();
+  }
 }
 
 bool SocketChannel::HandleClose(base::FdEvent* event) {
@@ -102,21 +100,14 @@ bool SocketChannel::HandleClose(base::FdEvent* event) {
 
 void SocketChannel::setup_channel() {
   VLOG(GLOG_VINFO) << __FUNCTION__ << " enter";
-
   fd_event_->EnableReading();
-  //fd_event_->EnableWriting();
-
+  // fd_event_->EnableWriting();
   pump_->InstallFdEvent(fd_event_.get());
-
   SetChannelStatus(Status::CONNECTED);
-
-  VLOG(GLOG_VINFO) << __FUNCTION__ << " notify ready";
-  reciever_->OnChannelReady(this);
 }
 
 void SocketChannel::close_channel() {
   pump_->RemoveFdEvent(fd_event_.get());
-
   SetChannelStatus(Status::CLOSED);
 }
 
@@ -134,9 +125,7 @@ std::string SocketChannel::remote_name() const {
 
 std::string SocketChannel::ChannelInfo() const {
   std::ostringstream oss;
-  oss << "[" << binded_fd()
-      << "@<" << local_name()
-      << "#" << remote_name()
+  oss << "[" << binded_fd() << "@<" << local_name() << "#" << remote_name()
       << ">" << StatusAsString() << "]";
   return oss.str();
 }

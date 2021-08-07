@@ -110,7 +110,6 @@ RefCodecService IOService::CreateCodeService(int fd, const IPEndPoint& peer) {
   }
 
   auto codec = CodecFactory::NewServerService(protocol_, io_loop);
-
   if (!codec) {
     socketutils::CloseSocket(fd);
     LOG(ERROR) << " protocol:" << protocol_ << " NOT-FOUND";

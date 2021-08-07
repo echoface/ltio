@@ -31,9 +31,11 @@ public:
 
   // override from CodecService
   void OnDataFinishSend(const SocketChannel*) override;
+
   void OnDataReceived(const SocketChannel*, IOBuffer*) override;
 
   bool SendRequest(CodecMessage* request) override;
+
   bool SendResponse(const CodecMessage* req, CodecMessage* res) override;
 
 private:

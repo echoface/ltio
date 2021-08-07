@@ -92,7 +92,7 @@ public:
 
   static void Yield();
 
-  static bool Yieldable();
+  static bool Waitable();
 
   static LtClosure MakeResumer();
 
@@ -106,6 +106,7 @@ public:
    */
   static void RegisteRunner(MessageLoop*);
 
+  static MessageLoop* BindLoop();
 public:
   virtual ~CoroRunner();
 
@@ -138,16 +139,17 @@ protected:
 #define CO_GO ::base::CoroRunner::_go(__FUNCTION__, __FILE__, __LINE__) -
 #define CO_YIELD ::base::CoroRunner::Yield()
 #define CO_RESUMER ::base::CoroRunner::MakeResumer()
-#define CO_CANYIELD ::base::CoroRunner::Yieldable()
+#define CO_CANYIELD ::base::CoroRunner::Waitable()
 #define CO_SLEEP(ms) ::base::CoroRunner::Sleep(ms)
 
 #define co_go base::CoroRunner::_go(__FUNCTION__, __FILE__, __LINE__) -
 #define co_sleep(ms) base::CoroRunner::Sleep(ms)
+#define co_new_resumer() base::CoroRunner::MakeResumer()
 
 #define __co_wait_here__ base::CoroRunner::Yield()
 #define __co_sched_here__ base::CoroRunner::Sched()
-#define __co_yielable__ base::CoroRunner::Yieldable()
-#define __co_new_resumer__ base::CoroRunner::MakeResumer()
+#define __co_yielable__ base::CoroRunner::Waitable()
+#define __co_waitable__ base::CoroRunner::Waitable()
 
 // sync task in coroutine context
 #define co_sync(func)                                        \

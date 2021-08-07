@@ -106,10 +106,10 @@ void SocketAcceptor::StopListen() {
 }
 
 void SocketAcceptor::HandleEvent(base::FdEvent* fdev) {
-  if (fdev->RecvRead()) {
+  if (fdev->ReadFired()) {
     AcceptRead(fdev);
   }
-  if (fdev->RecvClose() || fdev->RecvErr()) {
+  if (fdev->CloseFired() || fdev->ErrFired()) {
     HandleError(fdev);
   }
 }

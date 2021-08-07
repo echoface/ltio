@@ -194,28 +194,25 @@ public:
    * 如果本身是MainCoro，则直接进行切换.
    * 如果不是在调度的线程里,则调度到目标Loop去Resume*/
   void Resume(std::weak_ptr<Coroutine>& weak, uint64_t id) {
-    if (bind_loop_->IsInLoopThread()) {
-      RefCoroutine coro = weak.lock();
-      if (coro && coro->ResumeID() == id && !coro->Attatched()) {
-        return ready_list_.Append(coro.get());
-      }
-      LOG(ERROR) << "already resumed, want:" << id
-                 << " real:" << coro->ResumeID();
-      bind_loop_->WakeUpIfNeeded();
-      return;
-    }
-
-    /*do resume a coroutine in other thread*/
     auto do_resume = [weak, id, this]() {
-      CHECK(bind_loop_->IsInLoopThread());
       RefCoroutine coro = weak.lock();
-      if (coro && coro->ResumeID() == id && !coro->Attatched()) {
+      if (!coro) {
+        return;
+      }
+      if (coro->ResumeID() == id && !coro->Attatched()) {
         return ready_list_.Append(coro.get());
       }
-      LOG(ERROR) << "already resumed, want:" << id
-                 << " real:" << coro->ResumeID();
+      VLOG_IF(GLOG_VINFO, coro->Attatched())
+        << "already pending to ready list, skip";
+      VLOG_IF(GLOG_VINFO, coro->ResumeID() != id)
+        << "already resumed, want:" << id << " real:" << coro->ResumeID();
     };
-    remote_sched_.enqueue(NewClosure(do_resume));
+    if (bind_loop_->IsInLoopThread()) {
+      do_resume();
+    } else {
+      /*do resume a coroutine in other thread*/
+      remote_sched_.enqueue(NewClosure(do_resume));
+    }
     bind_loop_->WakeUpIfNeeded();
   }
 
@@ -375,13 +372,13 @@ void CoroRunner::RegisteRunner(MessageLoop* l) {
 }
 
 // static
-bool CoroRunner::Yieldable() {
+bool CoroRunner::Waitable() {
   return g ? (!g->in_main_coro()) : false;
 }
 
 // static
 void CoroRunner::Sched(int64_t us) {
-  if (!Yieldable()) {
+  if (!Waitable()) {
     return;
   }
   if (!g->HasPeedingTask()) {
@@ -394,7 +391,7 @@ void CoroRunner::Sched(int64_t us) {
 
 // static
 void CoroRunner::Yield() {
-  CHECK(Yieldable());
+  CHECK(Waitable());
   // add current_ into a linkedlist to tracking
   // system-range coroutine status
   g->SwitchContext(g->main_);
@@ -402,7 +399,7 @@ void CoroRunner::Yield() {
 
 // static
 void CoroRunner::Sleep(uint64_t ms) {
-  CHECK(Yieldable()) << "co_sleep only work on coro context";
+  CHECK(Waitable()) << "co_sleep only work on coro context";
 
   MessageLoop* loop = g->bind_loop_;
 
@@ -413,13 +410,18 @@ void CoroRunner::Sleep(uint64_t ms) {
 
 // static
 LtClosure CoroRunner::MakeResumer() {
-  if (!Yieldable()) {
+  if (!Waitable()) {
     LOG(WARNING) << "make resumer on main_coro";
     return nullptr;
   }
   auto weak = g->current_->AsWeakPtr();
   uint64_t resume_id = g->current_->ResumeID();
   return std::bind(&CoroRunnerImpl::Resume, g, weak, resume_id);
+}
+
+// static
+MessageLoop* CoroRunner::BindLoop() {
+  return g ? g->bind_loop_ : nullptr;
 }
 
 // static publish a task for any runner

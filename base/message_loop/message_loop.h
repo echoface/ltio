@@ -128,6 +128,9 @@ public:
 
   void QuitLoop();
 
+  // not preciese running status
+  bool Running() const {return running_;}
+
   EventPump* Pump() { return &pump_; }
 
 private:

@@ -48,6 +48,7 @@ public:
 
   bool IsRepeated() const { return flags & TIMEOUT_INT; }
 
+  inline void SetAutoDelete(bool del) { del_after_invoke_ = del; }
   inline bool DelAfterInvoke() const { return del_after_invoke_; }
 
   inline bool IsAttached() const { return pending != NULL; }

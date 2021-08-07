@@ -44,7 +44,7 @@ FdEventMgr::Result FdEventMgr::Add(FdEvent* fdev) {
 }
 
 FdEventMgr::Result FdEventMgr::Remove(FdEvent* fdev) {
-  VLOG(GLOG_VTRACE) << " fdev_mgr revove fd:" << fdev->EventInfo();
+  VLOG(GLOG_VTRACE) << "fdev_mgr revove fd:" << fdev->EventInfo();
 
   int fd = fdev->GetFd();
   if (fd < 0 || fd >= evs_.size()) {

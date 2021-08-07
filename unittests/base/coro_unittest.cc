@@ -3,6 +3,8 @@
 #include <atomic>
 #include <iostream>
 
+#include "base/utils/rand_util.h"
+#include "base/utils/sys_error.h"
 #include "fmt/chrono.h"
 #include "glog/logging.h"
 
@@ -301,3 +303,82 @@ TEST_CASE("coro.co_lock", "[resume_twice a yield coro]") {
   REQUIRE(cnt == 1000);
 }
 
+#include <sys/eventfd.h>
+#include <base/coroutine/io_event.h>
+
+TEST_CASE("coro.ioevent", "[ioevent for coro]") {
+  //FLAGS_v = 26;
+
+  base::MessageLoop loop("main");
+  loop.Start();
+
+  int timeout = 20;
+  bool running = true;
+  int fd = eventfd(0, EFD_NONBLOCK);
+  CHECK(fd > 0);
+
+  co_go &loop << [&]() {
+    do {
+      co::IOEvent ioev(fd, base::LtEv::LT_EVENT_READ);
+      ignore_result(ioev.Wait(timeout));
+      uint64_t val = 0;
+      if (eventfd_read(fd, &val) == 0) {
+        std::cout << ioev.ResultStr() << ", read val:" << val << std::endl;
+        continue;
+      }
+      std::cout << ioev.ResultStr() << ", read err:" << base::StrError() << std::endl;
+      if (errno != EAGAIN) {
+        break;
+      }
+    } while(running);
+    loop.QuitLoop();
+  };
+
+  int cnt = 100;
+  while(cnt--) {
+    uint64_t v = base::RandInt(timeout / 2, timeout + (timeout / 2));
+    usleep(1000 * v); // ms
+    ignore_result(eventfd_write(fd, v));
+  };
+  running = false;
+  loop.WaitLoopEnd();
+  close(fd);
+}
+
+TEST_CASE("coro.ioevent2", "[ioevent for coro]") {
+  //FLAGS_v = 26;
+
+  base::MessageLoop loop("main");
+  loop.Start();
+
+  bool running = true;
+  int fd = eventfd(0, EFD_NONBLOCK);
+  CHECK(fd > 0);
+
+  co_go &loop << [&]() {
+    do {
+      co::IOEvent ioev(fd, base::LtEv::LT_EVENT_READ);
+      ignore_result(ioev.Wait());
+      uint64_t val = 0;
+      if (eventfd_read(fd, &val) == 0) {
+        std::cout << ioev.ResultStr() << ", read val:" << val << std::endl;
+        continue;
+      }
+      std::cout << ioev.ResultStr() << ", read err:" << base::StrError() << std::endl;
+      if (errno != EAGAIN) {
+        break;
+      }
+    } while(running);
+    loop.QuitLoop();
+  };
+
+  int cnt = 100;
+  while(cnt--) {
+    uint64_t v = base::RandInt(50, 100);
+    usleep(1000 * v); // ms
+    ignore_result(eventfd_write(fd, v));
+  };
+  running = false;
+  loop.WaitLoopEnd();
+  close(fd);
+}
