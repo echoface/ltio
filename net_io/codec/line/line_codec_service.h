@@ -29,10 +29,7 @@ public:
   LineCodecService(base::MessageLoop* loop);
   ~LineCodecService();
 
-  // override from CodecService
-  void OnDataFinishSend(const SocketChannel*) override;
-
-  void OnDataReceived(const SocketChannel*, IOBuffer*) override;
+  void OnDataReceived(IOBuffer*) override;
 
   bool SendRequest(CodecMessage* request) override;
 

@@ -23,21 +23,27 @@
 
 namespace base {
 
+RefFdEvent FdEvent::Create(int fd, LtEvent events) {
+  return std::make_shared<FdEvent>(nullptr, fd, events);
+}
+
 RefFdEvent FdEvent::Create(FdEvent::Handler* handler, int fd, LtEvent events) {
   return std::make_shared<FdEvent>(handler, fd, events);
 }
 
+FdEvent::FdEvent(int fd, LtEvent events) : FdEvent(nullptr, fd, events) {}
+
 FdEvent::FdEvent(FdEvent::Handler* handler, int fd, LtEvent event)
-  : fd_(fd), event_(event), fired_(0), owner_fd_(true), handler_(handler) {}
+  : fd_(fd),
+    event_(event),
+    fired_(0),
+    owner_fd_(true),
+    handler_(handler) {}
 
 FdEvent::~FdEvent() {
   if (owner_fd_) {
     ::close(fd_);
   }
-}
-
-void FdEvent::SetFdWatcher(Watcher* d) {
-  watcher_ = d;
 }
 
 void FdEvent::EnableReading() {
@@ -92,9 +98,8 @@ void FdEvent::Invoke(LtEvent ev) {
 
 std::string FdEvent::EventInfo() const {
   std::ostringstream oss;
-  oss << " [fd:" << fd_
-    << ", watch:" << ev2str(event_)
-    << ", fired:" << ev2str(fired_) << "]";
+  oss << " [fd:" << fd_ << ", watch:" << ev2str(event_)
+      << ", fired:" << ev2str(fired_) << "]";
   return oss.str();
 }
 

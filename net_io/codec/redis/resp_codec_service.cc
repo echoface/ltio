@@ -32,10 +32,41 @@ RespCodecService::RespCodecService(base::MessageLoop* loop)
 
 RespCodecService::~RespCodecService() {}
 
-void RespCodecService::OnDataFinishSend(const SocketChannel*) {}
+void RespCodecService::StartProtocolService() {
+  StartInternal();
 
-void RespCodecService::OnDataReceived(const SocketChannel* channel,
-                                      IOBuffer* buffer) {
+  // Auth && Select DB initialize 
+  if (!delegate_ || !delegate_->GetRemoteInfo()) {
+    return CodecService::NotifyCodecReady();
+  }
+  const auto info = delegate_->GetRemoteInfo();
+
+  auto request = std::make_shared<RedisRequest>();
+  if (!info->passwd.empty()) {
+    request->Auth(info->passwd);
+    init_wait_res_flags_ |= InitWaitFlags::kWaitAuth;
+  }
+
+  auto db_iter = info->queries.find("db");
+  if (db_iter != info->queries.end() && !db_iter->second.empty()) {
+    request->Select(db_iter->second);
+    init_wait_res_flags_ |= InitWaitFlags::kWaitSelectDB;
+  }
+
+  if (request->CmdCount() == 0) {
+    return NotifyCodecReady();
+  }
+
+  if (!SendRequest(request.get())) {
+    init_wait_res_flags_ = InitWaitFlags::kWaitNone;
+    // TODO: what should do here
+    CloseService();
+    return NotifyCodecClosed();
+  }
+  next_incoming_count_ = request->CmdCount();
+}
+
+void RespCodecService::OnDataReceived(IOBuffer* buffer) {
   VLOG(GLOG_VTRACE) << __FUNCTION__ << " enter";
   CHECK(!IsServerSide());
 
@@ -93,37 +124,7 @@ void RespCodecService::HandleInitResponse(RedisResponse* response) {
       return CloseService();
     }
   }
-  CodecService::OnChannelReady(channel_.get());
-}
-
-// do initialize for redis protocol, auth && select db
-void RespCodecService::OnChannelReady(const SocketChannel* ch) {
-  if (!delegate_ || !delegate_->GetRemoteInfo()) {
-    return CodecService::OnChannelReady(ch);
-  }
-  const auto info = delegate_->GetRemoteInfo();
-
-  auto request = std::make_shared<RedisRequest>();
-  if (!info->passwd.empty()) {
-    request->Auth(info->passwd);
-    init_wait_res_flags_ |= InitWaitFlags::kWaitAuth;
-  }
-
-  auto db_iter = info->queries.find("db");
-  if (db_iter != info->queries.end() && !db_iter->second.empty()) {
-    request->Select(db_iter->second);
-    init_wait_res_flags_ |= InitWaitFlags::kWaitSelectDB;
-  }
-
-  if (request->CmdCount() == 0) {
-    return CodecService::OnChannelReady(ch);
-  }
-
-  if (!SendRequest(request.get())) {
-    init_wait_res_flags_ = InitWaitFlags::kWaitNone;
-    return CloseService();
-  }
-  next_incoming_count_ = request->CmdCount();
+  NotifyCodecReady();
 }
 
 const RefCodecMessage RespCodecService::NewHeartbeat() {

@@ -30,7 +30,8 @@ void IOService::Run() {
 }
 
 void IOService::accept_loop(int socket) {
-  co::IOEvent ioev(socket, base::LtEv::LT_EVENT_READ);
+  base::FdEvent fdev(socket, base::LtEv::LT_EVENT_READ);
+  co::IOEvent ioev(&fdev);
   do {
     ioev.Wait();
     LOG(INFO) << "accept loop awake";
@@ -58,13 +59,13 @@ void IOService::accept_loop(int socket) {
 void IOService::handle_connection(int client_socket, const IPEndPoint& peer) {
   lt::net::IOBuffer in_buf;
 
+  base::LtEvent event = base::LtEv::LT_EVENT_READ;
+  if (in_buf.CanReadSize()) {
+    event |= base::LtEv::LT_EVENT_WRITE;
+  }
+  base::FdEvent fdev(client_socket, event);
+  co::IOEvent(&fdev).Wait();
   do {
-    base::LtEvent event = base::LtEv::LT_EVENT_READ;
-    if (in_buf.CanReadSize()) {
-      event |= base::LtEv::LT_EVENT_WRITE;
-    }
-    co::IOEvent(client_socket, (base::LtEv)event).Wait();
-
     // write data
     if (in_buf.CanReadSize()) {
       ssize_t writen =

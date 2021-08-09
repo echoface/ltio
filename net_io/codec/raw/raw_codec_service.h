@@ -38,8 +38,9 @@ public:
   ~RawCodecService(){};
 
   void AfterChannelClosed() override { ; }
+
   // override from CodecService
-  void OnDataReceived(const SocketChannel*, IOBuffer* buffer) override {
+  void OnDataReceived(IOBuffer* buffer) {
     VLOG(GLOG_VTRACE) << __FUNCTION__ << " enter";
     do {
       RawMessageTypePtr message =

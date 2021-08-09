@@ -58,11 +58,7 @@ void HttpCodecService::StartProtocolService() {
   CodecService::StartProtocolService();
 }
 
-void HttpCodecService::OnDataFinishSend(const SocketChannel* channel) {}
-
-void HttpCodecService::OnDataReceived(const SocketChannel* ch, IOBuffer* buf) {
-  DCHECK(ch == channel_.get());
-
+void HttpCodecService::OnDataReceived(IOBuffer* buf) {
   VLOG(GLOG_VTRACE) << __FUNCTION__ << " buffer_size:" << buf->CanReadSize();
 
   bool success = false;
@@ -165,7 +161,7 @@ bool HttpCodecService::SendResponse(const CodecMessage* req,
    request/response is complete (Section 6.6).
    * */
   if (!response->IsKeepAlive()) {
-    channel_->ShutdownChannel(true);
+    schedule_close_ = true;
   }
   return channel_->TryFlush();
 }

@@ -14,16 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #include "tcp_channel.h"
+
 #include <cmath>
+
 #include "base/base_constants.h"
-#include "base/closure/closure_task.h"
-#include "base/message_loop/event_pump.h"
 #include "base/utils/sys_error.h"
-#include "glog/logging.h"
 #include "net_callback.h"
 #include "socket_utils.h"
+
+#include "glog/logging.h"
 
 namespace {
 const int32_t kBlockSize = 2 * 1024;
@@ -39,10 +39,13 @@ bool ReadAllFromSocket(base::FdEvent* fdev, lt::net::IOBuffer* buf) {
       buf->Produce(bytes_read);
       continue;
     }
+    if (bytes_read == 0) {
+      VLOG(GLOG_VTRACE) << "peer closed, fd:" << socket;
+      return false;
+    }
     if (errno == EINTR) {
       continue;
     }
-    VLOG_IF(GLOG_VTRACE, bytes_read == 0) << "peer closed, fd:" << socket;
     break;
   } while (true);
   return errno == EAGAIN ? true : false;
@@ -90,95 +93,66 @@ TcpChannel::TcpChannel(int socket_fd,
                        const IPEndPoint& loc,
                        const IPEndPoint& peer)
   : SocketChannel(socket_fd, loc, peer) {
-  fd_event_->SetEdgeTrigger(true);
-  socketutils::TCPNoDelay(socket_fd);
-  socketutils::KeepAlive(socket_fd, true);
+
 }
 
 TcpChannel::~TcpChannel() {
   VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
 }
 
-void TcpChannel::HandleEvent(base::FdEvent* fdev) {
-  if (out_buffer_.CanReadSize()) {
-    if (!WriteAllToSocket(fdev, &out_buffer_)) {
-      goto err_handle;
-    }
-    if (out_buffer_.CanReadSize()) {
-      reciever_->OnDataFinishSend(this);
-    }
-  }
-  if (fdev->ReadFired()) {
-    if (!ReadAllFromSocket(fdev, &in_buffer_)) {
-      goto err_handle;
-    }
-  }
-  if (in_buffer_.CanReadSize()) {
-    reciever_->OnDataReceived(this, &in_buffer_);
-  }
-  if (!schedule_shutdown_) {
-    return;
-  }
-err_handle:
-  HandleClose(fdev);
-  return;
+bool TcpChannel::StartChannel(bool server) {
+  fdev_->SetEdgeTrigger(true);
+  return SocketChannel::StartChannel(server);
+}
+
+bool TcpChannel::HandleRead() {
+  return ReadAllFromSocket(fdev_, &in_buffer_);
 }
 
 bool TcpChannel::TryFlush() {
-  if (out_buffer_.CanReadSize()) {
-    bool success = WriteAllToSocket(fd_event_.get(), &out_buffer_);
-    return success;
+  if (out_buffer_.CanReadSize() == 0) {
+    return true;
   }
-  return true;
+  return WriteAllToSocket(fdev_, &out_buffer_);
 }
 
 int32_t TcpChannel::Send(const char* data, const int32_t len) {
-  DCHECK(pump_->IsInLoop());
-
-  if (!IsConnected()) {
+  if (out_buffer_.CanReadSize() > 0) {
+    out_buffer_.WriteRawData(data, len);
+    if (WriteAllToSocket(fdev_, &out_buffer_)) {
+      return len;
+    }
     return -1;
   }
 
-  if (out_buffer_.CanReadSize() > 0) {
-    out_buffer_.WriteRawData(data, len);
-    WriteAllToSocket(fd_event_.get(), &out_buffer_);
-    return len;
-  }
+  int fatal_err = 0;
 
-  int32_t fatal_err = 0;
   size_t n_write = 0;
   size_t n_remain = len;
   do {
-    ssize_t part_write =
-        socketutils::Write(fd_event_->GetFd(), data + n_write, n_remain);
+    ssize_t part_write = ::write(fdev_->GetFd(), data + n_write, n_remain);
     if (part_write > 0) {
       n_write += part_write;
       n_remain = n_remain - part_write;
-
       DCHECK((n_write + n_remain) == size_t(len));
       continue;
     }
 
     if (errno == EAGAIN) {
       out_buffer_.WriteRawData(data + n_write, n_remain);
-    } else if (errno == EINTR) {
-      continue;
-    } else {
-      // to avoid A -> B -> callback delete A problem,
-      // use a write event to triggle handle close action
-      fatal_err = errno;
-      schedule_shutdown_ = true;
-      SetChannelStatus(Status::CLOSING);
-      LOG(ERROR) << ChannelInfo() << " send err:" << base::StrError()
-                 << " schedule close";
+      return n_write;
     }
+    if (errno == EINTR) {
+      continue;
+    }
+    fatal_err = 1;
     break;
   } while (n_remain != 0);
 
-  if (out_buffer_.CanReadSize()) {
-    fd_event_->EnableWriting();
+  if (!fatal_err && out_buffer_.CanReadSize()) {
+    fdev_->EnableWriting();
   }
-  return fatal_err != 0 ? -1 : n_write;
+  return fatal_err > 0 ? -1 : n_write;
 }
 
 }  // namespace net

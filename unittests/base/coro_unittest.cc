@@ -318,8 +318,9 @@ TEST_CASE("coro.ioevent", "[ioevent for coro]") {
   CHECK(fd > 0);
 
   co_go &loop << [&]() {
+    base::FdEvent fdev(fd, base::LtEv::LT_EVENT_READ);
+    co::IOEvent ioev(&fdev);
     do {
-      co::IOEvent ioev(fd, base::LtEv::LT_EVENT_READ);
       ignore_result(ioev.Wait(timeout));
       uint64_t val = 0;
       if (eventfd_read(fd, &val) == 0) {
@@ -356,7 +357,8 @@ TEST_CASE("coro.ioevent2", "[ioevent for coro]") {
   CHECK(fd > 0);
 
   co_go &loop << [&]() {
-    co::IOEvent ioev(fd, base::LtEv::LT_EVENT_READ);
+    base::FdEvent fdev(fd, base::LtEv::LT_EVENT_READ);
+    co::IOEvent ioev(&fdev);
     do {
       ignore_result(ioev.Wait());
       uint64_t val = 0;

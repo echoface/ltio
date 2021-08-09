@@ -20,11 +20,12 @@
 
 #include "base/compiler_specific.h"
 #include "base/message_loop/message_loop.h"
-#include "codec_message.h"
 #include "net_io/base/ip_endpoint.h"
 #include "net_io/channel.h"
 #include "net_io/net_callback.h"
 #include "net_io/url_utils.h"
+
+#include "codec_message.h"
 
 namespace base {
 class MessageLoop;
@@ -37,13 +38,11 @@ namespace net {
  * and encode request/response to bytestream and write to channel
  * */
 class CodecService : public EnableShared(CodecService),
-                     public SocketChannel::Reciever {
+                     public base::FdEvent::Handler {
 public:
   class Handler {
   public:
     virtual void OnCodecMessage(const RefCodecMessage& message) = 0;
-
-    virtual void OnCodecMessage(IOContext ctx, const RefCodecMessage& msg){};
   };
 
   class Delegate {
@@ -69,9 +68,12 @@ public:
 
   void SetProtocol(const std::string& protocol) { protocol_ = protocol; };
 
-  void BindSocket(SocketChannelPtr&& channel);
+  void BindSocket(base::RefFdEvent&& fdev, SocketChannelPtr&& channel);
 
   virtual void StartProtocolService();
+
+  // just close codec service, call notify if needed
+  void CloseService(bool block_callback = false);
 
   SocketChannel* Channel() { return channel_.get(); };
 
@@ -79,18 +81,17 @@ public:
 
   base::EventPump* Pump() const { return loop_->Pump(); };
 
-  void CloseService(bool block_callback = false);
-
   bool IsConnected() const {
     return channel_ ? channel_->IsConnected() : false;
   }
+
+  virtual void OnDataReceived(IOBuffer* buffer) = 0;
 
   virtual void BeforeCloseService(){};
 
   virtual void AfterChannelClosed(){};
 
-  /* feature indentify*/
-  // async clients request
+  /* feature indentify async clients request*/
   virtual bool KeepSequence() { return true; };
 
   virtual bool KeepHeartBeat() { return false; }
@@ -115,17 +116,36 @@ public:
 
   void SetIsServerSide(bool server_side);
 
-  bool IsServerSide() const override { return server_side_; }
+  bool IsServerSide() const { return server_side_; }
+
+  // the event drive api, call from pumped fdevent
+  // or
+  // other delegate event driver, eg: co::IOEvent
+  void HandleEvent(base::FdEvent* fdev) override;
+
+  // override this for some need after-send-action codec
+  virtual void OnDataFinishSend(){};
 
 protected:
-  // override this do initializing for client side, like set db, auth etc
-  void OnChannelReady(const SocketChannel*) override;
+  void StartInternal();
 
-  void OnChannelClosed(const SocketChannel*) override;
+  // notify delegate_ codec is ready
+  void NotifyCodecReady();
+
+  // will trigger AfterChannelClosed and notify to delegate_
+  void NotifyCodecClosed();
 
   bool server_side_;
 
   std::string protocol_;
+
+  bool schedule_close_ = false;
+
+  base::RefFdEvent fdev_;
+
+  // case 1: as fdevent handler, drive by io-pump
+  // case 2: drive by top level controller, eg: co::IOEvent
+  bool as_fdev_handler_ = true;
 
   SocketChannelPtr channel_;
 

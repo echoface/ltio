@@ -40,42 +40,6 @@ public:
   HttpCodecService(base::MessageLoop* loop);
 
   ~HttpCodecService();
-  /*
-  struct http_parser_settings {
-  http_cb      on_message_begin;
-  http_data_cb on_url;
-  http_data_cb on_status;
-  http_data_cb on_header_field;
-  http_data_cb on_header_value;
-  http_cb      on_headers_complete;
-  http_data_cb on_body;
-  http_cb      on_message_complete;
-  //When on_chunk_header is called,
-  //the current chunk length is stored
-  //in parser->content_length.
-  http_cb      on_chunk_header;
-  http_cb      on_chunk_complete;
-  };*/
-
-  static int OnMessageBegin(http_parser* parser);
-
-  static int OnHeaderFinish(http_parser* parser);
-
-  static int OnMessageEnd(http_parser* parser);
-
-  static int OnChunkHeader(http_parser* parser);
-
-  static int OnChunkFinished(http_parser* parser);
-
-  static int OnURL(http_parser* parser, const char* url, size_t len);
-
-  static int OnStatus(http_parser* parser, const char* start, size_t len);
-
-  static int OnHeaderField(http_parser* parser, const char* field, size_t len);
-
-  static int OnHeaderValue(http_parser* parser, const char* value, size_t len);
-
-  static int OnMessageBody(http_parser* parser, const char* body, size_t len);
 
   static bool RequestToBuffer(const HttpRequest*, IOBuffer*);
 
@@ -83,15 +47,14 @@ public:
 
   void StartProtocolService() override;
 
-  // override from CodecService
-  void OnDataFinishSend(const SocketChannel*) override;
+  void OnDataReceived(IOBuffer*) override;
 
-  void OnDataReceived(const SocketChannel*, IOBuffer*) override;
-
+  // last change for codec modify request 
   void BeforeSendRequest(HttpRequest*);
 
   bool SendRequest(CodecMessage* message) override;
 
+  // last change for codec modify response
   bool BeforeSendResponse(const HttpRequest*, HttpResponse*);
 
   bool SendResponse(const CodecMessage* req, CodecMessage* res) override;
