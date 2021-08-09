@@ -5,7 +5,7 @@
 #include "base/message_loop/linux_signal.h"
 #include "fcontext/fcontext.h"
 
-namespace base {
+namespace co {
 
 CoLoop::CoLoop() {
   InitializeTimeWheel();
@@ -17,12 +17,12 @@ CoLoop::~CoLoop() {
   FinalizeTimeWheel();
 }
 
-bool CoLoop::PostTask(TaskBasePtr&& task) {
+bool CoLoop::PostTask(base::TaskBasePtr&& task) {
   runner_->ScheduleTask(std::move(task));
   return true;
 }
 
-bool CoLoop::PostDelayTask(TaskBasePtr&&, int64_t ms) {
+bool CoLoop::PostDelayTask(base::TaskBasePtr&&, int64_t ms) {
   return false;
 }
 
@@ -35,7 +35,7 @@ timeout_t CoLoop::NextTimeout() {
   if (runner_->HasPeedingTask()) {
     return 0;
   }
-  ::timeouts_update(time_wheel_, time_ms());
+  ::timeouts_update(time_wheel_, base::time_ms());
   if (::timeouts_expired(time_wheel_)) {
     return 0;
   }
@@ -46,15 +46,14 @@ timeout_t CoLoop::NextTimeout() {
   return ms;
 }
 
-//static
+// static
 void CoLoop::ThreadMain() {
-  IgnoreSigPipeSignalOnCurrentThread();
+  base::IgnoreSigPipeSignalOnCurrentThread();
 
   int ms = 0;
-  std::vector<FiredEvent> active_list(65535);
-  //init setup
-  while(true) {
-
+  std::vector<base::FiredEvent> active_list(65535);
+  // init setup
+  while (true) {
     ms = NextTimeout();
     int count = io_mux_->WaitingIO(active_list, ms);
 
@@ -62,18 +61,18 @@ void CoLoop::ThreadMain() {
 
     InvokeFiredEvent(&active_list[0], count);
 
-    runner_->Run(); //run schedule task
+    runner_->Run();  // run schedule task
   }
   active_list.clear();
-  //clean up
+  // clean up
 }
 
-void CoLoop::InvokeFiredEvent(FiredEvent* evs, int count) {
+void CoLoop::InvokeFiredEvent(base::FiredEvent* evs, int count) {
   for (int i = 0; i < count; i++) {
-    FiredEvent ev = evs[i];
+    base::FiredEvent ev = evs[i];
 
     auto func = [this, ev]() {
-      FdEvent* fd_event = io_mux_->FindFdEvent(ev.fd_id);
+      base::FdEvent* fd_event = io_mux_->FindFdEvent(ev.fd_id);
       if (fd_event) {
         return fd_event->Invoke(ev.event_mask);
       }
@@ -85,17 +84,14 @@ void CoLoop::InvokeFiredEvent(FiredEvent* evs, int count) {
 }
 
 void CoLoop::ProcessTimerEvent() {
-  ::timeouts_update(time_wheel_, time_ms());
+  ::timeouts_update(time_wheel_, base::time_ms());
 
   Timeout* expired = NULL;
   while (NULL != (expired = timeouts_get(time_wheel_))) {
-
-    TimeoutEvent* timeout_ev = static_cast<TimeoutEvent*>(expired);
+    base::TimeoutEvent* timeout_ev = static_cast<base::TimeoutEvent*>(expired);
 
     if (timeout_ev->IsRepeated()) {
-      runner_->AppendTask(NewClosure([timeout_ev](){
-        timeout_ev->Invoke();
-      }));
+      runner_->AppendTask(NewClosure([timeout_ev]() { timeout_ev->Invoke(); }));
       continue;
     }
 
@@ -112,23 +108,23 @@ void CoLoop::InitializeTimeWheel() {
   int err = 0;
   time_wheel_ = ::timeouts_open(TIMEOUT_mHZ, &err);
   CHECK(err == 0);
-  ::timeouts_update(time_wheel_, time_ms());
+  ::timeouts_update(time_wheel_, base::time_ms());
 }
 
 void CoLoop::FinalizeTimeWheel() {
   CHECK(time_wheel_ != NULL);
 
-  std::vector<TimeoutEvent*> to_be_delete;
+  std::vector<base::TimeoutEvent*> to_be_delete;
   Timeout* to = NULL;
   TIMEOUTS_FOREACH(to, time_wheel_, TIMEOUTS_ALL) {
-    TimeoutEvent* toe = static_cast<TimeoutEvent*>(to);
+    base::TimeoutEvent* toe = static_cast<base::TimeoutEvent*>(to);
     ::timeouts_del(time_wheel_, to);
     if (toe->DelAfterInvoke()) {
       to_be_delete.push_back(toe);
     }
   }
 
-  for (TimeoutEvent* toe : to_be_delete) {
+  for (base::TimeoutEvent* toe : to_be_delete) {
     delete toe;
   }
   to_be_delete.clear();
@@ -136,4 +132,4 @@ void CoLoop::FinalizeTimeWheel() {
   time_wheel_ = NULL;
 }
 
-}
+}  // namespace co

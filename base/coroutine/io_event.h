@@ -4,6 +4,7 @@
 #include "base/closure/closure_task.h"
 #include "base/lt_micro.h"
 #include "base/message_loop/event.h"
+#include "base/message_loop/event_pump.h"
 #include "base/message_loop/fd_event.h"
 
 namespace co {
@@ -32,6 +33,8 @@ public:
 
   IOEvent(int fd, base::LtEv event);
 
+  ~IOEvent();
+
   std::string ResultStr() const;
 
   /*
@@ -42,9 +45,10 @@ public:
   __CO_WAIT__ Result Wait(int ms = -1);
 
 protected:
+  void initialize();
+
   void HandleEvent(base::FdEvent* fdev) override;
 private:
-
   void set_result(Result res) {
     if (result_ == None) {
       result_ = res;
@@ -53,9 +57,11 @@ private:
   }
 
   Result result_ = None;
+  base::EventPump* pump_;
   base::FdEvent fd_event_;
   base::LtClosure resumer_;
 
+  DISALLOW_ALLOCT_HEAP_OBJECT;
   DISALLOW_COPY_AND_ASSIGN(IOEvent);
 };
 

@@ -40,14 +40,6 @@ void CodecService::BindSocket(SocketChannelPtr&& channel) {
   channel_->SetReciever(this);
 }
 
-base::EventPump* CodecService::Pump() const {
-  return loop_->Pump();;
-}
-
-bool CodecService::IsConnected() const {
-  return channel_ ? channel_->IsConnected() : false;
-}
-
 void CodecService::StartProtocolService() {
   VLOG(GLOG_VINFO) << __FUNCTION__ << " enter";
   CHECK(loop_->IsInLoopThread());

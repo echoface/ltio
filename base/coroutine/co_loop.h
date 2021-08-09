@@ -9,7 +9,7 @@ extern "C" {
 #include <thirdparty/timeout/timeout.h>
 }
 
-namespace base {
+namespace co {
 
 class CoLoop {
 public:
@@ -19,12 +19,12 @@ public:
 
   ~CoLoop();
 
-  bool PostTask(TaskBasePtr&& task);
+  bool PostTask(base::TaskBasePtr&& task);
 
-  bool PostDelayTask(TaskBasePtr&&, int64_t ms);
+  bool PostDelayTask(base::TaskBasePtr&&, int64_t ms);
 
   template <typename Fn, typename... Args>
-  bool PostTask(const Location& loc, Fn&& fn, Args&&... args) {
+  bool PostTask(const base::Location& loc, Fn&& fn, Args&&... args) {
     return PostTask(CreateClosure(loc, std::bind(fn, args...)));
   }
 
@@ -50,7 +50,7 @@ protected:
 
   void ProcessTimerEvent();
 
-  void InvokeFiredEvent(FiredEvent* evs, int count);
+  void InvokeFiredEvent(base::FiredEvent* evs, int count);
 
 private:
   bool running_ = true;
@@ -62,7 +62,7 @@ private:
 
   // a epoll based io pump
   Coroutine* co_io_;
-  std::unique_ptr<IOMux> io_mux_;
+  std::unique_ptr<base::IOMux> io_mux_;
 
   TimeoutWheel* time_wheel_ = nullptr;
 

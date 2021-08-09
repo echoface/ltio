@@ -9,7 +9,7 @@
 #include "fcontext/fcontext.h"
 #include "glog/logging.h"
 
-namespace base {
+namespace co {
 
 class Coroutine;
 using RefCoroutine = std::shared_ptr<Coroutine>;

@@ -6,7 +6,7 @@
 #include "base/closure/closure_task.h"
 #include "base/memory/spin_lock.h"
 
-namespace base {
+namespace co {
 
 /**
  * CoMutex is a mutex lock for coroutines
@@ -28,7 +28,7 @@ private:
 
   bool locked_;
   base::SpinLock lock_;
-  std::deque<LtClosure> waiters_;
+  std::deque<base::LtClosure> waiters_;
   DISALLOW_COPY_AND_ASSIGN(CoMutex);
 };
 

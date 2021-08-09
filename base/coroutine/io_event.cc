@@ -6,15 +6,32 @@
 namespace co {
 
 IOEvent::IOEvent(base::FdEvent* fdev)
-  : fd_event_(this, fdev->GetFd(), fdev->MonitorEvents()) {
-  CHECK(fdev->GetFd() > 0);
-  fd_event_.ReleaseOwnership();
+  : pump_(CoroRunner::BindLoop()->Pump()),
+    fd_event_(this, fdev->GetFd(), fdev->MonitorEvents()) {
+  initialize();
 }
 
 IOEvent::IOEvent(int fd, base::LtEv event)
-  : fd_event_(this, fd, event) {
-  CHECK(fd > 0);
+  : pump_(CoroRunner::BindLoop()->Pump()),
+    fd_event_(this, fd, event) {
+  initialize();
+}
+
+IOEvent::~IOEvent() {
+  CHECK(pump_ == CoroRunner::BindLoop()->Pump());
+  pump_->RemoveFdEvent(&fd_event_);
+}
+
+void IOEvent::initialize() {
+  CHECK(__co_waitable__);
+  CHECK(fd_event_.GetFd() > 0);
+
   fd_event_.ReleaseOwnership();
+  if (fd_event_.MonitorEvents() == base::LtEv::LT_EVENT_NONE) {
+    fd_event_.EnableReading();
+    fd_event_.EnableWriting();
+  }
+  CHECK(pump_->InstallFdEvent(&fd_event_));
 }
 
 std::string IOEvent::ResultStr() const {
@@ -38,15 +55,7 @@ std::string IOEvent::ResultStr() const {
 IOEvent::Result IOEvent::Wait(int ms) {
   CHECK(__co_waitable__);
 
-  if (fd_event_.MonitorEvents() == base::LtEv::LT_EVENT_NONE) {
-    fd_event_.EnableReading();
-    fd_event_.EnableWriting();
-  }
   result_ = Result::None;
-
-  base::EventPump* pump = base::CoroRunner::BindLoop()->Pump();
-  bool ok = pump->InstallFdEvent(&fd_event_);
-  CHECK(ok);
 
   resumer_ = std::move(co_new_resumer());
 
@@ -57,18 +66,17 @@ IOEvent::Result IOEvent::Wait(int ms) {
       set_result(Result::Timeout);
       return resumer_();
     }));
-    pump->AddTimeoutEvent(&timer);
+    pump_->AddTimeoutEvent(&timer);
 
     __co_wait_here__;
 
-    pump->RemoveTimeoutEvent(&timer);
+    pump_->RemoveTimeoutEvent(&timer);
   } else {
 
     __co_wait_here__;
   }
   //LOG(INFO) << "io_event back:" << ResultStr();
 
-  pump->RemoveFdEvent(&fd_event_);
   resumer_ = nullptr;
   CHECK(result_ != Result::None) << ResultStr();
 

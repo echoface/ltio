@@ -20,9 +20,9 @@
 
 #include <base/message_loop/message_loop.h>
 
-namespace base {
+namespace co {
 
-std::shared_ptr<WaitGroup> WaitGroup::New() {
+RefWaitGroup WaitGroup::New() {
   return std::shared_ptr<WaitGroup>(new WaitGroup());
 }
 
@@ -71,7 +71,7 @@ WaitGroup::Result WaitGroup::Wait(int64_t timeout_ms) {
   resumer_ = CO_RESUMER;
 
   if (timeout_ms > 0) {
-    timeout_.reset(TimeoutEvent::CreateOneShot(timeout_ms, false));
+    timeout_.reset(base::TimeoutEvent::CreateOneShot(timeout_ms, false));
     // Don't Worry about invalid `this` happend, bz only follow two cases
     // case 1: timeout invoke, nothing happend
     // case 2: all task done, timeout event be removed, OnTimeOut never invoked
