@@ -37,8 +37,7 @@ typedef std::unique_ptr<FdEvent> FdEventPtr;
  * Create With a fd and take it owner  close it when it's gone*/
 class FdEvent final {
 public:
-  struct events {
-  };
+  struct events {};
   /* interface notify poller notify_watcher polling events*/
   typedef struct Watcher {
     virtual ~Watcher() = default;
@@ -54,50 +53,53 @@ public:
     virtual void HandleEvent(FdEvent* fdev) = 0;
   } Handler;
 
+  static RefFdEvent Create(int fd, LtEvent event);
   static RefFdEvent Create(Handler* handler, int fd, LtEvent event);
 
+  FdEvent(int fd, LtEvent events);
   FdEvent(Handler* handler, int fd, LtEvent events);
 
   ~FdEvent();
+
+  inline Handler* GetHandler() const { return handler_;}
+  inline void SetHandler(Handler* h) { handler_ = h; }
+
+  inline void SetFdWatcher(Watcher* w) {watcher_ = w;}
+  inline Watcher* EventWatcher() { return watcher_; }
 
   inline int GetFd() const { return fd_; };
 
   inline void ReleaseOwnership() { owner_fd_ = false; }
 
-  void SetFdWatcher(Watcher* watcher);
-
-  Watcher* EventWatcher() { return watcher_; }
-
   inline bool EdgeTriggerMode() const { return enable_et_; }
 
   inline void SetEdgeTrigger(bool edge) { enable_et_ = edge; }
-
 
   void EnableReading();
   void EnableWriting();
   void DisableReading();
   void DisableWriting();
-  void DisableAll() {SetEvent(LtEv::LT_EVENT_NONE);}
+  void DisableAll() { SetEvent(LtEv::LT_EVENT_NONE); }
   inline bool IsReadEnable() const { return event_ & LtEv::LT_EVENT_READ; }
   inline bool IsWriteEnable() const { return event_ & LtEv::LT_EVENT_WRITE; }
 
   // set event user intresting
   void SetEvent(const LtEv& ev);
   // the event user take care about
-  LtEvent MonitorEvents() const {return event_;};
-  std::string MonitorEventStr() const{return ev2str(event_);};
-
+  LtEvent MonitorEvents() const { return event_; };
+  std::string MonitorEventStr() const { return ev2str(event_); };
 
   void Invoke(LtEvent ev);
 
   LtEvent ActivedEvent() const { return fired_; };
-  bool ErrFired() const {return fired_ & LT_EVENT_ERROR;}
-  bool ReadFired() const {return fired_ & LT_EVENT_READ;}
-  bool WriteFired() const {return fired_ & LT_EVENT_WRITE;}
-  bool CloseFired() const {return fired_ & LT_EVENT_CLOSE;}
-  std::string FiredEventStr() const { return ev2str(fired_);};
+  bool ErrFired() const { return fired_ & LT_EVENT_ERROR; }
+  bool ReadFired() const { return fired_ & LT_EVENT_READ; }
+  bool WriteFired() const { return fired_ & LT_EVENT_WRITE; }
+  bool CloseFired() const { return fired_ & LT_EVENT_CLOSE; }
+  std::string FiredEventStr() const { return ev2str(fired_); };
 
   std::string EventInfo() const;
+
 private:
   void notify_watcher();
 
@@ -105,8 +107,8 @@ private:
 
   bool owner_fd_ = true;
 
-  LtEvent event_ = LT_EVENT_NONE; // watching event
-  LtEvent fired_ = LT_EVENT_NONE; // fired event
+  LtEvent event_ = LT_EVENT_NONE;  // watching event
+  LtEvent fired_ = LT_EVENT_NONE;  // fired event
 
   // for epoll mode
   bool enable_et_ = false;

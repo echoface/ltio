@@ -23,13 +23,12 @@ public:
     return true;
   };
 
-  void OnDataFinishSend(const SocketChannel* channel) override {
+  void OnDataFinishSend(const SocketChannel* channel) {
     LOG(INFO) << " channel write data finished";
   }
 
-  void OnDataReceived(const SocketChannel* channel, IOBuffer *buffer) override {
+  void OnDataReceived(IOBuffer *buffer) override {
     LOG(INFO) << " channel recieve data" << buffer->CanReadSize();
-    CHECK(channel == Channel());
     int32_t size = Channel()->Send(buffer->GetRead(), buffer->CanReadSize());
     if (size > 0) {
       buffer->Consume(size);
@@ -92,6 +91,7 @@ public:
   CodecService* GetProtocolService(const std::string protocol) {
     return tcp_protoservice_.get();
   }
+
   void OnRequestMessage(const RefCodecMessage& request) {
 
   };

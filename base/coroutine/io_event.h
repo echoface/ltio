@@ -31,8 +31,6 @@ public:
 
   IOEvent(base::FdEvent* fdev);
 
-  IOEvent(int fd, base::LtEv event);
-
   ~IOEvent();
 
   std::string ResultStr() const;
@@ -58,7 +56,7 @@ private:
 
   Result result_ = None;
   base::EventPump* pump_;
-  base::FdEvent fd_event_;
+  base::FdEvent* fd_event_;
   base::LtClosure resumer_;
 
   DISALLOW_ALLOCT_HEAP_OBJECT;

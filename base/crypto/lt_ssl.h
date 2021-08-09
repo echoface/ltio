@@ -14,7 +14,7 @@ using SSLCtxImpl = struct ssl_ctx_st;
 
 #else  // none LTIO_WITH_OPENSSL
 
-astatic_assert(false, "current only openssl support")
+static_assert(false, "current only openssl support");
 
 #endif  // end LTIO_WITH_OPENSSL
 

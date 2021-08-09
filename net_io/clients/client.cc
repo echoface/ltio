@@ -172,26 +172,30 @@ void Client::OnConnected(int socket_fd, IPEndPoint& local, IPEndPoint& remote) {
 
   base::MessageLoop* io_loop = next_client_io_loop();
 
-  RefCodecService codec_service =
+  // create socket fdevent
+  auto fdev = base::FdEvent::Create(nullptr, socket_fd, base::LT_EVENT_READ);
+
+  // create codec service
+  RefCodecService codec =
       CodecFactory::NewClientService(remote_info_.scheme, io_loop);
+  CHECK(codec) << "no supported codec for:" << remote_info_.scheme;
+
+  RefClientChannel client_channel = CreateClientChannel(this, codec);
+  client_channel->SetRequestTimeout(config_.message_timeout);
 
   SocketChannelPtr channel;
+  if (codec->UseSSLChannel()) {
 #ifdef LTIO_HAVE_SSL
-  if (codec_service->UseSSLChannel()) {
-    auto ssl_channel = TCPSSLChannel::Create(socket_fd, local, remote);
-    ssl_channel->InitSSL(GetClientSSLContext()->NewSSLSession(socket_fd));
-    channel = std::move(ssl_channel);
+    auto ch = TCPSSLChannel::Create(socket_fd, local, remote);
+    ch->InitSSL(GetClientSSLContext()->NewSSLSession(socket_fd));
+    channel = std::move(ch);
+#else
+    CHECK(false) << "ssl need compile with openssl lib support";
+#endif
   } else {
     channel = TcpChannel::Create(socket_fd, local, remote);
   }
-#else
-  channel = TcpChannel::Create(socket_fd, local, remote);
-#endif
-  channel->SetIOEventPump(io_loop->Pump());
-  codec_service->BindSocket(std::move(channel));
-
-  RefClientChannel client_channel = CreateClientChannel(this, codec_service);
-  client_channel->SetRequestTimeout(config_.message_timeout);
+  codec->BindSocket(std::move(fdev), std::move(channel));
 
   channels_.push_back(client_channel);
   io_loop->PostTask(FROM_HERE,

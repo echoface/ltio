@@ -7,31 +7,27 @@ namespace co {
 
 IOEvent::IOEvent(base::FdEvent* fdev)
   : pump_(CoroRunner::BindLoop()->Pump()),
-    fd_event_(this, fdev->GetFd(), fdev->MonitorEvents()) {
-  initialize();
-}
-
-IOEvent::IOEvent(int fd, base::LtEv event)
-  : pump_(CoroRunner::BindLoop()->Pump()),
-    fd_event_(this, fd, event) {
+    fd_event_(fdev) {
   initialize();
 }
 
 IOEvent::~IOEvent() {
   CHECK(pump_ == CoroRunner::BindLoop()->Pump());
-  pump_->RemoveFdEvent(&fd_event_);
+
+  fd_event_->SetHandler(nullptr);
+  pump_->RemoveFdEvent(fd_event_);
 }
 
 void IOEvent::initialize() {
   CHECK(__co_waitable__);
-  CHECK(fd_event_.GetFd() > 0);
+  CHECK(fd_event_->GetFd() > 0);
 
-  fd_event_.ReleaseOwnership();
-  if (fd_event_.MonitorEvents() == base::LtEv::LT_EVENT_NONE) {
-    fd_event_.EnableReading();
-    fd_event_.EnableWriting();
+  fd_event_->SetHandler(this);
+  if (fd_event_->MonitorEvents() == base::LtEv::LT_EVENT_NONE) {
+    fd_event_->EnableReading();
+    fd_event_->EnableWriting();
   }
-  CHECK(pump_->InstallFdEvent(&fd_event_));
+  CHECK(pump_->InstallFdEvent(fd_event_));
 }
 
 std::string IOEvent::ResultStr() const {

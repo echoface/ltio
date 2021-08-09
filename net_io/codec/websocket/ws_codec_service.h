@@ -85,13 +85,7 @@ protected:
 
   void CommitFrameMessage();
 
-  void OnDataFinishSend(const SocketChannel*) override;
-
-  void OnDataReceived(const SocketChannel*, IOBuffer*) override;
-
-  void OnChannelReady(const SocketChannel*) override;
-
-  void OnChannelClosed(const SocketChannel*) override;
+  void OnDataReceived(IOBuffer*) override;
 
   void init_http_parser();
 

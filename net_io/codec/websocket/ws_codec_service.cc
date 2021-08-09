@@ -121,11 +121,11 @@ void WSCodecService::CommitFrameMessage() {
 void WSCodecService::StartProtocolService() {
   VLOG(GLOG_VINFO) << __FUNCTION__ << " enter";
 
+  StartInternal();
+
   init_http_parser();
 
-  CodecService::StartProtocolService();
-
-  /*
+  /* handshake upgrade request
   GET / HTTP/1.1
   Host: localhost:8080
   Origin: http://127.0.0.1:3000
@@ -200,30 +200,6 @@ bool WSCodecService::SendResponse(const CodecMessage*, CodecMessage* res) {
 }
 
 /*
- * GET / HTTP/1.1
- *
- * Host: localhost:8080
- * Origin: http://127.0.0.1:3000
- * Connection: Upgrade
- * Upgrade: websocket
- * Sec-WebSocket-Version: 13
- * Sec-WebSocket-Key: IRhw449z7G0Mov9CahJ+Ow==
- * */
-void WSCodecService::OnChannelReady(const SocketChannel* ch) {
-  CHECK(delegate_);
-  VLOG(GLOG_VINFO) << __FUNCTION__ << ", ch:" << ch->ChannelInfo();
-  // Issue a handshake request
-  // auto hs_req = std::make_shared<HttpRequest>();
-  return;
-}
-
-void WSCodecService::OnChannelClosed(const SocketChannel* ch) {
-  CodecService::OnChannelClosed(ch);
-}
-
-void WSCodecService::OnDataFinishSend(const SocketChannel*) {}
-
-/*
  * HTTP/1.1 101 Switching Protocols
  *
  * Connection: Upgrade
@@ -252,7 +228,7 @@ void WSCodecService::CommitHttpRequest(const RefHttpRequest&& request) {
     return;
   }
   hs_state = handshake_state::HS_SUCCEESS;
-  CodecService::OnChannelReady(channel_.get());
+  NotifyCodecReady();
 }
 
 // OnDataReceived -> OnHandshakeReqData -> CommitHttpRequest -> OnChannelReady
@@ -270,14 +246,14 @@ void WSCodecService::OnHandshakeReqData(IOBuffer* buf) {
   }
 
   if (hs_state == HS_SUCCEESS) {
-    return CodecService::OnChannelReady(channel_.get());
+    return NotifyCodecReady();
   }
 
   if (hs_state == HS_WRONGMSG) {
     LOG(ERROR) << "got bad handshake message";
     ignore_result(channel_->Send(HttpConstant::kBadRequest));
     CloseService(true);
-    return delegate_->OnCodecClosed(shared_from_this());
+    return NotifyCodecClosed();
   }
 }
 
@@ -298,22 +274,22 @@ void WSCodecService::OnHandshakeResData(IOBuffer* buf) {
     LOG(ERROR) << "parse handshake response error";
     ignore_result(channel_->Send(HttpConstant::kBadRequest));
     CloseService(true);
-    return delegate_->OnCodecClosed(shared_from_this());
+    return NotifyCodecClosed();
   }
 
   if (hs_state == HS_SUCCEESS) {
-    return CodecService::OnChannelReady(channel_.get());
+    return NotifyCodecReady();
   }
 
   if (hs_state == HS_WRONGMSG) {
     LOG(ERROR) << "got bad handshake message";
     ignore_result(channel_->Send(HttpConstant::kBadRequest));
     CloseService(true);
-    return delegate_->OnCodecClosed(shared_from_this());
+    return NotifyCodecClosed();
   }
 }
 
-void WSCodecService::OnDataReceived(const SocketChannel*, IOBuffer* buf) {
+void WSCodecService::OnDataReceived(IOBuffer* buf) {
   if (hs_state != HS_SUCCEESS) {
     return IsServerSide() ? OnHandshakeReqData(buf) : OnHandshakeResData(buf);
   }
@@ -326,7 +302,7 @@ void WSCodecService::OnDataReceived(const SocketChannel*, IOBuffer* buf) {
                                             buf->CanReadSize());
   if (nparsed != buf->CanReadSize()) {
     CloseService(true);
-    return delegate_->OnCodecClosed(guard);
+    return NotifyCodecClosed();
   }
 
   buf->Consume(nparsed);

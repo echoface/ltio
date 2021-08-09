@@ -25,8 +25,8 @@
 #include <base/base_constants.h>
 #include <base/compiler_specific.h>
 #include <cstdint>
-#include "base/lt_micro.h"
 #include "base/ip_endpoint.h"
+#include "base/lt_micro.h"
 #include "base/message_loop/fd_event.h"
 #include "io_buffer.h"
 #include "net_callback.h"
@@ -39,27 +39,32 @@ class EventPump;
 namespace lt {
 namespace net {
 
-class SocketChannel : public base::FdEvent::Handler {
+/*
+ * 原始设计中，Channel是Owner FdEvent并管理链接状态的，并通过回调处理
+ * 状态同步，因为回调层数过深，并存在错误处理状态的一些困难，后来经过
+ * 思考后，将SocketChannel转化成BufferChannel + 驱动FdEvent侦听事件的
+ * 简化版本,从而减少回调层数并可以被其他非回调式reactor模型使用：eg
+ * coroutine + reactor 驱动的同步编程模式,  这样传统的reactor网络模型
+ * 和基于coroutine的同步网络模型都可以复用了。
+ *
+ * IOWaiter iowaiter(fdev);
+ * iowatier.Wait(timetout);
+ * handleRead/Write
+ * DataBuffer -> Codec -> Request/Response -> ServerHandler/ClientHandler
+ * */
+class SocketChannel {
 public:
   enum class Status { CONNECTING, CONNECTED, CLOSING, CLOSED };
-  typedef struct Reciever {
-    virtual void OnChannelReady(const SocketChannel*){};
-    virtual void OnDataFinishSend(const SocketChannel*){};
-    virtual void OnChannelClosed(const SocketChannel*) = 0;
-    virtual void OnDataReceived(const SocketChannel*, IOBuffer*) = 0;
 
-    // delegate interface
-    virtual bool IsServerSide() const = 0;
-  } Reciever;
-
-public:
   virtual ~SocketChannel();
 
-  virtual bool StartChannel() WARN_UNUSED_RESULT;
+  void SetFdEvent(base::FdEvent* fdev) { fdev_ = fdev; };
 
-  void SetIOEventPump(base::EventPump* pump);
+  virtual bool StartChannel(bool server) WARN_UNUSED_RESULT;
 
-  void SetReciever(SocketChannel::Reciever* consumer);
+  // read socket data to buffer
+  // when success return true, else return false
+  virtual bool HandleRead() WARN_UNUSED_RESULT = 0;
 
   // write as much as data into socket
   // return true when, false when error
@@ -77,19 +82,20 @@ public:
   /* return -1 when error, handle err is responsibility of caller
    * return 0 when all data pending to buffer,
    * other case return the bytes writen*/
-  virtual int32_t Send(const char* data, const int32_t len) WARN_UNUSED_RESULT = 0;
+  virtual int32_t Send(const char* data,
+                       const int32_t len) WARN_UNUSED_RESULT = 0;
 
-  /* a initiative call from codec to close channel
-   * 1. shutdown writer if writing is enable
-   * 2. unregiste fdevent from pump and close socket*/
-  virtual void ShutdownChannel(bool half_close);
-
-  /* close socket channel without callback notify*/
-  virtual void ShutdownWithoutNotify();
+  IOBuffer* ReaderBuffer() { return &in_buffer_; }
 
   IOBuffer* WriterBuffer() { return &out_buffer_; }
 
-  Status GetStatus() const {return status_;}
+  bool HasOutgoingData() const {return out_buffer_.CanReadSize();}  
+
+  bool HasIncommingData() const {return in_buffer_.CanReadSize();}  
+
+  Status GetStatus() const { return status_; }
+
+  const std::string StatusStr() const;
 
   bool IsClosed() const { return status_ == Status::CLOSED; };
 
@@ -97,25 +103,20 @@ public:
 
   bool IsConnecting() const { return status_ == Status::CONNECTING; };
 
-  bool ShutdownScheduled() const {return schedule_shutdown_;}
+  const IPEndPoint& LocalEndpoint() const { return local_ep_; }
 
-  const std::string StatusStr() const;
-
-  const IPEndPoint& LocalEndpoint() const {return local_ep_;}
-
-  const IPEndPoint& RemoteEndPoint() const {return local_ep_;}
+  const IPEndPoint& RemoteEndPoint() const { return local_ep_; }
 
   std::string ChannelInfo() const;
+
 protected:
-  SocketChannel(int socket_fd,
-                const IPEndPoint& loc,
-                const IPEndPoint& peer);
+  SocketChannel(int socket, const IPEndPoint& loc, const IPEndPoint& peer);
 
   void setup_channel();
 
   void close_channel();
 
-  int32_t binded_fd() const;
+  int32_t binded_fd() const { return fdev_ ? fdev_->GetFd() : -1; }
 
   std::string local_name() const;
 
@@ -123,23 +124,16 @@ protected:
 
   void SetChannelStatus(Status st);
 
-  bool HandleClose(base::FdEvent* fdev);
-
 protected:
-  base::EventPump* pump_;
-
-  base::RefFdEvent fd_event_;
+  base::FdEvent* fdev_ = nullptr;
 
   IPEndPoint local_ep_;
 
   IPEndPoint remote_ep_;
 
   IOBuffer in_buffer_;
+
   IOBuffer out_buffer_;
-
-  bool schedule_shutdown_ = false;
-
-  SocketChannel::Reciever* reciever_ = NULL;
 
 private:
   Status status_ = Status::CONNECTING;

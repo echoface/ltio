@@ -27,93 +27,23 @@
 #include "base/message_loop/event_pump.h"
 
 // socket chennel interface and base class
-using base::FdEvent;
 
 namespace lt {
 namespace net {
 
-SocketChannel::SocketChannel(int socket_fd,
+SocketChannel::SocketChannel(int socket,
                              const IPEndPoint& loc,
                              const IPEndPoint& peer)
   : local_ep_(loc),
-    remote_ep_(peer) {
-
-  fd_event_ = FdEvent::Create(this, socket_fd, base::LtEv::LT_EVENT_NONE);
-}
+    remote_ep_(peer) {}
 
 SocketChannel::~SocketChannel() {
-  CHECK(!IsConnected()) << ChannelInfo();
 }
 
-void SocketChannel::SetIOEventPump(base::EventPump* pump) {
-  VLOG(GLOG_VTRACE) << "set pump:" << pump << ", id:" << pump->LoopID();
-  pump_ = pump;
-}
-
-void SocketChannel::SetReciever(SocketChannel::Reciever* rec) {
-  VLOG(GLOG_VTRACE) << "set reciever:" << rec << " fd:" << binded_fd();
-  reciever_ = rec;
-}
-
-bool SocketChannel::StartChannel() {
-  CHECK(reciever_ && pump_->IsInLoop() && status_ == Status::CONNECTING);
-
-  setup_channel();
-
-  VLOG(GLOG_VINFO) << __FUNCTION__ << " notify ready";
-  reciever_->OnChannelReady(this);
-  return true;
-}
-
-void SocketChannel::ShutdownChannel(bool half_close) {
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
-  DCHECK(pump_->IsInLoop());
-
-  if (half_close) {
-    schedule_shutdown_ = true;
-    fd_event_->EnableWriting();
-    return SetChannelStatus(Status::CLOSING);
-  }
-
-  if (!IsClosed()) {
-    close_channel();
-  }
-  reciever_->OnChannelClosed(this);
-}
-
-void SocketChannel::ShutdownWithoutNotify() {
-  DCHECK(pump_->IsInLoop());
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << ChannelInfo();
-  if (!IsClosed()) {
-    close_channel();
-  }
-}
-
-bool SocketChannel::HandleClose(base::FdEvent* event) {
-  VLOG(GLOG_VTRACE) << "close socket channel:" << ChannelInfo();
-  if (!IsClosed()) {
-    close_channel();
-  }
-  reciever_->OnChannelClosed(this);
-  return false;  // disable next event
-}
-
-void SocketChannel::setup_channel() {
-  VLOG(GLOG_VINFO) << __FUNCTION__ << " enter";
-  fd_event_->EnableReading();
-  // fd_event_->EnableWriting();
-  pump_->InstallFdEvent(fd_event_.get());
+bool SocketChannel::StartChannel(bool server) {
   SetChannelStatus(Status::CONNECTED);
-}
-
-void SocketChannel::close_channel() {
-  pump_->RemoveFdEvent(fd_event_.get());
-  SetChannelStatus(Status::CLOSED);
-}
-
-int32_t SocketChannel::binded_fd() const {
-  return fd_event_ ? fd_event_->GetFd() : -1;
-}
+  return true;
+};
 
 std::string SocketChannel::local_name() const {
   return local_ep_.ToString();

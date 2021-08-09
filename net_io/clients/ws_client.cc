@@ -94,22 +94,25 @@ void WsClient::OnConnected(int socket_fd,
   transport_->SetDelegate(this);
   transport_->SetIsServerSide(false);
   transport_->SetProtocol(remote_.scheme);
+  transport_->SetTopicPath(topic_path_);
 
   SocketChannelPtr channel;
-#ifdef LTIO_HAVE_SSL
   if (transport_->UseSSLChannel()) {
-    auto ssl_channel = TCPSSLChannel::Create(socket_fd, local, remote);
-    ssl_channel->InitSSL(GetClientSSLContext()->NewSSLSession(socket_fd));
-    channel = std::move(ssl_channel);
+#ifdef LTIO_HAVE_SSL
+    auto ch = TCPSSLChannel::Create(socket_fd, local, remote);
+    ch->InitSSL(GetClientSSLContext()->NewSSLSession(socket_fd));
+    channel = std::move(ch);
+#else
+    CHECK(false) << "ssl need compile with openssl lib support";
+#endif
   } else {
     channel = TcpChannel::Create(socket_fd, local, remote);
   }
-#else
-  channel = TcpChannel::Create(socket_fd, local, remote);
-#endif
-  channel->SetIOEventPump(io_loop_->Pump());
-  transport_->BindSocket(std::move(channel));
-  transport_->SetTopicPath(topic_path_);
+
+  auto fdev = base::FdEvent::Create(nullptr, socket_fd, base::LT_EVENT_READ);
+
+  transport_->BindSocket(std::move(fdev), std::move(channel));
+
   transport_->StartProtocolService();
 }
 

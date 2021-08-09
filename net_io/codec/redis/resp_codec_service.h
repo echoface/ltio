@@ -41,20 +41,20 @@ public:
   } InitWaitFlags;
 
   RespCodecService(base::MessageLoop* loop);
+
   ~RespCodecService();
 
-  void OnDataFinishSend(const SocketChannel*) override;
+  void StartProtocolService() override;
 
-  void OnDataReceived(const SocketChannel*, IOBuffer*) override;
+  void OnDataReceived(IOBuffer*) override;
 
   bool SendRequest(CodecMessage* message) override;
+
   bool SendResponse(const CodecMessage* req, CodecMessage* res) override;
 
   bool KeepHeartBeat() override { return true; }
-  const RefCodecMessage NewHeartbeat() override;
 
-protected:
-  void OnChannelReady(const SocketChannel*) override;
+  const RefCodecMessage NewHeartbeat() override;
 
 private:
   void HandleInitResponse(RedisResponse* response);

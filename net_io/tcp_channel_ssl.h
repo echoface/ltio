@@ -25,9 +25,13 @@ public:
 
   void InitSSL(SSLImpl* ssl);
 
-  bool StartChannel() override WARN_UNUSED_RESULT;
+  bool StartChannel(bool server) override WARN_UNUSED_RESULT;
 
-  __attribute__((warn_unused_result))
+  bool HandleRead() override WARN_UNUSED_RESULT;
+
+  // write as much as data into socket
+  bool TryFlush() override WARN_UNUSED_RESULT;
+
   int32_t Send(const char* data, const int32_t len) override WARN_UNUSED_RESULT;
 
 protected:
@@ -35,20 +39,13 @@ protected:
                 const IPEndPoint& loc,
                 const IPEndPoint& peer);
 
-  // write as much as data into socket
-  bool TryFlush() override WARN_UNUSED_RESULT;
-
   // return true when success, false when failed
   bool DoHandshake(base::FdEvent* event);
 
   bool HandleWrite(base::FdEvent* event);
 
   bool HandleRead(base::FdEvent* event);
-
-  void HandleEvent(base::FdEvent* fdev) override;
 private:
-  bool server_ = true;
-
 #ifdef LTIO_WITH_OPENSSL
   SSLImpl* ssl_;
 #endif

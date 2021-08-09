@@ -109,35 +109,37 @@ RefCodecService IOService::CreateCodeService(int fd, const IPEndPoint& peer) {
     return nullptr;
   }
 
+  IPEndPoint local;
+  CHECK(socketutils::GetLocalEndpoint(fd, &local));
+
   auto codec = CodecFactory::NewServerService(protocol_, io_loop);
   if (!codec) {
     socketutils::CloseSocket(fd);
     LOG(ERROR) << " protocol:" << protocol_ << " NOT-FOUND";
     return nullptr;
   }
+  codec->SetDelegate(this);
+  codec->SetHandler(handler_);
 
-  IPEndPoint local_addr;
-  CHECK(socketutils::GetLocalEndpoint(fd, &local_addr));
+  socketutils::TCPNoDelay(fd);
+  socketutils::KeepAlive(fd, true);
+  auto fdev = base::FdEvent::Create(nullptr, fd, base::LtEv::LT_EVENT_READ);
 
   SocketChannelPtr channel;
-  // ??make a channel creator delegate to export CreateAction by server implment
   if (codec->UseSSLChannel()) {
 #ifdef LTIO_HAVE_SSL
-    auto ssl_channel = TCPSSLChannel::Create(fd, local_addr, peer);
-    ssl_channel->InitSSL(delegate_->GetSSLContext()->NewSSLSession(fd));
-    channel = std::move(ssl_channel);
+    auto ch = TCPSSLChannel::Create(fd, local, peer);
+    ch->InitSSL(delegate_->GetSSLContext()->NewSSLSession(fd));
+    channel = std::move(ch);
 #else
     CHECK(false) << "ssl need compile with openssl lib support";
 #endif
   } else {
-    channel = TcpChannel::Create(fd, local_addr, peer);
+    channel = TcpChannel::Create(fd, local, peer);
   }
-  channel->SetIOEventPump(io_loop->Pump());
+  channel->SetFdEvent(fdev.get());
 
-  codec->SetDelegate(this);
-  codec->SetHandler(handler_);
-
-  codec->BindSocket(std::move(channel));
+  codec->BindSocket(std::move(fdev), std::move(channel));
 
   io_loop->PostTask(FROM_HERE, [codec]() {
     codec->StartProtocolService();

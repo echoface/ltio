@@ -13,36 +13,26 @@ namespace so {
 
 class SocketReader {
 public:
-  SocketReader(int socket);
+  SocketReader() {};
 
-  virtual ~SocketReader();
+  virtual ~SocketReader() {};
 
   // for initializing purpose, return false when error
-  virtual bool Start() WARN_UNUSED_RESULT;
-
-  int BindSocket() const { return socket; };
+  virtual bool Start(bool server) WARN_UNUSED_RESULT = 0;
 
   // > 0 : bytes read from socket
   // = 0 : eof, peer socket closed
   // < 0 : error happened, log a detail error
-  int Read(lt::net::IOBuffer* buf);
-
-protected:
-  int socket = -1;
-
-  DISALLOW_COPY_AND_ASSIGN(SocketReader);
+  virtual int Read(lt::net::IOBuffer* buf) = 0;
 };
 
 class SocketWriter {
 public:
-  SocketWriter(int socket);
-
-  virtual ~SocketWriter();
+  SocketWriter() {}
+  virtual ~SocketWriter() {};
 
   // for initializing purpose, return false when error
-  virtual bool Start() WARN_UNUSED_RESULT;
-
-  int BindSocket() const { return socket; };
+  virtual bool Start(bool server) WARN_UNUSED_RESULT = 0;
 
   // write as much as data into socket
   // return true when, false when error
@@ -61,11 +51,9 @@ public:
   virtual int32_t Send(const char* data, int32_t len) WARN_UNUSED_RESULT = 0;
 
 protected:
-  int socket = -1;
-
   DISALLOW_COPY_AND_ASSIGN(SocketWriter);
 };
 
 }  // namespace so
 }  // namespace co
-#endif  // LIGHTINGIO_NET_CHANNEL_H
+#endif  // LIGHTINGIO_NET_SOCKET_READ_WRITER
