@@ -54,11 +54,9 @@ private:
   UniqueTimerTask timer_task_;
 };
 
-typedef std::shared_ptr<TimerEvent> RefTimerEvent;
-
 class TimerEventCompare {
 public:
-  bool operator()(const RefTimerEvent& lf, const RefTimerEvent& rt) {
+  bool operator()(const TimerEvent::RefTimerEvent& lf, const TimerEvent::RefTimerEvent& rt) {
     return lf->Time() > rt->Time();
   }
 };

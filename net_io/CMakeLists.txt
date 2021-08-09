@@ -66,6 +66,9 @@ set(LTNET_SOURCE
   #udp_io
   udp_io/udp_context.cc
   udp_io/udp_service.cc
+
+  #co_so
+  co_so/io_service.cc
 )
 
 if (LTIO_WITH_OPENSSL)

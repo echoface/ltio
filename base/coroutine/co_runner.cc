@@ -22,8 +22,10 @@
 #include "bstctx_impl.hpp"
 #include "glog/logging.h"
 
-namespace {
 using TaskList = std::vector<base::TaskBasePtr>;
+using base::MessageLoop;
+
+namespace {
 
 std::once_flag backgroup_once;
 
@@ -100,10 +102,10 @@ private:
 
 }  // namespace
 
-namespace base {
+namespace co {
 
 class CoroRunnerImpl;
-thread_local base::CoroRunnerImpl* g = NULL;
+thread_local CoroRunnerImpl* g = NULL;
 
 template <typename Rec>
 fcontext_transfer_t context_exit(fcontext_transfer_t from) noexcept {
@@ -165,7 +167,7 @@ public:
 
   void CoroMain() {
     do {
-      TaskBasePtr task;
+      base::TaskBasePtr task;
       while (run_.PopTask(task)) {
         task->Run();
       }
@@ -301,7 +303,7 @@ public:
   }
 
   /* override from MessageLoop::PersistRunner*/
-  void LoopGone(MessageLoop* loop) override {
+  void LoopGone(base::MessageLoop* loop) override {
     bind_loop_ = nullptr;
     LOG(ERROR) << "loop gone, CoroRunner feel not good";
   }
@@ -332,11 +334,11 @@ public:
   OneRunContext run_;
 
   // resume task pending to this
-  LinkedList<Coroutine> ready_list_;
+  base::LinkedList<Coroutine> ready_list_;
 
-  LinkedList<Coroutine> freelist_;
+  base::LinkedList<Coroutine> freelist_;
 
-  LinkedList<Coroutine> gc_list_;
+  base::LinkedList<Coroutine> gc_list_;
 
   // dynamic reuse coroutine number
   size_t max_reuse_co_ = 64;
@@ -352,7 +354,7 @@ CoroRunner& CoroRunner::instance() {
 
 // static
 MessageLoop* CoroRunner::backgroup() {
-  static LazyInstance<MessageLoop> loop = LAZY_INSTANCE_INIT;
+  static base::LazyInstance<MessageLoop> loop = LAZY_INSTANCE_INIT;
   std::call_once(backgroup_once, [&]() {
     loop->SetLoopName("co_background");
     loop->Start();
@@ -409,7 +411,7 @@ void CoroRunner::Sleep(uint64_t ms) {
 }
 
 // static
-LtClosure CoroRunner::MakeResumer() {
+base::LtClosure CoroRunner::MakeResumer() {
   if (!Waitable()) {
     LOG(WARNING) << "make resumer on main_coro";
     return nullptr;
@@ -425,7 +427,7 @@ MessageLoop* CoroRunner::BindLoop() {
 }
 
 // static publish a task for any runner
-bool CoroRunner::Publish(TaskBasePtr&& task) {
+bool CoroRunner::Publish(base::TaskBasePtr&& task) {
   return g_remote.enqueue(std::move(task));
 }
 
@@ -438,7 +440,7 @@ CoroRunner::~CoroRunner() {
   VLOG(GLOG_VINFO) << "CoroutineRunner@" << this << " gone";
 }
 
-void CoroRunner::ScheduleTask(TaskBasePtr&& tsk) {
+void CoroRunner::ScheduleTask(base::TaskBasePtr&& tsk) {
   if (bind_loop_->IsInLoopThread()) {
     sched_tasks_.push_back(std::move(tsk));
   } else {
@@ -446,7 +448,7 @@ void CoroRunner::ScheduleTask(TaskBasePtr&& tsk) {
   }
 }
 
-void CoroRunner::AppendTask(TaskBasePtr&& task) {
+void CoroRunner::AppendTask(base::TaskBasePtr&& task) {
   CHECK(bind_loop_->IsInLoopThread());
   sched_tasks_.push_back(std::move(task));
 }

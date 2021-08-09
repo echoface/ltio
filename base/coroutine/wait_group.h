@@ -47,7 +47,7 @@
  *
  * */
 
-namespace base {
+namespace co {
 
 class WaitGroup : public EnableShared(WaitGroup) {
 public:
@@ -72,18 +72,20 @@ private:
   void OnTimeOut();
   void wakeup_internal();
 
-  LtClosure resumer_;
+  base::LtClosure resumer_;
 
   // only rw same loop
   Result result_status_;
   std::atomic_flag flag_;
   std::atomic<int64_t> wait_count_;
 
-  MessageLoop* loop_ = nullptr;
-  std::unique_ptr<TimeoutEvent> timeout_;
+  base::MessageLoop* loop_ = nullptr;
+  base::TimeoutEventPtr timeout_;
   DISALLOW_COPY_AND_ASSIGN(WaitGroup);
 };
 
-}  // namespace base
+using RefWaitGroup = std::shared_ptr<WaitGroup>;
+
+}  // namespace co
 
 #endif

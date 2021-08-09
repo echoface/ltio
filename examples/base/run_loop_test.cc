@@ -8,7 +8,6 @@
 
 #include "base/message_loop/fd_event.h"
 #include "base/message_loop/event_pump.h"
-#include "base/message_loop/timer_event.h"
 #include "base/message_loop/message_loop.h"
 #include "base/message_loop/linux_signal.h"
 

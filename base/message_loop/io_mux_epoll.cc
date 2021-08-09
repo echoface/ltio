@@ -147,12 +147,10 @@ int IOMuxEpoll::EpollCtl(FdEvent* fdev, int opt) {
   }
 
   int ret = ::epoll_ctl(epoll_, opt, fd, &ev);
-  VLOG(26) << "apply epoll_ctl opt " << EpollOptToString(opt) << " on fd " << fd
-           << " failed, errno:" << StrError(errno)
+  VLOG(26) << "epoll_ctl:" << EpollOptToString(opt) << " fd:" << fd
            << " events:" << fdev->MonitorEventStr();
-  LOG_IF(ERROR, ret != 0) << "apply epoll_ctl opt " << EpollOptToString(opt)
-                          << " on fd " << fd
-                          << " failed, errno:" << StrError(errno)
+  LOG_IF(ERROR, ret != 0) << "epoll:" << EpollOptToString(opt) << " fail, fd "
+                          << fd << ",errno:" << StrError(errno)
                           << " events:" << fdev->MonitorEventStr();
 
   return ret;

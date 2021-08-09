@@ -1,7 +1,9 @@
 #include "co_mutex.h"
 #include "co_runner.h"
 
-namespace base {
+using base::LtClosure;
+
+namespace co {
 
 CoMutex::CoMutex() : locked_(false) {}
 CoMutex::~CoMutex() {}

@@ -178,7 +178,7 @@ TEST_CASE("coro.wg_timeout", "[coroutine resume twice]") {
   CO_GO[&]() {  // main
     LOG(INFO) << "waig group broadcast coro test start...";
 
-    auto wg = base::WaitGroup::New();
+    auto wg = co::WaitGroup::New();
 
     wg->Add(1);
     CO_GO[wg]() {
@@ -187,7 +187,7 @@ TEST_CASE("coro.wg_timeout", "[coroutine resume twice]") {
     };
 
     auto res = wg->Wait(10);
-    REQUIRE(res == base::WaitGroup::kTimeout);
+    REQUIRE(res == co::WaitGroup::kTimeout);
     LOG(INFO) << "wait group braodcast coro resumed from wait...";
   };
 
@@ -200,7 +200,7 @@ TEST_CASE("coro.wg_broadcast", "[coroutine braodcast resume]") {
   CO_GO[&]() {  // main
     LOG(INFO) << "waig group broadcast coro test start...";
 
-    auto wg = base::WaitGroup::New();
+    auto wg = co::WaitGroup::New();
     for (int i = 0; i < 2; i++) {
       wg->Add(1);
       CO_GO[wg]() {
@@ -210,7 +210,7 @@ TEST_CASE("coro.wg_broadcast", "[coroutine braodcast resume]") {
     }
 
     auto res = wg->Wait(1000);
-    REQUIRE(res == base::WaitGroup::kSuccess);
+    REQUIRE(res == co::WaitGroup::kSuccess);
     LOG(INFO) << "wait group braodcast resumed.";
   };
   sleep(2);
@@ -286,12 +286,12 @@ TEST_CASE("coro.co_lock", "[resume_twice a yield coro]") {
   for (int i = 0; i < 10; i++) {
     loops.push_back(new base::MessageLoop(std::to_string(i)));
     loops.back()->Start();
-    base::CoroRunner::RegisteRunner(loops.back());
+    co::CoroRunner::RegisteRunner(loops.back());
   }
 
   int64_t cnt = 0;
 
-  base::CoMutex co_lock;
+  co::CoMutex co_lock;
   for (int i = 0; i < 1000; i++) {
     CO_GO [&]() {
       co_lock.lock();
@@ -356,8 +356,8 @@ TEST_CASE("coro.ioevent2", "[ioevent for coro]") {
   CHECK(fd > 0);
 
   co_go &loop << [&]() {
+    co::IOEvent ioev(fd, base::LtEv::LT_EVENT_READ);
     do {
-      co::IOEvent ioev(fd, base::LtEv::LT_EVENT_READ);
       ignore_result(ioev.Wait());
       uint64_t val = 0;
       if (eventfd_read(fd, &val) == 0) {

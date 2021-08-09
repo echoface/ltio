@@ -11,6 +11,7 @@
 using namespace lt::net;
 using namespace lt;
 using namespace base;
+using namespace co;
 
 DEFINE_int32(loops, 4, "how many loops use for handle message and io");
 DEFINE_bool(echo, false, "just echo response without any logic");

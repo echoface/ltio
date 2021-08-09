@@ -19,6 +19,7 @@
 #define _NET_PROTOCOL_SERVICE_H_H
 
 #include "base/compiler_specific.h"
+#include "base/message_loop/message_loop.h"
 #include "codec_message.h"
 #include "net_io/base/ip_endpoint.h"
 #include "net_io/channel.h"
@@ -72,15 +73,17 @@ public:
 
   virtual void StartProtocolService();
 
-  base::EventPump* Pump() const;
+  SocketChannel* Channel() { return channel_.get(); };
 
   base::MessageLoop* IOLoop() const { return loop_; }
 
-  SocketChannel* Channel() { return channel_.get(); };
+  base::EventPump* Pump() const { return loop_->Pump(); };
 
   void CloseService(bool block_callback = false);
 
-  bool IsConnected() const;
+  bool IsConnected() const {
+    return channel_ ? channel_->IsConnected() : false;
+  }
 
   virtual void BeforeCloseService(){};
 
@@ -94,11 +97,15 @@ public:
 
   virtual bool SendRequest(CodecMessage* message) WARN_UNUSED_RESULT = 0;
 
-  virtual bool SendResponse(const CodecMessage* req, CodecMessage* res) WARN_UNUSED_RESULT = 0;
+  virtual bool SendResponse(const CodecMessage* req,
+                            CodecMessage* res) WARN_UNUSED_RESULT = 0;
 
-  virtual const RefCodecMessage NewHeartbeat() WARN_UNUSED_RESULT { return NULL; }
+  virtual const RefCodecMessage NewHeartbeat() WARN_UNUSED_RESULT {
+    return NULL;
+  }
 
-  virtual const RefCodecMessage NewResponse(const CodecMessage*) WARN_UNUSED_RESULT {
+  virtual const RefCodecMessage NewResponse(const CodecMessage*)
+      WARN_UNUSED_RESULT {
     return NULL;
   }
 

@@ -32,6 +32,10 @@
   TypeName(const TypeName&) = delete;      \
   void operator=(const TypeName&) = delete
 
+#define DISALLOW_ALLOCT_HEAP_OBJECT         \
+  void* operator new(std::size_t) = delete; \
+  void* operator new[](std::size_t) = delete;
+
 // A macro to disallow all the implicit constructors, namely the
 // default constructor, copy constructor and operator= functions.
 //

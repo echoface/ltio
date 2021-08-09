@@ -99,7 +99,7 @@ public:
 
   bool ShutdownScheduled() const {return schedule_shutdown_;}
 
-  const std::string StatusAsString() const;
+  const std::string StatusStr() const;
 
   const IPEndPoint& LocalEndpoint() const {return local_ep_;}
 

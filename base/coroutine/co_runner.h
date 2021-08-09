@@ -24,7 +24,7 @@
 #include <base/lt_micro.h>
 #include <base/message_loop/message_loop.h>
 
-namespace base {
+namespace co {
 
 /*
  * same thing like go language Goroutine CSP model,
@@ -42,7 +42,7 @@ namespace base {
  * */
 class Coroutine;
 
-class CoroRunner : public PersistRunner {
+class CoroRunner : public base::PersistRunner {
 public:
   typedef struct _go {
     _go(const char* func, const char* file, int line)
@@ -62,7 +62,7 @@ public:
      * */
     template <typename Functor>
     inline void operator-(Functor func) {
-      base::CoroRunner::Publish(CreateClosure(location_, func));
+      CoroRunner::Publish(CreateClosure(location_, func));
       loop()->WakeUpIfNeeded();
     }
 
@@ -71,14 +71,14 @@ public:
     template <typename Functor>
     inline void operator<<(Functor closure_fn) {
       auto func = [closure_fn](const base::Location& location) {
-        base::CoroRunner& runner = base::CoroRunner::instance();
+        CoroRunner& runner = CoroRunner::instance();
         runner.AppendTask(CreateClosure(location, closure_fn));
       };
       loop()->PostTask(location_, func, location_);
     }
 
     inline base::MessageLoop* loop() {
-      return loop_ ? loop_ : base::CoroRunner::backgroup();
+      return loop_ ? loop_ : CoroRunner::backgroup();
     }
     base::Location location_;
     base::MessageLoop* loop_ = nullptr;
@@ -94,62 +94,63 @@ public:
 
   static bool Waitable();
 
-  static LtClosure MakeResumer();
+  static base::LtClosure MakeResumer();
 
   static void Sleep(uint64_t ms);
 
-  static bool Publish(TaskBasePtr&& task);
+  static bool Publish(base::TaskBasePtr&& task);
 
   /* here two ways register as runner worker
    * 1. implicit call CoroRunner::instance()
    * 2. call RegisteRunner manually
    */
-  static void RegisteRunner(MessageLoop*);
+  static void RegisteRunner(base::MessageLoop*);
 
-  static MessageLoop* BindLoop();
+  static base::MessageLoop* BindLoop();
+
 public:
   virtual ~CoroRunner();
 
-  void ScheduleTask(TaskBasePtr&& tsk);
+  void ScheduleTask(base::TaskBasePtr&& tsk);
 
-  void AppendTask(TaskBasePtr&& task);
+  void AppendTask(base::TaskBasePtr&& task);
 
   size_t TaskCount() const;
 
 protected:
   static CoroRunner& instance();
 
-  static MessageLoop* backgroup();
+  static base::MessageLoop* backgroup();
 
-  CoroRunner(MessageLoop* loop);
+  CoroRunner(base::MessageLoop* loop);
 
   // scheduled task list
-  TaskQueue remote_sched_;
+  base::TaskQueue remote_sched_;
 
   // nested task sched in loop
-  std::vector<TaskBasePtr> sched_tasks_;
+  std::vector<base::TaskBasePtr> sched_tasks_;
 
-  MessageLoop* bind_loop_ = nullptr;
+  base::MessageLoop* bind_loop_ = nullptr;
 
   DISALLOW_COPY_AND_ASSIGN(CoroRunner);
 };
 
-}  // namespace base
+}  // namespace co
 
-#define CO_GO ::base::CoroRunner::_go(__FUNCTION__, __FILE__, __LINE__) -
-#define CO_YIELD ::base::CoroRunner::Yield()
-#define CO_RESUMER ::base::CoroRunner::MakeResumer()
-#define CO_CANYIELD ::base::CoroRunner::Waitable()
-#define CO_SLEEP(ms) ::base::CoroRunner::Sleep(ms)
+#define CO_GO co::CoroRunner::_go(__FUNCTION__, __FILE__, __LINE__) -
+#define CO_YIELD co::CoroRunner::Yield()
+#define CO_RESUMER co::CoroRunner::MakeResumer()
+#define CO_CANYIELD co::CoroRunner::Waitable()
+#define CO_SLEEP(ms) co::CoroRunner::Sleep(ms)
 
-#define co_go base::CoroRunner::_go(__FUNCTION__, __FILE__, __LINE__) -
-#define co_sleep(ms) base::CoroRunner::Sleep(ms)
-#define co_new_resumer() base::CoroRunner::MakeResumer()
+#define co_go co::CoroRunner::_go(__FUNCTION__, __FILE__, __LINE__) -
+#define co_sleep(ms) co::CoroRunner::Sleep(ms)
+#define co_new_resumer() co::CoroRunner::MakeResumer()
 
-#define __co_wait_here__ base::CoroRunner::Yield()
-#define __co_sched_here__ base::CoroRunner::Sched()
-#define __co_yielable__ base::CoroRunner::Waitable()
-#define __co_waitable__ base::CoroRunner::Waitable()
+#define __co_wait_here__ co::CoroRunner::Yield()
+#define __co_sched_here__ co::CoroRunner::Sched()
+#define __co_yielable__ co::CoroRunner::Waitable()
+#define __co_waitable__ co::CoroRunner::Waitable()
 
 // sync task in coroutine context
 #define co_sync(func)                                        \

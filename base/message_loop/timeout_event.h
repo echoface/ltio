@@ -62,5 +62,8 @@ private:
   bool del_after_invoke_ = false;
 };
 
+using RefTimerEvent = std::shared_ptr<TimeoutEvent>;
+using TimeoutEventPtr = std::unique_ptr<TimeoutEvent>;
+
 }  // namespace base
 #endif
