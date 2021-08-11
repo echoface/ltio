@@ -165,6 +165,7 @@ const std::string HttpRequest::Dump() const {
   std::ostringstream oss;
   oss << "{ \"major\": " << (int)http_major_
       << ", \"minor\": " << (int)http_minor_
+      << ", \"alive\": " << (int)keepalive_
       << ", \"method\": \"" << Method() << "\""
       << ", \"url\": \"" << url_ << "\"";
   for (const auto& pair : headers_) {

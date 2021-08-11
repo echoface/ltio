@@ -146,6 +146,7 @@ void WSCodecService::StartProtocolService() {
     hs_req->SetRequestURL(ws_path_);
     const url::RemoteInfo* info = delegate_->GetRemoteInfo();
     hs_req->InsertHeader("Host", info->host);
+    hs_req->InsertHeader("Server", "ltio");
     hs_req->InsertHeader("Upgrade", "websocket");
     hs_req->InsertHeader("Connection", "Upgrade");
     hs_req->InsertHeader("Sec-WebSocket-Version", "13");
@@ -207,9 +208,11 @@ bool WSCodecService::SendResponse(const CodecMessage*, CodecMessage* res) {
  * Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=
  */
 
+// only check and verify request correction and send response
 void WSCodecService::CommitHttpRequest(const RefHttpRequest&& request) {
   CHECK(IsServerSide());
   if (request->GetHeader("Upgrade") != "websocket") {
+    LOG(ERROR) << "bad handshake request:" << request->Dump();
     hs_state = handshake_state::HS_WRONGMSG;
     return;
   }
@@ -218,20 +221,22 @@ void WSCodecService::CommitHttpRequest(const RefHttpRequest&& request) {
   sec_key_ = request->GetHeader(SEC_WEBSOCKET_KEY);
 
   auto ws_accept = WebsocketUtil::GenAcceptKey(sec_key_.c_str());
-
   std::string response = fmt::format(upgrade_response_template, ws_accept);
-  VLOG(GLOG_VINFO) << "websocket upgrade, path:" << ws_path_
-                   << ",key:" << sec_key_ << ",rsp:" << response;
+
+  VLOG(GLOG_VINFO) << "websocket upgrade request"
+                   << ", path:" << ws_path_
+                   << ", key:" << sec_key_
+                   << ", resp:" << response;
 
   if (channel_->Send(response) < 0) {
     hs_state = handshake_state::HS_WRONGMSG;
-    return;
+    LOG(ERROR) << "send handshake response fail:" << response;
+  } else {
+    hs_state = handshake_state::HS_SUCCEESS;
   }
-  hs_state = handshake_state::HS_SUCCEESS;
-  NotifyCodecReady();
 }
 
-// OnDataReceived -> OnHandshakeReqData -> CommitHttpRequest -> OnChannelReady
+// server: OnDataReceived -> OnHandshakeReqData -> CommitHttpRequest -> OnChannelReady
 void WSCodecService::OnHandshakeReqData(IOBuffer* buf) {
   CHECK(IsServerSide());
 
@@ -239,10 +244,8 @@ void WSCodecService::OnHandshakeReqData(IOBuffer* buf) {
 
   if (HttpReqParser::Error == parser->Parse(buf)) {
     LOG(ERROR) << "parse handshake request error";
-
     ignore_result(channel_->Send(HttpConstant::kBadRequest));
-    CloseService(true);
-    return delegate_->OnCodecClosed(shared_from_this());
+    return CloseService(false);
   }
 
   if (hs_state == HS_SUCCEESS) {
@@ -250,31 +253,32 @@ void WSCodecService::OnHandshakeReqData(IOBuffer* buf) {
   }
 
   if (hs_state == HS_WRONGMSG) {
-    LOG(ERROR) << "got bad handshake message";
     ignore_result(channel_->Send(HttpConstant::kBadRequest));
-    CloseService(true);
-    return NotifyCodecClosed();
+    return CloseService(false);
   }
 }
 
+// only check and verify response correction, do not operate codec/channel
 void WSCodecService::CommitHttpResponse(const RefHttpResponse&& response) {
   CHECK(!IsServerSide());
 
   sec_accept_ = response->GetHeader(SEC_WEBSOCKET_ACCEPT);
   if (sec_accept_.size() > 0 && http_res_parser()->Upgrade()) {
     hs_state = handshake_state::HS_SUCCEESS;
+  } else {
+    LOG(ERROR) << "got bad handshake message";
+    hs_state = handshake_state::HS_WRONGMSG;
   }
 }
 
+// server: OnDataReceived -> OnHandshakeResData -> CommitHttpResponse -> OnChannelReady
 void WSCodecService::OnHandshakeResData(IOBuffer* buf) {
   CHECK(!IsServerSide());
 
   auto parser = http_res_parser();
   if (HttpResParser::Error == parser->Parse(buf)) {
     LOG(ERROR) << "parse handshake response error";
-    ignore_result(channel_->Send(HttpConstant::kBadRequest));
-    CloseService(true);
-    return NotifyCodecClosed();
+    return CloseService(false);
   }
 
   if (hs_state == HS_SUCCEESS) {
@@ -282,10 +286,7 @@ void WSCodecService::OnHandshakeResData(IOBuffer* buf) {
   }
 
   if (hs_state == HS_WRONGMSG) {
-    LOG(ERROR) << "got bad handshake message";
-    ignore_result(channel_->Send(HttpConstant::kBadRequest));
-    CloseService(true);
-    return NotifyCodecClosed();
+    return CloseService(false);
   }
 }
 
@@ -301,8 +302,7 @@ void WSCodecService::OnDataReceived(IOBuffer* buf) {
                                             buf->GetRead(),
                                             buf->CanReadSize());
   if (nparsed != buf->CanReadSize()) {
-    CloseService(true);
-    return NotifyCodecClosed();
+    return CloseService(false);
   }
 
   buf->Consume(nparsed);

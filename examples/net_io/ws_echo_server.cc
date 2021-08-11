@@ -28,7 +28,10 @@ public:
 
   void OnOpen(Websocket* ws) {
     LOG(INFO) << __func__ << " add to list";
-    conns_.Append(ws);
+    LOG_IF(ERROR, ws->Attatched()) << "already attached";
+    if (!ws->Attatched()) {
+      conns_.Append(ws);
+    }
   }
 
   void OnClose(Websocket* ws) {

@@ -73,7 +73,7 @@ void HttpCodecService::OnDataReceived(IOBuffer* buf) {
   if (!success) {
     ignore_result(channel_->Send(HttpConstant::kBadRequest));
     CloseService(true);  // no callback here
-    return delegate_->OnCodecClosed(shared_from_this());
+    NotifyCodecClosed();
   }
 }
 
@@ -163,7 +163,10 @@ bool HttpCodecService::SendResponse(const CodecMessage* req,
   if (!response->IsKeepAlive()) {
     schedule_close_ = true;
   }
-  return channel_->TryFlush();
+  bool ok = channel_->TryFlush();
+  LOG_IF(ERROR, !ok) << "write response fail";
+  return ok;
+  //return channel_->TryFlush();
 }
 
 // static

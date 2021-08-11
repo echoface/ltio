@@ -25,6 +25,7 @@
 #include "net_io/codec/redis/redis_response.h"
 #include "net_io/codec/redis/resp_codec_service.h"
 #include "net_io/dispatcher/coro_dispatcher.h"
+#include "net_io/server/raw_server/raw_server.h"
 #include "net_io/socket_acceptor.h"
 #include "net_io/socket_utils.h"
 #include "net_io/tcp_channel.h"
@@ -90,7 +91,7 @@ TEST_CASE("client.base", "[http client]") {
   http_client.Initialize(config);
 
   loop.PostDelayTask(NewClosure([&]() {
-                       REQUIRE(http_client.ConnectedCount() == connections);
+                       REQUIRE(http_client.ConnectedCount() >= connections);
                        http_client.Finalize();
                        loop.QuitLoop();
                      }),
@@ -136,7 +137,7 @@ TEST_CASE("client.async", "[http client]") {
 
   loop.PostDelayTask(
       NewClosure([&]() {
-        REQUIRE(http_client.ConnectedCount() == connections);
+        REQUIRE(http_client.ConnectedCount() >= connections);
 
         net::RefHttpRequest request = std::make_shared<net::HttpRequest>();
         request->SetKeepAlive(true);
@@ -204,9 +205,8 @@ TEST_CASE("client.http.request", "[http client send request]") {
 
   loop.PostDelayTask(
       NewClosure([&]() {
-        REQUIRE(http_client.ConnectedCount() == connections);
-        REQUIRE((failed_request + success_request) == total_task);
 
+        REQUIRE((failed_request + success_request) == total_task);
         http_client.Finalize();
         loop.QuitLoop();
       }),
@@ -217,12 +217,21 @@ TEST_CASE("client.http.request", "[http client send request]") {
   LOG(INFO) << " end test client.http.request, http client send request";
 }
 
-TEST_CASE("client.raw.request", "[raw client send request]") {
+TEST_CASE("client.raw.cs", "[raw client/server request/response test]") {
   LOG(INFO) << ">>>>>>> start test client.raw.request, raw client send request";
 
   base::MessageLoop loop;
   loop.SetLoopName("client");
   loop.Start();
+
+  std::vector<base::MessageLoop*> loops = {&loop};
+
+  lt::net::RawCoroServer server;
+  server.WithIOLoops(loops);
+  server.ServeAddress("raw://127.0.0.1:5005", NewRawCoroHandler([](lt::net::RefRawRequestContext ctx){
+    auto res = net::LtRawMessage::CreateResponse(ctx->GetRequest<net::LtRawMessage>());
+    ctx->Response(res);
+  }));
 
   net::url::RemoteInfo server_info;
   LOG_IF(ERROR, !net::url::ParseRemote("raw://127.0.0.1:5005", server_info))
@@ -264,15 +273,15 @@ TEST_CASE("client.raw.request", "[raw client send request]") {
     CO_GO& loop << raw_request_task;
   }
 
-  loop.PostDelayTask(
-      NewClosure([&]() {
-        REQUIRE(raw_router.ConnectedCount() == connections);
-        REQUIRE((failed_request + success_request) == total_task);
+  co_go &loop << [&]() {
+    co_sleep(5000);
+    REQUIRE((failed_request + success_request) == total_task);
 
-        raw_router.Finalize();
-        loop.QuitLoop();
-      }),
-      5000);
+    raw_router.Finalize();
+    server.StopServer();
+    co_sleep(1000);
+    loop.QuitLoop();
+  };
 
   loop.WaitLoopEnd();
   LOG(INFO) << "<<<<<< end test client.raw.request, raw client send request";

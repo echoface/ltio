@@ -72,6 +72,7 @@ void WsClient::Send(const RefWebsocketFrame& msg) {
   }
 
   if (!transport_->Send(msg)) {
+    transport_->CloseService(true);
     if (error_callback_) {
       error_callback_(guard, kConnBroken);
     }
