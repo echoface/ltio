@@ -46,30 +46,42 @@ TEST_CASE("client.hashrouter", "[http client]") {
   config.message_timeout = 5000;
   config.connections = 10;
 
-  lt::net::HashRouter<Hasher> router;
-  for (auto& remote : remote_hosts) {
-    lt::net::url::RemoteInfo server_info;
-    bool success = lt::net::url::ParseRemote(remote, server_info);
-    LOG_IF(ERROR, !success) << " server:" << remote << " can't be resolve";
-    if (!success) {
-      LOG(INFO) << "host:" << server_info.host << " ip:" << server_info.host_ip
-                << " port:" << server_info.port
-                << " protocol:" << server_info.scheme;
-      return;
+  {
+    lt::net::HashRouter<Hasher> router;
+    for (auto& remote : remote_hosts) {
+      lt::net::url::RemoteInfo server_info;
+      bool success = lt::net::url::ParseRemote(remote, server_info);
+      LOG_IF(ERROR, !success) << " server:" << remote << " can't be resolve";
+      if (!success) {
+        LOG(INFO) << "host:" << server_info.host << " ip:" << server_info.host_ip
+          << " port:" << server_info.port
+          << " protocol:" << server_info.scheme;
+        return;
+      }
+
+      lt::net::RefClient client(new lt::net::Client(&loop, server_info));
+      client->SetDelegate(&router_delegate);
+      client->Initialize(config);
+      router.AddClient(std::move(client));
     }
 
-    lt::net::RefClient client(new lt::net::Client(&loop, server_info));
-    client->SetDelegate(&router_delegate);
-    client->Initialize(config);
-    router.AddClient(std::move(client));
+    std::map<intptr_t, int> use_couter;
+    for (int i = 0; i < 1000; i++) {
+      std::string key = std::to_string(i);
+      lt::net::RefClient c = router.GetNextClient(key, NULL);
+      if (c) {
+        use_couter[(intptr_t(c.get()))]++;
+      }
+      LOG_IF(INFO, c != NULL) << "this@" << c << ", detail:" << c->ClientInfo();
+    }
+    for (auto kv : use_couter) {
+      LOG(INFO) << "this@" << (void*)kv.first << ", cout:" << kv.second;
+    }
   }
 
-  for (int i = 0; i < 10; i++) {
-    std::string key = std::to_string(i);
-    lt::net::RefClient c = router.GetNextClient(key, NULL);
-    LOG_IF(INFO, c != NULL) << "client:" << c;
-  }
-  loop.PostTask(FROM_HERE, &base::MessageLoop::QuitLoop, &loop);
+  loop.PostDelayTask(NewClosure([&]{
+    loop.QuitLoop();
+  }), 1000);
   loop.WaitLoopEnd();
   LOG(INFO) << " end test client.base, http client connections";
 }

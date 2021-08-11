@@ -9,7 +9,7 @@ using lt::net::IPEndPoint;
 
 namespace coso {
 
-class IOService {
+class IOService : public CodecService::Delegate {
 public:
   using Handler = CodecService::Handler;
 
@@ -27,6 +27,10 @@ public:
   const std::string Name() const { return address_.ToString(); }
 
   void Run();
+
+  void OnCodecReady(const lt::net::RefCodecService& service) override;
+
+  void OnCodecClosed(const lt::net::RefCodecService& service) override;
 
 private:
   void accept_loop(int socket);

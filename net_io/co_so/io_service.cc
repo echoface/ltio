@@ -4,9 +4,13 @@
 #include "base/coroutine/io_event.h"
 #include "base/utils/sys_error.h"
 #include "net_io/socket_utils.h"
+#include "net_io/codec/codec_factory.h"
+#include "net_io/tcp_channel.h"
 
 using lt::net::SockaddrStorage;
 using namespace lt::net::socketutils;
+using lt::net::TcpChannel;
+using lt::net::SocketChannelPtr;
 
 namespace coso {
 
@@ -60,38 +64,48 @@ void IOService::handle_connection(int client_socket, const IPEndPoint& peer) {
   lt::net::IOBuffer in_buf;
 
   base::LtEvent event = base::LtEv::LT_EVENT_READ;
-  if (in_buf.CanReadSize()) {
-    event |= base::LtEv::LT_EVENT_WRITE;
-  }
-  base::FdEvent fdev(client_socket, event);
-  co::IOEvent(&fdev).Wait();
-  do {
-    // write data
-    if (in_buf.CanReadSize()) {
-      ssize_t writen =
-          write(client_socket, in_buf.GetRead(), in_buf.CanReadSize());
-      if (writen > 0) {
-        in_buf.Consume(writen);
-      } else if (errno != EAGAIN) {
-        LOG(INFO) << "break connection loop";
-        break;
-      }
-    }
 
-    in_buf.EnsureWritableSize(1024);
-    ssize_t n = ::Read(client_socket, in_buf.GetWrite(), in_buf.CanWriteSize());
-    if (n > 0) {
-      in_buf.Produce(n);
-    } else if (n == 0) {
-      LOG(INFO) << "break connection loop, peer close, eof";
-      break;
-    } else if (errno != EAGAIN) {
-      LOG(INFO) << "break connection loop for error:" << base::StrError();
+  base::MessageLoop* io_loop = base::MessageLoop::Current();
+
+  IPEndPoint local;
+  CHECK(lt::net::socketutils::GetLocalEndpoint(client_socket, &local));
+
+  TCPNoDelay(client_socket);
+  KeepAlive(client_socket, true);
+
+  auto fdev = base::FdEvent::Create(nullptr, client_socket, base::LtEv::LT_EVENT_READ);
+
+  SocketChannelPtr channel = TcpChannel::Create(client_socket, local, peer);
+
+  channel->SetFdEvent(fdev.get());
+
+  auto codec = lt::net::CodecFactory::NewServerService(codec_, io_loop);
+  CHECK(codec) << "protocal:[line] not be registed";
+
+  codec->SetDelegate(this);
+  codec->SetHandler(handler_);
+  codec->SetAsFdEvHandler(false);
+  codec->BindSocket(fdev, std::move(channel));
+  codec->StartProtocolService();
+
+  co::IOEvent ioev(fdev.get());
+  do {
+    auto res = ioev.Wait();
+    if (res == co::IOEvent::Error || res == co::IOEvent::Timeout) {
       break;
     }
-  } while (1);
+    codec->HandleEvent(fdev.get());
+  } while (!codec->IsClosed());
   LOG(INFO) << "close client socket connection";
-  close(client_socket);
+  fdev.reset();
+}
+
+void IOService::OnCodecReady(const lt::net::RefCodecService& service) {
+  LOG(INFO) << "codec service ready:" << service->Channel()->ChannelInfo();
+}
+
+void IOService::OnCodecClosed(const lt::net::RefCodecService& service) {
+  LOG(INFO) << "codec service closed:" << service->Channel()->ChannelInfo();
 }
 
 }  // namespace coso

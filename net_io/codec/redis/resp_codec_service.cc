@@ -35,7 +35,7 @@ RespCodecService::~RespCodecService() {}
 void RespCodecService::StartProtocolService() {
   StartInternal();
 
-  // Auth && Select DB initialize 
+  // Auth && Select DB initialize
   if (!delegate_ || !delegate_->GetRemoteInfo()) {
     return CodecService::NotifyCodecReady();
   }

@@ -40,6 +40,8 @@ namespace net {
 class CodecService : public EnableShared(CodecService),
                      public base::FdEvent::Handler {
 public:
+  enum class Status { CONNECTING, CONNECTED, CLOSING, CLOSED };
+
   class Handler {
   public:
     virtual void OnCodecMessage(const RefCodecMessage& message) = 0;
@@ -68,7 +70,9 @@ public:
 
   void SetProtocol(const std::string& protocol) { protocol_ = protocol; };
 
-  void BindSocket(base::RefFdEvent&& fdev, SocketChannelPtr&& channel);
+  void SetAsFdEvHandler(bool as_handler) { as_fdev_handler_ = as_handler; }
+
+  void BindSocket(base::RefFdEvent fdev, SocketChannelPtr&& channel);
 
   virtual void StartProtocolService();
 
@@ -81,9 +85,11 @@ public:
 
   base::EventPump* Pump() const { return loop_->Pump(); };
 
-  bool IsConnected() const {
-    return channel_ ? channel_->IsConnected() : false;
-  }
+  bool ShouldClose() const;
+
+  bool IsClosed() const { return status_ == Status::CLOSED; }
+
+  bool IsConnected() const { return status_ == Status::CONNECTED; }
 
   virtual void OnDataReceived(IOBuffer* buffer) = 0;
 
@@ -124,7 +130,7 @@ public:
   void HandleEvent(base::FdEvent* fdev) override;
 
   // override this for some need after-send-action codec
-  virtual void OnDataFinishSend(){};
+  virtual void OnDataFinishSend();
 
 protected:
   void StartInternal();
@@ -139,6 +145,8 @@ protected:
 
   std::string protocol_;
 
+  // ScheduleClose will apply close action for a
+  // connected codec/channel when data finish send
   bool schedule_close_ = false;
 
   base::RefFdEvent fdev_;
@@ -154,6 +162,8 @@ protected:
   Delegate* delegate_ = nullptr;
 
   base::MessageLoop* loop_ = nullptr;
+
+  Status status_ = Status::CONNECTING;
 
   DISALLOW_COPY_AND_ASSIGN(CodecService);
 };

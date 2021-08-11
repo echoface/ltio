@@ -12,6 +12,8 @@
 #include "base/coroutine/co_runner.h"
 #include "net_io/io_service.h"
 
+using base::MessageLoop;
+
 namespace lt {
 namespace net {
 
@@ -21,10 +23,11 @@ public:
   HandlerFactory(const Functor& handler) : handler_(handler) {}
 
   void OnCodecMessage(const RefCodecMessage& message) override {
-    if (!coro) {
-      return handler_(Context::New(message));
+    if (coro) {
+      co_go std::bind(handler_, Context::New(message));
+      return;
     }
-    co_go std::bind(handler_, Context::New(message));
+    MessageLoop::Current()->PostTask(FROM_HERE, std::bind(handler_, Context::New(message)));
   };
 
 private:

@@ -249,7 +249,7 @@ bool MessageLoop::PostDelayTask(TaskBasePtr task, uint32_t ms) {
 }
 
 bool MessageLoop::PostTask(TaskBasePtr&& task) {
-  CHECK(running_) << LOOP_LOG_DETAIL;
+  CHECK(running_) << LOOP_LOG_DETAIL << task->ClosureInfo();
 
   if (IsInLoopThread()) {
     in_loop_tasks_.push_back(std::move(task));

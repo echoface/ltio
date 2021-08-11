@@ -109,10 +109,9 @@ void QueuedChannel::OnRequestTimeout(WeakCodecMessage weak) {
   ing_request_.reset();
 
   if (codec_->IsConnected()) {
-    codec_->CloseService();
-  } else {
-    OnCodecClosed(codec_);
+    codec_->CloseService(true);
   }
+  OnCodecClosed(codec_);
 }
 
 void QueuedChannel::OnCodecMessage(const RefCodecMessage& res) {

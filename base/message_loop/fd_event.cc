@@ -93,7 +93,6 @@ void FdEvent::Invoke(LtEvent ev) {
   fired_ = ev;
   VLOG(GLOG_VTRACE) << EventInfo();
   handler_->HandleEvent(this);
-  fired_ = LT_EVENT_NONE;
 }
 
 std::string FdEvent::EventInfo() const {

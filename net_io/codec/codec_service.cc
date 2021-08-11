@@ -35,7 +35,7 @@ CodecService::~CodecService() {
   VLOG(GLOG_VTRACE) << __func__ << " this@" << this << " gone";
 };
 
-void CodecService::BindSocket(base::RefFdEvent&& fdev,
+void CodecService::BindSocket(base::RefFdEvent fdev,
                               SocketChannelPtr&& channel) {
   DCHECK(!channel_.get());
   fdev_ = std::move(fdev);
@@ -48,6 +48,8 @@ void CodecService::StartProtocolService() {
   VLOG(GLOG_VINFO) << __FUNCTION__ << " enter";
 
   StartInternal();
+
+  status_ = Status::CONNECTED;
 
   // ready for default, if a codec has init action, need
   // override StartProtocolService and do init and then notify
@@ -67,6 +69,7 @@ void CodecService::StartInternal() {
 
 void CodecService::CloseService(bool block_callback) {
   DCHECK(loop_->IsInLoopThread());
+  VLOG(GLOG_VTRACE) << __FUNCTION__ << ", enter";
 
   BeforeCloseService();
 
@@ -74,10 +77,25 @@ void CodecService::CloseService(bool block_callback) {
     CHECK(fdev_->GetHandler() == this);
     Pump()->RemoveFdEvent(fdev_.get());
   }
+  status_ = Status::CLOSED;
+  if (!block_callback) {
+    NotifyCodecClosed();
+  }
 }
 
 void CodecService::SetIsServerSide(bool server_side) {
   server_side_ = server_side;
+}
+
+void CodecService::OnDataFinishSend() {
+  if (!schedule_close_) {
+    return;
+  }
+  return CloseService(false);
+}
+
+bool CodecService::ShouldClose() const {
+  return schedule_close_ && (!channel_->HasOutgoingData());
 }
 
 void CodecService::HandleEvent(base::FdEvent* fdev) {
@@ -98,12 +116,12 @@ void CodecService::HandleEvent(base::FdEvent* fdev) {
   if (channel_->HasIncommingData()) {
     OnDataReceived(channel_->ReaderBuffer());
   }
-  if (!schedule_close_) {
+
+  if (!ShouldClose()) {
     return;
   }
 err_handle:
-  CloseService(true);
-  return NotifyCodecClosed();
+  return CloseService(false);
 }
 
 void CodecService::NotifyCodecClosed() {
@@ -116,6 +134,9 @@ void CodecService::NotifyCodecClosed() {
 
 void CodecService::NotifyCodecReady() {
   VLOG(GLOG_VINFO) << __FUNCTION__ << " enter";
+  if (status_ == Status::CONNECTING) {
+    status_ = Status::CONNECTED;
+  }
   if (delegate_) {
     delegate_->OnCodecReady(shared_from_this());
   }

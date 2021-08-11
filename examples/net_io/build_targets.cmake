@@ -61,3 +61,10 @@ ADD_EXECUTABLE(lt_ws_client
 TARGET_LINK_LIBRARIES(lt_ws_client
   ltio
 )
+
+ADD_EXECUTABLE(lt_coso_io
+  net_io/co_so_service.cc
+)
+TARGET_LINK_LIBRARIES(lt_coso_io
+  ltio
+)
