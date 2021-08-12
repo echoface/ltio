@@ -91,7 +91,9 @@ void IOService::handle_connection(int client_socket, const IPEndPoint& peer) {
   co::IOEvent ioev(fdev.get());
   do {
     auto res = ioev.Wait();
-    if (res == co::IOEvent::Error || res == co::IOEvent::Timeout) {
+    if (res == co::IOEvent::Error ||
+        res == co::IOEvent::Timeout) {
+      codec->CloseService(true);
       break;
     }
     codec->HandleEvent(fdev.get(), fdev->FiredEvent());

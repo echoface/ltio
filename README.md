@@ -153,7 +153,7 @@ need run on a corotine context, eg: `CO_RESUMER, CO_YIELD, CO_SLEEP, CO_SYNC`
 
 some brief usage code looks like below:
 ```c++
-// just imaging CO_GO equal golang's go keywords
+// just imaging `CO_GO/co_go` equal golang's go keywords
 void coro_c_function();
 void coro_fun(std::string tag);
 {
@@ -220,6 +220,54 @@ void coro_fun(std::string tag);
     LOG_IF(INFO, WaitGroup::kTimeout == wg->Wait(10000))
       << " timeout, not all task finish in time";
   }
+```
+
+基于coroutine的IO. 这里还有区别于callback 和 coroutine 协作的异步IO
+```c++
+TEST_CASE("coro.ioevent", "[ioevent for coro]") {
+  //FLAGS_v = 26;
+  // 因为coro是构建在底层的消息循环之上的task runner
+  // 实际中可以隐藏掉loop，通常为构建物理线程个loops
+  base::MessageLoop loop("main");
+  loop.Start();
+
+  int timeout = 20;
+  bool running = true;
+  int fd = eventfd(0, EFD_NONBLOCK);
+  CHECK(fd > 0);
+
+  co_go &loop << [&]() {
+    base::FdEvent fdev(fd, base::LtEv::READ);
+    co::IOEvent ioev(&fdev);
+    do {
+      ignore_result(ioev.Wait(timeout)); //等待IOEvent
+      uint64_t val = 0;
+      if (eventfd_read(fd, &val) == 0) {
+        std::cout << ioev.ResultStr() << ", read val:" << val << std::endl;
+        continue;
+      }
+      // 对于Server: 这里则是accept -> co_go handle_connection(fd);
+      // 对于Client: 这里则是connect-> co_go handle_client_connection(fd);
+      // 对于Unary connection: read -> protocolDecode -> MessageHandler(req, res) -> SendResponse
+      // 对于BiStreamConnection: ....
+      std::cout << ioev.ResultStr() << ", read err:" << base::StrError() << std::endl;
+      if (errno != EAGAIN) {
+        break;
+      }
+    } while(running);
+    loop.QuitLoop();
+  };
+
+  int cnt = 100;
+  while(cnt--) {
+    uint64_t v = base::RandInt(timeout / 2, timeout + (timeout / 2));
+    usleep(1000 * v); // ms
+    ignore_result(eventfd_write(fd, v));
+  };
+  running = false;
+  loop.WaitLoopEnd();
+  close(fd);
+}
 ```
 
 这里没有Hook系统调用的原因主要有两个:

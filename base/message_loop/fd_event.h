@@ -106,7 +106,7 @@ private:
 
   bool owner_fd_ = true;
 
-  LtEv::Event  event_ = LtEv::NONE;
+  LtEv::Event event_ = LtEv::NONE;
   LtEv::Event fired_ = LtEv::NONE;
 
   // for epoll mode
