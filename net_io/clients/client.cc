@@ -173,7 +173,7 @@ void Client::OnConnected(int socket_fd, IPEndPoint& local, IPEndPoint& remote) {
   base::MessageLoop* io_loop = next_client_io_loop();
 
   // create socket fdevent
-  auto fdev = base::FdEvent::Create(nullptr, socket_fd, base::LT_EVENT_READ);
+  auto fdev = base::FdEvent::Create(nullptr, socket_fd, base::LtEv::READ);
 
   // create codec service
   RefCodecService codec =

@@ -63,9 +63,8 @@ void Connector::Dial(const net::IPEndPoint& ep, Connector::Delegate* r) {
     case EINTR:
     case EISCONN:
     case EINPROGRESS: {
-      RefFdEvent ev =
-          FdEvent::Create(this, sock_fd, base::LtEv::LT_EVENT_WRITE);
 
+      RefFdEvent ev = FdEvent::Create(this, sock_fd, base::LtEv::WRITE);
       pump_->InstallFdEvent(ev.get());
 
       inprogress_.push_back(connect_ctx{ev, r});
@@ -83,7 +82,6 @@ void Connector::Dial(const net::IPEndPoint& ep, Connector::Delegate* r) {
 }
 
 ConnDetail Connector::DialSync(const net::IPEndPoint& ep) {
-
   int fd = socketutils::CreateBlockTCPSocket(ep.GetSockAddrFamily());
   if (fd == -1) {
     return {};
@@ -117,12 +115,11 @@ ConnDetail Connector::DialSync(const net::IPEndPoint& ep) {
   return detail;
 }
 
-
-void Connector::HandleEvent(FdEvent* fdev) {
-  if (fdev->WriteFired()) {
+void Connector::HandleEvent(FdEvent* fdev, base::LtEv::Event ev) {
+  if (base::LtEv::has_read(ev)) {
     return HandleWrite(fdev);
   }
-  //read/error/close
+  // read/error/close
 err_handle:
   HandleError(fdev);
 }

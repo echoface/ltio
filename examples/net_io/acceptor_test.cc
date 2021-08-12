@@ -36,7 +36,7 @@ public:
     net::IPEndPoint local;
     CHECK(net::socketutils::GetLocalEndpoint(fd, &local));
 
-    auto fdev = new base::FdEvent(this, fd, base::LT_EVENT_READ);
+    auto fdev = new base::FdEvent(this, fd, base::LtEv::READ);
 
     net::SocketChannelPtr ch;
 #ifdef LTIO_HAVE_SSL
@@ -72,7 +72,7 @@ public:
     delete fdev;
   }
 
-  void HandleEvent(base::FdEvent* fdev) override {
+  void HandleEvent(base::FdEvent* fdev, base::LtEv::Event ev) override {
     auto ch = connections[fdev].get();
     LOG(INFO) << "handle event:" << ch->ChannelInfo();
     if (!ch->HandleRead()) {

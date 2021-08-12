@@ -28,10 +28,10 @@ namespace base {
 
 typedef struct FiredEvent {
   int fd_id;
-  LtEvent event_mask;
+  LtEv::Event event_mask;
   void reset() {
     fd_id = -1;
-    event_mask = LT_EVENT_NONE;
+    event_mask = LtEv::NONE;
   }
 } FiredEvent;
 using FiredEvList = std::vector<FiredEvent>;

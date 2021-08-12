@@ -34,11 +34,14 @@ public:
   class Actor {
   public:
     virtual bool AutoRestart() {return true;}
+
     virtual void OnFatalError() {CHECK(false);}
+
     virtual void OnNewConnection(int /*fd*/, const IPEndPoint&) = 0;
   };
 public:
   SocketAcceptor(Actor*, base::EventPump* pump, const IPEndPoint&);
+
   ~SocketAcceptor();
 
   bool StartListen();
@@ -50,8 +53,9 @@ public:
   const IPEndPoint& ListeningAddress() const { return address_; };
 private:
   bool InitListener();
+
   // override from FdEvent::Handler
-  void HandleEvent(base::FdEvent* fdev);
+  void HandleEvent(base::FdEvent* fdev, base::LtEv::Event ev) override;
 
   void AcceptRead(base::FdEvent* fdev);
   bool HandleError(base::FdEvent* fd_event);

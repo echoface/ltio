@@ -69,8 +69,7 @@ void CoLoop::ThreadMain() {
 
 void CoLoop::InvokeFiredEvent(base::FiredEvent* evs, int count) {
   for (int i = 0; i < count; i++) {
-    base::FiredEvent ev = evs[i];
-
+    base::FiredEvent& ev = evs[i];
     auto func = [this, ev]() {
       base::FdEvent* fd_event = io_mux_->FindFdEvent(ev.fd_id);
       if (fd_event) {

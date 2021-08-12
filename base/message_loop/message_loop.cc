@@ -91,10 +91,10 @@ MessageLoop::MessageLoop(const std::string& name)
   CHECK(CreateLocalNoneBlockingPipe(fds));
 
   wakeup_pipe_in_ = fds[1];
-  wakeup_event_ = FdEvent::Create(this, fds[0], LtEv::LT_EVENT_READ);
+  wakeup_event_ = FdEvent::Create(this, fds[0], LtEv::READ);
 
   int ev_fd = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
-  task_event_ = FdEvent::Create(this, ev_fd, LtEv::LT_EVENT_READ);
+  task_event_ = FdEvent::Create(this, ev_fd, LtEv::READ);
 
   pump_.SetLoopId(GenLoopID());
 }
@@ -127,11 +127,11 @@ void MessageLoop::WakeUpIfNeeded() {
   }
 }
 
-void MessageLoop::HandleEvent(FdEvent* fdev) {
-  if (fdev->ReadFired()) {
+void MessageLoop::HandleEvent(FdEvent* fdev, LtEv::Event ev) {
+  if (LtEv::has_read(ev)) {
     return HandleRead(fdev);
   }
-  LOG(ERROR) << LOOP_LOG_DETAIL << "event:" << fdev->FiredEventStr();
+  LOG(ERROR) << LOOP_LOG_DETAIL << "event:" << fdev->EventInfo();
 }
 
 void MessageLoop::HandleRead(FdEvent* fd_event) {

@@ -20,6 +20,7 @@ namespace co {
  * auto ret = ioev.wait(int ms);
  *
  * */
+using base::LtEv;
 class IOEvent : public base::FdEvent::Handler {
 public:
   enum Result {
@@ -45,7 +46,7 @@ public:
 protected:
   void initialize();
 
-  void HandleEvent(base::FdEvent* fdev) override;
+  void HandleEvent(base::FdEvent* fdev, LtEv::Event ev) override;
 private:
   void set_result(Result res) {
     if (result_ == None) {

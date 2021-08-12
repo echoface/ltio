@@ -4,7 +4,6 @@ ADD_EXECUTABLE(net_unittest
   router_unittest.cc
   client_unittest.cc
   net_base_unittest.cc
-  co_io_service.cc
   )
 
 TARGET_LINK_LIBRARIES(net_unittest

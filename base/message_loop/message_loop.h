@@ -151,7 +151,7 @@ private:
 
   int Notify(int fd, const void* data, size_t count);
 
-  void HandleEvent(FdEvent* fd_event) override;
+  void HandleEvent(FdEvent* fdev, LtEv::Event ev) override;
 
   void HandleRead(FdEvent* fd_event);
 

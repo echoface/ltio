@@ -110,7 +110,7 @@ void WsClient::OnConnected(int socket_fd,
     channel = TcpChannel::Create(socket_fd, local, remote);
   }
 
-  auto fdev = base::FdEvent::Create(nullptr, socket_fd, base::LT_EVENT_READ);
+  auto fdev = base::FdEvent::Create(nullptr, socket_fd, base::LtEv::READ);
 
   transport_->BindSocket(std::move(fdev), std::move(channel));
 

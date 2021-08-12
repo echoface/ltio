@@ -127,7 +127,7 @@ public:
   // the event drive api, call from pumped fdevent
   // or
   // other delegate event driver, eg: co::IOEvent
-  void HandleEvent(base::FdEvent* fdev) override;
+  void HandleEvent(base::FdEvent* fdev, base::LtEv::Event ev) override;
 
   // override this for some need after-send-action codec
   virtual void OnDataFinishSend();
