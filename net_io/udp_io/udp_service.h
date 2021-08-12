@@ -117,7 +117,7 @@ private:
   UDPService(base::MessageLoop* io, const IPEndPoint& ep);
 
   // override from FdEvent::Handler
-  void HandleEvent(base::FdEvent* fdev);
+  void HandleEvent(base::FdEvent* fdev, base::LtEv::Event ev);
 
   void HandleRead(base::FdEvent* fd_event);
   void HandleWrite(base::FdEvent* fd_event);

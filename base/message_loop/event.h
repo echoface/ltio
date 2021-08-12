@@ -25,21 +25,27 @@
 #include <memory>
 
 #include "base/lt_micro.h"
-#include "base/queue/double_linked_list.h"
 
 namespace base {
 
-enum LtEv {
-  LT_EVENT_NONE = 0x0000,
-  LT_EVENT_READ = 0x0001,
-  LT_EVENT_WRITE = 0x0002,
-  LT_EVENT_CLOSE = 0x0004,
-  LT_EVENT_ERROR = 0x0008,
+struct LtEv {
+  using Event = uint8_t;
+
+  enum __ev__ {
+    NONE  = 0x00,
+    READ  = 0x01,
+    WRITE = 0x02,
+    ERROR = 0x04,
+  };
+
+  static bool has_read(Event ev) {return ev | READ;};
+
+  static bool has_write(Event ev) {return ev | WRITE;};
+
+  static bool has_error(Event ev) {return ev | ERROR;};
+
+  static std::string to_string(Event ev);
 };
-
-typedef uint32_t LtEvent;
-
-std::string ev2str(const LtEvent& event);
 
 }  // namespace base
 #endif

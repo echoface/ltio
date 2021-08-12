@@ -86,7 +86,7 @@ private:
     bool IsNil() const {return (!hdl || !ev);}
   } ctx;
 
-  void HandleEvent(FdEvent* fdev) override;
+  void HandleEvent(FdEvent* fdev, base::LtEv::Event ev) override;
 
   void HandleError(FdEvent* fd_event);
 

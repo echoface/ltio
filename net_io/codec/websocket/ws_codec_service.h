@@ -3,6 +3,7 @@
 
 #include "ws_message.h"
 
+#include <base/queue/linked_list.h>
 #include "net_io/codec/codec_service.h"
 #include "net_io/codec/http/parser_context.h"
 #include "net_io/codec/websocket/websocket_parser.h"

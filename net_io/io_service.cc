@@ -123,7 +123,7 @@ RefCodecService IOService::CreateCodeService(int fd, const IPEndPoint& peer) {
 
   socketutils::TCPNoDelay(fd);
   socketutils::KeepAlive(fd, true);
-  auto fdev = base::FdEvent::Create(nullptr, fd, base::LtEv::LT_EVENT_READ);
+  auto fdev = base::FdEvent::Create(nullptr, fd, base::LtEv::READ);
 
   SocketChannelPtr channel;
   if (codec->UseSSLChannel()) {

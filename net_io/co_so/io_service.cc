@@ -34,7 +34,7 @@ void IOService::Run() {
 }
 
 void IOService::accept_loop(int socket) {
-  base::FdEvent fdev(socket, base::LtEv::LT_EVENT_READ);
+  base::FdEvent fdev(socket, base::LtEv::READ);
   co::IOEvent ioev(&fdev);
   do {
     ioev.Wait();
@@ -63,7 +63,7 @@ void IOService::accept_loop(int socket) {
 void IOService::handle_connection(int client_socket, const IPEndPoint& peer) {
   lt::net::IOBuffer in_buf;
 
-  base::LtEvent event = base::LtEv::LT_EVENT_READ;
+  base::LtEv::Event event = base::LtEv::READ;
 
   base::MessageLoop* io_loop = base::MessageLoop::Current();
 
@@ -73,7 +73,7 @@ void IOService::handle_connection(int client_socket, const IPEndPoint& peer) {
   TCPNoDelay(client_socket);
   KeepAlive(client_socket, true);
 
-  auto fdev = base::FdEvent::Create(nullptr, client_socket, base::LtEv::LT_EVENT_READ);
+  auto fdev = base::FdEvent::Create(nullptr, client_socket, base::LtEv::READ);
 
   SocketChannelPtr channel = TcpChannel::Create(client_socket, local, peer);
 
@@ -94,7 +94,7 @@ void IOService::handle_connection(int client_socket, const IPEndPoint& peer) {
     if (res == co::IOEvent::Error || res == co::IOEvent::Timeout) {
       break;
     }
-    codec->HandleEvent(fdev.get());
+    codec->HandleEvent(fdev.get(), fdev->FiredEvent());
   } while (!codec->IsClosed());
   LOG(INFO) << "close client socket connection";
   fdev.reset();

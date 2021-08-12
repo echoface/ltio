@@ -25,20 +25,20 @@
 #include <memory>
 
 #include "base/lt_micro.h"
-#include "base/queue/linked_list.h"
+#include "base/queue/double_linked_list.h"
 #include "event.h"
 
 namespace base {
 class FdEvent;
-typedef std::shared_ptr<FdEvent> RefFdEvent;
-typedef std::unique_ptr<FdEvent> FdEventPtr;
+using RefFdEvent = std::shared_ptr<FdEvent>;
+using FdEventPtr = std::unique_ptr<FdEvent>;
 
 /* A Event Holder and Owner represend a filedescriptor,
- * Create With a fd and take it owner  close it when it's gone*/
+ * Create With a fd and take it owner close it when it's gone*/
 class FdEvent final {
 public:
   struct events {};
-  /* interface notify poller notify_watcher polling events*/
+  /* interface notify iomux polling events*/
   typedef struct Watcher {
     virtual ~Watcher() = default;
 
@@ -50,24 +50,28 @@ public:
 
     // operator api, return false to block event popup
     // return true continue all event handle triggle
-    virtual void HandleEvent(FdEvent* fdev) = 0;
+    virtual void HandleEvent(FdEvent* fdev, LtEv::Event ev) = 0;
   } Handler;
 
-  static RefFdEvent Create(int fd, LtEvent event);
-  static RefFdEvent Create(Handler* handler, int fd, LtEvent event);
+  static RefFdEvent Create(int fd, LtEv::Event ev);
 
-  FdEvent(int fd, LtEvent events);
-  FdEvent(Handler* handler, int fd, LtEvent events);
+  static RefFdEvent Create(Handler* h, int fd, LtEv::Event ev);
+
+  FdEvent(int fd, LtEv::Event events);
+
+  FdEvent(Handler* handler, int fd, LtEv::Event ev);
 
   ~FdEvent();
 
-  inline Handler* GetHandler() const { return handler_;}
+  inline int GetFd() const { return fd_; };
+
   inline void SetHandler(Handler* h) { handler_ = h; }
 
-  inline void SetFdWatcher(Watcher* w) {watcher_ = w;}
-  inline Watcher* EventWatcher() { return watcher_; }
+  inline Handler* GetHandler() const { return handler_;}
 
-  inline int GetFd() const { return fd_; };
+  inline void SetFdWatcher(Watcher* w) {watcher_ = w;}
+
+  inline Watcher* EventWatcher() { return watcher_; }
 
   inline void ReleaseOwnership() { owner_fd_ = false; }
 
@@ -79,24 +83,19 @@ public:
   void EnableWriting();
   void DisableReading();
   void DisableWriting();
-  void DisableAll() { SetEvent(LtEv::LT_EVENT_NONE); }
-  inline bool IsReadEnable() const { return event_ & LtEv::LT_EVENT_READ; }
-  inline bool IsWriteEnable() const { return event_ & LtEv::LT_EVENT_WRITE; }
+  void DisableAll() { SetEvent(LtEv::NONE); }
+  inline bool IsReadEnable() const { return event_ & LtEv::READ; }
+  inline bool IsWriteEnable() const { return event_ & LtEv::WRITE; }
 
   // set event user intresting
-  void SetEvent(const LtEv& ev);
+  void SetEvent(LtEv::Event ev);
+
   // the event user take care about
-  LtEvent MonitorEvents() const { return event_; };
-  std::string MonitorEventStr() const { return ev2str(event_); };
+  LtEv::Event MonitorEvents() const { return event_; };
 
-  void Invoke(LtEvent ev);
+  LtEv::Event FiredEvent() const { return fired_; };
 
-  LtEvent ActivedEvent() const { return fired_; };
-  bool ErrFired() const { return fired_ & LT_EVENT_ERROR; }
-  bool ReadFired() const { return fired_ & LT_EVENT_READ; }
-  bool WriteFired() const { return fired_ & LT_EVENT_WRITE; }
-  bool CloseFired() const { return fired_ & LT_EVENT_CLOSE; }
-  std::string FiredEventStr() const { return ev2str(fired_); };
+  void Invoke(LtEv::Event ev);
 
   std::string EventInfo() const;
 
@@ -107,8 +106,8 @@ private:
 
   bool owner_fd_ = true;
 
-  LtEvent event_ = LT_EVENT_NONE;  // watching event
-  LtEvent fired_ = LT_EVENT_NONE;  // fired event
+  LtEv::Event  event_ = LtEv::NONE;
+  LtEv::Event fired_ = LtEv::NONE;
 
   // for epoll mode
   bool enable_et_ = false;

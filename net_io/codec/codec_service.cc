@@ -98,7 +98,7 @@ bool CodecService::ShouldClose() const {
   return schedule_close_ && (!channel_->HasOutgoingData());
 }
 
-void CodecService::HandleEvent(base::FdEvent* fdev) {
+void CodecService::HandleEvent(base::FdEvent* fdev, base::LtEv::Event ev) {
   if (channel_->HasOutgoingData()) {
     if (!channel_->TryFlush()) {
       goto err_handle;
@@ -108,7 +108,7 @@ void CodecService::HandleEvent(base::FdEvent* fdev) {
     }
   }
 
-  if (fdev->ReadFired()) {
+  if (base::LtEv::has_read(ev)) {
     if (!channel_->HandleRead()) {
       goto err_handle;
     }

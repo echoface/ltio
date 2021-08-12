@@ -63,7 +63,7 @@ bool SocketAcceptor::InitListener() {
     return false;
   }
   socket_event_ =
-      base::FdEvent::Create(this, socket_fd, base::LtEv::LT_EVENT_NONE);
+      base::FdEvent::Create(this, socket_fd, base::LtEv::NONE);
 
   VLOG(GLOG_VTRACE) << "acceptor init success, fd:[" << socket_fd
                     << "] bind to local:[" << address_.ToString() << "]";
@@ -105,11 +105,11 @@ void SocketAcceptor::StopListen() {
   VLOG(GLOG_VINFO) << "acceptor stop listen on:" << address_.ToString();
 }
 
-void SocketAcceptor::HandleEvent(base::FdEvent* fdev) {
-  if (fdev->ReadFired()) {
+void SocketAcceptor::HandleEvent(base::FdEvent* fdev, base::LtEv::Event ev) {
+  if (base::LtEv::has_read(ev)) {
     AcceptRead(fdev);
   }
-  if (fdev->CloseFired() || fdev->ErrFired()) {
+  if (base::LtEv::has_error(ev)) {
     HandleError(fdev);
   }
 }

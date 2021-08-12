@@ -49,7 +49,7 @@ int IOMuxEpoll::WaitingIO(FiredEvList& out, int32_t ms) {
   }
 
   if (out.size() < ret_count) {
-    out.resize(ret_count, {-1, LtEv::LT_EVENT_NONE});
+    out.resize(ret_count, {-1, LtEv::NONE});
   }
   for (int idx = 0; idx < ret_count; idx++) {
     struct epoll_event& ev = ep_evs_[idx];
@@ -62,39 +62,38 @@ int IOMuxEpoll::WaitingIO(FiredEvList& out, int32_t ms) {
   return ret_count;
 }
 
-LtEvent IOMuxEpoll::ToLtEvent(const uint32_t epoll_ev) {
-  LtEvent event = LtEv::LT_EVENT_NONE;
+LtEv::Event IOMuxEpoll::ToLtEvent(const uint32_t epoll_ev) {
+  LtEv::Event event = LtEv::NONE;
   // case hang out: but can read till EOF
   if (epoll_ev & (EPOLLHUP | EPOLLERR)) {
-    event |= LtEv::LT_EVENT_READ;
-    event |= LtEv::LT_EVENT_WRITE;
+    event |= LtEv::READ;
+    event |= LtEv::WRITE;
+    //event |= LtEv::ERROR;
   }
   // case readable:
-  if (epoll_ev & EPOLLIN) {
-    event |= LtEv::LT_EVENT_READ;
+  if (epoll_ev & (EPOLLIN | EPOLLRDHUP)) {
+    event |= LtEv::READ;
   }
   // writable
   if (epoll_ev & EPOLLOUT) {
-    event |= LtEv::LT_EVENT_WRITE;
+    event |= LtEv::WRITE;
   }
   // peer close
-  if (epoll_ev & EPOLLRDHUP) {
-    event |= LtEv::LT_EVENT_CLOSE;
-  }
+  //if (epoll_ev & EPOLLRDHUP) {
+  //  event |= LtEv::CLOSE;
+  //}
   return event;
 }
 
-uint32_t IOMuxEpoll::ToEpollEvent(const LtEvent& lt_ev, bool add_extr) {
+uint32_t IOMuxEpoll::ToEpollEvent(const LtEv::Event& lt_ev, bool add_extr) {
   uint32_t epoll_ev = 0;
-  if (lt_ev & LtEv::LT_EVENT_READ) {
+  if (lt_ev & LtEv::READ) {
     epoll_ev |= EPOLLIN;
   }
-  if (lt_ev & LtEv::LT_EVENT_WRITE) {
+  if (lt_ev & LtEv::WRITE) {
     epoll_ev |= EPOLLOUT;
   }
-  if ((lt_ev & LtEv::LT_EVENT_CLOSE) || add_extr) {
-    epoll_ev |= EPOLLRDHUP;
-  }
+  epoll_ev |= EPOLLRDHUP;
   return epoll_ev;
 }
 
@@ -148,10 +147,10 @@ int IOMuxEpoll::EpollCtl(FdEvent* fdev, int opt) {
 
   int ret = ::epoll_ctl(epoll_, opt, fd, &ev);
   VLOG(26) << "epoll_ctl:" << EpollOptToString(opt) << " fd:" << fd
-           << " events:" << fdev->MonitorEventStr();
+           << " events:" << fdev->EventInfo();
   LOG_IF(ERROR, ret != 0) << "epoll:" << EpollOptToString(opt) << " fail, fd "
                           << fd << ",errno:" << StrError(errno)
-                          << " events:" << fdev->MonitorEventStr();
+                          << " events:" << fdev->EventInfo();
 
   return ret;
 }

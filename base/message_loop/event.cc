@@ -24,16 +24,14 @@
 
 namespace base {
 
-std::string ev2str(const LtEvent& events) {
+std::string LtEv::to_string(LtEv::Event ev) {
   std::vector<std::string> evs;
-  if (events & LtEv::LT_EVENT_READ)
+  if (ev & READ)
     evs.emplace_back("read");
-  if (events & LtEv::LT_EVENT_WRITE)
+  if (ev & WRITE)
     evs.emplace_back("write");
-  if (events & LtEv::LT_EVENT_ERROR)
+  if (ev & ERROR)
     evs.emplace_back("error");
-  if (events & LtEv::LT_EVENT_CLOSE)
-    evs.emplace_back("close");
   return StrUtil::Join(evs, "|");
 }
 

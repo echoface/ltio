@@ -23,17 +23,17 @@
 
 namespace base {
 
-RefFdEvent FdEvent::Create(int fd, LtEvent events) {
-  return std::make_shared<FdEvent>(nullptr, fd, events);
+RefFdEvent FdEvent::Create(int fd, LtEv::Event ev) {
+  return std::make_shared<FdEvent>(nullptr, fd, ev);
 }
 
-RefFdEvent FdEvent::Create(FdEvent::Handler* handler, int fd, LtEvent events) {
-  return std::make_shared<FdEvent>(handler, fd, events);
+RefFdEvent FdEvent::Create(FdEvent::Handler* h, int fd, LtEv::Event ev) {
+  return std::make_shared<FdEvent>(h, fd, ev);
 }
 
-FdEvent::FdEvent(int fd, LtEvent events) : FdEvent(nullptr, fd, events) {}
+FdEvent::FdEvent(int fd, LtEv::Event events) : FdEvent(nullptr, fd, events) {}
 
-FdEvent::FdEvent(FdEvent::Handler* handler, int fd, LtEvent event)
+FdEvent::FdEvent(FdEvent::Handler* handler, int fd, LtEv::Event event)
   : fd_(fd),
     event_(event),
     fired_(0),
@@ -50,7 +50,7 @@ void FdEvent::EnableReading() {
   if (IsReadEnable()) {
     return;
   }
-  event_ |= LtEv::LT_EVENT_READ;
+  event_ |= LtEv::READ;
   notify_watcher();
 }
 
@@ -58,7 +58,7 @@ void FdEvent::EnableWriting() {
   if (IsWriteEnable()) {
     return;
   }
-  event_ |= LtEv::LT_EVENT_WRITE;
+  event_ |= LtEv::WRITE;
   notify_watcher();
 }
 
@@ -66,7 +66,7 @@ void FdEvent::DisableReading() {
   if (!IsReadEnable())
     return;
 
-  event_ &= ~LtEv::LT_EVENT_READ;
+  event_ &= ~LtEv::READ;
   notify_watcher();
 }
 
@@ -74,11 +74,11 @@ void FdEvent::DisableWriting() {
   if (!IsWriteEnable())
     return;
 
-  event_ &= ~LtEv::LT_EVENT_WRITE;
+  event_ &= ~LtEv::WRITE;
   notify_watcher();
 }
 
-void FdEvent::SetEvent(const LtEv& ev) {
+void FdEvent::SetEvent(LtEv::Event ev) {
   event_ = ev;
   notify_watcher();
 }
@@ -89,16 +89,16 @@ void FdEvent::notify_watcher() {
   }
 }
 
-void FdEvent::Invoke(LtEvent ev) {
+void FdEvent::Invoke(LtEv::Event ev) {
   fired_ = ev;
   VLOG(GLOG_VTRACE) << EventInfo();
-  handler_->HandleEvent(this);
+  handler_->HandleEvent(this, ev);
 }
 
 std::string FdEvent::EventInfo() const {
   std::ostringstream oss;
-  oss << " [fd:" << fd_ << ", watch:" << ev2str(event_)
-      << ", fired:" << ev2str(fired_) << "]";
+  oss << " [fd:" << fd_ << ", watch:" << LtEv::to_string(event_)
+      << ", fired:" << LtEv::to_string(fired_) << "]";
   return oss.str();
 }
 

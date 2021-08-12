@@ -30,7 +30,9 @@ RefUDPService UDPService::Create(base::MessageLoop* io, const IPEndPoint& ep) {
 }
 
 UDPService::UDPService(base::MessageLoop* io, const IPEndPoint& ep)
-  : io_(io), endpoint_(ep), buffers_(100) {}
+  : io_(io),
+    endpoint_(ep),
+    buffers_(100) {}
 
 void UDPService::StartService() {
   if (!io_->IsInLoopThread()) {
@@ -58,8 +60,7 @@ void UDPService::StartService() {
     socketutils::CloseSocket(socket);
     return;
   }
-  socket_event_ =
-      base::FdEvent::Create(this, socket, base::LtEv::LT_EVENT_READ);
+  socket_event_ = base::FdEvent::Create(this, socket, base::LtEv::READ);
   io_->Pump()->InstallFdEvent(socket_event_.get());
 }
 
@@ -73,8 +74,8 @@ void UDPService::StopService() {
   socketutils::CloseSocket(socket_event_->GetFd());
 }
 
-void UDPService::HandleEvent(base::FdEvent* fdev) {
-  if (fdev->ReadFired()) {
+void UDPService::HandleEvent(base::FdEvent* fdev, base::LtEv::Event ev) {
+  if (base::LtEv::has_read(ev)) {
     return HandleRead(fdev);
   }
 }
@@ -83,8 +84,11 @@ void UDPService::HandleEvent(base::FdEvent* fdev) {
 void UDPService::HandleRead(base::FdEvent* fd_event) {
   do {
     struct mmsghdr* hdr = buffers_.GetMmsghdr();
-    int recv_cnt =
-        recvmmsg(fd_event->GetFd(), hdr, buffers_.Count(), MSG_WAITFORONE, NULL);
+    int recv_cnt = recvmmsg(fd_event->GetFd(),
+                            hdr,
+                            buffers_.Count(),
+                            MSG_WAITFORONE,
+                            NULL);
     if (recv_cnt <= 0) {
       if (errno == EAGAIN || errno == EINTR) {
         break;

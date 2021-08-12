@@ -23,7 +23,7 @@ void IOEvent::initialize() {
   CHECK(fd_event_->GetFd() > 0);
 
   fd_event_->SetHandler(this);
-  if (fd_event_->MonitorEvents() == base::LtEv::LT_EVENT_NONE) {
+  if (fd_event_->MonitorEvents() == LtEv::NONE) {
     fd_event_->EnableReading();
     fd_event_->EnableWriting();
   }
@@ -71,7 +71,6 @@ IOEvent::Result IOEvent::Wait(int ms) {
 
     __co_wait_here__;
   }
-  //LOG(INFO) << "io_event back:" << ResultStr();
 
   resumer_ = nullptr;
   CHECK(result_ != Result::None) << ResultStr();
@@ -79,8 +78,8 @@ IOEvent::Result IOEvent::Wait(int ms) {
   return result_;
 }
 
-void IOEvent::HandleEvent(base::FdEvent* fdev) {
-  if ((fdev->MonitorEvents() & fdev->ActivedEvent())) {
+void IOEvent::HandleEvent(base::FdEvent* fdev, LtEv::Event ev) {
+  if (fdev->MonitorEvents() & ev) {
     set_result(Result::Ok);
   } else {
     set_result(Result::Error);
