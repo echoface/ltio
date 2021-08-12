@@ -38,11 +38,11 @@ struct LtEv {
     ERROR = 0x04,
   };
 
-  static bool has_read(Event ev) {return ev | READ;};
+  static bool has_read(Event ev) {return ev & READ;};
 
-  static bool has_write(Event ev) {return ev | WRITE;};
+  static bool has_write(Event ev) {return ev & WRITE;};
 
-  static bool has_error(Event ev) {return ev | ERROR;};
+  static bool has_error(Event ev) {return ev & ERROR;};
 
   static std::string to_string(Event ev);
 };

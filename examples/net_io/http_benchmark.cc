@@ -68,7 +68,7 @@ public:
     handler.reset(FLAGS_coro ? NewHttpCoroHandler(func) : NewHttpHandler(func));
 
     // ProfilerStart("perf.out");
-    wss.WithIOLoops(loops)
+    http_server.WithIOLoops(loops)
         .WithAddress(base::StrUtil::Concat("http://", FLAGS_http))
         .ServeAddress(handler.get());
     loops.back()->WaitLoopEnd();
@@ -77,15 +77,14 @@ public:
   void Stop() {
     CHECK(CO_CANYIELD);
     LOG(INFO) << __FUNCTION__ << " stop enter";
-    wss.StopServer(CO_RESUMER);
+    http_server.StopServer(CO_RESUMER);
     CO_YIELD;
     LOG(INFO) << __FUNCTION__ << " stop leave";
     loops.back()->QuitLoop();
   }
 
-  HttpServer wss;
+  HttpServer http_server;
   std::unique_ptr<CodecService::Handler> handler;
-  // HttpCoroServer http_server;
   base::MessageLoop main_loop;
   nlohmann::json json_message;
   std::vector<base::MessageLoop*> loops;
@@ -101,9 +100,6 @@ void signalHandler(int signum) {
 int main(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   gflags::SetUsageMessage("usage: exec --http=ip:port ");
-
-  // google::InitGoogleLogging(argv[0]);
-  // google::SetVLOGLevel(NULL, 26);
 
   signal(SIGINT, signalHandler);
   signal(SIGTERM, signalHandler);

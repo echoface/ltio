@@ -24,6 +24,13 @@
 #include <time.h>
 #include <unistd.h>
 
+
+#define SECONDS_PER_HOUR    3600
+#define SECONDS_PER_DAY     86400   // 24*3600
+#define SECONDS_PER_WEEK    604800  // 7*24*3600
+
+#define IS_LEAP_YEAR(year) (((year)%4 == 0 && (year)%100 != 0) || (year)%400 == 0)
+
 namespace base {
 
 // millseconds ms  1000
