@@ -14,8 +14,9 @@ namespace net {
 namespace {
 const char* upgrade_response_template =
     "HTTP/1.1 101 Switching Protocols\r\n"
-    "Connection: Upgrade\r\n"
+    "Server: ltio\r\n"
     "Upgrade: websocket\r\n"
+    "Connection: Upgrade\r\n"
     "Sec-WebSocket-Accept: {}\r\n\r\n";
 
 constexpr size_t MAX_PAYLOAD_LENGTH = (1 << 24);  // 16M
@@ -87,7 +88,7 @@ int WSCodecService::OnFrameBody(websocket_parser* parser,
   if (parser->flags & WS_HAS_MASK) {
     websocket_parser_decode((char*)data, data, len, parser);
   }
-  VLOG(GLOG_VTRACE) << "ws parse body:" << std::string(data, len);
+  VLOG(VTRACE) << "ws parse body:" << std::string(data, len);
   codec->current_->AppendData(data, len);
   return 0;
 }
@@ -119,7 +120,7 @@ void WSCodecService::CommitFrameMessage() {
 }
 
 void WSCodecService::StartProtocolService() {
-  VLOG(GLOG_VINFO) << __FUNCTION__ << " enter";
+  VLOG(VINFO) << __FUNCTION__ << " enter";
 
   StartInternal();
 
@@ -152,9 +153,9 @@ void WSCodecService::StartProtocolService() {
     hs_req->InsertHeader("Sec-WebSocket-Version", "13");
     hs_req->InsertHeader("Sec-WebSocket-Key", sec_key);
     HttpCodecService::RequestToBuffer(hs_req.get(), channel_->WriterBuffer());
-    VLOG(GLOG_VTRACE) << "send handshake request"
+    VLOG(VTRACE) << "send handshake request"
                       << channel_->WriterBuffer()->AsString();
-    ignore_result(channel_->TryFlush());
+    ignore_result(TryFlushChannel());
   }
 }
 
@@ -176,9 +177,9 @@ bool WSCodecService::SendRequest(CodecMessage* req) {
                                           wsmsg->Payload().size(),
                                           (ws_opcode)wsmsg->OpCode());
   buffer->Produce(size);
-  VLOG(GLOG_VTRACE) << "send request size:" << size << ", n:" << n
+  VLOG(VTRACE) << "send request size:" << size << ", n:" << n
                     << " content:" << wsmsg->Payload();
-  return channel_->TryFlush();
+  return TryFlushChannel();
 }
 
 bool WSCodecService::SendResponse(const CodecMessage*, CodecMessage* res) {
@@ -194,10 +195,10 @@ bool WSCodecService::SendResponse(const CodecMessage*, CodecMessage* res) {
                                           wsmsg->Payload().size(),
                                           (ws_opcode)wsmsg->OpCode());
   buffer->Produce(n);
-  VLOG(GLOG_VTRACE) << "send response size:" << size << ", n:" << n
+  VLOG(VTRACE) << "send response size:" << size << ", n:" << n
                     << " payload:" << wsmsg->Payload();
 
-  return channel_->TryFlush();
+  return TryFlushChannel();
 }
 
 /*
@@ -223,7 +224,7 @@ void WSCodecService::CommitHttpRequest(const RefHttpRequest&& request) {
   auto ws_accept = WebsocketUtil::GenAcceptKey(sec_key_.c_str());
   std::string response = fmt::format(upgrade_response_template, ws_accept);
 
-  VLOG(GLOG_VINFO) << "websocket upgrade request"
+  VLOG(VINFO) << "websocket upgrade request"
                    << ", path:" << ws_path_
                    << ", key:" << sec_key_
                    << ", resp:" << response;

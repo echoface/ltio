@@ -16,7 +16,7 @@
  */
 
 #include "socket_acceptor.h"
-#include "base/base_constants.h"
+#include "base/logging.h"
 #include "base/ip_endpoint.h"
 #include "base/sockaddr_storage.h"
 #include "base/utils/sys_error.h"
@@ -45,6 +45,7 @@ SocketAcceptor::~SocketAcceptor() {
 bool SocketAcceptor::InitListener() {
   int socket_fd = socketutils::CreateNoneBlockTCP(address_.GetSockAddrFamily());
   if (socket_fd < 0) {
+    LOG(ERROR) << "create non-blocking socket failed:" << base::StrError();
     return false;
   }
 
@@ -57,14 +58,15 @@ bool SocketAcceptor::InitListener() {
 
   int ret = socketutils::BindSocketFd(socket_fd, storage.AsSockAddr());
   if (ret < 0) {
-    LOG(ERROR) << "acceptor failed bind, address:" << address_.ToString()
-               << " fd:" << socket_fd;
+    LOG(ERROR) << "bind fail"
+               << ", fd:" << socket_fd << ", err:" << base::StrError()
+               << ", address:" << address_.ToString();
     socketutils::CloseSocket(socket_fd);
     return false;
   }
   socket_event_ = base::FdEvent::Create(this, socket_fd, base::LtEv::NONE);
 
-  VLOG(GLOG_VTRACE) << "acceptor init success, fd:[" << socket_fd
+  VLOG(VTRACE) << "acceptor init success, fd:[" << socket_fd
                     << "] bind to local:[" << address_.ToString() << "]";
   return true;
 }
@@ -87,7 +89,7 @@ bool SocketAcceptor::StartListen() {
     LOG(ERROR) << "acceptor failed listen on" << address_.ToString();
     return false;
   }
-  VLOG(GLOG_VINFO) << "acceptor start listen on:" << address_.ToString();
+  VLOG(VINFO) << "acceptor start listen on:" << address_.ToString();
   listening_ = true;
   return true;
 }
@@ -101,7 +103,7 @@ void SocketAcceptor::StopListen() {
   socket_event_->DisableAll();
 
   listening_ = false;
-  VLOG(GLOG_VINFO) << "acceptor stop listen on:" << address_.ToString();
+  VLOG(VINFO) << "acceptor stop listen on:" << address_.ToString();
 }
 
 void SocketAcceptor::HandleEvent(base::FdEvent* fdev, base::LtEv::Event ev) {
@@ -125,7 +127,7 @@ void SocketAcceptor::AcceptRead(base::FdEvent* fdev) {
   IPEndPoint client_addr;
   client_addr.FromSockAddr(&socket_in, sizeof(socket_in));
 
-  VLOG(GLOG_VTRACE) << "accept a connection:" << client_addr.ToString();
+  VLOG(VTRACE) << "accept a connection:" << client_addr.ToString();
 
   handler_->OnNewConnection(peer_fd, client_addr);
 }

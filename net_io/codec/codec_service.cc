@@ -32,7 +32,7 @@ namespace net {
 CodecService::CodecService(base::MessageLoop* loop) : loop_(loop) {}
 
 CodecService::~CodecService() {
-  VLOG(GLOG_VTRACE) << __func__ << " this@" << this << " gone";
+  VLOG(VTRACE) << __func__ << " this@" << this << " gone";
 };
 
 void CodecService::BindSocket(base::RefFdEvent fdev,
@@ -45,7 +45,7 @@ void CodecService::BindSocket(base::RefFdEvent fdev,
 }
 
 void CodecService::StartProtocolService() {
-  VLOG(GLOG_VINFO) << __FUNCTION__ << " enter";
+  VLOG(VINFO) << __FUNCTION__ << " enter";
 
   StartInternal();
 
@@ -59,17 +59,17 @@ void CodecService::StartProtocolService() {
 void CodecService::StartInternal() {
   CHECK(loop_->IsInLoopThread());
 
+  ignore_result(channel_->StartChannel(IsServerSide()));
+
   if (as_fdev_handler_) {
     fdev_->SetHandler(this);
     Pump()->InstallFdEvent(fdev_.get());
   }
-
-  ignore_result(channel_->StartChannel(IsServerSide()));
 }
 
 void CodecService::CloseService(bool block_callback) {
   DCHECK(loop_->IsInLoopThread());
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << ", enter";
+  VLOG(VTRACE) << __FUNCTION__ << ", enter";
 
   BeforeCloseService();
 
@@ -98,34 +98,54 @@ bool CodecService::ShouldClose() const {
   return schedule_close_ && (!channel_->HasOutgoingData());
 }
 
-void CodecService::HandleEvent(base::FdEvent* fdev, base::LtEv::Event ev) {
-  if (channel_->HasOutgoingData()) {
-    if (!channel_->TryFlush()) {
-      goto err_handle;
+bool CodecService::TryFlushChannel() {
+
+  int nbytes = channel_->HandleWrite();
+
+  if (nbytes > 0 && !channel_->HasOutgoingData()) {
+    OnDataFinishSend();
+  }
+  return nbytes >= 0;
+}
+
+// handle out data and read data into buffer
+bool CodecService::SocketReadWrite(base::LtEv::Event ev) {
+
+  if (base::LtEv::has_write(ev)) {
+    int rv = channel_->HandleWrite();
+    if (rv < 0) {
+      return false;
     }
-    if (!channel_->HasOutgoingData()) {
+    if (rv > 0 && !channel_->HasOutgoingData()) {
       OnDataFinishSend();
     }
   }
 
-  if (base::LtEv::has_read(ev)) {
-    if (!channel_->HandleRead()) {
-      goto err_handle;
-    }
+  if (base::LtEv::has_read(ev) && channel_->HandleRead() < 0) {
+    return false;
   }
+
+  return true;
+}
+
+void CodecService::HandleEvent(base::FdEvent* fdev, base::LtEv::Event ev) {
+  VLOG(VTRACE) << __FUNCTION__ << ", enter";
+
+  bool success = SocketReadWrite(ev);
+  // r/w fatal error
   if (channel_->HasIncommingData()) {
     OnDataReceived(channel_->ReaderBuffer());
   }
 
-  if (!ShouldClose()) {
+  if (success && !ShouldClose() && !base::LtEv::has_error(ev)) {
     return;
   }
-err_handle:
+
   return CloseService(false);
 }
 
 void CodecService::NotifyCodecClosed() {
-  VLOG(GLOG_VTRACE) << channel_->ChannelInfo() << " closed";
+  VLOG(VTRACE) << channel_->ChannelInfo() << " closed";
   AfterChannelClosed();
   if (delegate_) {
     delegate_->OnCodecClosed(shared_from_this());
@@ -133,7 +153,7 @@ void CodecService::NotifyCodecClosed() {
 }
 
 void CodecService::NotifyCodecReady() {
-  VLOG(GLOG_VINFO) << __FUNCTION__ << " enter";
+  VLOG(VINFO) << __FUNCTION__ << " enter";
   if (status_ == Status::CONNECTING) {
     status_ = Status::CONNECTED;
   }

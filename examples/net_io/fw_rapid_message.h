@@ -43,7 +43,7 @@ public:
   }
 
   bool EncodeTo(net::SocketChannel* ch) {
-    VLOG(GLOG_VTRACE) << __FUNCTION__ << " frame size:" << header_.size;
+    VLOG(VTRACE) << __FUNCTION__ << " frame size:" << header_.size;
     if (ch->Send((const char*)(&header_), sizeof(RapidHeader)) < 0) {
       return false;
     }

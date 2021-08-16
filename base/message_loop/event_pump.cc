@@ -19,7 +19,7 @@
 #include <sys/time.h>
 #include <algorithm>
 
-#include "base/base_constants.h"
+#include "base/logging.h"
 #include "event_pump.h"
 #include "fd_event.h"
 #include "io_multiplexer.h"
@@ -71,7 +71,7 @@ void EventPump::Pump(uint64_t ms) {
   CHECK(IsInLoop());
 
   ms = std::min(ms, NextTimeout());
-  VLOG_EVERY_N(GLOG_VTRACE, 1000) << " poll timeout:" << ms;
+  VLOG_EVERY_N(VTRACE, 1000) << " poll timeout:" << ms;
 
   int count = io_mux_->WaitingIO(fired_list_, ms);
 

@@ -32,7 +32,7 @@ LineCodecService::LineCodecService(base::MessageLoop* loop)
 LineCodecService::~LineCodecService() {}
 
 void LineCodecService::OnDataReceived(IOBuffer* buf) {
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << " enter";
+  VLOG(VTRACE) << __FUNCTION__ << " enter";
   const char* line_crlf = buf->FindCRLF();
   if (!line_crlf) {
     return;

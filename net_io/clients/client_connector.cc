@@ -55,7 +55,7 @@ void Connector::Dial(const net::IPEndPoint& ep, Connector::Delegate* r) {
       return r->OnConnectFailed(inprogress_.size());
     }
 
-    VLOG(GLOG_VTRACE) << ep.ToString() << " connected at once";
+    VLOG(VTRACE) << ep.ToString() << " connected at once";
     return r->OnConnected(sock_fd, local_addr, remote_addr);
   }
 
@@ -69,7 +69,7 @@ void Connector::Dial(const net::IPEndPoint& ep, Connector::Delegate* r) {
 
       inprogress_.push_back(connect_ctx{ev, r});
 
-      VLOG(GLOG_VTRACE) << "connect inprogress fd:" << sock_fd;
+      VLOG(VTRACE) << "connect inprogress fd:" << sock_fd;
 
     } break;
     default: {
@@ -111,7 +111,7 @@ ConnDetail Connector::DialSync(const net::IPEndPoint& ep) {
   detail.socket = fd;
   socketutils::SetSocketBlocking(fd, true);
 
-  VLOG(GLOG_VTRACE) << ep.ToString() << " connected success";
+  VLOG(VTRACE) << ep.ToString() << " connected success";
   return detail;
 }
 

@@ -14,6 +14,8 @@ using namespace base;
 using namespace co;
 
 DEFINE_int32(loops, 4, "how many loops use for handle message and io");
+
+DEFINE_bool(h2, false, "using http2 stack");
 DEFINE_bool(echo, false, "just echo response without any logic");
 DEFINE_bool(coro, false, "using coro context handle request");
 DEFINE_string(http,
@@ -45,6 +47,7 @@ public:
 
     auto func = [this](const RefHttpRequestCtx& context) {
       const HttpRequest* req = context->Request();
+      VLOG(VTRACE) << "got:" << req->Dump();
       // TODO: response freelist
       auto response = HttpResponse::CreateWithCode(200);
       response->SetKeepAlive(req->IsKeepAlive());
@@ -67,9 +70,11 @@ public:
 
     handler.reset(FLAGS_coro ? NewHttpCoroHandler(func) : NewHttpHandler(func));
 
+    std::string scheme_prefix = FLAGS_h2 ? "h2c://" : "http://";
+
     // ProfilerStart("perf.out");
     http_server.WithIOLoops(loops)
-        .WithAddress(base::StrUtil::Concat("http://", FLAGS_http))
+        .WithAddress(base::StrUtil::Concat(scheme_prefix, FLAGS_http))
         .ServeAddress(handler.get());
     loops.back()->WaitLoopEnd();
   }

@@ -23,7 +23,7 @@
 #include <memory>
 #include "base/time/time_utils.h"
 
-#include <base/base_constants.h>
+#include <base/logging.h>
 #include <base/lt_micro.h>
 #include <base/closure/closure_task.h>
 #include <thirdparty/libaco/aco.h>
@@ -59,7 +59,7 @@ public:
       aco_share_stack_destroy(sstk_);
       sstk_ = nullptr;
     }
-    VLOG(GLOG_VTRACE) << "coroutine gone:" << CoInfo();
+    VLOG(VTRACE) << "coroutine gone:" << CoInfo();
   }
 private:
   friend class CoroRunner;
@@ -70,9 +70,9 @@ private:
     } else {
       sstk_ = aco_share_stack_new(COROUTINE_STACK_SIZE);
       coro_ = aco_create(main_co->coro_, sstk_, 0, entry, this);
-      VLOG(GLOG_VTRACE) << "sstack size:" << sstk_->real_sz;
+      VLOG(VTRACE) << "sstack size:" << sstk_->real_sz;
     }
-    VLOG(GLOG_VTRACE) << "new coroutine:" << CoInfo();
+    VLOG(VTRACE) << "new coroutine:" << CoInfo();
   }
 
   /*NOTE: this will switch to main coro, be care for call this

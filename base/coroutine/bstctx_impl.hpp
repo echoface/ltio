@@ -3,7 +3,7 @@
 
 #include <string.h>
 #include <memory>
-#include "base/base_constants.h"
+#include "base/logging.h"
 #include "base/lt_micro.h"
 #include "base/queue/linked_list.h"
 #include "fcontext/fcontext.h"
@@ -36,7 +36,7 @@ public:
   }
 
   ~Coroutine() {
-    VLOG(GLOG_VTRACE) << "corotuine gone, " << CoInfo();
+    VLOG(VTRACE) << "corotuine gone, " << CoInfo();
     CHECK(!Attatched());
     destroy_fcontext_stack(&stack_);
   }
@@ -54,7 +54,7 @@ private:
     stack_ = create_fcontext_stack(64 * 1024);
 
     Reset(fn, data);
-    VLOG(GLOG_VTRACE) << "corotuine born, " << CoInfo();
+    VLOG(VTRACE) << "corotuine born, " << CoInfo();
   }
 public:
 

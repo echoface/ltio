@@ -59,7 +59,7 @@ void HttpCodecService::StartProtocolService() {
 }
 
 void HttpCodecService::OnDataReceived(IOBuffer* buf) {
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << " buffer_size:" << buf->CanReadSize();
+  VLOG(VTRACE) << __FUNCTION__ << " buffer_size:" << buf->CanReadSize();
 
   bool success = false;
   if (IsServerSide()) {
@@ -130,8 +130,8 @@ bool HttpCodecService::SendRequest(CodecMessage* message) {
     LOG(ERROR) << __FUNCTION__ << " failed encode:" << request->Dump();
     return false;
   }
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << ", write request:" << request->Dump();
-  return channel_->TryFlush();
+  VLOG(VTRACE) << __FUNCTION__ << ", write request:" << request->Dump();
+  return TryFlushChannel();
 }
 
 bool HttpCodecService::SendResponse(const CodecMessage* req,
@@ -145,8 +145,8 @@ bool HttpCodecService::SendResponse(const CodecMessage* req,
     LOG(ERROR) << __FUNCTION__ << " failed encode:" << response->Dump();
     return false;
   }
-  VLOG(GLOG_VTRACE) << "write response:" << response->Dump();
-  VLOG(GLOG_VTRACE) << "response encode buf:\n"
+  VLOG(VTRACE) << "write response:" << response->Dump();
+  VLOG(VTRACE) << "response encode buf:\n"
                     << channel_->WriterBuffer()->AsString();
   /* see: https://tools.ietf.org/html/rfc7230#section-6.1
 
@@ -163,10 +163,8 @@ bool HttpCodecService::SendResponse(const CodecMessage* req,
   if (!response->IsKeepAlive()) {
     schedule_close_ = true;
   }
-  bool ok = channel_->TryFlush();
-  LOG_IF(ERROR, !ok) << "write response fail";
-  return ok;
-  //return channel_->TryFlush();
+
+  return TryFlushChannel();
 }
 
 // static

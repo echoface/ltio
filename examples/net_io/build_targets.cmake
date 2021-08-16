@@ -38,7 +38,6 @@ ADD_EXECUTABLE(http_benchmark_server
 )
 TARGET_LINK_LIBRARIES(http_benchmark_server
   ltio
-  profiler
 )
 
 ADD_EXECUTABLE(lt_http_client
@@ -66,5 +65,12 @@ ADD_EXECUTABLE(lt_coso_io
   net_io/co_so_service.cc
 )
 TARGET_LINK_LIBRARIES(lt_coso_io
+  ltio
+)
+
+ADD_EXECUTABLE(lt_http2_server
+  net_io/http2_server.cc
+)
+TARGET_LINK_LIBRARIES(lt_http2_server
   ltio
 )

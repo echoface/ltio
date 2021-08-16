@@ -23,7 +23,10 @@
 namespace lt {
 namespace net {
 
+class H2Context;
 class HttpRequestCtx;
+
+using RefH2Context = std::shared_ptr<H2Context>;
 using RefHttpRequestCtx = std::shared_ptr<HttpRequestCtx>;
 
 class HttpRequestCtx {
@@ -44,14 +47,37 @@ public:
 
   bool Responsed() const { return did_reply_; };
 
-private:
+protected:
   HttpRequestCtx(const RefCodecMessage& request);
+
+private:
 
   RefCodecMessage request_;
 
   bool did_reply_ = false;
 
   base::MessageLoop* io_loop_ = NULL;
+};
+
+class H2Context : public HttpRequestCtx {
+public:
+  static RefH2Context New(const RefCodecMessage& req);
+
+  /*
+   * server push api, success notify if success or fail
+   *
+   * status: 0: success, other: fail code
+   * */
+  void Push(const std::string& method,
+            const std::string& path,
+            const HttpRequest* bind_req,
+            const RefHttpResponse& resp,
+            std::function<void(int status)> callback);
+protected:
+  H2Context(const RefCodecMessage& request);
+
+private:
+  std::vector<RefHttpResponse> srv_pushs_;
 };
 
 }  // namespace net
@@ -67,6 +93,16 @@ lt::net::CodecService::Handler* NewHttpHandler(const Functor& func) {
 template <typename Functor>
 lt::net::CodecService::Handler* NewHttpCoroHandler(const Functor& func) {
   return NewCoroHandler<Functor, lt::net::HttpRequestCtx>(func);
+}
+
+template <typename Functor>
+lt::net::CodecService::Handler* NewHttp2Handler(const Functor& func) {
+  return NewHandler<Functor, lt::net::H2Context>(func);
+}
+
+template <typename Functor>
+lt::net::CodecService::Handler* NewHttp2CoroHandler(const Functor& func) {
+  return NewCoroHandler<Functor, lt::net::H2Context>(func);
 }
 
 #endif

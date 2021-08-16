@@ -17,7 +17,7 @@
 #include "async_channel.h"
 
 #include "queued_channel.h"
-#include "base/base_constants.h"
+#include "base/logging.h"
 #include "base/message_loop/message_loop.h"
 #include "net_io/codec/codec_service.h"
 
@@ -101,7 +101,7 @@ void QueuedChannel::OnRequestTimeout(WeakCodecMessage weak) {
     return;
   }
 
-  VLOG(GLOG_VINFO) << codec_->Channel()->ChannelInfo()
+  VLOG(VINFO) << codec_->Channel()->ChannelInfo()
                    << " timeout reached";
 
   request->SetFailCode(MessageCode::kTimeOut);
@@ -116,7 +116,7 @@ void QueuedChannel::OnRequestTimeout(WeakCodecMessage weak) {
 
 void QueuedChannel::OnCodecMessage(const RefCodecMessage& res) {
   DCHECK(IOLoop()->IsInLoopThread());
-  VLOG(GLOG_VTRACE) << "got a response:" << res->Dump();
+  VLOG(VTRACE) << "got a response:" << res->Dump();
   if (!ing_request_) {
     return;
   }
@@ -130,7 +130,7 @@ void QueuedChannel::OnCodecMessage(const RefCodecMessage& res) {
 }
 
 void QueuedChannel::OnCodecClosed(const RefCodecService& service) {
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << service->Channel()->ChannelInfo()
+  VLOG(VTRACE) << __FUNCTION__ << service->Channel()->ChannelInfo()
                     << " protocol service closed";
   if (ing_request_) {
     ing_request_->SetFailCode(MessageCode::kConnBroken);

@@ -22,10 +22,11 @@
 #ifndef LIGHTINGIO_NET_CHANNEL_H
 #define LIGHTINGIO_NET_CHANNEL_H
 
-#include <base/base_constants.h>
-#include <base/compiler_specific.h>
 #include <cstdint>
+
+#include "base/compiler_specific.h"
 #include "base/ip_endpoint.h"
+#include "base/logging.h"
 #include "base/lt_micro.h"
 #include "base/message_loop/fd_event.h"
 #include "io_buffer.h"
@@ -47,15 +48,37 @@ namespace net {
  * coroutine + reactor 驱动的同步编程模式,  这样传统的reactor网络模型
  * 和基于coroutine的同步网络模型都可以复用了。
  *
+ * Coroutine:
  * IOWaiter iowaiter(fdev);
  * iowatier.Wait(timetout);
- * handleRead/Write
- * DataBuffer -> Codec -> Request/Response -> ServerHandler/ClientHandler
+ * Codec::HandleEvent(ev)
+ *  Socket::HandleRead/Write
+ *  Decode(buf) -cb-> Server/ClientHandler
+ *  |
+ *  | may async(none-io loop handler)
+ *  |
+ *  Encode(req/res)
+ *  Socket::Write
+ *
+ * EventLoop:
+ * Loop::WaitIO -cb->
+ * FdEv::HandleEvent() -cb->
+ * Codec::HandleEvent(ev)
+ *  Socket::HandleRead/Write
+ *  Decode(buf) -cb-> Server/ClientHandler
+ *  |
+ *  | may async(none-io loop handler)
+ *  |
+ *  Encode(req/res)
+ *  Socket::Write
+ *
+ * DataFlow:
+ * Socket|Buffer -> Codec -> Server/ClientHandler -|-> Codec -> Socket|Buffer
+ *
  * */
+
 class SocketChannel {
 public:
-  enum class Status { CONNECTING, CONNECTED, CLOSING, CLOSED };
-
   virtual ~SocketChannel();
 
   void SetFdEvent(base::FdEvent* fdev) { fdev_ = fdev; };
@@ -63,45 +86,37 @@ public:
   virtual bool StartChannel(bool server) WARN_UNUSED_RESULT;
 
   // read socket data to buffer
-  // when success return true, else return false
-  virtual bool HandleRead() WARN_UNUSED_RESULT = 0;
+  // On success, return the nbytes in in_buf returned
+  // return <0 when socket error or other fatal error
+  // the caller should decide close channel or not
+  virtual int HandleRead() WARN_UNUSED_RESULT = 0;
 
   // write as much as data into socket
-  // return true when, false when error
-  // handle err is responsibility of caller
+  // on success, return the nbytes write to peer
+  // return <0 when socket error or other fatal error
   // the caller should decide close channel or not
-  virtual bool TryFlush() WARN_UNUSED_RESULT = 0;
+  virtual int HandleWrite() WARN_UNUSED_RESULT = 0;
 
   /* return -1 when error, handle err is responsibility of caller
    * return 0 when all data pending to buffer,
-   * other case return the bytes writen*/
-  inline int32_t Send(const std::string& data) {
+   * other case return nbytes realy writen*/
+  inline int32_t Send(const std::string& data) WARN_UNUSED_RESULT {
     return Send(data.data(), data.size());
   }
 
   /* return -1 when error, handle err is responsibility of caller
-   * return 0 when all data pending to buffer,
-   * other case return the bytes writen*/
+   * return 0 when all data pending to out_buffer,
+   * other case return nbytes realy writen*/
   virtual int32_t Send(const char* data,
                        const int32_t len) WARN_UNUSED_RESULT = 0;
 
-  IOBuffer* ReaderBuffer() { return &in_buffer_; }
+  IOBuffer* ReaderBuffer() { return &in_; }
 
-  IOBuffer* WriterBuffer() { return &out_buffer_; }
+  IOBuffer* WriterBuffer() { return &out_; }
 
-  bool HasOutgoingData() const {return out_buffer_.CanReadSize();}  
+  bool HasOutgoingData() const { return out_.CanReadSize(); }
 
-  bool HasIncommingData() const {return in_buffer_.CanReadSize();}  
-
-  Status GetStatus() const { return status_; }
-
-  const std::string StatusStr() const;
-
-  bool IsClosed() const { return status_ == Status::CLOSED; };
-
-  bool IsConnected() const { return status_ == Status::CONNECTED; };
-
-  bool IsConnecting() const { return status_ == Status::CONNECTING; };
+  bool HasIncommingData() const { return in_.CanReadSize(); }
 
   const IPEndPoint& LocalEndpoint() const { return local_ep_; }
 
@@ -112,32 +127,25 @@ public:
 protected:
   SocketChannel(int socket, const IPEndPoint& loc, const IPEndPoint& peer);
 
-  void setup_channel();
-
-  void close_channel();
-
   int32_t binded_fd() const { return fdev_ ? fdev_->GetFd() : -1; }
 
   std::string local_name() const;
 
   std::string remote_name() const;
 
-  void SetChannelStatus(Status st);
-
 protected:
+  //not own fdev
   base::FdEvent* fdev_ = nullptr;
 
   IPEndPoint local_ep_;
 
   IPEndPoint remote_ep_;
 
-  IOBuffer in_buffer_;
+  IOBuffer in_;
 
-  IOBuffer out_buffer_;
+  IOBuffer out_;
 
 private:
-  Status status_ = Status::CONNECTING;
-
   DISALLOW_COPY_AND_ASSIGN(SocketChannel);
 };
 

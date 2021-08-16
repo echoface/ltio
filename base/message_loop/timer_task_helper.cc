@@ -1,5 +1,5 @@
 #include "timer_task_helper.h"
-#include "base/base_constants.h"
+#include "base/logging.h"
 
 namespace base {
 
@@ -20,7 +20,7 @@ void TimerTaskHelper::Run() {
   if (new_delay_ms <= 0) {
     return timeout_fn_->Run();
   }
-  VLOG(GLOG_VTRACE) << "Re-Schedule timer " << new_delay_ms << " ms";
+  VLOG(VTRACE) << "Re-Schedule timer " << new_delay_ms << " ms";
   TimeoutEvent* timeout_ev = TimeoutEvent::CreateOneShot(new_delay_ms, true);
   timeout_ev->InstallHandler(std::move(timeout_fn_));
   event_pump_->AddTimeoutEvent(timeout_ev);

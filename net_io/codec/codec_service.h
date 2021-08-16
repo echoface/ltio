@@ -135,6 +135,11 @@ public:
 protected:
   void StartInternal();
 
+  bool TryFlushChannel();
+
+  // true for success, false when fatal error
+  bool SocketReadWrite(base::LtEv::Event ev);
+
   // notify delegate_ codec is ready
   void NotifyCodecReady();
 

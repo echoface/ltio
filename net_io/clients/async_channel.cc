@@ -16,7 +16,7 @@
  */
 
 #include "async_channel.h"
-#include <base/base_constants.h>
+#include <base/logging.h>
 #include <net_io/codec/codec_service.h>
 #include "base/message_loop/message_loop.h"
 
@@ -73,7 +73,7 @@ void AsyncChannel::OnRequestTimeout(const WeakCodecMessage& weak) {
   uint64_t identify = request->AsyncId();
   size_t numbers = in_progress_.erase(identify);
   if (numbers == 0) {
-    VLOG(GLOG_VTRACE) << "message has reponsed";
+    VLOG(VTRACE) << "message has reponsed";
     return;
   }
   request->SetFailCode(MessageCode::kTimeOut);
@@ -97,7 +97,7 @@ void AsyncChannel::OnCodecMessage(const RefCodecMessage& res) {
 
   auto iter = in_progress_.find(identify);
   if (iter == in_progress_.end()) {
-    VLOG(GLOG_VINFO) << __FUNCTION__ << " response:" << identify
+    VLOG(VINFO) << __FUNCTION__ << " response:" << identify
                      << " not found corresponding request";
     return;
   }
@@ -108,7 +108,7 @@ void AsyncChannel::OnCodecMessage(const RefCodecMessage& res) {
 }
 
 void AsyncChannel::OnCodecClosed(const RefCodecService& service) {
-  VLOG(GLOG_VTRACE) << service->Channel()->ChannelInfo()
+  VLOG(VTRACE) << service->Channel()->ChannelInfo()
                     << " protocol service closed";
   DCHECK(IOLoop()->IsInLoopThread());
   auto guard = shared_from_this();

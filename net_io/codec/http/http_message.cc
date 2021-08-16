@@ -19,7 +19,7 @@
 
 #include <sstream>
 
-#include <base/base_constants.h>
+#include <base/logging.h>
 #include <base/utils/string/str_utils.h>
 #include "http_constants.h"
 #include "http_parser/http_parser.h"
@@ -28,40 +28,60 @@ namespace lt {
 namespace net {
 
 HttpMessage::HttpMessage()
-  : keepalive_(false),
+  : CodecMessage(),
+    keepalive_(false),
     http_major_(1),
     http_minor_(1) {}
 
 bool HttpMessage::HasHeader(const char* f) const {
-  return headers_.find(f) != headers_.end();
-}
-
-bool HttpMessage::HasHeader(const std::string& field) const {
+  std::string field(f);
+  base::StrUtil::ToLower(field);
   return headers_.find(field) != headers_.end();
 }
 
+bool HttpMessage::HasHeader(const std::string& field) const {
+  std::string fieldlowcase(field);
+  base::StrUtil::ToLower(fieldlowcase);
+  return headers_.find(fieldlowcase) != headers_.end();
+}
+
 void HttpMessage::InsertHeader(const char* k, const char* v) {
-  headers_.insert(std::make_pair(k, v));
+  std::string field(k); base::StrUtil::ToLower(field);
+  //std::string value(v); base::StrUtil::ToLower(value);
+  headers_.insert(std::make_pair(field, v));
 }
 
 void HttpMessage::InsertHeader(const std::pair<std::string, std::string>&& kv) {
   if (kv.first.empty())
     return;
-  headers_.insert(std::move(kv));
+  std::string field(kv.first); base::StrUtil::ToLower(field);
+  //std::string value(kv.second); base::StrUtil::ToLower(value);
+  headers_.insert(std::make_pair(std::move(field), std::move(kv.second)));
 }
 
 void HttpMessage::InsertHeader(const std::string& k, const std::string& v) {
   if (k.empty())
     return;
-  headers_.insert(std::make_pair(k, v));
+
+  std::string field(k); base::StrUtil::ToLower(field);
+  //std::string value(v); base::StrUtil::ToLower(value);
+  headers_.insert(std::make_pair(std::move(field), v));
 }
 
 const std::string& HttpMessage::GetHeader(const std::string& field) const {
-  auto iter = headers_.find(field);
+  std::string fieldlowcase = field;
+  base::StrUtil::ToLower(fieldlowcase);
+  auto iter = headers_.find(fieldlowcase);
   if (iter != headers_.end()) {
     return iter->second;
   }
-  return base::kNullString;
+  return base::EmptyString;
+}
+
+bool HttpMessage::RemoveHeader(const std::string& field) {
+  std::string fieldlowcase = field;
+  base::StrUtil::ToLower(fieldlowcase);
+  return headers_.erase(fieldlowcase);
 }
 
 void HttpMessage::AppendBody(const char* data, size_t len) {
@@ -85,10 +105,7 @@ void HttpMessage::SetBody(const char* body, size_t len) {
   body_.append(body, len);
 }
 
-HttpRequest::HttpRequest()
-  : CodecMessage(),
-    method_("GET"),
-    url_param_parsed_(false) {}
+HttpRequest::HttpRequest() : method_("GET"), url_param_parsed_(false) {}
 
 HttpRequest::~HttpRequest() {}
 
@@ -154,7 +171,7 @@ const std::string& HttpRequest::GetUrlParam(const char* key) {
 
 const std::string& HttpRequest::GetUrlParam(const std::string& key) {
   const auto& val = params_.find(key);
-  return val != params_.end() ? val->second : base::kNullString;
+  return val != params_.end() ? val->second : base::EmptyString;
 }
 
 const std::string& HttpRequest::Method() const {
@@ -165,8 +182,8 @@ const std::string HttpRequest::Dump() const {
   std::ostringstream oss;
   oss << "{ \"major\": " << (int)http_major_
       << ", \"minor\": " << (int)http_minor_
-      << ", \"alive\": " << (int)keepalive_
-      << ", \"method\": \"" << Method() << "\""
+      << ", \"alive\": " << (int)keepalive_ << ", \"method\": \"" << Method()
+      << "\""
       << ", \"url\": \"" << url_ << "\"";
   for (const auto& pair : headers_) {
     oss << ", \"header." << pair.first << "\": \"" << pair.second << "\"";
@@ -187,7 +204,7 @@ RefHttpResponse HttpResponse::CreateWithCode(uint16_t code) {
   return r;
 }
 
-HttpResponse::HttpResponse() : CodecMessage() {}
+HttpResponse::HttpResponse() {}
 
 HttpResponse::~HttpResponse() {}
 

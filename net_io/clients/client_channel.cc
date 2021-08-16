@@ -45,7 +45,7 @@ ClientChannel::ClientChannel(Delegate* d, const RefCodecService& service)
 }
 
 ClientChannel::~ClientChannel() {
-  VLOG(GLOG_VTRACE) << __func__ << " this:" << this << " gone";
+  VLOG(VTRACE) << __func__ << " this:" << this << " gone";
   codec_->SetHandler(NULL);
   codec_->SetDelegate(NULL);
 }
@@ -58,7 +58,7 @@ void ClientChannel::CloseClientChannel() {
   base::EventPump* pump = EventPump();
   CHECK(pump->IsInLoop());
 
-  VLOG(GLOG_VTRACE) << " going to close:" << ConnectionInfo();
+  VLOG(VTRACE) << " going to close:" << ConnectionInfo();
 
   state_ = kClosing;
 
@@ -79,7 +79,7 @@ void ClientChannel::CloseClientChannel() {
   }
 
   state_ = kDisconnected;
-  VLOG(GLOG_VTRACE) << " close:" << ConnectionInfo() << " back";
+  VLOG(VTRACE) << " close:" << ConnectionInfo() << " back";
 }
 
 std::string ClientChannel::ConnectionInfo() const {
@@ -128,7 +128,7 @@ bool ClientChannel::HandleResponse(const RefCodecMessage& req,
 
 // override
 void ClientChannel::OnCodecClosed(const RefCodecService& service) {
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << " enter";
+  VLOG(VTRACE) << __FUNCTION__ << " enter";
 
   if (heartbeat_timer_) {
     EventPump()->RemoveTimeoutEvent(heartbeat_timer_);
@@ -141,7 +141,7 @@ void ClientChannel::OnCodecClosed(const RefCodecService& service) {
 void ClientChannel::OnCodecReady(const RefCodecService& service) {
   state_ = kReady;
   uint32_t heartbeat_ms = 0;
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << ConnectionInfo();
+  VLOG(VTRACE) << __FUNCTION__ << ConnectionInfo();
 
   if (delegate_) {
     delegate_->OnClientChannelInited(this);

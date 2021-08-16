@@ -42,7 +42,11 @@ public:
   bool EnsureWritableSize(int64_t len);
 
   char* GetWrite();
+  uint8_t* GetWriteU();
+
   const char* GetRead();
+  const uint8_t* GetReadU();
+
   inline uint64_t Empty() const { return CanReadSize() == 0; }
   inline uint64_t CanReadSize() const { return write_index_ - read_index_; }
   inline uint64_t CanWriteSize() const { return data_.size() - write_index_; }

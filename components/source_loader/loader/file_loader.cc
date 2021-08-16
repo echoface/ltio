@@ -2,7 +2,7 @@
 #include "file_loader.h"
 #include <stdio.h>
 #include <fstream>
-#include "base/base_constants.h"
+#include "base/logging.h"
 #include "base/memory/scoped_guard.h"
 #include "glog/logging.h"
 
@@ -23,7 +23,7 @@ int FileLoader::Initialize() {
 }
 
 int FileLoader::Load() {
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << " Enter, source count:" << files_.size();
+  VLOG(VTRACE) << __FUNCTION__ << " Enter, source count:" << files_.size();
 
   int result = 0;
 
@@ -66,7 +66,7 @@ int FileLoader::Load() {
   }
 
   watcher_->OnFinish(result);
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << " Leave with result :" << result;
+  VLOG(VTRACE) << __FUNCTION__ << " Leave with result :" << result;
   return result;
 }
 

@@ -36,6 +36,9 @@ public:
 
   const std::string& Body() const;
 
+  const std::string Dump() const override {
+    return content_;
+  };
 private:
   std::string content_;
 };

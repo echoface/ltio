@@ -19,7 +19,6 @@
 #include "net_io/codec/line/line_message.h"
 #include "net_io/codec/raw/raw_codec_service.h"
 #include "net_io/codec/raw/raw_message.h"
-#include "net_io/dispatcher/coro_dispatcher.h"
 #include "net_io/socket_acceptor.h"
 #include "net_io/socket_utils.h"
 #include "net_io/tcp_channel.h"

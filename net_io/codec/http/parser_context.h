@@ -22,7 +22,7 @@
 #include <string>
 #include <vector>
 
-#include <base/base_constants.h>
+#include <base/logging.h>
 #include <base/utils/gzip/gzip_utils.h>
 #include "http_constants.h"
 #include "http_request.h"
@@ -75,7 +75,7 @@ public:
 
     size_t nparsed =
         http_parser_execute(&parser_, &settings_, buffer_start, buffer_size);
-    VLOG(GLOG_VTRACE) << "nparsed:" << nparsed << ", bufsize:" << buffer_size
+    VLOG(VTRACE) << "nparsed:" << nparsed << ", bufsize:" << buffer_size
                       << ", content:" << buf->AsString();
     buf->Consume(nparsed);
     if (nparsed != buffer_size) {
@@ -111,7 +111,7 @@ public:
   }
 
   static int OnMessageEnd(http_parser* parser) {
-    VLOG(GLOG_VTRACE) << __FUNCTION__ << " enter";
+    VLOG(VTRACE) << __FUNCTION__ << " enter";
     Parser* codec = (Parser*)parser->data;
     return codec->OnMessageParsed();
   }

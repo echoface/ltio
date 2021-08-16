@@ -12,6 +12,16 @@
 using SSLImpl = struct ssl_st;
 using SSLCtxImpl = struct ssl_ctx_st;
 
+// Recommended general purpose "Modern compatibility" cipher suites by
+// mozilla.
+//
+// https://wiki.mozilla.org/Security/Server_Side_TLS
+constexpr char DEFAULT_CIPHER_LIST[] =
+    "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-"
+    "CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-"
+    "SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-"
+    "AES256-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256";
+
 #else  // none LTIO_WITH_OPENSSL
 
 static_assert(false, "current only openssl support");
@@ -62,6 +72,7 @@ public:
 
   bool UseCertification(const std::string& cert, const std::string& key);
 
+  SSLCtxImpl* NativeHandle() {return impl_;}
 private:
   Param param_;
   SSLCtxImpl* impl_ = nullptr;

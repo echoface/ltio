@@ -24,14 +24,17 @@ void StrUtil::ToUpper(char* s) {
   for (size_t i = 0; s[i]; i++)
     s[i] = toupper(s[i]);
 }
+
 void StrUtil::ToUpper(std::string& str) {
   for (size_t i = 0; str[i]; i++)
     str[i] = toupper(str[i]);
 }
+
 void StrUtil::ToLower(char* s) {
   for (size_t i = 0; s[i]; i++)
     s[i] = tolower(s[i]);
 }
+
 void StrUtil::ToLower(std::string& str) {
   for (size_t i = 0; str[i]; i++)
     str[i] = tolower(str[i]);

@@ -12,8 +12,6 @@
 #include "base/coroutine/co_runner.h"
 #include "net_io/io_service.h"
 
-using base::MessageLoop;
-
 namespace lt {
 namespace net {
 
@@ -27,7 +25,7 @@ public:
       co_go std::bind(handler_, Context::New(message));
       return;
     }
-    MessageLoop::Current()->PostTask(FROM_HERE, std::bind(handler_, Context::New(message)));
+    handler_(Context::New(message));
   };
 
 private:

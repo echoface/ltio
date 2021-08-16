@@ -27,7 +27,7 @@
 #include <thread>
 #include <utility>
 
-#include "base/base_constants.h"
+#include "base/logging.h"
 #include "base/closure/closure_task.h"
 #include "base/closure/location.h"
 #include "base/memory/scoped_ref_ptr.h"
@@ -39,7 +39,7 @@
 
 namespace base {
 
-enum LoopState {ST_STOPED = 0, ST_STARTED = 1};
+enum LoopState { ST_STOPED = 0, ST_STARTED = 1 };
 
 class MessageLoop;
 class PersistRunner {
@@ -49,6 +49,7 @@ public:
   virtual void LoopGone(MessageLoop* loop){};
 
   virtual bool HasPeedingTask() const = 0;
+
 private:
   LtClosure notifier_;
 };
@@ -129,7 +130,7 @@ public:
   void QuitLoop();
 
   // not preciese running status
-  bool Running() const {return running_;}
+  bool Running() const { return running_; }
 
   EventPump* Pump() { return &pump_; }
 
@@ -182,6 +183,13 @@ private:
   EventPump pump_;
   DISALLOW_COPY_AND_ASSIGN(MessageLoop);
 };
+
+using RefMessageLoop = std::shared_ptr<MessageLoop>;
+using RawLoopList = std::vector<MessageLoop*>;
+using RefLoopList = std::vector<RefMessageLoop>;
+
+RawLoopList RawLoopsFromBundles(const RefLoopList& loops);
+RefLoopList NewLoopBundles(const std::string& prefix, int num);
 
 }  // namespace base
 #endif

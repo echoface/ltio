@@ -28,6 +28,8 @@ set(LTNET_SOURCE
   codec/http/http_message.cc
   codec/http/http_constants.cc
   codec/http/http_codec_service.cc
+  codec/http/h2/nghttp2_util.cc
+  codec/http/h2/h2_codec_service.cc
 
   codec/websocket/ws_util.cc
   codec/websocket/ws_message.cc
@@ -39,9 +41,6 @@ set(LTNET_SOURCE
   codec/redis/redis_request.cc
   codec/redis/redis_response.cc
   codec/redis/resp_codec_service.cc
-  #dispatcher
-  dispatcher/coro_dispatcher.cc
-  dispatcher/workload_dispatcher.cc
 
   #server
   server/generic_server.h
@@ -73,6 +72,7 @@ set(LTNET_SOURCE
 
 if (LTIO_WITH_OPENSSL)
   list(APPEND LTNET_SOURCE tcp_channel_ssl.cc)
+  list(APPEND LTNET_SOURCE codec/http/h2/h2_tls_context.cc)
 endif()
 
 add_library(ltnet_objs OBJECT ${LTNET_SOURCE})

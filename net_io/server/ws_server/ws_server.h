@@ -48,7 +48,7 @@ protected:
   void OnConnectionOpen(const RefCodecService& codec) override {
 
     WSCodecService* s = (WSCodecService*)codec.get();
-    VLOG(GLOG_VINFO) << __FUNCTION__ << ", enter, topic:" << s->TopicPath();
+    VLOG(VINFO) << __FUNCTION__ << ", enter, topic:" << s->TopicPath();
 
     auto iter = wss_.find(s->TopicPath());
     if (iter == wss_.end()) {
@@ -65,7 +65,7 @@ protected:
   void OnConnectionClose(const RefCodecService& codec) override {
     WSCodecService* s = (WSCodecService*)codec.get();
 
-    VLOG(GLOG_VINFO) << __FUNCTION__ << ", enter, topic:" << s->TopicPath();
+    VLOG(VINFO) << __FUNCTION__ << ", enter, topic:" << s->TopicPath();
     auto iter = wss_.find(s->TopicPath());
     if (iter == wss_.end()) {
       LOG(ERROR) << __FUNCTION__ << " not found service implement";
@@ -80,7 +80,7 @@ protected:
     CHECK(codec);
 
     WSCodecService* s = (WSCodecService*)codec.get();
-    VLOG(GLOG_VINFO) << __FUNCTION__ << ", enter, topic:" << s->TopicPath();
+    VLOG(VINFO) << __FUNCTION__ << ", enter, topic:" << s->TopicPath();
 
     auto iter = wss_.find(s->TopicPath());
     if (iter == wss_.end()) {
@@ -90,7 +90,7 @@ protected:
 
     WebsocketFrame* ws_msg = (WebsocketFrame*)message.get();
 
-    VLOG(GLOG_VTRACE) << "ws recieve:" << message->Dump();
+    VLOG(VTRACE) << "ws recieve:" << message->Dump();
     iter->second->OnMessage(s, RefCast(WebsocketFrame, message));
   }
 

@@ -10,13 +10,9 @@
 
 #include <glog/logging.h>
 #include <array>
-#include <base/string/string_view.hpp>
+#include <base/string/string_view.h>
 #include <string>
 #include <vector>
-
-namespace base {
-typedef nonstd::string_view StringPiece;
-}
 
 namespace lt {
 namespace net {

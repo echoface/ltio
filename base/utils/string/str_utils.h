@@ -77,7 +77,7 @@ public:
                                         const std::string& delims,
                                         bool ignore_empty = false);
 
-  bool IgnoreCaseEquals(const std::string& str1, const std::string& str2);
+  static bool IgnoreCaseEquals(const std::string& str1, const std::string& str2);
 
   template <typename T, typename Token>
   static std::string Join(const std::vector<T>& v, const Token& token) {
@@ -128,6 +128,7 @@ public:
     __detail__::ConcatImpl(oss, std::forward<Args>(args)...);
     return oss.str();
   }
+
 };
 
 template <>
@@ -149,6 +150,8 @@ inline bool StrUtil::Parse(const std::string& s) {
 
 /*make a str reserve enough size use for write something into it*/
 char* AsWriteInto(std::string* str, size_t length_with_null);
+
+static const std::string EmptyString;
 
 }  // namespace base
 #endif

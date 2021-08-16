@@ -27,11 +27,12 @@ public:
 
   bool StartChannel(bool server) override WARN_UNUSED_RESULT;
 
-  bool HandleRead() override WARN_UNUSED_RESULT;
+  int HandleRead() override WARN_UNUSED_RESULT;
 
   // write as much as data into socket
-  bool TryFlush() override WARN_UNUSED_RESULT;
+  int HandleWrite() override WARN_UNUSED_RESULT;
 
+  // send raw data to socket
   int32_t Send(const char* data, const int32_t len) override WARN_UNUSED_RESULT;
 
 protected:
@@ -42,12 +43,9 @@ protected:
   // return true when success, false when failed
   bool DoHandshake(base::FdEvent* event);
 
-  bool HandleWrite(base::FdEvent* event);
-
-  bool HandleRead(base::FdEvent* event);
 private:
 #ifdef LTIO_WITH_OPENSSL
-  SSLImpl* ssl_;
+  SSLImpl* ssl_ = nullptr;
 #endif
 
   DISALLOW_COPY_AND_ASSIGN(TCPSSLChannel);

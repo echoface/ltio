@@ -81,11 +81,20 @@ inline char* IOBuffer::MutableWrite() {
   return &data_[write_index_];
 }
 
+const uint8_t* IOBuffer::GetReadU() {
+  return (const uint8_t*)&data_[read_index_];
+}
+
 const char* IOBuffer::GetRead() {
   return &data_[read_index_];
 }
+
 char* IOBuffer::GetWrite() {
   return &data_[write_index_];
+}
+
+uint8_t* IOBuffer::GetWriteU() {
+  return (uint8_t*)&data_[write_index_];
 }
 
 void IOBuffer::WriteString(const std::string& str) {
