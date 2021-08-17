@@ -24,9 +24,38 @@ TEST_CASE("string_utils", "[]") {
   CHECK(!ok_bool);
 }
 
-TEST_CASE("clause.multilargs", "[task run]") {
+TEST_CASE("closure.multilargs", "[task run]") {
   int a = 0;
   int b = 0;
   auto task1 = NewClosure([&]() { LOG(INFO) << a << ", b:" << b; });
   auto task2 = NewClosure([a, b]() { LOG(INFO) << a << ", b:" << b; });
+}
+
+#include "base/memory/defer.h"
+TEST_CASE("defer", "[task run]") {
+
+  int cnt = 0;
+  do {
+    auto x = base::MakeDefer([&](){
+      cnt++;
+    });
+  } while(0);
+  REQUIRE(cnt == 1);
+
+  cnt = 0;
+  do {
+    auto x = base::MakeCancelableDefer([&](){
+      cnt++;
+    });
+  } while(0);
+  REQUIRE(cnt == 1);
+
+  cnt = 0;
+  do {
+    auto x = base::MakeCancelableDefer([&](){
+      cnt++;
+    });
+    x.Cancel();
+  } while(0);
+  REQUIRE(cnt == 0);
 }
