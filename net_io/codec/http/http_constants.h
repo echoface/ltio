@@ -20,6 +20,8 @@
 
 #include <string>
 
+#include "base/string/string_view.h"
+
 namespace lt {
 namespace net {
 
@@ -45,6 +47,9 @@ struct HttpConstant {
   // format: " 200 OK\r\n"
   static const char* GetResponseStatusTail(int32_t code);
 };
+
+std::string_view http_status_desc(int32_t code);
+std::string_view http_status_tailer(int32_t code);
 
 }  // namespace net
 }  // namespace lt

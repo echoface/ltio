@@ -21,7 +21,6 @@
 #include <string>
 #include <vector>
 
-#include "http_parser/http_parser.h"
 #include "net_io/codec/codec_service.h"
 #include "net_io/codec/http/http_message.h"
 #include "net_io/codec/http/parser_context.h"
@@ -89,6 +88,7 @@ private:
   };
 
   Parser http_parser_;
+
 };
 
 }  // namespace net

@@ -19,12 +19,15 @@
 #define _NET_IO_BUFFER_H_H
 
 #include <string.h>
+
 #include <algorithm>
 #include <cinttypes>
 #include <iostream>
 #include <string>
 #include <type_traits>
 #include <vector>
+
+#include <base/string/string_view.h>
 
 namespace lt {
 namespace net {
@@ -68,6 +71,7 @@ public:
   }
 
   std::string AsString();
+  std::string_view StringView();
 
   void Consume(uint64_t len);
   inline void Produce(uint64_t len) { write_index_ += len; }

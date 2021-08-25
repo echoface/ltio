@@ -19,10 +19,10 @@
 
 #include <sstream>
 
-#include <base/logging.h>
-#include <base/utils/string/str_utils.h>
+#include "base/logging.h"
+#include "base/utils/string/str_utils.h"
 #include "http_constants.h"
-#include "http_parser/http_parser.h"
+#include "url-parser/url_parser.h"
 
 namespace lt {
 namespace net {
@@ -46,16 +46,18 @@ bool HttpMessage::HasHeader(const std::string& field) const {
 }
 
 void HttpMessage::InsertHeader(const char* k, const char* v) {
-  std::string field(k); base::StrUtil::ToLower(field);
-  //std::string value(v); base::StrUtil::ToLower(value);
+  std::string field(k);
+  base::StrUtil::ToLower(field);
+  // std::string value(v); base::StrUtil::ToLower(value);
   headers_.insert(std::make_pair(field, v));
 }
 
 void HttpMessage::InsertHeader(const std::pair<std::string, std::string>&& kv) {
   if (kv.first.empty())
     return;
-  std::string field(kv.first); base::StrUtil::ToLower(field);
-  //std::string value(kv.second); base::StrUtil::ToLower(value);
+  std::string field(kv.first);
+  base::StrUtil::ToLower(field);
+  // std::string value(kv.second); base::StrUtil::ToLower(value);
   headers_.insert(std::make_pair(std::move(field), std::move(kv.second)));
 }
 
@@ -63,8 +65,9 @@ void HttpMessage::InsertHeader(const std::string& k, const std::string& v) {
   if (k.empty())
     return;
 
-  std::string field(k); base::StrUtil::ToLower(field);
-  //std::string value(v); base::StrUtil::ToLower(value);
+  std::string field(k);
+  base::StrUtil::ToLower(field);
+  // std::string value(v); base::StrUtil::ToLower(value);
   headers_.insert(std::make_pair(std::move(field), v));
 }
 
@@ -230,8 +233,7 @@ void HttpResponse::SetResponseCode(uint16_t code) {
 }
 
 std::string HttpResponse::StatusCodeInfo() const {
-  const char* desc = http_status_str(http_status(status_code_));
-  return desc;
+  return http_status_desc(status_code_).to_string();
 }
 
 }  // namespace net

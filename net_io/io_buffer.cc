@@ -19,15 +19,15 @@
 #include <vector>
 #include "glog/logging.h"
 
-#include <termios.h>
-#include <unistd.h>
-
-#include <base/utils/sys_error.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <sys/uio.h>
 #include <algorithm>
 #include <cerrno>
+#include <termios.h>
+#include <unistd.h>
+
+#include <base/utils/sys_error.h>
 
 static const char kCRLF[] = "\r\n";
 static const int32_t kWarningBufferSize = 64 * 1024 * 1024;
@@ -111,6 +111,10 @@ void IOBuffer::WriteRawData(const void* data, size_t len) {
 
 std::string IOBuffer::AsString() {
   return std::string(data_.begin() + read_index_, data_.begin() + write_index_);
+}
+
+std::string_view IOBuffer::StringView() {
+  return std::string_view(GetRead(), CanReadSize());
 }
 
 void IOBuffer::Consume(uint64_t len) {
