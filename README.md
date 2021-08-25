@@ -1,5 +1,7 @@
 ## ltio (LigthingIO)
 
+![master](https://github.com/echoface/ltio/actions/workflows/build.yml/badge.svg?branch=master)
+
 LigthingIO is a 'light' network IO framework with some `base` impliment for better coding experience;all of those code inspired by project Chromium/libevent/Qt/NodeJs
 
 ## code implemnet
