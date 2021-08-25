@@ -1,0 +1,35 @@
+name: Build && Test
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: RelWithDebInfo
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Install deps
+      run: sudo apt-get install -yqq software-properties-common unzip cmake build-essential libgoogle-perftools-dev git-core libgoogle-perftools-dev libssl-dev zlib1g-dev
+
+    - uses: actions/checkout@v2
+      with:
+        submodules: recursive
+
+    - name: Configure CMake
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DLTIO_WITH_OPENSSL=ON
+
+    - name: Build
+      # Build your program with the given configuration
+      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+
+    - name: Test Base Module
+      working-directory: ${{github.workspace}}/build
+      run: ./bin/base_unittest
+
