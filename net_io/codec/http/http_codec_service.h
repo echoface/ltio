@@ -72,7 +72,6 @@ private:
   void finalize_http_parser();
 
 private:
-  using HeaderKV = std::pair<std::string, std::string>;
   using HttpReqParser = HttpParser<HttpCodecService, HttpRequest>;
   using HttpResParser = HttpParser<HttpCodecService, HttpResponse>;
 
@@ -86,9 +85,9 @@ private:
     HttpReqParser* req_parser;
     HttpResParser* res_parser;
   };
-
   Parser http_parser_;
-
+  bool flush_scheduled_;
+  base::LtClosure flush_fn_;
 };
 
 }  // namespace net

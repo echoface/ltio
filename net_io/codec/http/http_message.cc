@@ -232,8 +232,8 @@ void HttpResponse::SetResponseCode(uint16_t code) {
   status_code_ = code;
 }
 
-std::string HttpResponse::StatusCodeInfo() const {
-  return http_status_desc(status_code_).to_string();
+const std::string& HttpResponse::StatusCodeInfo() const {
+  return http_status_desc(status_code_);
 }
 
 }  // namespace net

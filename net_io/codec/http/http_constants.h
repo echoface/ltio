@@ -38,18 +38,15 @@ struct HttpConstant {
   static const std::string kContentEncoding;
   static const std::string kAcceptEncoding;
 
-  static const std::string kHeaderKeepAlive;
-  static const std::string kHeaderNotKeepAlive;
+  static const std::string kHeaderClose;
+  static const std::string kHeaderKeepalive;
   static const std::string kHeaderDefaultContentType;
   static const std::string kHeaderGzipEncoding;
   static const std::string kHeaderSupportedEncoding;
-
-  // format: " 200 OK\r\n"
-  static const char* GetResponseStatusTail(int32_t code);
 };
 
-std::string_view http_status_desc(int32_t code);
-std::string_view http_status_tailer(int32_t code);
+const std::string& http_status_desc(int code);
+const std::string& http_resp_head_line(int code, uint8_t subversion);
 
 }  // namespace net
 }  // namespace lt

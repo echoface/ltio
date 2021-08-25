@@ -178,7 +178,7 @@ public:
 
   void SetResponseCode(uint16_t code);
 
-  std::string StatusCodeInfo() const;
+  const std::string& StatusCodeInfo() const;
 
 private:
   friend class HttpCodecService;

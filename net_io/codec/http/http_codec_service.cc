@@ -42,7 +42,13 @@ const char* kHTTP_RESPONSE_HEADER_1_0 = "HTTP/1.0";
 }  // namespace
 
 HttpCodecService::HttpCodecService(base::MessageLoop* loop)
-  : CodecService(loop) {}
+  : CodecService(loop) {
+
+  flush_fn_ = [this]() {
+    TryFlushChannel();
+    flush_scheduled_ = false;
+  };
+}
 
 HttpCodecService::~HttpCodecService() {
   finalize_http_parser();
@@ -96,8 +102,8 @@ bool HttpCodecService::RequestToBuffer(const HttpRequest* request,
 
   if (!request->HasHeader(HttpConstant::kConnection)) {
     buffer->WriteString(request->IsKeepAlive()
-                            ? HttpConstant::kHeaderKeepAlive
-                            : HttpConstant::kHeaderNotKeepAlive);
+                            ? HttpConstant::kHeaderKeepalive
+                            : HttpConstant::kHeaderClose);
   }
 
   if (!request->HasHeader(HttpConstant::kAcceptEncoding)) {
@@ -131,7 +137,12 @@ bool HttpCodecService::SendRequest(CodecMessage* message) {
     return false;
   }
   VLOG(VTRACE) << __FUNCTION__ << ", write request:" << request->Dump();
-  return TryFlushChannel();
+  if (!flush_scheduled_) {
+    flush_scheduled_ = true;
+    loop_->PostTask(NewClosure(flush_fn_));
+  }
+  return true;
+  //return TryFlushChannel();
 }
 
 bool HttpCodecService::SendResponse(const CodecMessage* req,
@@ -164,7 +175,12 @@ bool HttpCodecService::SendResponse(const CodecMessage* req,
     schedule_close_ = true;
   }
 
-  return TryFlushChannel();
+  if (!flush_scheduled_) {
+    flush_scheduled_ = true;
+    loop_->PostTask(NewClosure(flush_fn_));
+  }
+  //return TryFlushChannel();
+  return true;
 }
 
 // static
@@ -176,9 +192,7 @@ bool HttpCodecService::ResponseToBuffer(const HttpResponse* response,
   buffer->EnsureWritableSize(guess_size);
 
   int32_t code = response->ResponseCode();
-  const char* status_tail = HttpConstant::GetResponseStatusTail(code);
-  buffer->WriteString(
-      fmt::format("HTTP/1.{} {}\r\n", response->VersionMinor(), status_tail));
+  buffer->WriteString(http_resp_head_line(code, response->VersionMinor()));
   // header: value
   for (const auto& header : response->Headers()) {
     buffer->WriteString(fmt::format("{}: {}\r\n", header.first, header.second));
@@ -186,8 +200,8 @@ bool HttpCodecService::ResponseToBuffer(const HttpResponse* response,
 
   if (!response->HasHeader(HttpConstant::kConnection)) {
     buffer->WriteString(response->IsKeepAlive()
-                            ? HttpConstant::kHeaderKeepAlive
-                            : HttpConstant::kHeaderNotKeepAlive);
+                            ? HttpConstant::kHeaderKeepalive
+                            : HttpConstant::kHeaderClose);
   }
 
   if (!response->HasHeader(HttpConstant::kContentLength)) {
