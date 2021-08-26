@@ -68,9 +68,11 @@ TARGET_LINK_LIBRARIES(lt_coso_io
   ltio
 )
 
+#if (LTIO_WITH_HTTP2)
 ADD_EXECUTABLE(lt_http2_server
   net_io/http2_server.cc
 )
 TARGET_LINK_LIBRARIES(lt_http2_server
   ltio
 )
+#endif()

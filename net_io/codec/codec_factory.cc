@@ -19,12 +19,15 @@
 
 #include "base/memory/lazy_instance.h"
 #include "base/message_loop/message_loop.h"
-#include "http/h2/h2_codec_service.h"
 #include "http/http_codec_service.h"
 #include "line/line_codec_service.h"
 #include "raw/raw_codec_service.h"
 #include "redis/resp_codec_service.h"
 #include "websocket/ws_codec_service.h"
+
+#ifdef LTIO_WITH_HTTP2
+#include "http/h2/h2_codec_service.h"
+#endif
 
 using base::MessageLoop;
 using LzyCodecFactory = base::LazyInstance<lt::net::CodecFactory>;
@@ -121,6 +124,7 @@ void CodecFactory::InitInnerDefault() {
         std::shared_ptr<CodecService> service(new WSCodecService(loop));
         return std::static_pointer_cast<CodecService>(service);
       }));
+#ifdef LTIO_WITH_HTTP2
   creators_.insert(
       std::make_pair("h2", [](MessageLoop* loop) -> RefCodecService {
         std::shared_ptr<CodecService> service(new H2CodecService(loop));
@@ -131,6 +135,7 @@ void CodecFactory::InitInnerDefault() {
         std::shared_ptr<CodecService> service(new H2CodecService(loop));
         return std::static_pointer_cast<CodecService>(service);
       }));
+#endif
 }
 
 }  // namespace net

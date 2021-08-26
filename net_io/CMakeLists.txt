@@ -28,8 +28,6 @@ set(LTNET_SOURCE
   codec/http/http_message.cc
   codec/http/http_constants.cc
   codec/http/http_codec_service.cc
-  codec/http/h2/nghttp2_util.cc
-  codec/http/h2/h2_codec_service.cc
 
   codec/websocket/ws_util.cc
   codec/websocket/ws_message.cc
@@ -72,6 +70,14 @@ set(LTNET_SOURCE
 
 if (LTIO_WITH_OPENSSL)
   list(APPEND LTNET_SOURCE tcp_channel_ssl.cc)
+endif()
+
+if (LTIO_WITH_HTTP2)
+  list(APPEND LTNET_SOURCE codec/http/h2/nghttp2_util.cc)
+  list(APPEND LTNET_SOURCE codec/http/h2/h2_codec_service.cc)
+endif()
+
+if (LTIO_WITH_HTTP2 AND LTIO_WITH_OPENSSL)
   list(APPEND LTNET_SOURCE codec/http/h2/h2_tls_context.cc)
 endif()
 
