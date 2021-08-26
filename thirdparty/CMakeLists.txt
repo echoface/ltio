@@ -19,7 +19,7 @@ SET(LT_3RD_SRSC
 
   urlsafe64/urlsafe64.c
   tinyxml2/tinyxml2.cpp
-  http_parser/http_parser.c
+  url-parser/url_parser.c
   )
 
 ADD_LIBRARY(lt3rd STATIC

@@ -6,8 +6,6 @@
 .cache
 .clangd
 
-base/ltio_config.h
-
 lib/
 *build/
 compile_commands.json
