@@ -19,7 +19,7 @@
 
 #include "glog/logging.h"
 
-#include "base/base_constants.h"
+#include "base/logging.h"
 
 namespace base {
 
@@ -91,7 +91,7 @@ void FdEvent::notify_watcher() {
 
 void FdEvent::Invoke(LtEv::Event ev) {
   fired_ = ev;
-  VLOG(GLOG_VTRACE) << EventInfo();
+  VLOG(VTRACE) << EventInfo();
   handler_->HandleEvent(this, ev);
 }
 

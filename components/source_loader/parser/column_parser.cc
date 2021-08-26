@@ -4,7 +4,7 @@
 
 #include "column_parser.h"
 #include <glog/logging.h>
-#include "base/base_constants.h"
+#include "base/logging.h"
 #include "base/utils/string/str_utils.h"
 
 /*
@@ -76,7 +76,7 @@ void from_json(const Json& j, ColumnInfo& info) {
 ColumnParser::~ColumnParser() {}
 
 bool ColumnParser::ParseContent(const std::string& content) {
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << " enter";
+  VLOG(VTRACE) << __FUNCTION__ << " enter";
 
   std::vector<std::string> results = base::StrUtil::Split(content, delimiter_);
   if (results.size() != header_.size()) {
@@ -102,7 +102,7 @@ bool ColumnParser::ParseContent(const std::string& content) {
     delegate_->OnContentParsed(column_out);
   }
 
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << " leave";
+  VLOG(VTRACE) << __FUNCTION__ << " leave";
   return true;
 }
 

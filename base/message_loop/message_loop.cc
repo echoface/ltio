@@ -39,7 +39,7 @@
 #include "timeout_event.h"
 #include "timer_task_helper.h"
 
-#include <base/base_constants.h>
+#include <base/logging.h>
 #include <base/time/time_utils.h>
 #include <base/utils/sys_error.h>
 
@@ -107,14 +107,14 @@ MessageLoop::~MessageLoop() {
 
   // first join, others wait util loop end
   if (thread_ptr_ && thread_ptr_->joinable()) {
-    VLOG(GLOG_VINFO) << LOOP_LOG_DETAIL << "join here";
+    VLOG(VINFO) << LOOP_LOG_DETAIL << "join here";
     thread_ptr_->join();
   }
 
   WaitLoopEnd();
 
   ::close(wakeup_pipe_in_);
-  VLOG(GLOG_VINFO) << LOOP_LOG_DETAIL << "Gone";
+  VLOG(VINFO) << LOOP_LOG_DETAIL << "Gone";
 }
 
 void MessageLoop::WakeUpIfNeeded() {
@@ -209,7 +209,7 @@ void MessageLoop::ThreadMain() {
 
   SetThreadNativeName();
 
-  VLOG(GLOG_VINFO) << LOOP_LOG_DETAIL << "Start";
+  VLOG(VINFO) << LOOP_LOG_DETAIL << "Start";
 
   pump_.InstallFdEvent(task_event_.get());
   pump_.InstallFdEvent(wakeup_event_.get());
@@ -231,7 +231,7 @@ void MessageLoop::ThreadMain() {
   pump_.RemoveFdEvent(wakeup_event_.get());
 
   threadlocal_current_ = NULL;
-  VLOG(GLOG_VINFO) << LOOP_LOG_DETAIL << "Thread End";
+  VLOG(VINFO) << LOOP_LOG_DETAIL << "Thread End";
   cv_.notify_all();
 }
 
@@ -332,6 +332,24 @@ void MessageLoop::SetThreadNativeName() {
   if (loop_name_.empty())
     return;
   pthread_setname_np(pthread_self(), loop_name_.c_str());
+}
+
+RawLoopList RawLoopsFromBundles(const RefLoopList& loops) {
+  RawLoopList vec;
+  for (auto& l : loops) {
+    vec.push_back(l.get());
+  }
+  return vec;
+}
+
+RefLoopList NewLoopBundles(const std::string& prefix, int num) {
+  RefLoopList vec;
+  for (int i = 0; i < num; i++) {
+    RefMessageLoop loop(new MessageLoop(prefix + std::to_string(i)));
+    loop->Start();
+    vec.push_back(std::move(loop));
+  }
+  return vec;
 }
 
 #undef LOOP_LOG_DETAIL

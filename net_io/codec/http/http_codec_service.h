@@ -21,7 +21,6 @@
 #include <string>
 #include <vector>
 
-#include "http_parser/http_parser.h"
 #include "net_io/codec/codec_service.h"
 #include "net_io/codec/http/http_message.h"
 #include "net_io/codec/http/parser_context.h"
@@ -73,7 +72,6 @@ private:
   void finalize_http_parser();
 
 private:
-  using HeaderKV = std::pair<std::string, std::string>;
   using HttpReqParser = HttpParser<HttpCodecService, HttpRequest>;
   using HttpResParser = HttpParser<HttpCodecService, HttpResponse>;
 
@@ -87,8 +85,9 @@ private:
     HttpReqParser* req_parser;
     HttpResParser* res_parser;
   };
-
   Parser http_parser_;
+  bool flush_scheduled_;
+  base::LtClosure flush_fn_;
 };
 
 }  // namespace net

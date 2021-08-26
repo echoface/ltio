@@ -204,9 +204,9 @@ public:
       if (coro->ResumeID() == id && !coro->Attatched()) {
         return ready_list_.Append(coro.get());
       }
-      VLOG_IF(GLOG_VINFO, coro->Attatched())
+      VLOG_IF(VINFO, coro->Attatched())
         << "already pending to ready list, skip";
-      VLOG_IF(GLOG_VINFO, coro->ResumeID() != id)
+      VLOG_IF(VINFO, coro->ResumeID() != id)
         << "already resumed, want:" << id << " real:" << coro->ResumeID();
     };
     if (bind_loop_->IsInLoopThread()) {
@@ -248,8 +248,6 @@ public:
    * P(CoroRunner) take a M(Corotine) do work(TaskBasePtr)
    */
   void Run() override {
-    VLOG_EVERY_N(GLOG_VTRACE, 1000) << " coroutine runner enter";
-
     size_t co_usage_cnt = 0;
 
     // resume any ready coros
@@ -433,11 +431,11 @@ bool CoroRunner::Publish(base::TaskBasePtr&& task) {
 
 CoroRunner::CoroRunner(MessageLoop* loop) : bind_loop_(loop) {
   CHECK(bind_loop_);
-  VLOG(GLOG_VINFO) << "CoroutineRunner@" << this << " initialized";
+  VLOG(VINFO) << "CoroutineRunner@" << this << " initialized";
 }
 
 CoroRunner::~CoroRunner() {
-  VLOG(GLOG_VINFO) << "CoroutineRunner@" << this << " gone";
+  VLOG(VINFO) << "CoroutineRunner@" << this << " gone";
 }
 
 void CoroRunner::ScheduleTask(base::TaskBasePtr&& tsk) {

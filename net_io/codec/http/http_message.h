@@ -45,14 +45,14 @@ struct URIView {
   string_view fragment;
 };
 
-class HttpMessage {
+class HttpMessage : public CodecMessage {
 public:
   HttpMessage();
   virtual ~HttpMessage(){};
 
-  std::string& MutableBody() {return body_;}
+  std::string& MutableBody() { return body_; }
 
-  const std::string& Body() const {return body_;}
+  const std::string& Body() const { return body_; }
 
   void SetBody(std::string&& body);
 
@@ -64,13 +64,13 @@ public:
 
   void AppendBody(const char* data, size_t len);
 
-  bool IsKeepAlive() const {return keepalive_;};
+  bool IsKeepAlive() const { return keepalive_; };
 
-  void SetKeepAlive(bool alive) {keepalive_ = alive;}
+  void SetKeepAlive(bool alive) { keepalive_ = alive; }
 
-  KeyValMap& MutableHeaders() {return headers_;}
+  KeyValMap& MutableHeaders() { return headers_; }
 
-  const KeyValMap& Headers() const {return headers_;}
+  const KeyValMap& Headers() const { return headers_; }
 
   bool HasHeader(const char* f) const;
 
@@ -82,20 +82,29 @@ public:
 
   void InsertHeader(const std::pair<std::string, std::string>&& kv);
 
-  bool RemoveHeader(const std::string& field) {
-    return headers_.erase(field);
-  }
+  bool RemoveHeader(const std::string& field);
 
   const std::string& Header(const std::string& field) const {
     return GetHeader(field);
   }
+
   const std::string& GetHeader(const std::string&) const;
 
   int VersionMajor() const { return http_major_; }
 
   int VersionMinor() const { return http_minor_; }
-protected:
+#ifdef LTIO_WITH_HTTP2
+public:
+  int32_t StreamID() const { return stream_id_; }
+  void SetStreamID(int32_t sid) { stream_id_ = sid; }
 
+  const uint64_t AsyncId() const override { return stream_id_; };
+  void SetAsyncId(uint64_t sid) override { stream_id_ = sid; }
+
+private:
+  int32_t stream_id_ = 0;
+#endif
+protected:
   bool keepalive_ = false;
   uint8_t http_major_ = 1;
   uint8_t http_minor_ = 1;
@@ -104,7 +113,7 @@ protected:
   KeyValMap headers_;
 };
 
-class HttpRequest : public HttpMessage, public CodecMessage {
+class HttpRequest : public HttpMessage {
 public:
   typedef HttpResponse ResponseType;
 
@@ -126,7 +135,7 @@ public:
 
   const std::string& RequestUrl() const;
 
-  const string_view Path() const {return url_view_.path;}
+  const string_view Path() const { return url_view_.path; }
 
   KeyValMap& MutableParams();
 
@@ -137,9 +146,11 @@ public:
   const std::string Dump() const override;
 
   void parse_url_view();
+
 private:
   friend class HttpCodecService;
-  template<typename T, typename M> friend class HttpParser;
+  template <typename T, typename M>
+  friend class HttpParser;
 
   // GET /path?params#fragment
   std::string method_;
@@ -153,7 +164,7 @@ private:
   bool url_param_parsed_ = false;
 };
 
-class HttpResponse : public HttpMessage, public CodecMessage {
+class HttpResponse : public HttpMessage {
 public:
   HttpResponse();
 
@@ -167,16 +178,16 @@ public:
 
   void SetResponseCode(uint16_t code);
 
-  std::string StatusCodeInfo() const;
+  const std::string& StatusCodeInfo() const;
 
 private:
   friend class HttpCodecService;
-  template<typename T, typename M> friend class HttpParser;
+  template <typename T, typename M>
+  friend class HttpParser;
 
-  uint16_t status_code_;
+  uint16_t status_code_ = 200;
 };
 
 }  // namespace net
 }  // namespace lt
 #endif
-

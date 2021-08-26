@@ -53,7 +53,7 @@ public:
 
   BaseServer() : serving_flag_(false), client_count_(0) {}
 
-  Server& WithIOLoops(MessageLoopList& loops) {
+  Server& WithIOLoops(const MessageLoopList& loops) {
     io_loops_ = loops;
     return *this;
   }

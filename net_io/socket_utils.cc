@@ -31,7 +31,7 @@
 #include "glog/logging.h"
 
 #include <arpa/inet.h>
-#include <base/base_constants.h>
+#include <base/logging.h>
 #include <sys/types.h>
 #include <sys/uio.h>
 #include "base/utils/sys_error.h"
@@ -110,7 +110,7 @@ SocketFd AcceptSocket(SocketFd sockfd, struct sockaddr* addr, int* err) {
   int savedErrno = 0;
   if (connfd < 0) {
     savedErrno = errno;
-    VLOG(GLOG_VERROR) << "SocketUtils::AcceptSocket Error: fd:" << sockfd;
+    VLOG(VERROR) << "SocketUtils::AcceptSocket Error: fd:" << sockfd;
     switch (savedErrno) {
       case EAGAIN:
       case ECONNABORTED:
@@ -130,10 +130,10 @@ SocketFd AcceptSocket(SocketFd sockfd, struct sockaddr* addr, int* err) {
       case ENOTSOCK:
       case EOPNOTSUPP:
         // unexpected errors
-        VLOG(GLOG_VERROR) << "unexpected error of ::accept " << savedErrno;
+        VLOG(VERROR) << "unexpected error of ::accept " << savedErrno;
         break;
       default:
-        VLOG(GLOG_VERROR) << "unknown error of ::accept " << savedErrno;
+        VLOG(VERROR) << "unknown error of ::accept " << savedErrno;
         break;
     }
   }

@@ -49,7 +49,7 @@ void IOService::accept_loop(int socket) {
     }
     IPEndPoint client_addr;
     client_addr.FromSockAddr(&socket_in, sizeof(socket_in));
-    VLOG(GLOG_VTRACE) << "accept a connection:" << client_addr.ToString();
+    VLOG(VTRACE) << "accept a connection:" << client_addr.ToString();
 
     // spawn a corotine handle this connection
     //-> IOEvent::wait -> channel::read/write -> codec::Decode -> Router ->

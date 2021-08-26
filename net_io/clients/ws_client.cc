@@ -65,7 +65,7 @@ void WsClient::Send(const RefWebsocketFrame& msg) {
   RefClient guard = shared_from_this();
   if (!transport_ || !transport_->IsConnected()) {
     if (error_callback_) {
-      VLOG(GLOG_VTRACE) << "transport_ broken";
+      VLOG(VTRACE) << "transport_ broken";
       error_callback_(guard, kConnBroken);
     }
     return;

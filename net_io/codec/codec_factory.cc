@@ -16,6 +16,8 @@
  */
 
 #include "codec_factory.h"
+
+#include "base/memory/lazy_instance.h"
 #include "base/message_loop/message_loop.h"
 #include "http/http_codec_service.h"
 #include "line/line_codec_service.h"
@@ -23,14 +25,19 @@
 #include "redis/resp_codec_service.h"
 #include "websocket/ws_codec_service.h"
 
-#include <base/memory/lazy_instance.h>
+#ifdef LTIO_WITH_HTTP2
+#include "http/h2/h2_codec_service.h"
+#endif
+
+using base::MessageLoop;
+using LzyCodecFactory = base::LazyInstance<lt::net::CodecFactory>;
 
 namespace lt {
 namespace net {
 
 // static
 CodecFactory& Instance() {
-  static base::LazyInstance<CodecFactory> instance = LAZY_INSTANCE_INIT;
+  static LzyCodecFactory instance = LAZY_INSTANCE_INIT;
   return instance.get();
 }
 
@@ -40,17 +47,17 @@ CodecFactory::CodecFactory() {
 
 // static
 RefCodecService CodecFactory::NewServerService(const std::string& proto,
-                                               base::MessageLoop* loop) {
+                                               MessageLoop* loop) {
   return Instance().CreateProtocolService(proto, loop, true);
 }
 // static
 RefCodecService CodecFactory::NewClientService(const std::string& proto,
-                                               base::MessageLoop* loop) {
+                                               MessageLoop* loop) {
   return Instance().CreateProtocolService(proto, loop, false);
 }
 
 RefCodecService CodecFactory::CreateProtocolService(const std::string& proto,
-                                                    base::MessageLoop* loop,
+                                                    MessageLoop* loop,
                                                     bool server_service) {
   auto iter = Instance().creators_.find(proto);
   if (iter != Instance().creators_.end() && iter->second) {
@@ -78,45 +85,57 @@ bool CodecFactory::HasCreator(const std::string& proto) {
 
 void CodecFactory::InitInnerDefault() {
   creators_.insert(
-      std::make_pair("line", [](base::MessageLoop* loop) -> RefCodecService {
+      std::make_pair("line", [](MessageLoop* loop) -> RefCodecService {
         std::shared_ptr<LineCodecService> service(new LineCodecService(loop));
         return std::static_pointer_cast<CodecService>(service);
       }));
   creators_.insert(
-      std::make_pair("http", [](base::MessageLoop* loop) -> RefCodecService {
+      std::make_pair("http", [](MessageLoop* loop) -> RefCodecService {
         std::shared_ptr<HttpCodecService> service(new HttpCodecService(loop));
         return std::static_pointer_cast<CodecService>(service);
       }));
   creators_.insert(
-      std::make_pair("https", [](base::MessageLoop* loop) -> RefCodecService {
+      std::make_pair("https", [](MessageLoop* loop) -> RefCodecService {
         std::shared_ptr<HttpCodecService> service(new HttpCodecService(loop));
         return std::static_pointer_cast<CodecService>(service);
       }));
   creators_.insert(
-      std::make_pair("raw", [](base::MessageLoop* loop) -> RefCodecService {
+      std::make_pair("raw", [](MessageLoop* loop) -> RefCodecService {
         auto service = std::make_shared<RawCodecService<RawMessage>>(loop);
         return std::static_pointer_cast<CodecService>(service);
       }));
   creators_.insert(
-      std::make_pair("rawSSL", [](base::MessageLoop* loop) -> RefCodecService {
+      std::make_pair("rawSSL", [](MessageLoop* loop) -> RefCodecService {
         auto service = std::make_shared<RawCodecService<RawMessage>>(loop);
         return std::static_pointer_cast<CodecService>(service);
       }));
   creators_.insert(
-      std::make_pair("redis", [](base::MessageLoop* loop) -> RefCodecService {
+      std::make_pair("redis", [](MessageLoop* loop) -> RefCodecService {
         std::shared_ptr<RespCodecService> service(new RespCodecService(loop));
         return std::static_pointer_cast<CodecService>(service);
       }));
   creators_.insert(
-      std::make_pair("ws", [](base::MessageLoop* loop) -> RefCodecService {
+      std::make_pair("ws", [](MessageLoop* loop) -> RefCodecService {
         std::shared_ptr<CodecService> service(new WSCodecService(loop));
         return std::static_pointer_cast<CodecService>(service);
       }));
   creators_.insert(
-      std::make_pair("wss", [](base::MessageLoop* loop) -> RefCodecService {
+      std::make_pair("wss", [](MessageLoop* loop) -> RefCodecService {
         std::shared_ptr<CodecService> service(new WSCodecService(loop));
         return std::static_pointer_cast<CodecService>(service);
       }));
+#ifdef LTIO_WITH_HTTP2
+  creators_.insert(
+      std::make_pair("h2", [](MessageLoop* loop) -> RefCodecService {
+        std::shared_ptr<CodecService> service(new H2CodecService(loop));
+        return std::static_pointer_cast<CodecService>(service);
+      }));
+  creators_.insert(
+      std::make_pair("h2c", [](MessageLoop* loop) -> RefCodecService {
+        std::shared_ptr<CodecService> service(new H2CodecService(loop));
+        return std::static_pointer_cast<CodecService>(service);
+      }));
+#endif
 }
 
 }  // namespace net

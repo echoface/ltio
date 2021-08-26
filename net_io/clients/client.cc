@@ -19,7 +19,7 @@
 #include <algorithm>
 
 #include <base/ltio_config.h>
-#include "base/base_constants.h"
+#include "base/logging.h"
 #include "base/coroutine/co_runner.h"
 #include "base/utils/string/str_utils.h"
 #include "client_channel.h"
@@ -65,7 +65,7 @@ Client::Client(base::MessageLoop* loop, const url::RemoteInfo& info)
 
 Client::~Client() {
   Finalize();
-  VLOG(GLOG_VINFO) << __func__ << " gone:" << ClientInfo();
+  VLOG(VINFO) << __func__ << " gone:" << ClientInfo();
 }
 
 void Client::SetDelegate(ClientDelegate* delegate) {
@@ -105,7 +105,7 @@ void Client::Finalize() {
 void Client::OnConnectFailed(uint32_t count) {
   CHECK(work_loop_->IsInLoopThread());
 
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << " connect failed";
+  VLOG(VTRACE) << __FUNCTION__ << " connect failed";
   if (stopping_ || required_count() <= ConnectedCount()) {
     return;
   }
@@ -114,14 +114,14 @@ void Client::OnConnectFailed(uint32_t count) {
   next_reconnect_interval_ += 10;
 
   if (connector_->InprocessCount() > kConnetBatchCount) {
-    VLOG(GLOG_VERROR) << RemoteIpPort() << ", giveup reconnect"
+    VLOG(VERROR) << RemoteIpPort() << ", giveup reconnect"
                       << ", inprogress connection:"
                       << connector_->InprocessCount();
   } else {
     int32_t delay = std::min(next_reconnect_interval_, kMaxReconInterval);
     auto functor = std::bind(&Connector::Dial, connector_, address_, this);
     work_loop_->PostDelayTask(NewClosure(functor), delay);
-    VLOG(GLOG_VERROR) << "reconnect:" << RemoteIpPort() << " after " << delay
+    VLOG(VERROR) << "reconnect:" << RemoteIpPort() << " after " << delay
                       << "(ms)";
   }
 }
@@ -206,7 +206,7 @@ void Client::OnConnected(int socket_fd, IPEndPoint& local, IPEndPoint& remote) {
       new ClientChannelList(channels_.begin(), channels_.end()));
   channels_count_.store(new_list->size());
   std::atomic_store(&in_use_channels_, new_list);
-  VLOG(GLOG_VINFO) << ClientInfo() << " connected, initializing...";
+  VLOG(VINFO) << ClientInfo() << " connected, initializing...";
 
   launch_next_if_need();
 }
@@ -221,7 +221,7 @@ void Client::OnClientChannelInited(const ClientChannel* channel) {
   if (delegate_) {
     delegate_->OnClientChannelReady(channel);
   }
-  VLOG(GLOG_VINFO) << ClientInfo() << "@" << channel << " ready for use";
+  VLOG(VINFO) << ClientInfo() << "@" << channel << " ready for use";
 }
 
 /*on the loop of client IO, need managed by connector loop*/
@@ -232,7 +232,7 @@ void Client::OnClientChannelClosed(const RefClientChannel& channel) {
     return;
   }
 
-  VLOG(GLOG_VINFO) << ClientInfo() << "@" << channel.get() << " closed";
+  VLOG(VINFO) << ClientInfo() << "@" << channel.get() << " closed";
 
   do {
     channels_.remove_if([&](const RefClientChannel& ch) -> bool {

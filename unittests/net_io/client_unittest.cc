@@ -24,7 +24,6 @@
 #include "net_io/codec/redis/redis_request.h"
 #include "net_io/codec/redis/redis_response.h"
 #include "net_io/codec/redis/resp_codec_service.h"
-#include "net_io/dispatcher/coro_dispatcher.h"
 #include "net_io/server/raw_server/raw_server.h"
 #include "net_io/socket_acceptor.h"
 #include "net_io/socket_utils.h"

@@ -23,7 +23,7 @@
 #include "socket_utils.h"
 
 #include <base/utils/sys_error.h>
-#include "base/base_constants.h"
+#include "base/logging.h"
 #include "base/message_loop/event_pump.h"
 
 // socket chennel interface and base class
@@ -37,11 +37,13 @@ SocketChannel::SocketChannel(int socket,
   : local_ep_(loc),
     remote_ep_(peer) {}
 
-SocketChannel::~SocketChannel() {
-}
+SocketChannel::~SocketChannel() {}
 
 bool SocketChannel::StartChannel(bool server) {
-  SetChannelStatus(Status::CONNECTED);
+
+  fdev_->EnableWriting();
+  fdev_->EnableReading();
+  fdev_->SetEdgeTrigger(true);
   return true;
 };
 
@@ -56,28 +58,8 @@ std::string SocketChannel::remote_name() const {
 std::string SocketChannel::ChannelInfo() const {
   std::ostringstream oss;
   oss << "[" << binded_fd() << "@<" << local_name() << "#" << remote_name()
-      << ">" << StatusStr() << "]";
+      << ">]";
   return oss.str();
-}
-
-void SocketChannel::SetChannelStatus(Status st) {
-  status_ = st;
-}
-
-const std::string SocketChannel::StatusStr() const {
-  switch (status_) {
-    case Status::CONNECTING:
-      return "CONNECTING";
-    case Status::CONNECTED:
-      return "ESTABLISHED";
-    case Status::CLOSING:
-      return "CLOSING";
-    case Status::CLOSED:
-      return "CLOSED";
-    default:
-      break;
-  }
-  return "UNKNOWN";
 }
 
 }  // namespace net

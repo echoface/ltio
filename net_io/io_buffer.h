@@ -19,12 +19,15 @@
 #define _NET_IO_BUFFER_H_H
 
 #include <string.h>
+
 #include <algorithm>
 #include <cinttypes>
 #include <iostream>
 #include <string>
 #include <type_traits>
 #include <vector>
+
+#include <base/string/string_view.h>
 
 namespace lt {
 namespace net {
@@ -42,7 +45,11 @@ public:
   bool EnsureWritableSize(int64_t len);
 
   char* GetWrite();
+  uint8_t* GetWriteU();
+
   const char* GetRead();
+  const uint8_t* GetReadU();
+
   inline uint64_t Empty() const { return CanReadSize() == 0; }
   inline uint64_t CanReadSize() const { return write_index_ - read_index_; }
   inline uint64_t CanWriteSize() const { return data_.size() - write_index_; }
@@ -64,6 +71,7 @@ public:
   }
 
   std::string AsString();
+  std::string_view StringView();
 
   void Consume(uint64_t len);
   inline void Produce(uint64_t len) { write_index_ += len; }

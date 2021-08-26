@@ -63,7 +63,7 @@ SSLCtx::SSLCtx(const Param& param) : param_(param) {
 
   impl_ = SSL_CTX_new(TLS_method());
   SSL_CTX_set_options(impl_, SSL_OP_NO_SSLv2);
-  SSL_CTX_set_options(impl_, SSL_OP_NO_SSLv3);
+  // SSL_CTX_set_options(impl_, SSL_OP_NO_SSLv3);
   SSL_CTX_set_session_cache_mode(impl_,
                                  SSL_SESS_CACHE_CLIENT | SSL_SESS_CACHE_SERVER |
                                      SSL_SESS_CACHE_NO_INTERNAL |
@@ -101,8 +101,7 @@ SSLCtx::SSLCtx(const Param& param) : param_(param) {
   if (param.verify_peer) {
     mode = SSL_VERIFY_PEER;
   }
-  if (mode == SSL_VERIFY_PEER &&
-      param.ca_file.empty() &&
+  if (mode == SSL_VERIFY_PEER && param.ca_file.empty() &&
       param.ca_path.empty()) {
     SSL_CTX_set_default_verify_paths(impl_);
   }
@@ -138,7 +137,8 @@ void SSLCtx::SetCtxTimeout(int sec) {
   SSL_CTX_set_timeout(impl_, sec);
 }
 
-bool SSLCtx::UseVerifyCA(const std::string& ca_file, const std::string& verify_path) {
+bool SSLCtx::UseVerifyCA(const std::string& ca_file,
+                         const std::string& verify_path) {
   if (ca_file.empty() && verify_path.empty()) {
     return false;
   }
@@ -146,7 +146,7 @@ bool SSLCtx::UseVerifyCA(const std::string& ca_file, const std::string& verify_p
   const char* _ca_path = verify_path.size() ? ca_file.c_str() : nullptr;
   if (!SSL_CTX_load_verify_locations(impl_, _ca_file, _ca_path)) {
     LOG(ERROR) << "ssl ca_file/ca_path failed!"
-      << ", file:" << ca_file << " path:" << verify_path;
+               << ", file:" << ca_file << " path:" << verify_path;
     goto error;
   }
   return true;

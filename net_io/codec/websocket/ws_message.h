@@ -17,8 +17,8 @@ public:
 
   WebsocketFrame(int opcode);
 
-  const nonstd::string_view Payload() const {
-    return nonstd::string_view((char*)payload_.data(), payload_.size());
+  const std::string_view Payload() const {
+    return std::string_view((char*)payload_.data(), payload_.size());
   }
 
   void AppendData(const char* data, size_t len);

@@ -20,6 +20,7 @@
 #include "net_io/codec/codec_service.h"
 
 #include "http_context.h"
+#include "net_io/codec/http/h2/h2_codec_service.h"
 
 namespace lt {
 namespace net {
@@ -74,8 +75,9 @@ void HttpRequestCtx::String(const std::string& content, uint16_t code) {
 void HttpRequestCtx::Response(RefHttpResponse& response) {
   did_reply_ = true;
 
-  const HttpRequest* request = Request();
+  request_->SetResponse(response);
 
+  const HttpRequest* request = Request();
   auto service = request->GetIOCtx().codec.lock();
   if (!service) {
     LOG(ERROR) << __FUNCTION__ << " Connection Has Broken";
@@ -102,6 +104,34 @@ void HttpRequestCtx::Response(RefHttpResponse& response) {
   if (!keep_alive || !success) {
     service->CloseService();
   }
+}
+
+
+RefH2Context H2Context::New(const RefCodecMessage& req) {
+  return RefH2Context(new H2Context(req));
+}
+
+H2Context::H2Context(const RefCodecMessage& request)
+  : HttpRequestCtx(request) {
+}
+
+void H2Context::Push(const std::string& method,
+                     const std::string& path,
+                     const HttpRequest* bind_req,
+                     const RefHttpResponse& resp,
+                     std::function<void(int status)> callback) {
+
+  const HttpRequest* request = Request();
+  auto codec = request->GetIOCtx().codec.lock();
+  if (!codec) {
+    LOG(ERROR) << __FUNCTION__ << " Connection Broken";
+    return;
+  }
+  H2CodecService* h2_con = (H2CodecService*)codec.get();
+  if (!h2_con->IOLoop()->IsInLoopThread()) {
+    return;
+  }
+  h2_con->PushPromise(method, path, bind_req, resp, callback);
 }
 
 }  // namespace net

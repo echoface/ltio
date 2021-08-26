@@ -73,4 +73,4 @@ target_include_directories(ltbase_objs
 )
 
 # configure a header file to pass some of the CMake settings to the source code
-configure_file(ltio_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/ltio_config.h)
+configure_file(ltio_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/ltio_config.h)

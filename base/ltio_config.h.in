@@ -3,7 +3,11 @@
 
 #cmakedefine01 LTIO_BUILD_SHARED_LIBS
 
+#cmakedefine LTIO_WITH_HTTP2 1
+#cmakedefine01 LTIO_USE_SYS_NGHTTP2
+
 #cmakedefine LTIO_WITH_OPENSSL 1
+
 #ifdef LTIO_WITH_OPENSSL
 #define LTIO_HAVE_SSL 1
 #endif

@@ -19,15 +19,15 @@
 #include <vector>
 #include "glog/logging.h"
 
-#include <termios.h>
-#include <unistd.h>
-
-#include <base/utils/sys_error.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <sys/uio.h>
 #include <algorithm>
 #include <cerrno>
+#include <termios.h>
+#include <unistd.h>
+
+#include <base/utils/sys_error.h>
 
 static const char kCRLF[] = "\r\n";
 static const int32_t kWarningBufferSize = 64 * 1024 * 1024;
@@ -81,11 +81,20 @@ inline char* IOBuffer::MutableWrite() {
   return &data_[write_index_];
 }
 
+const uint8_t* IOBuffer::GetReadU() {
+  return (const uint8_t*)&data_[read_index_];
+}
+
 const char* IOBuffer::GetRead() {
   return &data_[read_index_];
 }
+
 char* IOBuffer::GetWrite() {
   return &data_[write_index_];
+}
+
+uint8_t* IOBuffer::GetWriteU() {
+  return (uint8_t*)&data_[write_index_];
 }
 
 void IOBuffer::WriteString(const std::string& str) {
@@ -102,6 +111,10 @@ void IOBuffer::WriteRawData(const void* data, size_t len) {
 
 std::string IOBuffer::AsString() {
   return std::string(data_.begin() + read_index_, data_.begin() + write_index_);
+}
+
+std::string_view IOBuffer::StringView() {
+  return std::string_view(GetRead(), CanReadSize());
 }
 
 void IOBuffer::Consume(uint64_t len) {

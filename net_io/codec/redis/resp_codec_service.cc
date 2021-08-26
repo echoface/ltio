@@ -16,7 +16,7 @@
  */
 
 #include "resp_codec_service.h"
-#include <base/base_constants.h>
+#include <base/logging.h>
 #include <net_io/codec/codec_service.h>
 #include <net_io/io_buffer.h>
 #include <net_io/tcp_channel.h>
@@ -67,7 +67,7 @@ void RespCodecService::StartProtocolService() {
 }
 
 void RespCodecService::OnDataReceived(IOBuffer* buffer) {
-  VLOG(GLOG_VTRACE) << __FUNCTION__ << " enter";
+  VLOG(VTRACE) << __FUNCTION__ << " enter";
   CHECK(!IsServerSide());
 
   if (!current_response) {

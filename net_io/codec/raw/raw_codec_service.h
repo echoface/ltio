@@ -41,7 +41,7 @@ public:
 
   // override from CodecService
   void OnDataReceived(IOBuffer* buffer) {
-    VLOG(GLOG_VTRACE) << __FUNCTION__ << " enter";
+    VLOG(VTRACE) << __FUNCTION__ << " enter";
     do {
       RawMessageTypePtr message =
           RawMessageType::Decode(buffer, IsServerSide());
@@ -49,7 +49,7 @@ public:
         break;
       }
       message->SetIOCtx(shared_from_this());
-      VLOG(GLOG_VTRACE) << __FUNCTION__ << "  decode a message success";
+      VLOG(VTRACE) << __FUNCTION__ << "  decode a message success";
 
       if (IsServerSide() && message->IsHeartbeat()) {
         auto response = NewHeartbeat();
@@ -89,7 +89,7 @@ public:
     auto raw_response = static_cast<RawMessageType*>(res);
     auto raw_request = static_cast<const RawMessageType*>(req);
     CHECK(raw_request->AsyncId() == raw_response->AsyncId());
-    VLOG(GLOG_VTRACE) << __FUNCTION__ << " request:" << raw_request->Dump()
+    VLOG(VTRACE) << __FUNCTION__ << " request:" << raw_request->Dump()
                       << " response:" << raw_response->Dump();
     return raw_response->EncodeTo(channel_.get());
   };

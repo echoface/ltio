@@ -26,7 +26,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <base/string/string_view.hpp>
+#include <base/string/string_view.h>
 #include <string>
 #include "glog/logging.h"
 
@@ -52,7 +52,7 @@ bool ParseURI(const std::string uri, SchemeIpPort& out) {
   out.port = 0;
   out.protocol = "http";
 
-  nonstd::string_view in(uri);
+  std::string_view in(uri);
 
   std::string::size_type find_start = 0;
   std::string::size_type pos = in.find("://", find_start);
@@ -125,7 +125,7 @@ bool HostResolve(const std::string& host, std::string& host_ip) {
 // use c++17 std::string_view avoid memory allocator
 /* scheme://user:password@host:port?query_string*/
 bool ParseRemote(const std::string& str, RemoteInfo& out, bool resolve) {
-  nonstd::string_view in = nonstd::string_view(str);
+  std::string_view in(str);
 
   std::string::size_type find_start = 0;
   std::string::size_type pos = in.find("://", find_start);

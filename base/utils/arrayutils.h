@@ -60,5 +60,7 @@ public:
   }
 };
 
+#define ARRAY_SIZE(v) base::ArrayUtils::size(v)
+
 }  // namespace base
 #endif  // UTILS_ARRAYUTILS_H
