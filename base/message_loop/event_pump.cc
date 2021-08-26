@@ -71,7 +71,6 @@ void EventPump::Pump(uint64_t ms) {
   CHECK(IsInLoop());
 
   ms = std::min(ms, NextTimeout());
-  VLOG_EVERY_N(VTRACE, 1000) << " poll timeout:" << ms;
 
   int count = io_mux_->WaitingIO(fired_list_, ms);
 
@@ -84,7 +83,7 @@ bool EventPump::InstallFdEvent(FdEvent* fd_event) {
   CHECK(IsInLoop());
   FdEvent::Watcher* wc = fd_event->EventWatcher();
   if (wc && wc != io_mux_.get()) {
-    LOG(ERROR) << "event has registered," << fd_event->EventInfo();
+    LOG(INFO) << "event already registered:" << fd_event->EventInfo();
     return false;
   }
   io_mux_->AddFdEvent(fd_event);
@@ -95,7 +94,7 @@ bool EventPump::RemoveFdEvent(FdEvent* fd_event) {
   CHECK(IsInLoop());
 
   if (!fd_event->EventWatcher()) {
-    LOG(ERROR) << "event not been registered, " << fd_event->EventInfo();
+    LOG(INFO) << "event not been registered:" << fd_event->EventInfo();
     return false;
   }
   io_mux_->DelFdEvent(fd_event);

@@ -248,8 +248,6 @@ public:
    * P(CoroRunner) take a M(Corotine) do work(TaskBasePtr)
    */
   void Run() override {
-    VLOG_EVERY_N(VTRACE, 1000) << " coroutine runner enter";
-
     size_t co_usage_cnt = 0;
 
     // resume any ready coros

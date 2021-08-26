@@ -79,13 +79,12 @@ bool SocketAcceptor::StartListen() {
     LOG(ERROR) << "already listen on:" << address_.ToString();
     return true;
   }
-
-  event_pump_->InstallFdEvent(socket_event_.get());
   socket_event_->EnableReading();
+  event_pump_->InstallFdEvent(socket_event_.get());
 
   if (socketutils::ListenSocket(socket_event_->GetFd()) < 0) {
-    socket_event_->DisableAll();
     event_pump_->RemoveFdEvent(socket_event_.get());
+    socket_event_->DisableAll();
     LOG(ERROR) << "acceptor failed listen on" << address_.ToString();
     return false;
   }
