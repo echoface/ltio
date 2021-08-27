@@ -32,12 +32,10 @@
 namespace lt {
 namespace net {
 
-#define kDefaultInitialSize 4096
-
 class IOBuffer {
 public:
-  IOBuffer(uint64_t size = kDefaultInitialSize);
-  IOBuffer(const IOBuffer&& r);
+  IOBuffer();
+  IOBuffer(IOBuffer&& r);
   ~IOBuffer();
 
   bool HasALine();

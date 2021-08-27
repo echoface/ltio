@@ -2,14 +2,16 @@
 
 ![master](https://github.com/echoface/ltio/actions/workflows/build.yml/badge.svg?branch=master)
 
-LigthingIO is a 'light' network IO framework with some `base` impliment for better coding experience;all of those code inspired by project Chromium/libevent/Qt/NodeJs
+LigthingIO is a lightweight network IO framework with some infrastructure code for better coding experience;
+all of those code based on my work experience in those years, inspired by project Chromium/libevent/Qt/NodeJs
 
 ## code implemnet
-those implemnet include follow code/component
+
+Here is a brief summary of this project:
 
 ### base
-- base code
-- message loop
+- base/util code
+- message/task loop
 - repeat timer
 - lazyinstance
 - coroutine scheduler(a limited G/M/P schedule model with work stealing)
@@ -22,6 +24,8 @@ those implemnet include follow code/component
 - maglevHash/consistentHash/roundrobin router
 - raw/http[s]/line client with full async/waitable coro
 - async redis protocol[only client side support]
+- websocket bi-stream support
+- http2 server side(h2,h2c) with server push
 
 ### component
 - geo utils
@@ -34,10 +38,13 @@ those implemnet include follow code/component
 - add full async mysql client support; [move to ltapp]
 
 TODO:
-- websocket
-- http2 implement
-- RPC implement(may based on this repo to keep code clear)
-+ add sendfile support for zero copy between kernel and user space
+- RPC implement(may another repo)
+- Http Message body reader/writer interface refactor
+  - header refactor
+  - current only full-filled body supported
+- Adaptive io buffer for long running io connection
+
+Issues and PRs are welcome 🎉🎉🎉
 
 
 ## Build And Deploy
@@ -50,11 +57,10 @@ sudo apt-get install -yqq \
 
 git clone https://github.com/echoface/ltio.git
 cd ltio
-git submodule update --init
+git submodule update --init --recursive
 mkdir build; cd build;
-cmake -DWITH_OPENSSL=[ON|OFF]    \
-      -DLTIO_BUILD_UNITTESTS=OFF \
-      -DLTIO_USE_ACO_CORO_IMPL=OFF ../
+cmake -DWITH_OPENSSL=[ON|OFF]       \
+      -DLTIO_BUILD_UNITTESTS=OFF .. \
 
 ./bin/simple_ltserver
 ```
@@ -142,15 +148,16 @@ loop.PostTask(FROM_HERE, [&]() {
 
 ## Coroutine:
 
-a coroutine implement base two different backend, libcoro|libaco, select one with compile
-option `-DLTIO_USE_ACO_CORO_IMPL=OFF|ON`
+current only fcontext(extract from boost library(but no boost lib needed)) supported,
+in history commit, another two coroutine backend suppored, (libcoro|libaco),
+in some reason switch to fcontext impl now;
 
 NOTE: NO SYSTEM Hook
 reason: many struggle behind this choose; not enough/perfect fundamentals implement can
 make it stable work on a real world complex project with widely varying dependency 3rdparty lib
 
-ltcoro top on base::MessageLoop, you should remember this, anther point is a started corotuine
-will guarded always runing on it's binded MessageLoop(physical thread), all coro dependency things
+ltcoro top on base::MessageLoop, you should remember this!, another point need considered, a started corotuine
+will be guarded always runing on it's binded MessageLoop(physical thread), all coro dependency things
 need run on a corotine context, eg: `CO_RESUMER, CO_YIELD, CO_SLEEP, CO_SYNC`
 
 some brief usage code looks like below:
@@ -277,11 +284,11 @@ TEST_CASE("coro.ioevent", "[ioevent for coro]") {
 2. 个人仍然坚持需要知道自己在干什么,有什么风险, 开发者有选择的使用Coroutone
 
 基于上面这个原因, 所以在ltio中, Coroutine是基于MessageLoop的TopLevel的工具. 其底层模拟实现了Golang类似的G,M,P 角色调度.并支持Worksteal, 其中有跨线程调度在C++资源管理方面带来的问题, 更重要的一点是希望通过约束其行为, 让使用着非常明确其运行的环境和作用. 从个人角度上讲, 仍旧希望他是一基于MessageLoop的Task调度为主的实现方式, 但是可以让用户根据需要使用Coroutine作为工具辅助, 使得完成一些事情来让逻辑编写更加舒适.所以有两个需要开发者了解的机制(了解就足够了)
-- 1. Coroutine Task 开始运行后,以后只会在指定的物理线程切换状态 Yield-Run-End, 所以WorkSteal的语义被约束在一个全新的(schedule之后未开始运行的)可以被stealing调度到其他woker上运行, 而不是任何状态都可以被stealing调度, 任务Yield后恢复到Run状态后,仍旧在先前绑定的物理线程上;我想某些时候,你会感谢这样的实现的.😊
-- 2. 调度方式两种, 作出合理的选择, 有时候这很有用:
+- 1. Coroutine Task 开始运行后,以后只会在指定的物理线程切换状态 Yield-Run-End, 所以WorkSteal的语义被约束在一个全新的(schedule之后未开始运行的)可以被stealing调度到其他woker上运行, 而不是任何状态都可以被stealing调度, 任务Yield后恢复到Run状态后,仍旧在先前绑定的物理线程上; 在现实项目中的C++工程, 开发者无法忽视线程和相关线程绑定的存在. 这样的实现可以使得一些基于thread local的数据仍可以被安全的使用.😊
+- 2. 调度方式两种, 作出合理的选择, 有时候这很有用, eg: 访问/修改的数据是被某一个绑定的loop管理维护的
   - `CO_GO task;` 允许这个task被workstealing的方式调度
   - `CO_GO &specified_loop << task;` 指定物理线程运行调度任务
-  从我作为一个在一线业务开发多年的菜鸡选手而言, 合理的设计业务比什么都重要; 合理的选择和业务设计, 会让很多所谓的锁和资源共享变得多余; 在听到golang的口号:"不要通过共享内存来通信，而应该通过通信来共享内存"之前,本人基于chromium conenten api做开发和在计算广告设计的这几年的经验教训中对此早已有深深的体会.
+  作为一个在一线业务开发多年的菜鸟本鸟, 合理的设计业务比什么都重要; 合理的选择和业务设计, 会让很多所谓的锁和资源共享变得多余; 在听到golang的口号:"不要通过共享内存来通信，而应该通过通信来共享内存"之前,本人基于chromium content api做开发和在计算广告设计的这几年的经验有很大的感触. 基于转移控制权的逻辑来设计数据会让很多冲突的解决变得简单.
 
 ## NET IO:
 ---

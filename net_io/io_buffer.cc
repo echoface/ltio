@@ -29,21 +29,26 @@
 
 #include <base/utils/sys_error.h>
 
-static const char kCRLF[] = "\r\n";
-static const int32_t kWarningBufferSize = 64 * 1024 * 1024;
+static constexpr char kCRLF[] = "\r\n";
+static constexpr int kDefaultInitialSize = 512;
+static constexpr int32_t kWarningBufferSize = 64 * 1024 * 1024;
 
 namespace lt {
 namespace net {
 
-IOBuffer::IOBuffer(uint64_t init_size)
+IOBuffer::IOBuffer()
   : read_index_(0),
     write_index_(0),
-    data_(init_size) {}
+    data_(kDefaultInitialSize) {}
 
-IOBuffer::IOBuffer(const IOBuffer&& r)
+IOBuffer::IOBuffer(IOBuffer&& r)
   : read_index_(r.read_index_),
     write_index_(r.write_index_),
-    data_(std::move(r.data_)) {}
+    data_(std::move(r.data_)) {
+  r.read_index_ = 0;
+  r.write_index_ = 0;
+  r.data_.clear();
+}
 
 IOBuffer::~IOBuffer() {
   data_.clear();
@@ -77,6 +82,7 @@ bool IOBuffer::EnsureWritableSize(int64_t len) {
 inline char* IOBuffer::MutableRead() {
   return &data_[read_index_];
 }
+
 inline char* IOBuffer::MutableWrite() {
   return &data_[write_index_];
 }

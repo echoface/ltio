@@ -85,28 +85,37 @@ public:
 
   virtual bool StartChannel(bool server) WARN_UNUSED_RESULT;
 
-  // read socket data to buffer
-  // On success, return the nbytes in in_buf returned
-  // return <0 when socket error or other fatal error
-  // the caller should decide close channel or not
+  /*
+  * read socket as much as to in_buf
+  * On success, return the nbytes in in_buf returned
+  * return <0 when socket error or other fatal error
+  * the caller should decide close channel or not
+  */
   virtual int HandleRead() WARN_UNUSED_RESULT = 0;
 
-  // write as much as data into socket
-  // on success, return the nbytes write to peer
-  // return <0 when socket error or other fatal error
-  // the caller should decide close channel or not
+  /*
+   * write as much as data into socket
+   * on success, return the nbytes write to peer
+   * return <0 when socket error or other fatal error
+   * the caller should decide close channel or not
+   */
   virtual int HandleWrite() WARN_UNUSED_RESULT = 0;
 
-  /* return -1 when error, handle err is responsibility of caller
-   * return 0 when all data pending to buffer,
-   * other case return nbytes realy writen*/
+  /*
+   * return 0 when all data pending to out buffer,
+   * other case return nbytes realy write to socket
+   * return -1 when error, err-handle is responsibility of caller
+   * */
   inline int32_t Send(const std::string& data) WARN_UNUSED_RESULT {
     return Send(data.data(), data.size());
   }
 
-  /* return -1 when error, handle err is responsibility of caller
-   * return 0 when all data pending to out_buffer,
-   * other case return nbytes realy writen*/
+  /*
+   * return 0 when all data pending to out buffer,
+   * other case return nbytes realy write to socket,
+   * remain bytes (len - nbytes) pending to out buf,
+   * return -1 when error, err-handle is responsibility of caller
+   * */
   virtual int32_t Send(const char* data,
                        const int32_t len) WARN_UNUSED_RESULT = 0;
 
@@ -134,7 +143,7 @@ protected:
   std::string remote_name() const;
 
 protected:
-  //not own fdev
+  // not own fdev
   base::FdEvent* fdev_ = nullptr;
 
   IPEndPoint local_ep_;
