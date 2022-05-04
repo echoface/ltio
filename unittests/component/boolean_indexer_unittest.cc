@@ -200,7 +200,6 @@ TEST_CASE("index_result_check", "[be posting list correction check]") {
     if (diff.size() || diff2.size()) {
       std::ostringstream oss;
       index->DumpIndex(oss);
-      index->DumpIDMapping(oss);
 
       IndexScanner::Option option;
       option.dump_detail = true;
@@ -254,7 +253,6 @@ query:
 
   auto index = builder.BuildIndexer();
   index->DumpIndex(oss);
-  index->DumpIDMapping(oss);
 
   IndexScanner::Option option;
   option.dump_detail = true;

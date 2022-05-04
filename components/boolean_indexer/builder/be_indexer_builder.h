@@ -6,20 +6,24 @@
 #include "base/lt_micro.h"
 #include "components/boolean_indexer/be_indexer.h"
 #include "components/boolean_indexer/document.h"
+#include "components/boolean_indexer/parser/number_parser.h"
 
 namespace component {
 
 class BeIndexerBuilder {
 public:
-  BeIndexerBuilder(){};
+  BeIndexerBuilder();
+
+  FieldMeta* GetFieldMeta(const std::string& field);
 
   void AddDocument(Document&& doc);
 
   RefBooleanIndexer BuildIndexer();
 
 private:
-  // doc_id => Document
-  std::unordered_map<int32_t, Document> documents_;
+  RefBooleanIndexer indexer_;
+
+  RefExprParser default_parser_;
 
   DISALLOW_COPY_AND_ASSIGN(BeIndexerBuilder);
 };

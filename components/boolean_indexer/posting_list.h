@@ -3,7 +3,9 @@
 
 #include <unordered_map>
 
+#include "document.h"
 #include "id_generator.h"
+#include "parser/parser.h"
 
 namespace component {
 
@@ -16,23 +18,35 @@ struct pair_hash {
 
 typedef std::unordered_map<Attr, Entries, pair_hash> PostingList;
 
-class KSizePostingEntries {
+class FieldMeta {
 public:
-  KSizePostingEntries() {}
+  std::string name;
 
-  void MakeEntriesSorted();
+  RefExprParser parser;
 
-  void AddEntry(const Attr& attr, EntryId id);
-
-  const Entries* GetEntryList(const Attr& attr) const;
-
-  void DumpPostingEntries(std::ostringstream& oss) const;
-
-private:
-  // Attr=>EntryIdList
-  // eg: (age, 15) => [1, 2, 5, 9]
-  PostingList posting_entries_;
 };
+// alias here bz perfer client/dever use it like this
+using FieldMetaPtr = std::unique_ptr<FieldMeta>;
+using RefFieldMeta = std::shared_ptr<FieldMeta>;
+
+class EntriesContainer {
+public:
+  virtual ~EntriesContainer(){};
+
+  virtual bool IndexingToken(const FieldMeta* meta,
+                             const EntryId eid,
+                             const Token* expr) = 0;
+
+  virtual EntriesList RetrieveEntries(const FieldMeta* meta,
+                                      const Token* attrs) const = 0;
+
+  virtual bool CompileEntries() = 0;
+
+  virtual void DumpEntries(std::ostringstream& oss) const = 0;
+};
+// why here: perfer client/dever use it like this
+using EntriesContainerPtr = std::unique_ptr<EntriesContainer>;
+using RefEntriesContainer = std::shared_ptr<EntriesContainer>;
 
 }  // namespace component
 #endif

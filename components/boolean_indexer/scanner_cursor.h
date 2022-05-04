@@ -9,7 +9,7 @@
 
 namespace component {
 
-/* represent a posting list for one Assign */
+/* a iterator access entries */
 class EntriesCursor {
 public:
   EntriesCursor(const Attr&, const Entries&);
@@ -69,6 +69,8 @@ public:
   EntryId Skip(const EntryId id);
 
   EntryId SkipTo(const EntryId id);
+
+  bool ReachEnd() const {return current_id_ == NULLENTRY;}
 
   void DumpEntries(std::ostringstream& oss) const;
 

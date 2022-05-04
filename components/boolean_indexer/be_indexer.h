@@ -15,44 +15,45 @@
 namespace component {
 
 class IndexScanner;
+class BeIndexerBuilder;
+
 class BooleanIndexer {
 public:
-  static const Attr& WildcardAttr();
-
   BooleanIndexer();
 
   ~BooleanIndexer();
 
-  void CompleteIndex();
-
   void DumpIndex(std::ostringstream& oss) const;
 
-  void DumpIDMapping(std::ostringstream& oss) const;
+  FieldCursorPtr GenWildcardCursor() const;
 
-  KSizePostingEntries* MutableIndexes(size_t k);
-  const KSizePostingEntries* GetPostEntries(size_t k) const;
+  FieldMeta* GetMeta(const std::string& field) const;
 
-  FieldQueryValues ParseAssigns(const QueryAssigns& queries) const;
-
-  std::vector<FieldCursorPtr> BuildFieldIterators(
-      const size_t k_size,
-      const FieldQueryValues& assigns) const;
-
-  uint64_t GenUniqueID(const std::string& value);
-
-  const size_t MaxKSize() const { return ksize_entries_.size(); }
+  EntriesContainer* GetContainer(const std::string field) const;
 
 private:
   friend IndexScanner;
+  friend BeIndexerBuilder;
 
-  const Entries* wildcard_list_;
+  bool SetMeta(const std::string& field, FieldMetaPtr meta);
 
-  std::vector<KSizePostingEntries> ksize_entries_;
+  bool CompleteIndex();
 
-  std::unordered_map<std::string, uint64_t> id_gen_;
+  void AddWildcardEntry(const EntryId eid);
+
+private:
+
+  Entries wildcard_list_;
+
+  std::map<std::string, FieldMetaPtr> field_meta_;
+
+  // here register a speical key: ___default___ as the
+  // default container for fields without specifing container
+  std::map<std::string, EntriesContainerPtr> containers_;
 };
 
-typedef std::shared_ptr<BooleanIndexer> RefBooleanIndexer;
+using RefBooleanIndexer = std::shared_ptr<BooleanIndexer>;
+using BooleanIndexerPtr = std::unique_ptr<BooleanIndexer>;
 
 }  // namespace component
 #endif

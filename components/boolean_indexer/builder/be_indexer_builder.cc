@@ -2,50 +2,70 @@
 
 #include <algorithm>
 
+#include <glog/logging.h>
+
 #include "components/boolean_indexer/id_generator.h"
+#include "fmt/format.h"
 
 namespace component {
 
-void BeIndexerBuilder::AddDocument(Document&& doc) {
-  auto result = documents_.insert(std::make_pair(doc.doc_id(), std::move(doc)));
+BeIndexerBuilder::BeIndexerBuilder() {
+  indexer_ = RefBooleanIndexer(new BooleanIndexer());
+  // default_parser_ = std::make_shared<NumberParser>();
+  default_parser_ = std::make_shared<HasherParser>();
+}
 
-  if (!result.second) {
-    return;
+FieldMeta* BeIndexerBuilder::GetFieldMeta(const std::string& field) {
+  auto meta = indexer_->GetMeta(field);
+  if (meta != nullptr) {
+    return meta;
+  }
+
+  FieldMetaPtr meta_ptr(new FieldMeta());
+  meta_ptr->name = field;
+  meta_ptr->parser = default_parser_;
+
+  meta = meta_ptr.get();
+  indexer_->SetMeta(field, std::move(meta_ptr));
+  return meta;
+}
+
+void BeIndexerBuilder::AddDocument(Document&& doc) {
+  for (Conjunction* conj : doc.conjunctions()) {
+    uint64_t conj_id = conj->id();
+
+    if (conj->size() == 0) {
+      indexer_->AddWildcardEntry(conj->id());
+    }
+
+    for (const auto& field_expr : conj->ExpressionAssigns()) {
+      const BooleanExpr& expr = field_expr.second;
+      const std::string& field = field_expr.first;
+
+      EntryId eid =
+          EntryUtil::GenEntryID(conj->id(), field_expr.second.exclude());
+
+      FieldMeta* meta = GetFieldMeta(field);
+      EntriesContainer* container = indexer_->GetContainer(field);
+
+      TokenPtr token = meta->parser->ParseIndexing(expr.Values());
+      if (token->BadToken()) {
+        LOG(ERROR) << "expression can't be parsed, field:" << field
+                   << ", values:"
+                   << fmt::format("{}", fmt::join(expr.Values(), ","));
+        return;
+      }
+      container->IndexingToken(meta, eid, token.get());
+    }
   }
 }
 
 RefBooleanIndexer BeIndexerBuilder::BuildIndexer() {
-  RefBooleanIndexer indexer(new BooleanIndexer());
-
-  for (const auto& doc : documents_) {
-    for (Conjunction* conj : doc.second.conjunctions()) {
-      uint64_t conj_id = conj->id();
-
-      auto kindexes = indexer->MutableIndexes(conj->size());
-
-      if (conj->size() == 0) {
-        auto& wc_attr = BooleanIndexer::WildcardAttr();
-        kindexes->AddEntry(wc_attr, EntryUtil::GenEntryID(conj->id(), false));
-      }
-
-      for (const auto& name_expr_kv : conj->ExpressionAssigns()) {
-        const std::string& assin_name = name_expr_kv.first;
-
-        const BooleanExpr& expr = name_expr_kv.second;
-
-        // TODO: to do parser ExpressionsValue to values
-        for (const auto& value : expr.Values()) {
-          Attr attr(assin_name, indexer->GenUniqueID(value));
-          kindexes->AddEntry(attr,
-                             EntryUtil::GenEntryID(conj->id(), expr.exclude()));
-        }
-      }
-    }
+  bool ok = indexer_->CompleteIndex();
+  if (!ok) {
+    return nullptr;
   }
-
-  indexer->CompleteIndex();
-
-  return indexer;
+  return indexer_;
 }
 
 }  // namespace component

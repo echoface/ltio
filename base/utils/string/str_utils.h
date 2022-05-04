@@ -49,6 +49,9 @@ class StrUtil {
   };
 
 public:
+  static bool ToInt(const std::string& s, int* out);
+  static bool ToInt64(const std::string& s, int64_t* out);
+
   static void ToUpper(char* s);
   static void ToUpper(std::string& s);
   static void ToLower(char* s);
