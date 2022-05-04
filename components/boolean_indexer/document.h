@@ -10,22 +10,23 @@
 
 namespace component {
 
-class Assigns {
+class AttrValues {
 public:
   typedef std::string ExprValue;
   typedef std::set<ExprValue> ValueContainer;
   typedef std::initializer_list<ExprValue> ValueInitList;
 
-  Assigns(const std::string& name, const ValueInitList& values)
+  AttrValues(const std::string& name, const ValueInitList& values)
     : name_(name), values_(values) {}
 
-  Assigns(const std::string& name, const ValueContainer& values)
+  AttrValues(const std::string& name, const ValueContainer& values)
     : name_(name), values_(values) {}
 
   void SetValue(const ValueInitList& values) {
     values_.clear(), AppendValue(values);
   }
   void AppendValue(ExprValue value) { values_.insert(value); }
+
   void AppendValue(const ValueInitList& values) { values_.insert(values); }
 
   const ValueContainer& Values() const { return values_; };
@@ -36,15 +37,17 @@ protected:
   std::string name_;
   ValueContainer values_;
 };
-typedef std::vector<Assigns> QueryAssigns;
 
-class BooleanExpr : public Assigns {
+typedef std::vector<AttrValues> QueryAssigns;
+
+class BooleanExpr : public AttrValues {
 public:
   typedef std::initializer_list<BooleanExpr> BEInitializer;
 
   BooleanExpr(const std::string& name,
               const ValueInitList& values,
               bool exclude = false);
+
   BooleanExpr(const std::string& name,
               const ValueContainer& values,
               bool exclude = false);
@@ -78,10 +81,10 @@ public:
   void AddExpression(const BooleanExpr::BEInitializer& exprs);
 
   Conjunction* Include(const std::string& field,
-                       const Assigns::ValueInitList& values);
+                       const AttrValues::ValueInitList& values);
 
   Conjunction* Exclude(const std::string& field,
-                       const Assigns::ValueInitList& values);
+                       const AttrValues::ValueInitList& values);
 
   std::map<std::string, BooleanExpr> ExpressionAssigns() const {
     return assigns_;
@@ -112,6 +115,13 @@ public:
   }
 
   ~Document();
+
+  Document& operator=(const Document& doc) {
+    if (this == &doc) return *this;
+    this->doc_id_ = doc.doc_id_;
+    this->conjunctions_ = doc.conjunctions_;
+    return *this;
+  }
 
   Document& operator=(Document&& doc) {
     if (this == &doc) {

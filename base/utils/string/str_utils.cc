@@ -16,9 +16,39 @@
  */
 
 #include "str_utils.h"
+
 #include <glog/logging.h>
+#include <iostream>
 
 namespace base {
+
+bool StrUtil::ToInt(const std::string& s, int* out) {
+  std::size_t pos{};
+  try {
+    *out = std::stoi(s, &pos);
+    return true;
+  } catch(std::invalid_argument const& ex) {
+    LOG_EVERY_N(ERROR, 1000) << "conv:" << s << "fail std::invalid_argument::what(): " << ex.what();
+  } catch(std::out_of_range const& ex) {
+    LOG_EVERY_N(ERROR, 1000) << "conv:" << s << "fail std::out_of_range::what(): " << ex.what();
+  }
+  LOG(ERROR) << "unknown error, input:" << s;
+  return false;
+}
+
+bool StrUtil::ToInt64(const std::string& s, int64_t* out) {
+  std::size_t pos{};
+  try {
+    *out = std::stoll(s, &pos);
+    return true;
+  } catch(std::invalid_argument const& ex) {
+    LOG_EVERY_N(ERROR, 1000) << "conv:" << s << "fail std::invalid_argument::what(): " << ex.what();
+  } catch(std::out_of_range const& ex) {
+    LOG_EVERY_N(ERROR, 1000) << "conv:" << s << "fail std::out_of_range::what(): " << ex.what();
+  }
+  LOG(ERROR) << "unknown error, input:" << s;
+  return false;
+}
 
 void StrUtil::ToUpper(char* s) {
   for (size_t i = 0; s[i]; i++)

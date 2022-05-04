@@ -7,8 +7,8 @@
 
 namespace component {
 
-Assigns::ValueContainer rand_assigns(int n, int min, int max) {
-  Assigns::ValueContainer expr_assigns;
+AttrValues::ValueContainer rand_assigns(int n, int min, int max) {
+  AttrValues::ValueContainer expr_assigns;
   while (n-- >= 0) {
     int v = base::RandInt(min, max);
     expr_assigns.insert(std::to_string(v));
@@ -16,7 +16,7 @@ Assigns::ValueContainer rand_assigns(int n, int min, int max) {
   return expr_assigns;
 }
 
-bool EvalBoolExpression(const BooleanExpr& expr, Assigns ass) {
+bool EvalBoolExpression(const BooleanExpr& expr, AttrValues ass) {
   if (expr.Values().empty()) {
     return true;
   }

@@ -6,6 +6,8 @@
 
 namespace component {
 
+using FieldCursors = std::vector<FieldCursorPtr>;
+
 class IndexScanner {
 public:
   struct Option {
@@ -14,14 +16,18 @@ public:
   struct Result {
     std::string to_string() const;
     int error_code = 0;
-    std::vector<uint32_t> result;
+    std::vector<int64_t> result;
   };
+
   IndexScanner(BooleanIndexer* index);
 
   static const Option& DefaultOption();
 
   Result Retrieve(const QueryAssigns& queries,
                   const Option* opt = nullptr) const;
+private:
+  FieldCursors init_cursors(const QueryAssigns& queries,
+                            const Option* opt) const;
 
 private:
   BooleanIndexer* index_;

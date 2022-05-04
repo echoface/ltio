@@ -2,6 +2,8 @@ aux_source_directory(. COMPONENT_UT_SOURCES)
 
 ADD_EXECUTABLE(component_unittest
   ${COMPONENT_UT_SOURCES}
+  ${PROJECT_SOURCE_DIR}/components/boolean_indexer/id_generator_unittest.cc
+  ${PROJECT_SOURCE_DIR}/components/boolean_indexer/common_container_unittest.cc
 )
 
 TARGET_LINK_LIBRARIES(component_unittest

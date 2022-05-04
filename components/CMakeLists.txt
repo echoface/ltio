@@ -31,10 +31,16 @@ SET(COMPONENT_SOURCES
   ./boolean_indexer/be_indexer.cc
   ./boolean_indexer/id_generator.cc
   ./boolean_indexer/posting_list.cc
+  ./boolean_indexer/common_container.cc
   ./boolean_indexer/index_scanner.cc
   ./boolean_indexer/scanner_cursor.cc
+  ./boolean_indexer/parser/number_parser.cc
   ./boolean_indexer/builder/be_indexer_builder.cc
 )
 
 add_library(ltcomponent_objs OBJECT ${COMPONENT_SOURCES})
 ltio_default_properties(ltcomponent_objs)
+target_include_directories(ltcomponent_objs
+    PUBLIC
+    $<TARGET_PROPERTY:fmt,INTERFACE_INCLUDE_DIRECTORIES>
+)

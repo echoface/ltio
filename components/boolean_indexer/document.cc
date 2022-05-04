@@ -8,17 +8,17 @@ namespace component {
 BooleanExpr::BooleanExpr(const std::string& name,
                          const ValueInitList& values,
                          bool exclude)
-  : Assigns(name, values), exclude_(exclude) {}
+  : AttrValues(name, values), exclude_(exclude) {}
 
 BooleanExpr::BooleanExpr(const std::string& name,
                          const ValueContainer& values,
                          bool exclude)
-  : Assigns(name, values), exclude_(exclude) {}
+  : AttrValues(name, values), exclude_(exclude) {}
 
 std::ostream& operator<<(std::ostream& os, const BooleanExpr& expr) {
   os << "{" << expr.name() << (expr.exclude() ? " exc [" : " inc [");
 
-  const Assigns::ValueContainer& values = expr.Values();
+  const AttrValues::ValueContainer& values = expr.Values();
   for (auto iter = values.begin(); iter != values.end(); iter++) {
     os << *iter << ", ";
   }
@@ -44,12 +44,16 @@ void Conjunction::AddExpression(const BooleanExpr::BEInitializer& exprs) {
 }
 
 Conjunction* Conjunction::Include(const std::string& field,
-                                  const Assigns::ValueInitList& values) {
+                                  const AttrValues::ValueInitList& values) {
+  BooleanExpr expr(field, values, false);
+  AddExpression(expr);
   return this;
 }
 
 Conjunction* Conjunction::Exclude(const std::string& field,
-                                  const Assigns::ValueInitList& values) {
+                                  const AttrValues::ValueInitList& values) {
+  BooleanExpr expr(field, values, true);
+  AddExpression(expr);
   return this;
 }
 
