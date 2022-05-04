@@ -110,11 +110,10 @@ public:
     return Send(data.data(), data.size());
   }
 
-  /*
-   * return 0 when all data pending to out buffer,
-   * other case return nbytes realy write to socket,
-   * remain bytes (len - nbytes) pending to out buf,
-   * return -1 when error, err-handle is responsibility of caller
+  /* 
+   * return 0 when all data pending to out_buffer,
+   * other case return nbytes realy writen
+   * return -1 when error, handle err is responsibility of caller
    * */
   virtual int32_t Send(const char* data,
                        const int32_t len) WARN_UNUSED_RESULT = 0;
