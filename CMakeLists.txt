@@ -16,7 +16,7 @@ option(LTIO_BUILD_SHARED_LIBS "Build shared libraries" ON)
 
 # features
 option(LTIO_WITH_HTTP2 "enable http2 support" ON)
-option(LTIO_WITH_OPENSSL "support ssl by openssl" OFF)
+option(LTIO_WITH_OPENSSL "support ssl by openssl" ON)
 option(LTIO_USE_SYS_NGHTTP2 "use system wide installed nghttp2 libraries" OFF)
 
 # switchs

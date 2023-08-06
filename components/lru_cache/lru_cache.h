@@ -4,6 +4,7 @@
 #include <list>
 #include <unordered_map>
 #include <utility>
+#include <cstdlib>
 
 namespace component {
 
