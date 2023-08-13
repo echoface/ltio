@@ -1,12 +1,17 @@
 #ifndef LT_NET_HTTP2_TLS_CONTEXT
 #define LT_NET_HTTP2_TLS_CONTEXT
 
+/*
+this ssl configure by referenece: nghttp2/src/HttpServer.cc
+*/
+
 #include "h2_tls_context.h"
 
 #include <cstddef>
 #include <vector>
 
 #include <nghttp2/nghttp2.h>
+#include <openssl/ssl.h>
 
 #include "base/crypto/lt_ssl.h"
 #include "base/string/string_view.h"
@@ -160,14 +165,6 @@ bool configure_server_tls_context_easy(SSLCtxImpl* ctx) {
   SSL_CTX_set_mode(ctx, SSL_MODE_AUTO_RETRY);
   SSL_CTX_set_mode(ctx, SSL_MODE_RELEASE_BUFFERS);
   SSL_CTX_set_cipher_list(ctx, DEFAULT_CIPHER_LIST);
-
-#ifndef OPENSSL_NO_EC
-  auto ecdh = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
-  if (ecdh) {
-    SSL_CTX_set_tmp_ecdh(ctx, ecdh);
-    EC_KEY_free(ecdh);
-  }
-#endif /* OPENSSL_NO_EC */
 
 #ifndef OPENSSL_NO_NEXTPROTONEG
   SSL_CTX_npn_advertised_cb_func npn_fun =

@@ -18,8 +18,7 @@
 #ifndef _LT_LINKED_LIST_IMPL_H_
 #define _LT_LINKED_LIST_IMPL_H_
 
-#include "base/check.h"
-#include "base/lt_micro.h"
+#include "base/lt_macro.h"
 
 namespace base {
 

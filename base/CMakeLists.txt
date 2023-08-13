@@ -60,17 +60,40 @@ if (LTIO_WITH_OPENSSL)
   list(APPEND BASE_SOURCES crypto/lt_ssl.cc)
 endif()
 
+# configure a header file to pass some of the CMake settings to the source code
+configure_file(ltio_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/ltio_config.h)
+
 add_library(ltbase_objs OBJECT ${BASE_SOURCES})
 
 ltio_default_properties(ltbase_objs)
-add_dependencies(ltbase_objs
-  ${CORO_LIBRARY}
-)
-target_include_directories(ltbase_objs
-    PUBLIC
-    $<TARGET_PROPERTY:fmt,INTERFACE_INCLUDE_DIRECTORIES>
-    $<TARGET_PROPERTY:fcontext,INTERFACE_INCLUDE_DIRECTORIES>
-)
 
-# configure a header file to pass some of the CMake settings to the source code
-configure_file(ltio_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/ltio_config.h)
+target_link_libraries(ltbase_objs
+    PUBLIC lt3rd
+    PUBLIC ${LtIO_LINKER_LIBS}
+    ${CORO_LIBRARY}
+    )
+
+add_executable(ut_ltbase
+    ${BASE_UT_SOURCES}
+    sys/byteords_unittest.cc
+    sys/sys_info_unittest.cc
+
+    coroutine/coro_unittest.cc
+
+    message_loop/messageloop_unittest.cc
+    message_loop/repeat_timer_unittest.cc
+
+    time/time_unittest.cc
+
+    crypto/crypto_unittest.cc
+
+    utils/utils_unittest.cc
+    utils/base64/base64_unittest.cc
+    )
+
+target_link_libraries(ut_ltbase
+    PRIVATE
+    profiler
+    ltbase_objs
+    Catch2::Catch2WithMain
+    )

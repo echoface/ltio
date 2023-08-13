@@ -10,6 +10,7 @@ TARGET_LINK_LIBRARIES(log_metrics_test
 
 ADD_EXECUTABLE(be_index_bench
   component/be_index_bench.cc
+  ${PROJECT_SOURCE_DIR}/components/boolean_indexer/testing_helper.cc
 )
 
 TARGET_LINK_LIBRARIES(be_index_bench

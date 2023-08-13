@@ -21,7 +21,7 @@
 #include <memory>
 #include <vector>
 
-#include <base/lt_micro.h>
+#include <base/lt_macro.h>
 #include <net_io/codec/codec_message.h>
 #include <thirdparty/resp/resp/all.hpp>
 

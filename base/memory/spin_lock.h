@@ -3,7 +3,7 @@
 #ifndef _BASE_SPIN_LOCK_H_H
 #define _BASE_SPIN_LOCK_H_H
 
-#include <base/lt_micro.h>
+#include <base/lt_macro.h>
 #include <unistd.h>
 #include <x86intrin.h>
 #include <atomic>

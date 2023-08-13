@@ -18,9 +18,10 @@
 #ifndef _LT_NET_UDP_CONTEXT_H_
 #define _LT_NET_UDP_CONTEXT_H_
 
-#include <base/lt_micro.h>
-#include <net_io/io_buffer.h>
 #include <memory>
+
+#include <base/lt_macro.h>
+#include <net_io/io_buffer.h>
 #include "net_io/base/ip_endpoint.h"
 
 namespace base {

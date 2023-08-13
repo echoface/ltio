@@ -82,8 +82,15 @@ if (LTIO_WITH_HTTP2 AND LTIO_WITH_OPENSSL)
 endif()
 
 add_library(ltnet_objs OBJECT ${LTNET_SOURCE})
+
 ltio_default_properties(ltnet_objs)
-target_include_directories(ltnet_objs
-    PUBLIC
-    $<TARGET_PROPERTY:fmt,INTERFACE_INCLUDE_DIRECTORIES>
-    )
+
+# add_dependencies only ensure compile deps before target
+# target_link_libraries will import <target>::properties
+# and also ensure compile deps before target
+target_link_libraries(ltnet_objs
+    PUBLIC fmt::fmt
+    PUBLIC glog::glog
+    PUBLIC nghttp2
+    ${CORO_LIBRARY}
+)

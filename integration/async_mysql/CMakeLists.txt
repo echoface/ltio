@@ -9,7 +9,6 @@ target_include_directories(ltasyncmysql
   PUBLIC
   ${LtIO_INCLUDE_DIRS}
   ${MYSQL_INCLUDE_DIR}
-  ${LT_INTEGRATION_DIR}
   ${PROJECT_SOURCE_DIR}
   ${PROJECT_SOURCE_DIR}/thirdparty
   )

@@ -24,7 +24,7 @@
 
 #include "glog/logging.h"
 
-#include "base/lt_micro.h"
+#include "base/lt_macro.h"
 #include "location.h"
 
 namespace base {

@@ -4,8 +4,7 @@
 #include <limits>
 #include <ostream>
 
-#include <base/lt_micro.h>
-#include <base/compiler_specific.h>
+#include <base/lt_macro.h>
 #include <base/time/time_base.h>
 
 namespace base {
