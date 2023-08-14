@@ -1,6 +1,8 @@
-#include <glog/logging.h>
 #include <functional>
 #include <set>
+
+#include <gflags/gflags.h>
+#include <glog/logging.h>
 
 #include "net_io/base/ip_endpoint.h"
 #include "net_io/socket_acceptor.h"
@@ -54,9 +56,8 @@ public:
 
     ch->SetFdEvent(fdev);
     auto ch_p = ch.get();
-    loop.PostTask(FROM_HERE, [ch_p](){
-      ignore_result(ch_p->StartChannel(true));
-    });
+    loop.PostTask(FROM_HERE,
+                  [ch_p]() { ignore_result(ch_p->StartChannel(true)); });
 
     LOG(INFO) << "channel:[" << ch->ChannelInfo()
               << "] connected, connections count:" << connections.size();

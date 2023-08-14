@@ -75,7 +75,7 @@
 #include <cstdio>
 #include <cstdlib>
 
-#include "base/check.h"
+#define PR_ASSERT LTCHECK
 
 /*
  * The COUNT_LEAPS macro counts the number of leap years passed by

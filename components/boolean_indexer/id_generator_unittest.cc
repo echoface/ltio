@@ -2,7 +2,7 @@
 
 #include "id_generator.h"
 
-#include <thirdparty/catch/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 using namespace component;
 

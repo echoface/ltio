@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.5)
-
 SET(COMPONENT_SOURCES
   ./log_metrics/metrics_item.cc
   ./log_metrics/metrics_stash.cc
@@ -7,7 +5,7 @@ SET(COMPONENT_SOURCES
 
   ./count_min_sketch/count_min_sketch.cc
 
-  ./bloomfilter/bloom_filter.cc
+  ./bloomfilter/bloomfilter.cc
 
   ./source_loader/source.cc
   ./source_loader/parser/parser.cc
@@ -38,9 +36,36 @@ SET(COMPONENT_SOURCES
   ./boolean_indexer/builder/be_indexer_builder.cc
 )
 
-add_library(ltcomponent_objs OBJECT ${COMPONENT_SOURCES})
-ltio_default_properties(ltcomponent_objs)
-target_include_directories(ltcomponent_objs
-    PUBLIC
-    $<TARGET_PROPERTY:fmt,INTERFACE_INCLUDE_DIRECTORIES>
-)
+target_sources(ltio PRIVATE ${COMPONENT_SOURCES})
+target_sources(ltio_shared PRIVATE ${COMPONENT_SOURCES})
+
+SET(COMPONENT_UT_SOURCES
+    inverted_indexer/indexer_unittest.cc
+
+    utils/data_accumulator_unittest.cc
+
+    lru_cache/lru_cache_unittest.cc
+
+    source_loader/source_loader_unittest.cc
+
+    boolean_indexer/testing_helper.cc
+    boolean_indexer/be_indexer_unittest.cc
+
+    bloomfilter/bloomfilter_unittest.cc
+    )
+add_executable(ut_component
+    ${COMPONENT_UT_SOURCES}
+    )
+target_link_libraries(ut_component
+    PRIVATE
+    ltio
+    profiler
+    Catch2::Catch2WithMain
+    )
+
+set(copy_dest_dir "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
+set(copy_src_file "${CMAKE_CURRENT_SOURCE_DIR}/boolean_indexer/testing_docs.txt")
+add_custom_command(TARGET ut_component POST_BUILD
+    COMMENT "Copying ${copy_src_file} to build directory"
+    COMMAND ${CMAKE_COMMAND} -E copy "${copy_src_file}" "${copy_dest_dir}"
+    )

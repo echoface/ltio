@@ -18,7 +18,7 @@
 #ifndef _NET_PROTOCOL_SERVICE_H_H
 #define _NET_PROTOCOL_SERVICE_H_H
 
-#include "base/compiler_specific.h"
+#include "base/lt_macro.h"
 #include "base/message_loop/message_loop.h"
 #include "net_io/base/ip_endpoint.h"
 #include "net_io/channel.h"

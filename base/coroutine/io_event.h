@@ -2,7 +2,7 @@
 #define _LT_CORO_IO_EVENT_H_
 
 #include "base/closure/closure_task.h"
-#include "base/lt_micro.h"
+#include "base/lt_macro.h"
 #include "base/message_loop/event.h"
 #include "base/message_loop/event_pump.h"
 #include "base/message_loop/fd_event.h"

@@ -4,8 +4,8 @@
 #include <limits>
 #include <ostream>
 
-#include "base/lt_micro.h"
-#include "base/check.h"
+#include "nspr/prtime.h"
+#include "base/lt_macro.h"
 #include "base/numerics/clamped_math.h"
 
 namespace base {

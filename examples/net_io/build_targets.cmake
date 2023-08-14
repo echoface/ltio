@@ -1,9 +1,10 @@
 ADD_EXECUTABLE(acceptor_test
   net_io/acceptor_test.cc
 )
-TARGET_LINK_LIBRARIES(acceptor_test
-  ltio
-)
+target_link_libraries(acceptor_test
+    ltio
+    gflags::gflags
+    )
 
 ADD_EXECUTABLE(simple_ltserver
   net_io/simple_ltserver.cc

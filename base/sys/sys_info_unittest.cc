@@ -5,7 +5,7 @@
 
 #include "base/build_config.h"
 #include "base/utils/sys_error.h"
-#include <thirdparty/catch/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 TEST_CASE("sysinfo.getncpu", "[get system cpu count]") {
   std::cout << "cpu count:" << base::GetNCPU() << std::endl;

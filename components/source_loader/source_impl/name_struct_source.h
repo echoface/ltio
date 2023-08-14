@@ -9,7 +9,7 @@
 #include <inttypes.h>
 #include <unordered_map>
 #include "../source.h"
-#include "base/lt_micro.h"
+#include "base/lt_macro.h"
 
 namespace component {
 namespace sl {

@@ -18,11 +18,12 @@
 #ifndef _BASE_DOUBLELINKED_LIST_H_
 #define _BASE_DOUBLELINKED_LIST_H_
 
-#include <base/lt_micro.h>
 #include <inttypes.h>
 #include <cstdio>
 #include <functional>
 #include <memory>
+
+#include <base/lt_macro.h>
 
 namespace base {
 

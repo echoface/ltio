@@ -4,6 +4,7 @@
 #include <mutex>
 
 #include "fmt/printf.h"
+#include <fmt/core.h>
 #include "nspr/prtime.h"
 
 namespace base {

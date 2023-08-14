@@ -66,7 +66,6 @@ typedef PRIntn PRBool;
 
 typedef enum { PR_FAILURE = -1, PR_SUCCESS = 0 } PRStatus;
 
-#define PR_ASSERT LTCHECK
 #define PR_CALLBACK
 #define PR_INT16_MAX 32767
 #define NSPR_API(__type) extern __type
@@ -255,5 +254,16 @@ NSPR_API(PRTimeParameters) PR_GMTParameters(const PRExplodedTime* gmt);
 PRStatus PR_ParseTimeString(const char* string,
                             PRBool default_to_gmt,
                             PRTime* result);
+
+#define LTCHECK(x)                                    \
+  do {                                                \
+    if (!(x)) {                                       \
+      fprintf(stderr, "%s:%d: ", __func__, __LINE__); \
+      perror(#x);                                     \
+      exit(-1);                                       \
+    }                                                 \
+  } while (0)
+
+#define LTCHECK_NE(x, y) LTCHECK((x != y))
 
 #endif  // BASE_PRTIME_H__

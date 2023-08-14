@@ -81,9 +81,19 @@ if (LTIO_WITH_HTTP2 AND LTIO_WITH_OPENSSL)
   list(APPEND LTNET_SOURCE codec/http/h2/h2_tls_context.cc)
 endif()
 
-add_library(ltnet_objs OBJECT ${LTNET_SOURCE})
-ltio_default_properties(ltnet_objs)
-target_include_directories(ltnet_objs
-    PUBLIC
-    $<TARGET_PROPERTY:fmt,INTERFACE_INCLUDE_DIRECTORIES>
+target_sources(ltio PRIVATE ${LTNET_SOURCE})
+target_sources(ltio_shared PRIVATE ${LTNET_SOURCE})
+
+add_executable(ut_ltnetio
+    client_unittest.cc
+    net_base_unittest.cc
+    maglev_unittest.cc
+    router_unittest.cc
+    )
+
+target_link_libraries(ut_ltnetio
+    PRIVATE
+    ltio
+    profiler
+    Catch2::Catch2WithMain
     )

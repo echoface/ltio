@@ -4,8 +4,7 @@
 
 #include <cstdint>
 
-#include "base/compiler_specific.h"
-#include "base/lt_micro.h"
+#include "base/lt_macro.h"
 #include "net_io/io_buffer.h"
 
 namespace co {

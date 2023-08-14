@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 
 project(LightingIO VERSION 0.2.1 LANGUAGES C CXX)
 
@@ -24,9 +24,9 @@ option(LTIO_ENABLE_REUSER_PORT "enable reuse port" ON)
 
 include(ExternalProject)
 include(GNUInstallDirs)
+
+include(${CMAKE_CONFIG_DIR}/CPM.cmake)
 include(${CMAKE_CONFIG_DIR}/common.cmake)
 include(${CMAKE_CONFIG_DIR}/dependency.cmake)
 
-include(${CMAKE_CONFIG_DIR}/include.cmake)
-#include(${CMAKE_CONFIG_DIR}/googletest.cmake)
-include(${CMAKE_CONFIG_DIR}/targets.cmake)
+include(${CMAKE_CONFIG_DIR}/targets.cmake) # declare targets

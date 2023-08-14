@@ -2,7 +2,7 @@
 #define _COMPONENT_LOG_METRICS_CONTAINER_H
 
 #include <initializer_list>
-#include <nlohmann/json_fwd.hpp>
+#include <nlohmann/json.hpp>
 #include <string>
 #include <unordered_map>
 #include <vector>

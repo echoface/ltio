@@ -2,6 +2,8 @@
 #include "net_io/clients/ws_client.h"
 #include "base/message_loop/repeating_timer.h"
 
+#include <gflags/gflags.h>
+
 using lt::net::WsClient;
 
 int main(int argc, char** argv) {

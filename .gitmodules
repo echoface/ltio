@@ -6,12 +6,6 @@
   shallow = true
 	path = thirdparty/cameron_queue
 	url = https://gitee.com/ltecho/concurrentqueue.git
-[submodule "thirdparty/glog"]
-	path = thirdparty/glog
-	url = https://github.com/google/glog.git
-[submodule "thirdparty/gflags"]
-	path = thirdparty/gflags
-	url = https://github.com/gflags/gflags.git
 [submodule "thirdparty/fcontext"]
 	path = thirdparty/fcontext
 	url = https://github.com/echoface/deboost.context.git
