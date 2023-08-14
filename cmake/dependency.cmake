@@ -33,6 +33,7 @@ list(APPEND LtIO_LINKER_LIBS PUBLIC nlohmann_json::nlohmann_json)
 
 if (LTIO_WITH_OPENSSL)
   find_package(OpenSSL REQUIRED)
+  list(APPEND LtIO_LINKER_LIBS PUBLIC ${OPENSSL_LIBRARIES})
 endif()
 
 if (LTIO_WITH_HTTP2)
@@ -51,6 +52,7 @@ if (NOT TARGET llhttp)
 endif()
 list(APPEND LtIO_LINKER_LIBS PUBLIC llhttp)
 
+message("dependency lib:${LtIO_LINKER_LIBS}")
 
 # ---[ ccache
 find_program(CCACHE_FOUND ccache)

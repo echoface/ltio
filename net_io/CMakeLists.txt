@@ -81,24 +81,9 @@ if (LTIO_WITH_HTTP2 AND LTIO_WITH_OPENSSL)
   list(APPEND LTNET_SOURCE codec/http/h2/h2_tls_context.cc)
 endif()
 
-target_sources(ltio
-    PRIVATE
-    ${LTNET_SOURCE}
-    )
-target_link_libraries(ltio
-    PUBLIC
-    crypto
-    )
+target_sources(ltio PRIVATE ${LTNET_SOURCE})
+target_sources(ltio_shared PRIVATE ${LTNET_SOURCE})
 
-#target_sources(ltio_shared
-#    PRIVATE
-#    ${LTNET_SOURCE}
-#    )
-#target_link_libraries(ltio_shared
-#    PUBLIC
-#    ${LtIO_LINKER_LIBS}
-#    )
-#
 add_executable(ut_ltnetio
     client_unittest.cc
     net_base_unittest.cc

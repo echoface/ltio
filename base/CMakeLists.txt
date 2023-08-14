@@ -63,33 +63,8 @@ endif()
 # configure a header file to pass some of the CMake settings to the source code
 configure_file(ltio_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/ltio_config.h)
 
-target_sources(ltio
-    PRIVATE
-    ${BASE_SOURCES}
-    )
-
-target_link_libraries(ltio
-    PUBLIC
-    fcontext
-    fmt::fmt
-    glog::glog
-    )
-if (LTIO_WITH_HTTP2)
-    target_link_libraries(ltio
-        PUBLIC
-        ssl
-        nghttp2
-        )
-endif()
-
-#target_sources(ltio_shared
-#    PRIVATE
-#    ${BASE_SOURCES}
-#    )
-#target_link_libraries(ltio_shared
-#    PUBLIC
-#    ${LtIO_LINKER_LIBS}
-#    )
+target_sources(ltio PRIVATE ${BASE_SOURCES})
+target_sources(ltio_shared PRIVATE ${BASE_SOURCES})
 
 add_executable(ut_ltbase
     sys/byteords_unittest.cc

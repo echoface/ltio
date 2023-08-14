@@ -36,22 +36,8 @@ SET(COMPONENT_SOURCES
   ./boolean_indexer/builder/be_indexer_builder.cc
 )
 
-target_sources(ltio
-    PRIVATE
-    ${COMPONENT_SOURCES}
-    )
-target_link_libraries(ltio
-    PUBLIC
-    ${LtIO_LINKER_LIBS}
-    )
-#target_sources(ltio_shared
-#    PRIVATE
-#    ${COMPONENT_SOURCES}
-#    )
-#target_link_libraries(ltio_shared
-#    PUBLIC
-#    ${LtIO_LINKER_LIBS}
-#    )
+target_sources(ltio PRIVATE ${COMPONENT_SOURCES})
+target_sources(ltio_shared PRIVATE ${COMPONENT_SOURCES})
 
 SET(COMPONENT_UT_SOURCES
     inverted_indexer/indexer_unittest.cc
