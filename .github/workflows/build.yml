@@ -16,7 +16,7 @@ jobs:
 
     steps:
     - name: Install deps
-      run: sudo apt-get install -yqq software-properties-common unzip cmake build-essential libgoogle-perftools-dev git-core libgoogle-perftools-dev libssl-dev zlib1g-dev
+      run: sudo apt update && sudo apt upgrade && sudo apt install -y software-properties-common unzip cmake build-essential libgoogle-perftools-dev git-core libgoogle-perftools-dev libssl-dev zlib1g-dev
 
     - uses: actions/checkout@v2
       with:
