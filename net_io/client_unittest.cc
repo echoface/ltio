@@ -10,8 +10,6 @@
 #include "base/closure/closure_task.h"
 #include "glog/logging.h"
 
-#include <thirdparty/catch/catch.hpp>
-
 #include <glog/logging.h>
 #include "net_io/codec/codec_factory.h"
 #include "net_io/codec/codec_message.h"
@@ -34,6 +32,8 @@
 #include <net_io/clients/router/roundrobin_router.h>
 #include "net_io/clients/client.h"
 #include "net_io/clients/client_connector.h"
+
+#include <catch2/catch_test_macros.hpp>
 
 static std::atomic_int io_round_count;
 

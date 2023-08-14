@@ -4,7 +4,7 @@
 #include <memory>
 #include <set>
 #include <string>
-#include <thirdparty/nlohmann/json.hpp>
+#include <nlohmann/json.hpp>
 #include <unordered_map>
 #include <vector>
 

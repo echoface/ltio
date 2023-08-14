@@ -10,7 +10,7 @@
 #include <base/time/time_utils.h>
 #include <hash/murmurhash3.h>
 #include <net_io/clients/router/maglev_router.h>
-#include <thirdparty/catch/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 using namespace lt;
 

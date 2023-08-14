@@ -36,21 +36,24 @@ SET(COMPONENT_SOURCES
   ./boolean_indexer/builder/be_indexer_builder.cc
 )
 
-add_library(ltcomponent_objs OBJECT ${COMPONENT_SOURCES})
-ltio_default_properties(ltcomponent_objs)
-target_link_libraries(ltcomponent_objs
+target_sources(ltio
+    PRIVATE
+    ${COMPONENT_SOURCES}
+    )
+target_link_libraries(ltio
     PUBLIC
     ${LtIO_LINKER_LIBS}
-)
-
-# target_link_libraries will take care of include dir well
-#
-#target_include_directories(ltcomponent_objs
+    )
+#target_sources(ltio_shared
+#    PRIVATE
+#    ${COMPONENT_SOURCES}
+#    )
+#target_link_libraries(ltio_shared
 #    PUBLIC
-#    $<TARGET_PROPERTY:fmt,INTERFACE_INCLUDE_DIRECTORIES>
-#)
+#    ${LtIO_LINKER_LIBS}
+#    )
 
-add_executable(ut_component
+SET(COMPONENT_UT_SOURCES
     inverted_indexer/indexer_unittest.cc
 
     utils/data_accumulator_unittest.cc
@@ -64,10 +67,13 @@ add_executable(ut_component
 
     bloomfilter/bloomfilter_unittest.cc
     )
+add_executable(ut_component
+    ${COMPONENT_UT_SOURCES}
+    )
 target_link_libraries(ut_component
     PRIVATE
-    profiler
     ltio
+    profiler
     Catch2::Catch2WithMain
     )
 

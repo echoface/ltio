@@ -24,11 +24,12 @@
 #include "net_io/tcp_channel.h"
 #include "net_io/url_utils.h"
 
-#include <thirdparty/catch/catch.hpp>
 #include "net_io/base/ip_address.h"
 #include "net_io/base/ip_endpoint.h"
 #include "net_io/base/sockaddr_storage.h"
 #include "net_io/udp_io/udp_service.h"
+
+#include <catch2/catch_test_macros.hpp>
 
 using namespace lt;
 

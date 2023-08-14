@@ -13,7 +13,7 @@
 #include <net_io/clients/router/ringhash_router.h>
 #include <net_io/clients/router/roundrobin_router.h>
 
-#include <thirdparty/catch/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 struct Hasher {
   uint64_t operator()(const std::string& key) {

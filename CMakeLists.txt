@@ -28,6 +28,5 @@ include(GNUInstallDirs)
 include(${CMAKE_CONFIG_DIR}/CPM.cmake)
 include(${CMAKE_CONFIG_DIR}/common.cmake)
 include(${CMAKE_CONFIG_DIR}/dependency.cmake)
-include(${CMAKE_CONFIG_DIR}/subdirectory.cmake)
-#include(${CMAKE_CONFIG_DIR}/googletest.cmake)
-include(${CMAKE_CONFIG_DIR}/targets.cmake)
+
+include(${CMAKE_CONFIG_DIR}/targets.cmake) # declare targets

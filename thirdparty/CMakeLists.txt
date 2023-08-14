@@ -1,27 +1,18 @@
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-sign-compare")
 
-ADD_SUBDIRECTORY(resp)
-ADD_SUBDIRECTORY(hat-trie)
-ADD_SUBDIRECTORY(fcontext)
+target_sources(ltio
+    PRIVATE
+    #hash
+    hash/md5.c
+    hash/crc.cpp
+    hash/sha1.cpp
+    hash/murmurhash3.cpp
 
-# if enable nghttp2 it will import library llhttp
-if (NOT TARGET llhttp)
-    ADD_SUBDIRECTORY(llhttp)
-endif()
+    # timeout wheel
+    timeout/timeout.h
+    timeout/timeout.c
 
-ADD_LIBRARY(lt3rd STATIC
-  #hash
-  hash/md5.c
-  hash/crc.cpp
-  hash/sha1.cpp
-  hash/murmurhash3.cpp
-
-  # timeout wheel
-  timeout/timeout.h
-  timeout/timeout.c
-
-  urlsafe64/urlsafe64.c
-  tinyxml2/tinyxml2.cpp
-  url-parser/url_parser.c
-)
-ltio_default_properties(lt3rd)
+    urlsafe64/urlsafe64.c
+    tinyxml2/tinyxml2.cpp
+    url-parser/url_parser.c
+    )
