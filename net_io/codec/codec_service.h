@@ -20,7 +20,7 @@
 
 #include "base/lt_macro.h"
 #include "base/message_loop/message_loop.h"
-#include "net_io/base/ip_endpoint.h"
+#include "net_io/common/ip_endpoint.h"
 #include "net_io/channel.h"
 #include "net_io/net_callback.h"
 #include "net_io/url_utils.h"

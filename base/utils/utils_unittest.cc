@@ -6,7 +6,7 @@
 #include <iostream>
 #include <vector>
 
-TEST_CASE("string_utils", "[str to double]") {
+CATCH_TEST_CASE("string_utils", "[str to double]") {
   std::vector<std::string> test_strs = {"742.16", ".123", "123.", "abc"};
   std::vector<double> test_results = {742.16, 0.123, 123.0, 0};
   for (size_t idx = 0; idx < test_strs.size(); idx++) {
@@ -26,7 +26,7 @@ TEST_CASE("string_utils", "[str to double]") {
   CHECK(!ok_bool);
 }
 
-TEST_CASE("closure.multilargs", "[task run]") {
+CATCH_TEST_CASE("closure.multilargs", "[task run]") {
   int a = 0;
   int b = 0;
   auto task1 = NewClosure([&]() { LOG(INFO) << a << ", b:" << b; });
@@ -34,7 +34,7 @@ TEST_CASE("closure.multilargs", "[task run]") {
 }
 
 #include "base/memory/defer.h"
-TEST_CASE("defer", "[task run]") {
+CATCH_TEST_CASE("defer", "[task run]") {
 
   int cnt = 0;
   do {
@@ -42,7 +42,7 @@ TEST_CASE("defer", "[task run]") {
       cnt++;
     });
   } while(0);
-  REQUIRE(cnt == 1);
+  CATCH_REQUIRE(cnt == 1);
 
   cnt = 0;
   do {
@@ -50,7 +50,7 @@ TEST_CASE("defer", "[task run]") {
       cnt++;
     });
   } while(0);
-  REQUIRE(cnt == 1);
+  CATCH_REQUIRE(cnt == 1);
 
   cnt = 0;
   do {
@@ -59,5 +59,5 @@ TEST_CASE("defer", "[task run]") {
     });
     x.Cancel();
   } while(0);
-  REQUIRE(cnt == 0);
+  CATCH_REQUIRE(cnt == 0);
 }

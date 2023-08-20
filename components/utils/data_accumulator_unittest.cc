@@ -10,7 +10,7 @@
 
 #include <components/utils/data_accumulator.h>
 
-TEST_CASE("data.accumulator", "[acc data]") {
+CATCH_TEST_CASE("data.accumulator", "[acc data]") {
   typedef component::AccumulatorCollector<int> IntCollector;
   IntCollector collector(1000);
   collector.SetHandler([&](const IntCollector::AccumulationMap& all) {

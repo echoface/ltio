@@ -21,7 +21,7 @@
 #include <atomic>
 #include <unordered_set>
 
-#include "base/ip_endpoint.h"
+#include "common/ip_endpoint.h"
 #include "codec/codec_message.h"
 #include "codec/codec_service.h"
 #include "net_callback.h"

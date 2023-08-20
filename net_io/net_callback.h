@@ -21,7 +21,8 @@
 #include <functional>
 #include <memory>
 #include <string>
-#include "base/ip_endpoint.h"
+
+#include "common/ip_endpoint.h"
 
 namespace lt {
 namespace net {

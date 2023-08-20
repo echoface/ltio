@@ -4,7 +4,7 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 
-#include "net_io/base/ip_endpoint.h"
+#include "net_io/common/ip_endpoint.h"
 #include "net_io/socket_acceptor.h"
 #include "net_io/socket_utils.h"
 #include "net_io/tcp_channel.h"

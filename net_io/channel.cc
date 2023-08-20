@@ -40,7 +40,6 @@ SocketChannel::SocketChannel(int socket,
 SocketChannel::~SocketChannel() {}
 
 bool SocketChannel::StartChannel(bool server) {
-
   fdev_->EnableWriting();
   fdev_->EnableReading();
   fdev_->SetEdgeTrigger(true);
@@ -57,8 +56,8 @@ std::string SocketChannel::remote_name() const {
 
 std::string SocketChannel::ChannelInfo() const {
   std::ostringstream oss;
-  oss << "[" << binded_fd() << "@<" << local_name() << "#" << remote_name()
-      << ">]";
+  oss << "[" << binded_fd() << "@" << local_name() << "<->" << remote_name()
+      << "]";
   return oss.str();
 }
 

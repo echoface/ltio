@@ -18,7 +18,6 @@
 #ifndef _NET_IO_UDP_SERVICE_H_H_
 #define _NET_IO_UDP_SERVICE_H_H_
 
-#include <net_io/base/sockaddr_storage.h>
 #include <sys/socket.h>
 #include <array>
 #include <cmath>
@@ -26,7 +25,9 @@
 #include <cstdint>
 #include <memory>
 #include <vector>
+
 #include "base/message_loop/fd_event.h"
+#include "net_io/common/sockaddr_storage.h"
 #include "udp_context.h"
 
 namespace lt {

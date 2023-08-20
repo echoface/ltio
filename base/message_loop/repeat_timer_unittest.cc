@@ -4,7 +4,7 @@
 #include <base/message_loop/message_loop.h>
 #include <base/message_loop/repeating_timer.h>
 
-TEST_CASE("repeat_timer.normal", "[repeating time test]") {
+CATCH_TEST_CASE("repeat_timer.normal", "[repeating time test]") {
   base::MessageLoop loop;
   loop.Start();
 
@@ -26,7 +26,7 @@ TEST_CASE("repeat_timer.normal", "[repeating time test]") {
             << " actually:" << invoke_count;
 }
 
-TEST_CASE("repeat_timer.stop", "[repeating time stop test]") {
+CATCH_TEST_CASE("repeat_timer.stop", "[repeating time stop test]") {
   base::MessageLoop loop;
   loop.Start();
 
@@ -62,6 +62,6 @@ TEST_CASE("repeat_timer.stop", "[repeating time stop test]") {
 
   loop.WaitLoopEnd();
 
-  REQUIRE(restart_run);
-  REQUIRE(stop_in_timer_handler_run == 1);
+  CATCH_REQUIRE(restart_run);
+  CATCH_REQUIRE(stop_in_timer_handler_run == 1);
 }

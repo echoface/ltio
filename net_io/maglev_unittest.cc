@@ -16,7 +16,7 @@ using namespace lt;
 
 using Endpoint = net::lb::Endpoint;
 
-TEST_CASE("maglev.distribution", "[meglev]") {
+CATCH_TEST_CASE("maglev.distribution", "[meglev]") {
   LOG(INFO) << " start test client.maglev";
 
   std::vector<Endpoint> eps;
@@ -56,7 +56,7 @@ TEST_CASE("maglev.distribution", "[meglev]") {
   LOG(INFO) << " end test maglev end";
 }
 
-TEST_CASE("maglev.base", "[meglev fixed weight distribution]") {
+CATCH_TEST_CASE("maglev.base", "[meglev fixed weight distribution]") {
   LOG(INFO) << " start test Maglev.FixedWeight";
 
   std::vector<Endpoint> eps;

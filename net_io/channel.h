@@ -25,10 +25,11 @@
 #include <cstdint>
 
 #include "base/lt_macro.h"
-#include "base/ip_endpoint.h"
 #include "base/logging.h"
 #include "base/lt_macro.h"
 #include "base/message_loop/fd_event.h"
+#include "common/ip_endpoint.h"
+
 #include "io_buffer.h"
 #include "net_callback.h"
 

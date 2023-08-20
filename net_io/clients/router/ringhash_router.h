@@ -22,7 +22,7 @@
 
 #include "client_router.h"
 #include "hash/murmurhash3.h"
-#include "net_io/base/load_balance/consistent_hash_map.h"
+#include "net_io/common/load_balance/consistent_hash_map.h"
 
 namespace lt {
 namespace net {

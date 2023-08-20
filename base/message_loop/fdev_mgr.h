@@ -22,12 +22,12 @@ public:
 
   Result Remove(FdEvent* fdev);
 
-  FdEvent* GetFdEvent(int fd) const; 
+  FdEvent* GetFdEvent(int fd) const;
 protected:
   FdEventMgr();
 
 private:
-  std::vector<FdEvent*> evs_; 
+  std::vector<FdEvent*> evs_;
 };
 
 }  // namespace base

@@ -9,7 +9,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-TEST_CASE("expression_base", "[test expression and document]") {
+CATCH_TEST_CASE("expression_base", "[test expression and document]") {
   component::Expression expr;
   std::string field("name");
   expr.SetFieldName(field);
@@ -28,7 +28,7 @@ TEST_CASE("expression_base", "[test expression and document]") {
   std::cout << "from_json:" << out << std::endl;
 }
 
-TEST_CASE("document_base", "[test document basic funcation]") {
+CATCH_TEST_CASE("document_base", "[test document basic funcation]") {
   component::Document doc;
 
   component::Expression expr;
@@ -51,10 +51,10 @@ TEST_CASE("document_base", "[test document basic funcation]") {
   std::cout << "from_json:" << j_doc << std::endl;
 }
 
-TEST_CASE("indexer_file", "[load document from text file]") {
+CATCH_TEST_CASE("indexer_file", "[load document from text file]") {
   std::ifstream ifs;
   ifs.open("testing_docs.txt");
-  REQUIRE(ifs.is_open());
+  CATCH_REQUIRE(ifs.is_open());
   component::DefaultDelegate d;
   {
     d.RegisterGeneralStrField("name");
@@ -102,7 +102,7 @@ TEST_CASE("indexer_file", "[load document from text file]") {
   std::cout << "query request:" << query_request << std::endl;
 }
 
-TEST_CASE("bitmap_base", "[load document from text file]") {
+CATCH_TEST_CASE("bitmap_base", "[load document from text file]") {
   std::vector<int64_t> sorted_ids = {1, 2, 4, 5, 6, 8, 11, 12, 15, 22};
 
   component::PostingListManager manager;
@@ -110,31 +110,31 @@ TEST_CASE("bitmap_base", "[load document from text file]") {
 
   std::set<int64_t> s1 = {1, 2, 22};
   component::BitMapPostingList* p1 = manager.BuildBitMapPostingListForIds(s1);
-  REQUIRE(p1->IdCount() == 3);
+  CATCH_REQUIRE(p1->IdCount() == 3);
   std::cout << "bits info:" << p1->DumpBits() << std::endl;
 
   component::Json j = manager.GetIdsFromPostingList(p1);
   std::cout << "id from bitmap:" << j << std::endl;
-  REQUIRE(s1 == manager.GetIdsFromPostingList(p1));
+  CATCH_REQUIRE(s1 == manager.GetIdsFromPostingList(p1));
 
   std::set<int64_t> s2 = {1, 4, 4, 6, 11, 22};
   component::BitMapPostingList* p2 = manager.BuildBitMapPostingListForIds(s2);
-  REQUIRE(p2->IdCount() == 5);
+  CATCH_REQUIRE(p2->IdCount() == 5);
   component::Json j_s = manager.GetIdsFromPostingList(p2);
   std::cout << "id from bitmap:" << j_s << std::endl;
-  REQUIRE(s2 == manager.GetIdsFromPostingList(p2));
+  CATCH_REQUIRE(s2 == manager.GetIdsFromPostingList(p2));
 
   std::set<int64_t> s3 = {22, 22};
   component::BitMapPostingList* p3 = manager.BuildBitMapPostingListForIds(s3);
-  REQUIRE(p3->IdCount() == 1);
+  CATCH_REQUIRE(p3->IdCount() == 1);
   j_s = manager.GetIdsFromPostingList(p3);
   std::cout << "id from bitmap:" << j_s << std::endl;
-  REQUIRE(s3 == manager.GetIdsFromPostingList(p3));
+  CATCH_REQUIRE(s3 == manager.GetIdsFromPostingList(p3));
 
   std::set<int64_t> s4 = {11, 22};
   component::BitMapPostingList* p4 = manager.BuildBitMapPostingListForIds(s4);
-  REQUIRE(p4->IdCount() == 2);
-  REQUIRE(s4 == manager.GetIdsFromPostingList(p4));
+  CATCH_REQUIRE(p4->IdCount() == 2);
+  CATCH_REQUIRE(s4 == manager.GetIdsFromPostingList(p4));
   j_s = manager.GetIdsFromPostingList(p4);
   std::cout << "id from bitmap:" << j_s << std::endl;
 }

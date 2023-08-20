@@ -9,13 +9,12 @@ set(LTNET_SOURCE
   url_utils.cc
 
   #base/address.cc
-  base/ip_address.cc
-  base/ip_endpoint.cc
-  base/address_family.cc
-  base/sockaddr_storage.cc
-
+  common/ip_address.cc
+  common/ip_endpoint.cc
+  common/address_family.cc
+  common/sockaddr_storage.cc
   #base/load_balance
-  base/load_balance/maglev2.cc
+  common/load_balance/maglev2.cc
 
   #protocol codec
   codec/codec_message.cc
@@ -64,8 +63,8 @@ set(LTNET_SOURCE
   udp_io/udp_context.cc
   udp_io/udp_service.cc
 
-  #co_so
-  co_so/io_service.cc
+  #coro io service
+  coronet/io_service.cc
 )
 
 if (LTIO_WITH_OPENSSL)
@@ -86,7 +85,7 @@ target_sources(ltio_shared PRIVATE ${LTNET_SOURCE})
 
 add_executable(ut_ltnetio
     client_unittest.cc
-    net_base_unittest.cc
+    common_unittest.cc
     maglev_unittest.cc
     router_unittest.cc
     )

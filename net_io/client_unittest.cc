@@ -4,13 +4,12 @@
 #include <iostream>
 
 #include <base/coroutine/co_runner.h>
+#include <base/logging.h>
 #include <base/message_loop/message_loop.h>
 #include <base/time/time_utils.h>
 #include <base/utils/string/str_utils.h>
 #include "base/closure/closure_task.h"
-#include "glog/logging.h"
 
-#include <glog/logging.h>
 #include "net_io/codec/codec_factory.h"
 #include "net_io/codec/codec_message.h"
 #include "net_io/codec/codec_service.h"
@@ -67,7 +66,7 @@ public:
 };
 RouterManager router_delegate;
 
-TEST_CASE("client.base", "[http client]") {
+CATCH_TEST_CASE("client.base", "[http client]") {
   LOG(INFO) << " start test client.base, http client connections";
 
   base::MessageLoop loop;
@@ -89,19 +88,20 @@ TEST_CASE("client.base", "[http client]") {
 
   http_client.Initialize(config);
 
-  loop.PostDelayTask(NewClosure([&]() {
-                       REQUIRE(http_client.ConnectedCount() >= connections);
-                       http_client.Finalize();
-                       loop.QuitLoop();
-                     }),
-                     500);
+  loop.PostDelayTask(
+      NewClosure([&]() {
+        CATCH_REQUIRE(http_client.ConnectedCount() >= connections);
+        http_client.Finalize();
+        loop.QuitLoop();
+      }),
+      500);
 
   loop.WaitLoopEnd();
 
   LOG(INFO) << " end test client.base, http client connections";
 }
 
-TEST_CASE("client.async", "[http client]") {
+CATCH_TEST_CASE("client.async", "[http client]") {
   LOG(INFO) << " start test client.base, http client connections";
 
   base::MessageLoop loop;
@@ -136,7 +136,7 @@ TEST_CASE("client.async", "[http client]") {
 
   loop.PostDelayTask(
       NewClosure([&]() {
-        REQUIRE(http_client.ConnectedCount() >= connections);
+        CATCH_REQUIRE(http_client.ConnectedCount() >= connections);
 
         net::RefHttpRequest request = std::make_shared<net::HttpRequest>();
         request->SetKeepAlive(true);
@@ -154,7 +154,7 @@ TEST_CASE("client.async", "[http client]") {
   LOG(INFO) << " end test client.base, http client connections";
 }
 
-TEST_CASE("client.http.request", "[http client send request]") {
+CATCH_TEST_CASE("client.http.request", "[http client send request]") {
   LOG(INFO) << " start test client.http.request, http client send request";
 
   base::MessageLoop loop;
@@ -204,8 +204,7 @@ TEST_CASE("client.http.request", "[http client send request]") {
 
   loop.PostDelayTask(
       NewClosure([&]() {
-
-        REQUIRE((failed_request + success_request) == total_task);
+        CATCH_REQUIRE((failed_request + success_request) == total_task);
         http_client.Finalize();
         loop.QuitLoop();
       }),
@@ -216,7 +215,7 @@ TEST_CASE("client.http.request", "[http client send request]") {
   LOG(INFO) << " end test client.http.request, http client send request";
 }
 
-TEST_CASE("client.raw.cs", "[raw client/server request/response test]") {
+CATCH_TEST_CASE("client.raw.cs", "[raw client/server request/response test]") {
   LOG(INFO) << ">>>>>>> start test client.raw.request, raw client send request";
 
   base::MessageLoop loop;
@@ -227,10 +226,12 @@ TEST_CASE("client.raw.cs", "[raw client/server request/response test]") {
 
   lt::net::RawCoroServer server;
   server.WithIOLoops(loops);
-  server.ServeAddress("raw://127.0.0.1:5005", NewRawCoroHandler([](lt::net::RefRawRequestContext ctx){
-    auto res = net::LtRawMessage::CreateResponse(ctx->GetRequest<net::LtRawMessage>());
-    ctx->Response(res);
-  }));
+  server.ServeAddress("raw://127.0.0.1:5005",
+                      NewRawCoroHandler([](lt::net::RefRawRequestContext ctx) {
+                        auto res = net::LtRawMessage::CreateResponse(
+                            ctx->GetRequest<net::LtRawMessage>());
+                        ctx->Response(res);
+                      }));
 
   net::url::RemoteInfo server_info;
   LOG_IF(ERROR, !net::url::ParseRemote("raw://127.0.0.1:5005", server_info))
@@ -272,9 +273,9 @@ TEST_CASE("client.raw.cs", "[raw client/server request/response test]") {
     CO_GO& loop << raw_request_task;
   }
 
-  co_go &loop << [&]() {
+  co_go& loop << [&]() {
     co_sleep(5000);
-    REQUIRE((failed_request + success_request) == total_task);
+    CATCH_REQUIRE((failed_request + success_request) == total_task);
 
     raw_router.Finalize();
     server.StopServer();
@@ -286,7 +287,7 @@ TEST_CASE("client.raw.cs", "[raw client/server request/response test]") {
   LOG(INFO) << "<<<<<< end test client.raw.request, raw client send request";
 }
 
-TEST_CASE("client.timer.request", "[fetch resource every interval]") {
+CATCH_TEST_CASE("client.timer.request", "[fetch resource every interval]") {
   LOG(INFO) << " start test client.timer.request, raw client send request";
 
   base::MessageLoop loop;
@@ -340,12 +341,12 @@ TEST_CASE("client.timer.request", "[fetch resource every interval]") {
                      10000);
 
   loop.WaitLoopEnd();
-  //LOG(INFO) << "system co count:" << base::CoroBase::SystemCoroutineCount();
+  // LOG(INFO) << "system co count:" << base::CoroBase::SystemCoroutineCount();
 
   LOG(INFO) << " end test client.timer.request, raw client send request";
 }
 
-TEST_CASE("client.raw.bench", "[raw client send request benchmark]") {
+CATCH_TEST_CASE("client.raw.bench", "[raw client send request benchmark]") {
   LOG(INFO)
       << " start test client.raw.bench, raw client send request benchmark";
   base::MessageLoop loop;
@@ -428,7 +429,7 @@ TEST_CASE("client.raw.bench", "[raw client send request benchmark]") {
   loop.WaitLoopEnd();
 }
 
-TEST_CASE("client.http.bench", "[http client send request benchmark]") {
+CATCH_TEST_CASE("client.http.bench", "[http client send request benchmark]") {
   LOG(INFO)
       << " start test client.http.bench, http client send request benchmark";
 
@@ -505,7 +506,7 @@ TEST_CASE("client.http.bench", "[http client send request benchmark]") {
   loop.WaitLoopEnd();
 }
 
-TEST_CASE("client.redis_client", "[redis client]") {
+CATCH_TEST_CASE("client.redis_client", "[redis client]") {
   static const int connections = 2;
 
   LOG(INFO) << "start test client.router with redis protocal";
@@ -587,7 +588,7 @@ TEST_CASE("client.redis_client", "[redis client]") {
   return;
 }
 
-TEST_CASE("client.ringhash_router", "[redis ringhash router client]") {
+CATCH_TEST_CASE("client.ringhash_router", "[redis ringhash router client]") {
   static const int connections = 2;
 
   LOG(INFO) << "start test client.ringhash_router with redis protocol";
@@ -597,8 +598,10 @@ TEST_CASE("client.ringhash_router", "[redis ringhash router client]") {
   loop.Start();
 
   std::vector<std::string> remote_hosts = {
-      "redis://127.0.0.1:6400", "redis://127.0.0.1:6401",
-      "redis://127.0.0.1:6402", "redis://127.0.0.1:6403",
+      "redis://127.0.0.1:6400",
+      "redis://127.0.0.1:6401",
+      "redis://127.0.0.1:6402",
+      "redis://127.0.0.1:6403",
       "redis://127.0.0.1:6404",
   };
 
@@ -662,7 +665,7 @@ TEST_CASE("client.ringhash_router", "[redis ringhash router client]") {
   return;
 }
 
-TEST_CASE("client.redis_heartbeat", "[redis client heartbeat]") {
+CATCH_TEST_CASE("client.redis_heartbeat", "[redis client heartbeat]") {
   static const int connections = 1;
   LOG(INFO) << "start test client.redis_heartbeat with redis protocal";
 
@@ -736,7 +739,7 @@ private:
   std::vector<base::MessageLoop*> loops_;
 };
 
-TEST_CASE("client.http_pool", "[http client pool manager]") {
+CATCH_TEST_CASE("client.http_pool", "[http client pool manager]") {
   LOG(INFO) << " start test client.http_pool, http client send request";
 
   ClientD delegate;

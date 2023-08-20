@@ -29,7 +29,7 @@ struct RouterManager : public lt::net::ClientDelegate {
 
 extern RouterManager router_delegate;
 
-TEST_CASE("client.hashrouter", "[http client]") {
+CATCH_TEST_CASE("client.hashrouter", "[http client]") {
   LOG(INFO) << " start hashrouter test enter";
 
   base::MessageLoop loop;

@@ -18,7 +18,7 @@
 #include "io_service.h"
 #include "base/logging.h"
 #include "base/closure/closure_task.h"
-#include "base/ip_endpoint.h"
+#include "common/ip_endpoint.h"
 #include "codec/codec_factory.h"
 #include "codec/codec_message.h"
 #include "codec/codec_service.h"

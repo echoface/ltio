@@ -22,14 +22,28 @@ list(APPEND LtIO_LINKER_LIBS PUBLIC fcontext)
 # thirdparty deps
 CPMAddPackage("gh:fmtlib/fmt#10.1.0")
 CPMAddPackage("gh:nlohmann/json@3.10.5")
-CPMAddPackage("gh:catchorg/Catch2@3.2.1")
-CPMAddPackage("gh:google/glog@0.4.0")
+#CPMAddPackage("gh:google/glog@0.4.0")
 CPMAddPackage("gh:gflags/gflags@2.2.2")
+CPMAddPackage("gh:cameron314/concurrentqueue@1.0.4")
+CPMAddPackage(
+    NAME glog
+    VERSION 0.4.0
+    OPTIONS "WITH_GFLAGS NO" # disable warning about gflags not found
+    GITHUB_REPOSITORY google/glog
+)
+CPMAddPackage(
+    NAME Catch2
+    VERSION 3.2.1
+    OPTIONS "CATCH_CONFIG_PREFIX_ALL" # fix `CHECK` conflict with glog
+    GITHUB_REPOSITORY catchorg/Catch2
+)
+#CPMAddPackage("gh:catchorg/Catch2@3.2.1")
 
 list(APPEND LtIO_LINKER_LIBS PUBLIC fmt::fmt)
 list(APPEND LtIO_LINKER_LIBS PUBLIC glog::glog)
 list(APPEND LtIO_LINKER_LIBS PUBLIC gflags::gflags)
 list(APPEND LtIO_LINKER_LIBS PUBLIC nlohmann_json::nlohmann_json)
+list(APPEND LtIO_LINKER_LIBS PUBLIC concurrentqueue)
 
 if (LTIO_WITH_OPENSSL)
   find_package(OpenSSL REQUIRED)
@@ -40,7 +54,7 @@ if (LTIO_WITH_HTTP2)
   if(LTIO_USE_SYS_NGHTTP2)
     find_package(NGHTTP2 REQUIRED)
   else()
-    CPMAddPackage("gh:nghttp2/nghttp2@1.44.0")
+    CPMAddPackage("gh:nghttp2/nghttp2@1.55.1")
   endif()
 
   list(APPEND LtIO_LINKER_LIBS PUBLIC nghttp2)

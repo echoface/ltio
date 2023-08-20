@@ -22,7 +22,7 @@
 
 #include <base/lt_macro.h>
 #include <net_io/io_buffer.h>
-#include "net_io/base/ip_endpoint.h"
+#include "net_io/common/ip_endpoint.h"
 
 namespace base {
 class MessageLoop;

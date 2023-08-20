@@ -28,17 +28,17 @@ void coro_fun(std::string tag) {
 }
 
 #if 0
-TEST_CASE("coro.crash", "[run task as coro crash task]") {
+CATCH_TEST_CASE("coro.crash", "[run task as coro crash task]") {
   CO_SLEEP(1000);
 }
 #endif
 
-TEST_CASE("coro.check", "[run task as coro not working task]") {
-  REQUIRE_FALSE(CO_RESUMER);
-  REQUIRE_FALSE(CO_CANYIELD);
+CATCH_TEST_CASE("coro.check", "[run task as coro not working task]") {
+  CATCH_REQUIRE_FALSE(CO_RESUMER);
+  CATCH_REQUIRE_FALSE(CO_CANYIELD);
 }
 
-TEST_CASE("coro.with_fmt", "[run task as coro with fmt lib]") {
+CATCH_TEST_CASE("coro.with_fmt", "[run task as coro with fmt lib]") {
   FLAGS_v = 26;
   LOG(INFO) << "start test use libfmt in coro";
   CO_GO [&]() {
@@ -49,7 +49,7 @@ TEST_CASE("coro.with_fmt", "[run task as coro with fmt lib]") {
   LOG(INFO) << "end test use libfmt in coro";
 }
 
-TEST_CASE("coro.background", "[run task as coro task in background]") {
+CATCH_TEST_CASE("coro.background", "[run task as coro task in background]") {
   LOG(INFO) << " start test go flag enter";
   FLAGS_v = 26;
   bool background_ok = false;
@@ -58,11 +58,11 @@ TEST_CASE("coro.background", "[run task as coro task in background]") {
     background_ok = true;
   };
   sleep(1);
-  REQUIRE(background_ok);
+  CATCH_REQUIRE(background_ok);
   LOG(INFO) << " start test go flag leave";
 }
 
-TEST_CASE("coro.go", "[go flag call coroutine]") {
+CATCH_TEST_CASE("coro.go", "[go flag call coroutine]") {
   FLAGS_v = 26;
   base::MessageLoop loop;
   loop.Start();
@@ -85,11 +85,11 @@ TEST_CASE("coro.go", "[go flag call coroutine]") {
 
   loop.PostDelayTask(NewClosure([&]() { loop.QuitLoop(); }), 2000);
   loop.WaitLoopEnd();
-  REQUIRE(lambda_ok);
-  REQUIRE(withloop_ok);
+  CATCH_REQUIRE(lambda_ok);
+  CATCH_REQUIRE(withloop_ok);
 }
 
-TEST_CASE("coro.resumer", "[coroutine resumer with loop reply task]") {
+CATCH_TEST_CASE("coro.resumer", "[coroutine resumer with loop reply task]") {
   FLAGS_v = 26;
   base::MessageLoop loop;
   loop.Start();
@@ -117,11 +117,11 @@ TEST_CASE("coro.resumer", "[coroutine resumer with loop reply task]") {
       2000);
   loop.WaitLoopEnd();
 
-  REQUIRE(looptask_ok);
-  REQUIRE(gogo_task_ok);
+  CATCH_REQUIRE(looptask_ok);
+  CATCH_REQUIRE(gogo_task_ok);
 }
 
-TEST_CASE("coro.co_sleep", "[coroutine sleep]") {
+CATCH_TEST_CASE("coro.co_sleep", "[coroutine sleep]") {
   FLAGS_v = 25;
 
   base::MessageLoop loop;
@@ -137,10 +137,10 @@ TEST_CASE("coro.co_sleep", "[coroutine sleep]") {
                      500);  // exit ater 5s
 
   loop.WaitLoopEnd();
-  REQUIRE(co_sleep_resumed == true);
+  CATCH_REQUIRE(co_sleep_resumed == true);
 }
 
-TEST_CASE("coro.multi_resume", "[coroutine resume twice]") {
+CATCH_TEST_CASE("coro.multi_resume", "[coroutine resume twice]") {
   FLAGS_v = 25;
 
   base::MessageLoop loop;
@@ -169,10 +169,10 @@ TEST_CASE("coro.multi_resume", "[coroutine resume twice]") {
   loop.PostDelayTask(NewClosure([&]() { loop.QuitLoop(); }),
                      500);  // exit ater 5s
   loop.WaitLoopEnd();
-  REQUIRE(resuer_ok);
+  CATCH_REQUIRE(resuer_ok);
 }
 
-TEST_CASE("coro.wg_timeout", "[coroutine resume twice]") {
+CATCH_TEST_CASE("coro.wg_timeout", "[coroutine resume twice]") {
   FLAGS_v = 25;
 
   CO_GO[&]() {  // main
@@ -187,14 +187,14 @@ TEST_CASE("coro.wg_timeout", "[coroutine resume twice]") {
     };
 
     auto res = wg->Wait(10);
-    REQUIRE(res == co::WaitGroup::kTimeout);
+    CATCH_REQUIRE(res == co::WaitGroup::kTimeout);
     LOG(INFO) << "wait group braodcast coro resumed from wait...";
   };
 
   sleep(1);
 }
 
-TEST_CASE("coro.wg_broadcast", "[coroutine braodcast resume]") {
+CATCH_TEST_CASE("coro.wg_broadcast", "[coroutine braodcast resume]") {
   FLAGS_v = 25;
 
   CO_GO[&]() {  // main
@@ -210,13 +210,13 @@ TEST_CASE("coro.wg_broadcast", "[coroutine braodcast resume]") {
     }
 
     auto res = wg->Wait(1000);
-    REQUIRE(res == co::WaitGroup::kSuccess);
+    CATCH_REQUIRE(res == co::WaitGroup::kSuccess);
     LOG(INFO) << "wait group braodcast resumed.";
   };
   sleep(2);
 }
 
-TEST_CASE("coro.co_sync", "[coroutine braodcast resume]") {
+CATCH_TEST_CASE("coro.co_sync", "[coroutine braodcast resume]") {
   FLAGS_v = 25;
 
   CO_GO[]() {
@@ -227,12 +227,12 @@ TEST_CASE("coro.co_sync", "[coroutine braodcast resume]") {
       result = 12;
     });
 
-    REQUIRE(result == 12);
+    CATCH_REQUIRE(result == 12);
   };
   usleep(500);
 }
 
-TEST_CASE("coro.Sched", "[coroutine sched]") {
+CATCH_TEST_CASE("coro.Sched", "[coroutine sched]") {
   FLAGS_v = 26;
 
   int64_t cnt = 0;
@@ -252,10 +252,10 @@ TEST_CASE("coro.Sched", "[coroutine sched]") {
     std::cout << "second task run" << std::endl;
   };
   usleep(3000);
-  REQUIRE(cnt == 2);
+  CATCH_REQUIRE(cnt == 2);
 }
 
-TEST_CASE("coro.resume_twice", "[resume_twice a yield coro]") {
+CATCH_TEST_CASE("coro.resume_twice", "[resume_twice a yield coro]") {
   FLAGS_v = 25;
 
   int64_t cnt = 0;
@@ -276,10 +276,10 @@ TEST_CASE("coro.resume_twice", "[resume_twice a yield coro]") {
   resumer();
 
   usleep(5000);
-  REQUIRE(cnt == 1);
+  CATCH_REQUIRE(cnt == 1);
 }
 
-TEST_CASE("coro.co_lock", "[resume_twice a yield coro]") {
+CATCH_TEST_CASE("coro.co_lock", "[resume_twice a yield coro]") {
   FLAGS_v = 25;
 
   std::vector<base::MessageLoop*> loops;
@@ -300,13 +300,13 @@ TEST_CASE("coro.co_lock", "[resume_twice a yield coro]") {
     };
   }
   sleep(1);
-  REQUIRE(cnt == 1000);
+  CATCH_REQUIRE(cnt == 1000);
 }
 
 #include <sys/eventfd.h>
 #include <base/coroutine/io_event.h>
 
-TEST_CASE("coro.ioevent", "[ioevent for coro]") {
+CATCH_TEST_CASE("coro.ioevent", "[ioevent for coro]") {
   //FLAGS_v = 26;
 
   base::MessageLoop loop("main");
@@ -346,7 +346,7 @@ TEST_CASE("coro.ioevent", "[ioevent for coro]") {
   close(fd);
 }
 
-TEST_CASE("coro.ioevent2", "[ioevent for coro]") {
+CATCH_TEST_CASE("coro.ioevent2", "[ioevent for coro]") {
   //FLAGS_v = 26;
 
   base::MessageLoop loop("main");

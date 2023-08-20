@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+#include <arpa/inet.h>
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -23,18 +24,17 @@
 #include <stdio.h>    // snprintf
 #include <strings.h>  // bzero
 #include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/uio.h>
 #include <unistd.h>
 #include <string>
 
-#include "base/ip_endpoint.h"
-#include "base/sockaddr_storage.h"
 #include "glog/logging.h"
 
-#include <arpa/inet.h>
-#include <base/logging.h>
-#include <sys/types.h>
-#include <sys/uio.h>
+#include "base/logging.h"
 #include "base/utils/sys_error.h"
+#include "common/ip_endpoint.h"
+#include "common/sockaddr_storage.h"
 #include "socket_utils.h"
 
 namespace lt {
@@ -95,7 +95,6 @@ bool SetSocketBlocking(int fd, bool blocking) {
   flags = blocking ? (flags & ~O_NONBLOCK) : (flags | O_NONBLOCK);
   return (fcntl(fd, F_SETFL, flags) == 0) ? true : false;
 }
-
 
 int ListenSocket(SocketFd socket_fd) {
   int ret = ::listen(socket_fd, SOMAXCONN);

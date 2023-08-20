@@ -1,7 +1,7 @@
 #ifndef _COMPONENT_LOG_METRICS_H_
 #define _COMPONENT_LOG_METRICS_H_
 
-#include <thirdparty/cameron_queue/blockingconcurrentqueue.h>
+#include <blockingconcurrentqueue.h>
 #include <atomic>
 #include <thread>
 #include <vector>

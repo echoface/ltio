@@ -18,13 +18,12 @@
 #ifndef _NET_SERVICE_ACCEPTOR_H_H_
 #define _NET_SERVICE_ACCEPTOR_H_H_
 
-#include "base/ip_endpoint.h"
-#include "socket_utils.h"
-
 #include "base/lt_macro.h"
 #include "base/message_loop/fd_event.h"
 #include "base/message_loop/message_loop.h"
+#include "common/ip_endpoint.h"
 #include "net_callback.h"
+#include "socket_utils.h"
 
 namespace lt {
 namespace net {
@@ -33,12 +32,13 @@ class SocketAcceptor : public base::FdEvent::Handler {
 public:
   class Actor {
   public:
-    virtual bool AutoRestart() {return true;}
+    virtual bool AutoRestart() { return true; }
 
-    virtual void OnFatalError() {CHECK(false);}
+    virtual void OnFatalError() { CHECK(false); }
 
     virtual void OnNewConnection(int /*fd*/, const IPEndPoint&) = 0;
   };
+
 public:
   SocketAcceptor(Actor*, base::EventPump* pump, const IPEndPoint&);
 
@@ -51,6 +51,7 @@ public:
   bool IsListening() { return listening_; }
 
   const IPEndPoint& ListeningAddress() const { return address_; };
+
 private:
   bool InitListener();
 

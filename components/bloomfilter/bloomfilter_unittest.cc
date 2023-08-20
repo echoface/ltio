@@ -6,16 +6,16 @@
 
 #include "components/bloomfilter/bloomfilter.h"
 
-TEST_CASE("base", "[Add New Item To BloomFilter]") {
+CATCH_TEST_CASE("base", "[Add New Item To BloomFilter]") {
   component::BloomFilter filter(1000000, 0.00001);
 
   for (uint64_t i = 0; i < 1000000; i++) {
     filter.Set(&i, sizeof(uint64_t));
-    REQUIRE(filter.IsSet(&i, sizeof(uint64_t)));
+    CATCH_REQUIRE(filter.IsSet(&i, sizeof(uint64_t)));
   }
 }
 
-TEST_CASE("bloom_filter.falserate", "[false case]") {
+CATCH_TEST_CASE("bloom_filter.falserate", "[false case]") {
   component::BloomFilter filter(1000000, 0.00001);
 
   for (uint64_t i = 0; i < 1000000; i++) {
@@ -29,5 +29,5 @@ TEST_CASE("bloom_filter.falserate", "[false case]") {
     }
   }
 
-  REQUIRE(false_count < 50);
+  CATCH_REQUIRE(false_count < 50);
 }

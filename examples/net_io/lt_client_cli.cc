@@ -10,7 +10,7 @@
 
 #include <gflags/gflags.h>
 #include <glog/logging.h>
-#include <thirdparty/cameron_queue/blockingconcurrentqueue.h>
+#include <blockingconcurrentqueue.h>
 
 using namespace lt;
 typedef moodycamel::BlockingConcurrentQueue<std::string> BlockMessageQueue;

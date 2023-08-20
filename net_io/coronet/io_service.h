@@ -1,7 +1,7 @@
 #ifndef LT_CO_NET_IO_SERVICE_H_
 #define LT_CO_NET_IO_SERVICE_H_
 
-#include "net_io/base/ip_endpoint.h"
+#include "net_io/common/ip_endpoint.h"
 #include "net_io/codec/codec_service.h"
 
 using lt::net::CodecService;

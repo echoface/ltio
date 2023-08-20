@@ -14,14 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-#include "socket_acceptor.h"
-#include "base/logging.h"
-#include "base/ip_endpoint.h"
-#include "base/sockaddr_storage.h"
-#include "base/utils/sys_error.h"
-#include "glog/logging.h"
 #include "socket_utils.h"
+
+#include "base/logging.h"
+#include "base/utils/sys_error.h"
+#include "common/ip_endpoint.h"
+#include "common/sockaddr_storage.h"
+#include "glog/logging.h"
+#include "socket_acceptor.h"
 
 namespace lt {
 namespace net {
@@ -67,7 +67,7 @@ bool SocketAcceptor::InitListener() {
   socket_event_ = base::FdEvent::Create(this, socket_fd, base::LtEv::NONE);
 
   VLOG(VTRACE) << "acceptor init success, fd:[" << socket_fd
-                    << "] bind to local:[" << address_.ToString() << "]";
+               << "] bind to local:[" << address_.ToString() << "]";
   return true;
 }
 

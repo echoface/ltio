@@ -17,10 +17,11 @@
 
 #include "udp_service.h"
 
+#include <memory>
+
 #include <base/message_loop/message_loop.h>
 #include <net_io/socket_utils.h>
-#include <memory>
-#include "net_io/base/sockaddr_storage.h"
+#include "net_io/common/sockaddr_storage.h"
 
 namespace lt {
 namespace net {

@@ -6,15 +6,15 @@
 #include <iostream>
 #include "base/time/time_utils.h"
 
-TEST_CASE("time_delta", "[test time delta]") {
+CATCH_TEST_CASE("time_delta", "[test time delta]") {
   auto delta = base::TimeDelta::FromSeconds(10);
-  REQUIRE(delta.ToHz() == 0.1);
-  REQUIRE(delta.InMilliseconds() == 10000);
+  CATCH_REQUIRE(delta.ToHz() == 0.1);
+  CATCH_REQUIRE(delta.InMilliseconds() == 10000);
 
-  REQUIRE_FALSE(delta.is_inf());
-  REQUIRE_FALSE(delta.is_zero());
-  REQUIRE_FALSE(delta.is_max());
-  REQUIRE_FALSE(delta.is_min());
+  CATCH_REQUIRE_FALSE(delta.is_inf());
+  CATCH_REQUIRE_FALSE(delta.is_zero());
+  CATCH_REQUIRE_FALSE(delta.is_max());
+  CATCH_REQUIRE_FALSE(delta.is_min());
 
   int64_t ms = base::time_ms();
   base::TimeTicks now = base::TimeTicks::Now();
@@ -23,7 +23,7 @@ TEST_CASE("time_delta", "[test time delta]") {
   int64_t msdelta = base::time_ms() - ms;
 
   int64_t diff = delta.InMilliseconds() - msdelta;
-  REQUIRE(diff <= 1);
+  CATCH_REQUIRE(diff <= 1);
 
   std::cout << "sizeof(TimeDelta):" << sizeof(base::TimeDelta) << std::endl;
   std::cout << "sizeof(TimeTicks):" << sizeof(base::TimeTicks) << std::endl;

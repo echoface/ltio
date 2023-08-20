@@ -24,7 +24,7 @@
 #include <vector>
 
 #include "client_router.h"
-#include "net_io/base/load_balance/maglev2.h"
+#include "net_io/common/load_balance/maglev2.h"
 
 namespace lt {
 namespace net {

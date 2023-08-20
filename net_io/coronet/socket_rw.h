@@ -12,9 +12,9 @@ namespace so {
 
 class SocketReader {
 public:
-  SocketReader() {};
+  SocketReader(){};
 
-  virtual ~SocketReader() {};
+  virtual ~SocketReader(){};
 
   // for initializing purpose, return false when error
   virtual bool Start(bool server) WARN_UNUSED_RESULT = 0;
@@ -28,7 +28,7 @@ public:
 class SocketWriter {
 public:
   SocketWriter() {}
-  virtual ~SocketWriter() {};
+  virtual ~SocketWriter(){};
 
   // for initializing purpose, return false when error
   virtual bool Start(bool server) WARN_UNUSED_RESULT = 0;

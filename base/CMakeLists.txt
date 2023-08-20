@@ -62,6 +62,7 @@ endif()
 
 # configure a header file to pass some of the CMake settings to the source code
 configure_file(ltio_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/ltio_config.h)
+message(STATUS "ltio_config.h gen in location ${CMAKE_CURRENT_BINARY_DIR}")
 
 target_sources(ltio PRIVATE ${BASE_SOURCES})
 target_sources(ltio_shared PRIVATE ${BASE_SOURCES})

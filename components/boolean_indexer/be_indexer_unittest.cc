@@ -19,14 +19,14 @@
 
 using namespace component;
 
-TEST_CASE("conjunction_gen_id", "[document and conjunction id]") {
+CATCH_TEST_CASE("conjunction_gen_id", "[document and conjunction id]") {
   uint64_t conj_id = ConjUtil::GenConjID(120, 0, 5);
-  REQUIRE(120 == ConjUtil::GetDocumentID(conj_id));
-  REQUIRE(0 == ConjUtil::GetIndexInDoc(conj_id));
-  REQUIRE(5 == ConjUtil::GetConjunctionSize(conj_id));
+  CATCH_REQUIRE(120 == ConjUtil::GetDocumentID(conj_id));
+  CATCH_REQUIRE(0 == ConjUtil::GetIndexInDoc(conj_id));
+  CATCH_REQUIRE(5 == ConjUtil::GetConjunctionSize(conj_id));
 }
 
-TEST_CASE("conjunction_dump", "[dump document and conjunction id]") {
+CATCH_TEST_CASE("conjunction_dump", "[dump document and conjunction id]") {
   component::BooleanExpr expr1("gender", {"man"}, true);
   std::cout << expr1 << std::endl;
 
@@ -48,7 +48,7 @@ TEST_CASE("conjunction_dump", "[dump document and conjunction id]") {
   std::cout << conj2 << std::endl;
 }
 
-TEST_CASE("be_indexes_dump", "[dump indexes and conjunction id]") {
+CATCH_TEST_CASE("be_indexes_dump", "[dump indexes and conjunction id]") {
   BeIndexerBuilder builder;
 
   Document doc(1);
@@ -102,26 +102,26 @@ TEST_CASE("be_indexes_dump", "[dump indexes and conjunction id]") {
   }
 }
 
-TEST_CASE("be_posting_list", "[be posting list sort id]") {
+CATCH_TEST_CASE("be_posting_list", "[be posting list sort id]") {
   Entries entrylist = {0, 1, 1, 4, 8, 20};
 
   Attr attr("age", 0);
   EntriesCursor cursor(attr, entrylist);
 
-  REQUIRE(cursor.ReachEnd() == false);
-  REQUIRE(cursor.GetCurEntryID() == 0);
-  REQUIRE(cursor.Skip(1) == 4);
-  REQUIRE(cursor.GetCurEntryID() == 4);
-  REQUIRE(cursor.Skip(5) == 8);
-  REQUIRE(cursor.GetCurEntryID() == 8);
-  REQUIRE(cursor.SkipTo(20) == 20);
-  REQUIRE(cursor.GetCurEntryID() == 20);
-  REQUIRE(cursor.Skip(20) == NULLENTRY);
-  REQUIRE(cursor.GetCurEntryID() == NULLENTRY);
-  REQUIRE(cursor.ReachEnd());
+  CATCH_REQUIRE(cursor.ReachEnd() == false);
+  CATCH_REQUIRE(cursor.GetCurEntryID() == 0);
+  CATCH_REQUIRE(cursor.Skip(1) == 4);
+  CATCH_REQUIRE(cursor.GetCurEntryID() == 4);
+  CATCH_REQUIRE(cursor.Skip(5) == 8);
+  CATCH_REQUIRE(cursor.GetCurEntryID() == 8);
+  CATCH_REQUIRE(cursor.SkipTo(20) == 20);
+  CATCH_REQUIRE(cursor.GetCurEntryID() == 20);
+  CATCH_REQUIRE(cursor.Skip(20) == NULLENTRY);
+  CATCH_REQUIRE(cursor.GetCurEntryID() == NULLENTRY);
+  CATCH_REQUIRE(cursor.ReachEnd());
 }
 
-TEST_CASE("entries_cursor", "[skip posting list sort id]") {
+CATCH_TEST_CASE("entries_cursor", "[skip posting list sort id]") {
   Entries ids = {1, 18, 24, 57, 70};
   Attr attr("test", 0);
 
@@ -130,17 +130,17 @@ TEST_CASE("entries_cursor", "[skip posting list sort id]") {
   EntriesCursor c2 = curosr;
 }
 
-TEST_CASE("skipto_test", "[skip posting list sort id]") {
+CATCH_TEST_CASE("skipto_test", "[skip posting list sort id]") {
   //[<1,1>,<18,1>,<24,1>,<57,1>,<70,1>,]
   Entries ids = {1, 18, 24, 57, 70};
   Attr attr("test", 0);
   EntriesCursor iter(attr, ids);
 
   int res = iter.SkipTo(2);
-  REQUIRE(res == 18);
+  CATCH_REQUIRE(res == 18);
 }
 
-TEST_CASE("index_result_check", "[be posting list correction check]") {
+CATCH_TEST_CASE("index_result_check", "[be posting list correction check]") {
   std::map<int, UTBooleanExpr*> targets;
   component::BeIndexerBuilder builder;
 
@@ -222,12 +222,12 @@ TEST_CASE("index_result_check", "[be posting list correction check]") {
         oss << "}\n";
       }
       std::cout << oss.str() << std::endl;
-      REQUIRE(false);
+      CATCH_REQUIRE(false);
     }
   }
 }
 
-TEST_CASE("index_build", "[build posting list correction check]") {
+CATCH_TEST_CASE("index_build", "[build posting list correction check]") {
   /*
    * >>>>>>>>>t:8
 a:{a inc [55, 56, 65, 76, 92, 93, ]}

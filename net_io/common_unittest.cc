@@ -24,16 +24,16 @@
 #include "net_io/tcp_channel.h"
 #include "net_io/url_utils.h"
 
-#include "net_io/base/ip_address.h"
-#include "net_io/base/ip_endpoint.h"
-#include "net_io/base/sockaddr_storage.h"
+#include "net_io/common/ip_address.h"
+#include "net_io/common/ip_endpoint.h"
+#include "net_io/common/sockaddr_storage.h"
 #include "net_io/udp_io/udp_service.h"
 
 #include <catch2/catch_test_macros.hpp>
 
 using namespace lt;
 
-TEST_CASE("net.base", "[system basic check]") {
+CATCH_TEST_CASE("net.base", "[system basic check]") {
   struct sockaddr sock_addr;
   struct sockaddr_in sock_addr_v4;
   struct sockaddr_in6 sock_addr_v6;
@@ -44,38 +44,38 @@ TEST_CASE("net.base", "[system basic check]") {
             << " sorage.addr_len:" << storage.addr_len;
 }
 
-TEST_CASE("url.host_resolve", "[host resolve test]") {
+CATCH_TEST_CASE("url.host_resolve", "[host resolve test]") {
   std::string host_ip;
   lt::net::url::HostResolve("g.test.amnetapi.com", host_ip);
   std::cout << "result:" << host_ip << std::endl;
 }
 
-TEST_CASE("uri.parse", "[http uri parse]") {
+CATCH_TEST_CASE("uri.parse", "[http uri parse]") {
   {
     lt::net::url::SchemeIpPort result;
-    REQUIRE(lt::net::url::ParseURI("http://www.baidu.com:80", result));
-    REQUIRE(result.port == 80);
-    REQUIRE(result.protocol == "http");
-    REQUIRE(result.host == "www.baidu.com");
+    CATCH_REQUIRE(lt::net::url::ParseURI("http://www.baidu.com:80", result));
+    CATCH_REQUIRE(result.port == 80);
+    CATCH_REQUIRE(result.protocol == "http");
+    CATCH_REQUIRE(result.host == "www.baidu.com");
   }
 
   {
     net::url::SchemeIpPort result;
-    REQUIRE(net::url::ParseURI("://127.0.0.1:", result));
-    REQUIRE(result.protocol == "http");
-    REQUIRE(result.host == "127.0.0.1");
+    CATCH_REQUIRE(net::url::ParseURI("://127.0.0.1:", result));
+    CATCH_REQUIRE(result.protocol == "http");
+    CATCH_REQUIRE(result.host == "127.0.0.1");
   }
 
   {
     net::url::SchemeIpPort result;
-    REQUIRE(net::url::ParseURI("://61.135.169.121:5006", result));
-    REQUIRE(result.protocol == "http");
-    REQUIRE(result.host == "61.135.169.121");
+    CATCH_REQUIRE(net::url::ParseURI("://61.135.169.121:5006", result));
+    CATCH_REQUIRE(result.protocol == "http");
+    CATCH_REQUIRE(result.host == "61.135.169.121");
     LOG(INFO) << " result host_ip:" << result.host_ip;
   }
 }
 
-TEST_CASE("uri.parse.remote", "[remote uri parse]") {
+CATCH_TEST_CASE("uri.parse.remote", "[remote uri parse]") {
   std::vector<std::string> remote_uris = {
       "http://gh:passwd@localhost:8020?abc=&name=1234",
       "://gh:passwd@localhost:8020?abc=&name=1234",
@@ -101,13 +101,13 @@ TEST_CASE("uri.parse.remote", "[remote uri parse]") {
   }
 }
 
-TEST_CASE("ip.address", "[ip address test]") {
+CATCH_TEST_CASE("ip.address", "[ip address test]") {
   LOG(INFO) << "ipv4 localhost:" << net::IPAddress::IPv4Localhost().ToString();
   LOG(INFO) << "ipv6 localhost:" << net::IPAddress::IPv6Localhost().ToString();
 
   auto bytes = net::IPAddressBytes();
-  REQUIRE(bytes.size() == 0);
-  REQUIRE(bytes.empty());
+  CATCH_REQUIRE(bytes.size() == 0);
+  CATCH_REQUIRE(bytes.empty());
 
   auto address = net::IPAddress();
   LOG(INFO) << "net::IPAddress().IsIPv4():" << address.IsIPv4();
@@ -115,34 +115,34 @@ TEST_CASE("ip.address", "[ip address test]") {
   LOG(INFO) << "net::IPAddress().IsZero():" << address.IsZero();
 
   address.AssignFromIPLiteral("127.0.0.1");
-  REQUIRE((address.IsIPv4() && address.IsValid() && address.IsLoopback()));
+  CATCH_REQUIRE((address.IsIPv4() && address.IsValid() && address.IsLoopback()));
 
-  REQUIRE((address.ToString() == "127.0.0.1"));
+  CATCH_REQUIRE((address.ToString() == "127.0.0.1"));
 
   auto ipv6 = net::ConvertIPv4ToIPv4MappedIPv6(address);
   LOG(INFO) << "127.0.0.1 => IPV6:" << ipv6.ToString();
 }
 
-TEST_CASE("ip.endpoint", "[ip endpoint test]") {
+CATCH_TEST_CASE("ip.endpoint", "[ip endpoint test]") {
   auto ep = net::IPEndPoint();
   LOG(INFO) << " port:" << ep.port();
 
   auto local_ep = net::IPEndPoint(net::IPAddress::IPv6Localhost(), 8080);
-  REQUIRE((local_ep.GetFamily() == net::ADDRESS_FAMILY_IPV6));
+  CATCH_REQUIRE((local_ep.GetFamily() == net::ADDRESS_FAMILY_IPV6));
 
   sockaddr_in6 addr;
   uint32_t len = sizeof(sockaddr_in6);
-  REQUIRE(local_ep.ToSockAddr((struct sockaddr*)&addr, len));
-  REQUIRE(addr.sin6_port == htobe16(8080));
+  CATCH_REQUIRE(local_ep.ToSockAddr((struct sockaddr*)&addr, len));
+  CATCH_REQUIRE(addr.sin6_port == htobe16(8080));
 
   LOG(INFO) << "ipv6 localhost with port 8080:" << local_ep.ToString();
 }
 
-TEST_CASE("udp.pollbuffer", "[udp pollbuffer]") {
+CATCH_TEST_CASE("udp.pollbuffer", "[udp pollbuffer]") {
   net::UDPPollBuffer buffer(5);
 }
 
-TEST_CASE("udp.udpservice", "[udp serivce]") {
+CATCH_TEST_CASE("udp.udpservice", "[udp serivce]") {
   base::MessageLoop main;
   main.Start();
 
@@ -155,7 +155,7 @@ TEST_CASE("udp.udpservice", "[udp serivce]") {
 
 #include "net_io/codec/http/parser_context.h"
 
-TEST_CASE("http.parser.tpl", "[http parser template]") {
+CATCH_TEST_CASE("http.parser.tpl", "[http parser template]") {
   struct T {
     void CommitHttpRequest(net::RefHttpRequest&& req) {}
     void CommitHttpResponse(net::RefHttpResponse&& rsp) {}

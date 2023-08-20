@@ -20,7 +20,7 @@
 #include <base/utils/sys_error.h>
 #include "base/message_loop/event.h"
 #include "client_connector.h"
-#include "net_io/base/sockaddr_storage.h"
+#include "net_io/common/sockaddr_storage.h"
 
 namespace lt {
 namespace net {
@@ -63,7 +63,6 @@ void Connector::Dial(const net::IPEndPoint& ep, Connector::Delegate* r) {
     case EINTR:
     case EISCONN:
     case EINPROGRESS: {
-
       RefFdEvent ev = FdEvent::Create(this, sock_fd, base::LtEv::WRITE);
       pump_->InstallFdEvent(ev.get());
 

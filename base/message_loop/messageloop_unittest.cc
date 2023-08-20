@@ -31,7 +31,7 @@ public:
   static void static_member_fun() { LOG(INFO) << __func__ << " run, arg:"; }
 };
 
-TEST_CASE("loop.benchStart", "[test event start]") {
+CATCH_TEST_CASE("loop.benchStart", "[test event start]") {
   for (int i = 0; i < 10; i++) {
     base::MessageLoop loop;
     loop.SetLoopName("ut_" + std::to_string(i));
@@ -45,7 +45,7 @@ TEST_CASE("loop.benchStart", "[test event start]") {
   sleep(1);
 }
 
-TEST_CASE("base.task", "[test event pump timer]") {
+CATCH_TEST_CASE("base.task", "[test event pump timer]") {
   auto f = NewClosure(&cfunc);
   f->Run();
   auto lambda_task = NewClosure([]() { ; });
@@ -59,7 +59,7 @@ TEST_CASE("base.task", "[test event pump timer]") {
   member_fun_task->Run();
 }
 
-TEST_CASE("event_pump.timer", "[test event pump timer]") {
+CATCH_TEST_CASE("event_pump.timer", "[test event pump timer]") {
   base::EventPump pump;
   pump.SetLoopId(base::MessageLoop::GenLoopID());
   pump.PrepareRun();
@@ -79,7 +79,7 @@ TEST_CASE("event_pump.timer", "[test event pump timer]") {
   quit_toe->InstallHandler(NewClosure([&]() {
     auto end = base::time_ms();
     std::cout << "stop at ms:" << end - start << std::endl;
-    REQUIRE(end - start >= 1000);
+    CATCH_REQUIRE(end - start >= 1000);
 
     oneshot_invoked = true;
     pump.RemoveTimeoutEvent(quit_toe);
@@ -96,14 +96,14 @@ TEST_CASE("event_pump.timer", "[test event pump timer]") {
   }
   std::cout << "repeated_times:" << repeated_times << std::endl;
 
-  REQUIRE(oneshot_invoked);
-  REQUIRE(repeated_times > 190);
+  CATCH_REQUIRE(oneshot_invoked);
+  CATCH_REQUIRE(repeated_times > 190);
 
   delete quit_toe;
   delete repeated_toe;
 }
 
-TEST_CASE("messageloop.delaytask", "[run delay task]") {
+CATCH_TEST_CASE("messageloop.delaytask", "[run delay task]") {
   base::MessageLoop loop;
   loop.SetLoopName("DelayTaskTestLoop");
   loop.Start();
@@ -113,7 +113,7 @@ TEST_CASE("messageloop.delaytask", "[run delay task]") {
                        uint64_t end = base::time_ms();
                        LOG(INFO) << "delay task run:" << end - start
                                  << "(ms), expect 500";
-                       REQUIRE(((end - start >= 500) && (end - start <= 550)));
+                       CATCH_REQUIRE(((end - start >= 500) && (end - start <= 550)));
                      }),
                      500);
 
@@ -122,7 +122,7 @@ TEST_CASE("messageloop.delaytask", "[run delay task]") {
   loop.WaitLoopEnd();
 }
 
-TEST_CASE("messageloop.replytask", "[task with reply function]") {
+CATCH_TEST_CASE("messageloop.replytask", "[task with reply function]") {
   base::MessageLoop loop;
   loop.Start();
 
@@ -135,7 +135,7 @@ TEST_CASE("messageloop.replytask", "[task with reply function]") {
                         [&]() { LOG(INFO) << " task bind reply in loop run"; },
                         [&]() {
                           replytask_invoked_times++;
-                          REQUIRE(base::MessageLoop::Current() == &loop);
+                          CATCH_REQUIRE(base::MessageLoop::Current() == &loop);
                         });
 
   loop.PostTaskAndReply(
@@ -143,7 +143,7 @@ TEST_CASE("messageloop.replytask", "[task with reply function]") {
       [&]() { LOG(INFO) << " task bind reply use another loop run"; },
       [&]() {
         replytask_invoked_times++;
-        REQUIRE(base::MessageLoop::Current() == &replyloop);
+        CATCH_REQUIRE(base::MessageLoop::Current() == &replyloop);
       },
       &replyloop);
 
@@ -153,7 +153,7 @@ TEST_CASE("messageloop.replytask", "[task with reply function]") {
                      }),
                      100);
   loop.WaitLoopEnd();
-  REQUIRE(replytask_invoked_times == 2);
+  CATCH_REQUIRE(replytask_invoked_times == 2);
 }
 
 int64_t start_time;
@@ -191,7 +191,7 @@ void invoke(base::MessageLoop* loop, BenchMode mode) {
   }
 }
 
-TEST_CASE("co_task_obo_bench",
+CATCH_TEST_CASE("co_task_obo_bench",
           "[schedule coro task one after one]") {
   FLAGS_v = 0;
   base::MessageLoop loop;
@@ -206,7 +206,7 @@ TEST_CASE("co_task_obo_bench",
   LOG(INFO) << __FUNCTION__ << ", co_task_obo_bench end";
 }
 
-TEST_CASE("co_task_obo_bench_bind_loop",
+CATCH_TEST_CASE("co_task_obo_bench_bind_loop",
           "[schedule coro task one after one with specific loop]") {
 
   FLAGS_v = 0;
@@ -223,7 +223,7 @@ TEST_CASE("co_task_obo_bench_bind_loop",
   LOG(INFO) << __FUNCTION__ << ", co_task_obo_bench_bind_loop end";
 }
 
-TEST_CASE("task_obo_bench",
+CATCH_TEST_CASE("task_obo_bench",
           "[schedule normal task one after one]") {
   FLAGS_v = 0;
   base::MessageLoop loop;

@@ -28,7 +28,7 @@ void from_json(const component::sl::Json& j, Person& persion) {
   persion.ext = j["info"];
 }
 
-TEST_CASE("json_test", "[test josn lib]") {
+CATCH_TEST_CASE("json_test", "[test josn lib]") {
   component::sl::Json empty_j;
   std::cout << "empty_j type:" << empty_j.type_name() << std::endl;
 
@@ -45,7 +45,7 @@ TEST_CASE("json_test", "[test josn lib]") {
             << std::endl;
 }
 
-TEST_CASE("filereader", "[test file loader]") {
+CATCH_TEST_CASE("filereader", "[test file loader]") {
   std::ifstream i("./config_test.json");
   if (!i.is_open()) {
     std::cout << "not open file" << std::endl;
@@ -71,7 +71,7 @@ TEST_CASE("filereader", "[test file loader]") {
   fileReader.Initialize();
 }
 
-TEST_CASE("name_struct", "[test namestruct source]") {
+CATCH_TEST_CASE("name_struct", "[test namestruct source]") {
   //	std::ifstream i("./config_test.json");
   //	if (!i.is_open()) {
   //		std::cout << "not open file" << std::endl;
@@ -123,7 +123,7 @@ TEST_CASE("name_struct", "[test namestruct source]") {
   }
 	})"_json;
   component::sl::NameStructSource<Person> source(config["source"]);
-  REQUIRE(source.Initialize());
+  CATCH_REQUIRE(source.Initialize());
 
   source.StartLoad();
   const Person& p = source.GetByName("gonghuan");

@@ -1,7 +1,7 @@
 #ifndef _COMPONENET_METRICS_DEFINE_H_
 #define _COMPONENET_METRICS_DEFINE_H_
 
-#include <thirdparty/cameron_queue/concurrentqueue.h>
+#include <concurrentqueue.h>
 
 namespace component {
 
