@@ -1,13 +1,13 @@
 #include "ws_util.h"
 
-#include <hash/sha1.h>
 #include <string.h>
-#include <base/utils/base64/base64.hpp>
 
+#include <hash/sha1.h>
+#include <base/utils/base64/base64.hpp>
 #include "websocket_parser.h"
 
 namespace {
-  const char *ws_magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+const char* ws_magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 }
 
 // base64_encode( SHA1(key + magic) )

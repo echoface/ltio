@@ -16,14 +16,9 @@ WebsocketFrame* WebsocketFrame::NewCloseFrame(uint16_t code) {
 
 WebsocketFrame::~WebsocketFrame() {}
 
-WebsocketFrame::WebsocketFrame()
-  : CodecMessage(),
-    opcode_(WS_OP_TEXT) {
-}
+WebsocketFrame::WebsocketFrame() : CodecMessage(), opcode_(WS_OP_TEXT) {}
 
-WebsocketFrame::WebsocketFrame(int opcode)
-  : CodecMessage(),
-    opcode_(opcode) {}
+WebsocketFrame::WebsocketFrame(int opcode) : CodecMessage(), opcode_(opcode) {}
 
 void WebsocketFrame::AppendData(const char* data, size_t len) {
   std::copy(data, data + len, std::back_inserter(payload_));

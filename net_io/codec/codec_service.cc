@@ -24,8 +24,6 @@
 #include "net_io/channel.h"
 #include "net_io/socket_utils.h"
 
-#include "glog/logging.h"
-
 namespace lt {
 namespace net {
 

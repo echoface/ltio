@@ -16,18 +16,16 @@
  */
 
 #include "codec_message.h"
-#include "codec_service.h"
-#include "glog/logging.h"
 
-#include <base/message_loop/message_loop.h>
+#include "base/message_loop/message_loop.h"
+#include "codec_service.h"
 
 namespace lt {
 namespace net {
 
 const RefCodecMessage CodecMessage::kNullMessage;
 
-CodecMessage::CodecMessage()
-  : code_(kSuccess) {
+CodecMessage::CodecMessage() : code_(kSuccess) {
   work_context_.loop = NULL;
 }
 

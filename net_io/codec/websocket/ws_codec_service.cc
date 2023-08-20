@@ -154,7 +154,7 @@ void WSCodecService::StartProtocolService() {
     hs_req->InsertHeader("Sec-WebSocket-Key", sec_key);
     HttpCodecService::RequestToBuffer(hs_req.get(), channel_->WriterBuffer());
     VLOG(VTRACE) << "send handshake request"
-                      << channel_->WriterBuffer()->AsString();
+                 << channel_->WriterBuffer()->AsString();
     ignore_result(TryFlushChannel());
   }
 }
@@ -178,7 +178,7 @@ bool WSCodecService::SendRequest(CodecMessage* req) {
                                           (ws_opcode)wsmsg->OpCode());
   buffer->Produce(size);
   VLOG(VTRACE) << "send request size:" << size << ", n:" << n
-                    << " content:" << wsmsg->Payload();
+               << " content:" << wsmsg->Payload();
   return TryFlushChannel();
 }
 
@@ -196,7 +196,7 @@ bool WSCodecService::SendResponse(const CodecMessage*, CodecMessage* res) {
                                           (ws_opcode)wsmsg->OpCode());
   buffer->Produce(n);
   VLOG(VTRACE) << "send response size:" << size << ", n:" << n
-                    << " payload:" << wsmsg->Payload();
+               << " payload:" << wsmsg->Payload();
 
   return TryFlushChannel();
 }
@@ -225,9 +225,8 @@ void WSCodecService::CommitHttpRequest(const RefHttpRequest&& request) {
   std::string response = fmt::format(upgrade_response_template, ws_accept);
 
   VLOG(VINFO) << "websocket upgrade request"
-                   << ", path:" << ws_path_
-                   << ", key:" << sec_key_
-                   << ", resp:" << response;
+              << ", path:" << ws_path_ << ", key:" << sec_key_
+              << ", resp:" << response;
 
   if (channel_->Send(response) < 0) {
     hs_state = handshake_state::HS_WRONGMSG;
@@ -237,7 +236,8 @@ void WSCodecService::CommitHttpRequest(const RefHttpRequest&& request) {
   }
 }
 
-// server: OnDataReceived -> OnHandshakeReqData -> CommitHttpRequest -> OnChannelReady
+// server: OnDataReceived -> OnHandshakeReqData -> CommitHttpRequest ->
+// OnChannelReady
 void WSCodecService::OnHandshakeReqData(IOBuffer* buf) {
   CHECK(IsServerSide());
 
@@ -272,7 +272,8 @@ void WSCodecService::CommitHttpResponse(const RefHttpResponse&& response) {
   }
 }
 
-// server: OnDataReceived -> OnHandshakeResData -> CommitHttpResponse -> OnChannelReady
+// server: OnDataReceived -> OnHandshakeResData -> CommitHttpResponse ->
+// OnChannelReady
 void WSCodecService::OnHandshakeResData(IOBuffer* buf) {
   CHECK(!IsServerSide());
 

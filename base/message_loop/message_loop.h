@@ -27,15 +27,14 @@
 #include <thread>
 #include <utility>
 
-#include "base/logging.h"
 #include "base/closure/closure_task.h"
 #include "base/closure/location.h"
+#include "base/logging.h"
 #include "base/memory/scoped_ref_ptr.h"
 #include "base/memory/spin_lock.h"
 #include "base/queue/task_queue.h"
 #include "event_pump.h"
 #include "fd_event.h"
-#include "glog/logging.h"
 
 namespace base {
 

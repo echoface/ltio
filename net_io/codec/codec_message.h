@@ -18,9 +18,10 @@
 #ifndef NET_PROTOCOL_MESSAGE_H
 #define NET_PROTOCOL_MESSAGE_H
 
+#include <string>
+
 #include <base/closure/closure_task.h>
 #include <net_io/net_callback.h>
-#include <string>
 
 namespace base {
 class MessageLoop;

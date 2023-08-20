@@ -84,10 +84,10 @@ target_sources(ltio PRIVATE ${LTNET_SOURCE})
 target_sources(ltio_shared PRIVATE ${LTNET_SOURCE})
 
 add_executable(ut_ltnetio
-    client_unittest.cc
-    common_unittest.cc
-    maglev_unittest.cc
-    router_unittest.cc
+    common/common_unittest.cc
+    common/load_balance/maglev_unittest.cc
+    clients/client_unittest.cc
+    clients/router/router_unittest.cc
     )
 
 target_link_libraries(ut_ltnetio
