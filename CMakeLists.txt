@@ -12,7 +12,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CONFIG_DIR}/Modules)
 # build
 option(LTIO_BUILD_EXAMPLES "Build UNITTEST" ON)
 option(LTIO_BUILD_UNITTESTS "Build UNITTEST" ON)
-option(LTIO_BUILD_SHARED_LIBS "Build shared libraries" ON)
+option(LTIO_BUILD_SHARED_LIBS "Build shared libraries" OFF)
 
 # features
 option(LTIO_WITH_HTTP2 "enable http2 support" ON)
@@ -22,11 +22,8 @@ option(LTIO_USE_SYS_NGHTTP2 "use system wide installed nghttp2 libraries" OFF)
 # switchs
 option(LTIO_ENABLE_REUSER_PORT "enable reuse port" ON)
 
-include(ExternalProject)
-include(GNUInstallDirs)
-
-include(${CMAKE_CONFIG_DIR}/CPM.cmake)
+include(${CMAKE_CONFIG_DIR}/cpm.cmake)
 include(${CMAKE_CONFIG_DIR}/common.cmake)
-include(${CMAKE_CONFIG_DIR}/dependency.cmake)
+include(${CMAKE_CONFIG_DIR}/third_deps.cmake)
 
 include(${CMAKE_CONFIG_DIR}/targets.cmake) # declare targets
