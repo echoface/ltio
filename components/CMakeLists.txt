@@ -37,7 +37,9 @@ SET(COMPONENT_SOURCES
 )
 
 target_sources(ltio PRIVATE ${COMPONENT_SOURCES})
-target_sources(ltio_shared PRIVATE ${COMPONENT_SOURCES})
+if (LTIO_BUILD_SHARED_LIBS)
+    target_sources(ltio_shared PRIVATE ${COMPONENT_SOURCES})
+endif()
 
 SET(COMPONENT_UT_SOURCES
     inverted_indexer/indexer_unittest.cc

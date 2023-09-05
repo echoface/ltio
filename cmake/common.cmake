@@ -8,9 +8,6 @@ SET(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # These lists are later turned into target properties on main LtIO library target
 set(LtIO_LINKER_LIBS "")
-set(LtIO_INCLUDE_DIRS "")
-
-list(APPEND LtIO_INCLUDE_DIRS PUBLIC ${PROJECT_BINARY_DIR})
 
 # ---[ Set debug postfix
 IF(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)

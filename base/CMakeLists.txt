@@ -61,11 +61,14 @@ if (LTIO_WITH_OPENSSL)
 endif()
 
 # configure a header file to pass some of the CMake settings to the source code
-configure_file(ltio_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/ltio_config.h)
-message(STATUS "ltio_config.h gen in location ${CMAKE_CURRENT_BINARY_DIR}")
+configure_file(ltio_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/ltio_config.h)
+message(STATUS "ltio_config.h gen in location ${CMAKE_CURRENT_SOURCE_DIR}")
 
 target_sources(ltio PRIVATE ${BASE_SOURCES})
-target_sources(ltio_shared PRIVATE ${BASE_SOURCES})
+
+if (LTIO_BUILD_SHARED_LIBS)
+    target_sources(ltio_shared PRIVATE ${BASE_SOURCES})
+endif(LTIO_BUILD_SHARED_LIBS)
 
 add_executable(ut_ltbase
     sys/byteords_unittest.cc

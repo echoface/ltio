@@ -81,7 +81,9 @@ if (LTIO_WITH_HTTP2 AND LTIO_WITH_OPENSSL)
 endif()
 
 target_sources(ltio PRIVATE ${LTNET_SOURCE})
-target_sources(ltio_shared PRIVATE ${LTNET_SOURCE})
+if (LTIO_BUILD_SHARED_LIBS)
+    target_sources(ltio_shared PRIVATE ${LTNET_SOURCE})
+endif()
 
 add_executable(ut_ltnetio
     common/common_unittest.cc

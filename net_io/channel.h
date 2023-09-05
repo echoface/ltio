@@ -111,7 +111,7 @@ public:
     return Send(data.data(), data.size());
   }
 
-  /* 
+  /*
    * return 0 when all data pending to out_buffer,
    * other case return nbytes realy writen
    * return -1 when error, handle err is responsibility of caller

@@ -8,11 +8,12 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <glog/logging.h>
 #include <array>
-#include <base/string/string_view.h>
 #include <string>
 #include <vector>
+
+#include <base/logging.h>
+#include <base/string/string_view.h>
 
 namespace lt {
 namespace net {

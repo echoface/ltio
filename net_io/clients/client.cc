@@ -18,12 +18,11 @@
 
 #include <algorithm>
 
-#include <base/ltio_config.h>
-#include "base/logging.h"
 #include "base/coroutine/co_runner.h"
+#include "base/logging.h"
+#include "base/ltio_config.h"
 #include "base/utils/string/str_utils.h"
 #include "client_channel.h"
-#include "glog/logging.h"
 #include "net_io/tcp_channel.h"
 
 #ifdef LTIO_HAVE_SSL
@@ -115,14 +114,13 @@ void Client::OnConnectFailed(uint32_t count) {
 
   if (connector_->InprocessCount() > kConnetBatchCount) {
     VLOG(VERROR) << RemoteIpPort() << ", giveup reconnect"
-                      << ", inprogress connection:"
-                      << connector_->InprocessCount();
+                 << ", inprogress connection:" << connector_->InprocessCount();
   } else {
     int32_t delay = std::min(next_reconnect_interval_, kMaxReconInterval);
     auto functor = std::bind(&Connector::Dial, connector_, address_, this);
     work_loop_->PostDelayTask(NewClosure(functor), delay);
     VLOG(VERROR) << "reconnect:" << RemoteIpPort() << " after " << delay
-                      << "(ms)";
+                 << "(ms)";
   }
 }
 

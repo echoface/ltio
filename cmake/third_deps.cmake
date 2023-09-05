@@ -71,8 +71,6 @@ if (LTIO_WITH_HTTP2)
   list(APPEND LtIO_LINKER_LIBS PUBLIC nghttp2)
 endif()
 
-message("dependency lib:${LtIO_LINKER_LIBS}")
-
 # ---[ ccache
 find_program(CCACHE_FOUND ccache)
 if(CCACHE_FOUND)

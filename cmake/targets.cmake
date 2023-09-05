@@ -6,7 +6,6 @@ add_library(ltio STATIC "")
 target_link_libraries(ltio PUBLIC ${LtIO_LINKER_LIBS})
 target_compile_definitions(ltio PUBLIC ${EXPORT_CORO_COMPLILE_DEFINE})
 target_include_directories(ltio PUBLIC
-  ${LtIO_INCLUDE_DIRS}
   ${PROJECT_SOURCE_DIR}
   ${PROJECT_SOURCE_DIR}/thirdparty
   )
@@ -22,7 +21,6 @@ if (LTIO_BUILD_SHARED_LIBS)
   target_link_libraries(ltio_shared PUBLIC ${LtIO_LINKER_LIBS})
   target_include_directories(ltio_shared
       PUBLIC
-      ${LtIO_INCLUDE_DIRS}
       ${PROJECT_SOURCE_DIR}
       ${PROJECT_SOURCE_DIR}/thirdparty
       )

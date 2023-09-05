@@ -27,8 +27,8 @@ void IOService::Run() {
 
   int ret = BindSocketFd(socket, storage.AsSockAddr());
   CHECK(ret >= 0) << Name() << " bind socket fail, socket:" << socket;
-  CHECK(ListenSocket(socket) >= 0)
-      << "listen fail, reason:" << base::StrError();
+  ret = ListenSocket(socket);
+  CHECK(ret >= 0) << "listen fail, reason:" << base::StrError();
 
   return accept_loop(socket);
 }

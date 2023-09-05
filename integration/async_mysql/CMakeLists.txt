@@ -7,8 +7,6 @@ add_library(ltasyncmysql STATIC
 ltio_default_properties(ltasyncmysql)
 target_include_directories(ltasyncmysql
   PUBLIC
-  ${LtIO_INCLUDE_DIRS}
-  ${MYSQL_INCLUDE_DIR}
   ${PROJECT_SOURCE_DIR}
   ${PROJECT_SOURCE_DIR}/thirdparty
   )
