@@ -10,6 +10,25 @@ SET(CMAKE_CONFIG_DIR ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CONFIG_DIR})
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CONFIG_DIR}/Modules)
 
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "Choose the build type" FORCE)
+
+  # Include "None" as option to disable any additional (optimization) flags,
+  # relying on just CMAKE_C_FLAGS and CMAKE_CXX_FLAGS (which are empty by
+  # default). These strings are presented in cmake-gui.
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "None" "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+endif()
+if(NOT CMAKE_C_FLAGS)
+    set(CMAKE_C_FLAGS "-O2 -g")
+    set(CMAKE_C_FLAGS_DEBUG "-O0 -g")
+    set(CMAKE_C_FLAGS_RELEASE "-O2 -g")
+endif()
+if(NOT CMAKE_CXX_FLAGS)
+    set(CMAKE_CXX_FLAGS "-O2 -g")
+    set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O2 -g")
+endif()
+
 # build
 option(LTIO_BUILD_EXAMPLES "Build UNITTEST" ON)
 option(LTIO_BUILD_UNITTESTS "Build UNITTEST" ON)
