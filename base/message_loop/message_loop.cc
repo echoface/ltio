@@ -28,11 +28,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include <chrono>
 #include <csignal>
 #include <functional>
 #include <iostream>
-#include <sstream>
 #include <string>
 
 #include "file_util_linux.h"
@@ -81,37 +79,44 @@ uint64_t MessageLoop::GenLoopID() {
 MessageLoop::MessageLoop() : MessageLoop(generate_loop_name()) {}
 
 MessageLoop::MessageLoop(const std::string& name)
-  : start_flag_(0),
-    loop_name_(name),
+  : loop_name_(name),
     wakeup_pipe_in_(0) {
-  start_flag_.clear();
+
   notify_flag_.clear();
 
   int fds[2];
   CHECK(CreateLocalNoneBlockingPipe(fds));
 
   wakeup_pipe_in_ = fds[1];
-  wakeup_event_ = FdEvent::Create(this, fds[0], LtEv::READ);
+  ctrl_ev_handler_.reset(
+      new base::FdEvent::FuncHandler(std::bind(&MessageLoop::HandleCtrlEvent,
+                                               this,
+                                               std::placeholders::_1,
+                                               std::placeholders::_2)));
+  wakeup_event_ = FdEvent::Create(ctrl_ev_handler_.get(), fds[0], LtEv::READ);
 
   int ev_fd = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
-  task_event_ = FdEvent::Create(this, ev_fd, LtEv::READ);
+
+  task_ev_handler_.reset(
+      new base::FdEvent::FuncHandler(std::bind(&MessageLoop::HandleTaskEvent,
+                                               this,
+                                               std::placeholders::_1,
+                                               std::placeholders::_2)));
+  task_event_ = FdEvent::Create(task_ev_handler_.get(), ev_fd, LtEv::READ);
 
   pump_.SetLoopId(GenLoopID());
 }
 
 MessageLoop::~MessageLoop() {
-  CHECK(!(running_ && IsInLoopThread()));
+  CHECK(!IsInLoopThread());
 
-  QuitLoop();
-  Notify(wakeup_pipe_in_, &kQuit, sizeof(kQuit));
+  SyncStop();
 
   // first join, others wait util loop end
   if (thread_ptr_ && thread_ptr_->joinable()) {
     VLOG(VINFO) << LOOP_LOG_DETAIL << "join here";
     thread_ptr_->join();
   }
-
-  WaitLoopEnd();
 
   ::close(wakeup_pipe_in_);
   VLOG(VINFO) << LOOP_LOG_DETAIL << "Gone";
@@ -127,18 +132,26 @@ void MessageLoop::WakeUpIfNeeded() {
   }
 }
 
-void MessageLoop::HandleEvent(FdEvent* fdev, LtEv::Event ev) {
-  if (LtEv::has_read(ev)) {
-    return HandleRead(fdev);
-  }
-  LOG(ERROR) << LOOP_LOG_DETAIL << "event:" << fdev->EventInfo();
+void MessageLoop::HandleTaskEvent(FdEvent* fdev, LtEv::Event ev) {
+  uint64_t count = 0;
+  int ret = ::read(task_event_->GetFd(), &count, sizeof(count));
+  LOG_IF(ERROR, ret < 0) << " error:" << StrError()
+                         << " fd:" << task_event_->GetFd();
+
+  // must clear after read, minimum system call times
+  notify_flag_.clear();
+
+  RunScheduledTask();
 }
 
-void MessageLoop::HandleRead(FdEvent* fd_event) {
-  if (fd_event == task_event_.get()) {
-    RunCommandTask(ScheduledTaskType::TaskTypeDefault);
-  } else if (fd_event == wakeup_event_.get()) {
-    RunCommandTask(ScheduledTaskType::TaskTypeCtrl);
+void MessageLoop::HandleCtrlEvent(FdEvent* fdev, LtEv::Event ev) {
+  char buf = 0x7F;
+  int ret = ::read(wakeup_event_->GetFd(), &buf, sizeof(buf));
+  LOG_IF(ERROR, ret < 0) << " error:" << StrError(errno)
+                         << " fd:" << wakeup_event_->GetFd();
+
+  if (buf == kQuit) {
+    running_ = false;
   } else {
     LOG(ERROR) << LOOP_LOG_DETAIL << "should not reached";
   }
@@ -152,19 +165,6 @@ bool MessageLoop::IsInLoopThread() const {
   return pump_.IsInLoop();
 }
 
-void MessageLoop::Start() {
-  if (start_flag_.test_and_set(std::memory_order_acquire)) {
-    LOG(INFO) << LOOP_LOG_DETAIL << "aready start runing...";
-    return;
-  }
-
-  thread_ptr_.reset(new std::thread(std::bind(&MessageLoop::ThreadMain, this)));
-  {
-    std::unique_lock<std::mutex> lk(start_stop_lock_);
-    cv_.wait(lk, [this]() { return running_; });
-  }
-}
-
 PersistRunner* MessageLoop::DelegateRunner() {
   return delegate_runner_;
 }
@@ -173,6 +173,29 @@ void MessageLoop::InstallPersistRunner(PersistRunner* runner) {
   CHECK(IsInLoopThread());
   CHECK(delegate_runner_ == nullptr) << "override runner";
   delegate_runner_ = runner;
+}
+
+void MessageLoop::Start() {
+  auto once_fn = [&]() {
+    auto loop_main = std::bind(&MessageLoop::ThreadMain, this);
+    thread_ptr_.reset(new std::thread(loop_main));
+
+    std::unique_lock<std::mutex> lk(start_stop_lock_);
+    cv_.wait(lk, [this]() { return running_; });
+  };
+  std::call_once(start_onece_, once_fn);
+}
+
+void MessageLoop::SyncStop() {
+  CHECK(!IsInLoopThread());
+
+  Notify(wakeup_pipe_in_, &kQuit, sizeof(kQuit));
+
+  WaitLoopEnd();
+}
+
+void MessageLoop::QuitLoop() {
+  Notify(wakeup_pipe_in_, &kQuit, sizeof(kQuit));
 }
 
 void MessageLoop::WaitLoopEnd(int32_t ms) {
@@ -189,15 +212,14 @@ void MessageLoop::WaitLoopEnd(int32_t ms) {
   }
 }
 
-uint64_t MessageLoop::PumpTimeout() {
+uint64_t MessageLoop::CalcMaxPumpTimeout() {
+  if (in_loop_tasks_.size() > 0 || scheduled_tasks_.size_approx() > 0) {
+    return 0;
+  }
   if (delegate_runner_ && delegate_runner_->HasPeedingTask()) {
     return 0;
   }
-  return PendingTasksCount() > 0 ? 0 : 50;
-}
-
-size_t MessageLoop::PendingTasksCount() const {
-  return in_loop_tasks_.size() + scheduled_tasks_.size_approx();
+  return 50;
 }
 
 void MessageLoop::ThreadMain() {
@@ -214,17 +236,17 @@ void MessageLoop::ThreadMain() {
   pump_.InstallFdEvent(task_event_.get());
   pump_.InstallFdEvent(wakeup_event_.get());
 
-  cv_.notify_all();
+  cv_.notify_all();  // notify loop start; see ::Start
   while (running_) {
-    // pump io/timer event
-    pump_.Pump(PumpTimeout());
+    // pump io/timer event; trigger RunScheduledTask
+    pump_.Pump(CalcMaxPumpTimeout());
 
     RunNestedTask();
   }
 
-  RunNestedTask();
-
   RunScheduledTask();
+
+  RunNestedTask();
 
   pump_.RemoveFdEvent(task_event_.get());
 
@@ -232,7 +254,7 @@ void MessageLoop::ThreadMain() {
 
   threadlocal_current_ = NULL;
   VLOG(VINFO) << LOOP_LOG_DETAIL << "Thread End";
-  cv_.notify_all();
+  cv_.notify_all();  // notify loop stop; see ::WaitLoopEnd
 }
 
 bool MessageLoop::PostDelayTask(TaskBasePtr task, uint32_t ms) {
@@ -281,47 +303,6 @@ void MessageLoop::RunNestedTask() {
   if (delegate_runner_) {
     delegate_runner_->Run();
   }
-}
-
-void MessageLoop::RunCommandTask(ScheduledTaskType type) {
-  switch (type) {
-    case ScheduledTaskType::TaskTypeDefault: {
-      uint64_t count = 0;
-      int ret = ::read(task_event_->GetFd(), &count, sizeof(count));
-      LOG_IF(ERROR, ret < 0)
-          << " error:" << StrError() << " fd:" << task_event_->GetFd();
-
-      // clear must clear after read
-      notify_flag_.clear();
-
-      RunScheduledTask();
-
-    } break;
-    case ScheduledTaskType::TaskTypeCtrl: {
-      char buf = 0x7F;
-      int ret = ::read(wakeup_event_->GetFd(), &buf, sizeof(buf));
-      LOG_IF(ERROR, ret < 0)
-          << " error:" << StrError(errno) << " fd:" << wakeup_event_->GetFd();
-
-      switch (buf) {
-        case kQuit: {
-          QuitLoop();
-        } break;
-        default: {
-          LOG(ERROR) << LOOP_LOG_DETAIL << "should not reached";
-          DCHECK(false);
-        } break;
-      }
-    } break;
-    default:
-      DCHECK(false);
-      LOG(ERROR) << LOOP_LOG_DETAIL << "should not reached";
-      break;
-  }
-}
-
-void MessageLoop::QuitLoop() {
-  running_ = false;
 }
 
 int MessageLoop::Notify(int fd, const void* data, size_t count) {

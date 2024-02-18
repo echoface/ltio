@@ -117,10 +117,6 @@ public:
       base::MessageLoop* io = service->AcceptorLoop();
       io->PostTask(FROM_HERE, &IOService::Stop, service);
     }
-
-    if (services.empty()) {
-      closed_callback_();
-    }
   }
 
 protected:

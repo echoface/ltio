@@ -110,7 +110,7 @@ public:
   }
 
   ~SimpleApp() {
-    LOG(INFO) << __func__ << " close app";
+    // LOG(INFO) << __func__ << " close app";
     if (FLAGS_raw_client) {
       delete raw_client;
     }
@@ -326,11 +326,13 @@ public:
 
     raw_server.StopServer(CO_RESUMER);
 
-    CO_YIELD;
+    CO_YIELD; // waiting stop task finish
+    LOG(INFO) << __FUNCTION__ << " stop raw server done!";
 
     http_server.StopServer(CO_RESUMER);
 
     CO_YIELD;
+    LOG(INFO) << __FUNCTION__ << " stop http server done!";
 
     LOG(INFO) << __FUNCTION__ << " stop leave";
     main_loop.QuitLoop();

@@ -25,7 +25,6 @@
 #include <memory>
 
 #include "base/lt_macro.h"
-#include "base/queue/double_linked_list.h"
 #include "event.h"
 
 namespace base {
@@ -53,6 +52,18 @@ public:
     virtual void HandleEvent(FdEvent* fdev, LtEv::Event ev) = 0;
   } Handler;
 
+  using HandlerFunc = std::function<void(FdEvent* fdev, LtEv::Event ev)>;
+  class FuncHandler : public Handler {
+  public:
+    FuncHandler(HandlerFunc fn) : func_(fn){};
+
+    void HandleEvent(FdEvent* fdev, LtEv::Event ev) override {
+        return func_(fdev, ev);
+    };
+  private:
+    std::function<void(FdEvent* fdev, LtEv::Event ev)> func_;
+  };
+
   static RefFdEvent Create(int fd, LtEv::Event ev);
 
   static RefFdEvent Create(Handler* h, int fd, LtEv::Event ev);
@@ -67,9 +78,9 @@ public:
 
   inline void SetHandler(Handler* h) { handler_ = h; }
 
-  inline Handler* GetHandler() const { return handler_;}
+  inline Handler* GetHandler() const { return handler_; }
 
-  inline void SetFdWatcher(Watcher* w) {watcher_ = w;}
+  inline void SetFdWatcher(Watcher* w) { watcher_ = w; }
 
   inline Watcher* EventWatcher() { return watcher_; }
 

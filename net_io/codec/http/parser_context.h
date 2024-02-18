@@ -18,9 +18,8 @@
 #ifndef _NET_HTTP_PROTO_PARSER_CONTEXT_H_
 #define _NET_HTTP_PROTO_PARSER_CONTEXT_H_
 
-#include <list>
+#include <memory>
 #include <string>
-#include <vector>
 
 #include <llhttp.h>
 
@@ -46,42 +45,42 @@ public:
   template <bool is_server = std::is_same<M, HttpRequest>::value>
   HttpParser(T* reciever) : reciever_(reciever) {
     llhttp_settings_init(&settings_);
-    settings_ = {
-        .on_message_begin = &Parser::OnMessageBegin,
+    settings_.on_message_begin = &Parser::OnMessageBegin;
 
-        /* Possible return values 0, -1, HPE_USER */
-        .on_url = &Parser::OnURL,
-        .on_status = &Parser::OnStatus,
-        .on_header_field = &Parser::OnHeaderField,
-        .on_header_value = &Parser::OnHeaderValue,
+    /* Possible return values 0, -1, HPE_USER */
+    settings_.on_url = &Parser::OnURL;
+    settings_.on_status = &Parser::OnStatus;
+    settings_.on_header_field = &Parser::OnHeaderField;
+    settings_.on_header_value = &Parser::OnHeaderValue;
 
-        /* Possible return values:
-         * 0  - Proceed normally
-         * 1  - Assume that request/response has no body, and proceed to parsing
-         * the next message 2  - Assume absence of body (as above) and make
-         * `llhttp_execute()` return `HPE_PAUSED_UPGRADE` -1 - Error
-         * `HPE_PAUSED`
-         */
-        .on_headers_complete = &Parser::OnHeaderFinish,
+    /* Possible return values:
+     * 0  - Proceed normally
+     * 1  - Assume that request/response has no body, and proceed to parsing
+     * the next message
+     * 2  - Assume absence of body (as above) and make
+     * `llhttp_execute()` return `HPE_PAUSED_UPGRADE`
+     * -1 - Error
+     * `HPE_PAUSED`
+     */
+    settings_.on_headers_complete = &Parser::OnHeaderFinish;
 
-        /* Possible return values 0, -1, HPE_USER */
-        .on_body = &Parser::OnMessageBody,
+    /* Possible return values 0, -1, HPE_USER */
+    settings_.on_body = &Parser::OnMessageBody;
 
-        /* Possible return values 0, -1, `HPE_PAUSED` */
-        .on_message_complete = &Parser::OnMessageEnd,
-        /* Information-only callbacks, return value is ignored */
-        .on_url_complete = nullptr,
-        .on_status_complete = nullptr,
-        .on_header_field_complete = nullptr,
-        .on_header_value_complete = nullptr,
+    /* Possible return values 0, -1, `HPE_PAUSED` */
+    settings_.on_message_complete = &Parser::OnMessageEnd;
+    /* Information-only callbacks, return value is ignored */
+    settings_.on_url_complete = nullptr;
+    settings_.on_status_complete = nullptr;
+    settings_.on_header_field_complete = nullptr;
+    settings_.on_header_value_complete = nullptr;
 
-        /* When on_chunk_header is called, the current chunk length is stored
-         * in parser->content_length.
-         * Possible return values 0, -1, `HPE_PAUSED`
-         */
-        .on_chunk_header = &Parser::OnChunkHeader,
-        .on_chunk_complete = &Parser::OnChunkFinished,
-    };
+    /* When on_chunk_header is called, the current chunk length is stored
+     * in parser->content_length.
+     * Possible return values 0, -1, `HPE_PAUSED`
+     */
+    settings_.on_chunk_header = &Parser::OnChunkHeader;
+    settings_.on_chunk_complete = &Parser::OnChunkFinished;
     llhttp_init(&parser_, HTTP_BOTH, &settings_);
     parser_.data = this;
   }

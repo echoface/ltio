@@ -53,15 +53,9 @@ private:
   LtClosure notifier_;
 };
 
-class MessageLoop : public FdEvent::Handler {
+class MessageLoop {
 public:
   static MessageLoop* Current();
-
-  typedef enum {
-    TaskTypeDefault = 0,
-    TaskTypeReply = 1,
-    TaskTypeCtrl = 2
-  } ScheduledTaskType;
 
   MessageLoop();
 
@@ -111,6 +105,10 @@ public:
 
   void Start();
 
+  void SyncStop();
+
+  void QuitLoop();
+
   bool IsInLoopThread() const;
 
   void WakeUpIfNeeded();
@@ -126,8 +124,6 @@ public:
 
   const std::string& LoopName() const { return loop_name_; }
 
-  void QuitLoop();
-
   // not preciese running status
   bool Running() const { return running_; }
 
@@ -135,31 +131,24 @@ public:
 
 private:
   void ThreadMain();
+
   void SetThreadNativeName();
 
-  void RunCommandTask(ScheduledTaskType t);
+  uint64_t CalcMaxPumpTimeout();
 
-  uint64_t PumpTimeout();
-
-  size_t PendingTasksCount() const;
-
-  // nested task: post another task in current loop
-  // override from pump for nested task;
+  // nested task: task scheduled in current loop
   void RunNestedTask();
 
   void RunScheduledTask();
 
   int Notify(int fd, const void* data, size_t count);
 
-  void HandleEvent(FdEvent* fdev, LtEv::Event ev) override;
-
-  void HandleRead(FdEvent* fd_event);
-
 private:
   using ThreadPtr = std::unique_ptr<std::thread>;
+  using EvFuncHandlerPtr = std::unique_ptr<base::FdEvent::FuncHandler>;
 
-  bool running_ = false;
-  std::atomic_flag start_flag_;
+  bool running_ = false; // only assign in loop thread
+  std::once_flag start_onece_;
 
   std::mutex start_stop_lock_;
   std::condition_variable cv_;
@@ -167,17 +156,24 @@ private:
   std::string loop_name_;
   ThreadPtr thread_ptr_;
 
-  RefFdEvent task_event_;
-  std::atomic_flag notify_flag_;
-
+  // task relative
   TaskQueue scheduled_tasks_;
+
   std::vector<TaskBasePtr> in_loop_tasks_;
 
   PersistRunner* delegate_runner_ = nullptr;
 
+  RefFdEvent task_event_;
+  std::atomic_flag notify_flag_;
+  EvFuncHandlerPtr task_ev_handler_;
+  void HandleTaskEvent(FdEvent* fdev, LtEv::Event ev);
+
+
   // pipe just use for loop control
   int wakeup_pipe_in_ = -1;
   RefFdEvent wakeup_event_;
+  EvFuncHandlerPtr ctrl_ev_handler_;
+  void HandleCtrlEvent(FdEvent* fdev, LtEv::Event ev);
 
   EventPump pump_;
   DISALLOW_COPY_AND_ASSIGN(MessageLoop);
